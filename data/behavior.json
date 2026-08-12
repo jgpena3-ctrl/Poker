@@ -1,0 +1,1438 @@
+{
+  "hands": 327,
+  "observaciones": 3373,
+  "profiles": {
+    "Jarduan": "Regular",
+    "NESANVAR": "Loose-passive",
+    "Pipaaf182": "Regular",
+    "mur420": "Regular",
+    "Hachirama": "LAG",
+    "Juanmabm": "Passive-reg",
+    "JHONCACH": "LAG",
+    "JHONCASH": "Regular",
+    "DominoSaurio": "Regular",
+    "Arquejandro": "Regular",
+    "Jeffer30bog": "Loose-reg",
+    "Mateo": "Loose-passive",
+    "Mira90": "Loose-passive",
+    "Hellfish1": "Regular",
+    "Juanfelipe1": "Loose-reg",
+    "Santiago ja": "Loose-passive",
+    "Andresyjeymi": "LAG",
+    "Andreayjeymi": "LAG",
+    "Valentina22": "LAG",
+    "Elyessi27": "Loose-passive",
+    "P5": "LAG",
+    "Geilyn21": "LAG",
+    "P3": "Regular",
+    "P4": "LAG",
+    "HERO": "LAG",
+    "P1": "Regular",
+    "Maicolp": "Loose-passive",
+    "Johan Otero": "Regular",
+    "KappaxSlayer": "Loose-passive",
+    "MegustanLas...": "Loose-passive",
+    "SamPachero30": "Regular",
+    "ComboHunter": "Regular",
+    "LaloMora": "Regular",
+    "SAE_AAAA": "Loose-passive",
+    "JuanPApada": "Regular",
+    "Zenin15": "Regular",
+    "Rolitoyerda": "Loose-passive",
+    "triki12": "Regular",
+    "oscar123": "Regular",
+    "Irene_giraldo": "Regular",
+    "trombosis2.0": "Loose-passive",
+    "Nnn1": "Loose-passive",
+    "CCE": "Loose-passive",
+    "Mauroparley": "Loose-passive",
+    "JhonvyB": "Loose-passive",
+    "RMF99": "Loose-passive"
+  },
+  "granular": {
+    "Regular|preflop|-|none": {
+      "f": 0.63,
+      "x": 0.073,
+      "c": 0.039,
+      "b": 0.225,
+      "r": 0.033,
+      "sizing_mean": 1.368,
+      "n": 668
+    },
+    "Loose-passive|preflop|-|bet": {
+      "f": 0.472,
+      "x": 0.047,
+      "c": 0.425,
+      "b": 0.009,
+      "r": 0.047,
+      "sizing_mean": 1.15,
+      "n": 214
+    },
+    "Regular|preflop|-|bet": {
+      "f": 0.724,
+      "x": 0.041,
+      "c": 0.157,
+      "b": 0.011,
+      "r": 0.066,
+      "sizing_mean": 3.446,
+      "n": 439
+    },
+    "LAG|preflop|-|bet": {
+      "f": 0.225,
+      "x": 0.025,
+      "c": 0.525,
+      "b": 0.05,
+      "r": 0.175,
+      "sizing_mean": 11.366,
+      "n": 40
+    },
+    "Passive-reg|preflop|-|bet": {
+      "f": 0.636,
+      "x": 0.091,
+      "c": 0.212,
+      "b": 0.03,
+      "r": 0.03,
+      "sizing_mean": 0.476,
+      "n": 33
+    },
+    "LAG|flop|two_tone|none": {
+      "f": 0.048,
+      "x": 0.667,
+      "c": 0.0,
+      "b": 0.286,
+      "r": 0.0,
+      "sizing_mean": 2.175,
+      "n": 21
+    },
+    "Passive-reg|flop|two_tone|none": {
+      "f": 0.0,
+      "x": 0.571,
+      "c": 0.0,
+      "b": 0.429,
+      "r": 0.0,
+      "sizing_mean": 2.833,
+      "n": 7
+    },
+    "Regular|flop|two_tone|none": {
+      "f": 0.0,
+      "x": 0.699,
+      "c": 0.0,
+      "b": 0.301,
+      "r": 0.0,
+      "sizing_mean": 0.742,
+      "n": 103
+    },
+    "Loose-passive|flop|two_tone|none": {
+      "f": 0.0,
+      "x": 0.69,
+      "c": 0.0,
+      "b": 0.31,
+      "r": 0.0,
+      "sizing_mean": 1.166,
+      "n": 71
+    },
+    "Regular|flop|two_tone|bet": {
+      "f": 0.556,
+      "x": 0.0,
+      "c": 0.444,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 18
+    },
+    "LAG|flop|two_tone|bet": {
+      "f": 0.571,
+      "x": 0.0,
+      "c": 0.429,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 7
+    },
+    "Regular|turn|two_tone|none": {
+      "f": 0.0,
+      "x": 0.658,
+      "c": 0.0,
+      "b": 0.342,
+      "r": 0.0,
+      "sizing_mean": 0.913,
+      "n": 73
+    },
+    "Loose-passive|turn|two_tone|none": {
+      "f": 0.0,
+      "x": 0.5,
+      "c": 0.0,
+      "b": 0.5,
+      "r": 0.0,
+      "sizing_mean": 0.461,
+      "n": 56
+    },
+    "Regular|river|two_tone|none": {
+      "f": 0.0,
+      "x": 0.714,
+      "c": 0.0,
+      "b": 0.286,
+      "r": 0.0,
+      "sizing_mean": 0.936,
+      "n": 35
+    },
+    "Loose-passive|river|two_tone|none": {
+      "f": 0.0,
+      "x": 0.652,
+      "c": 0.0,
+      "b": 0.348,
+      "r": 0.0,
+      "sizing_mean": 0.411,
+      "n": 23
+    },
+    "LAG|preflop|-|none": {
+      "f": 0.149,
+      "x": 0.043,
+      "c": 0.17,
+      "b": 0.404,
+      "r": 0.234,
+      "sizing_mean": 0.5,
+      "n": 47
+    },
+    "Passive-reg|preflop|-|none": {
+      "f": 0.462,
+      "x": 0.077,
+      "c": 0.385,
+      "b": 0.038,
+      "r": 0.038,
+      "sizing_mean": 0.0,
+      "n": 26
+    },
+    "Loose-passive|preflop|-|none": {
+      "f": 0.271,
+      "x": 0.06,
+      "c": 0.459,
+      "b": 0.102,
+      "r": 0.109,
+      "sizing_mean": 0.675,
+      "n": 266
+    },
+    "Loose-passive|flop|two_tone|bet": {
+      "f": 0.542,
+      "x": 0.0,
+      "c": 0.417,
+      "b": 0.0,
+      "r": 0.042,
+      "sizing_mean": 0.5,
+      "n": 24
+    },
+    "Loose-passive|flop|two_tone|cbet": {
+      "f": 0.45,
+      "x": 0.0,
+      "c": 0.45,
+      "b": 0.0,
+      "r": 0.1,
+      "sizing_mean": 1.362,
+      "n": 20
+    },
+    "LAG|turn|two_tone|none": {
+      "f": 0.0,
+      "x": 0.615,
+      "c": 0.0,
+      "b": 0.385,
+      "r": 0.0,
+      "sizing_mean": 0.605,
+      "n": 13
+    },
+    "LAG|turn|two_tone|bet": {
+      "f": 0.333,
+      "x": 0.0,
+      "c": 0.667,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 6
+    },
+    "Loose-passive|turn|two_tone|bet": {
+      "f": 0.412,
+      "x": 0.0,
+      "c": 0.529,
+      "b": 0.0,
+      "r": 0.059,
+      "sizing_mean": 1.667,
+      "n": 17
+    },
+    "Regular|river|rainbow|none": {
+      "f": 0.0,
+      "x": 0.778,
+      "c": 0.0,
+      "b": 0.222,
+      "r": 0.0,
+      "sizing_mean": 0.676,
+      "n": 27
+    },
+    "LAG|river|rainbow|none": {
+      "f": 0.0,
+      "x": 0.5,
+      "c": 0.0,
+      "b": 0.5,
+      "r": 0.0,
+      "sizing_mean": 0.21,
+      "n": 4
+    },
+    "Regular|river|rainbow|bet": {
+      "f": 0.5,
+      "x": 0.0,
+      "c": 0.333,
+      "b": 0.0,
+      "r": 0.167,
+      "sizing_mean": 4.225,
+      "n": 6
+    },
+    "LAG|turn|two_tone|barrel": {
+      "f": 0.333,
+      "x": 0.0,
+      "c": 0.667,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 3
+    },
+    "Regular|turn|two_tone|barrel": {
+      "f": 0.273,
+      "x": 0.0,
+      "c": 0.455,
+      "b": 0.0,
+      "r": 0.273,
+      "sizing_mean": 0.733,
+      "n": 11
+    },
+    "Loose-passive|turn|two_tone|barrel": {
+      "f": 0.6,
+      "x": 0.0,
+      "c": 0.267,
+      "b": 0.0,
+      "r": 0.133,
+      "sizing_mean": 0.71,
+      "n": 15
+    },
+    "Regular|river|two_tone|bet": {
+      "f": 0.7,
+      "x": 0.0,
+      "c": 0.1,
+      "b": 0.0,
+      "r": 0.2,
+      "sizing_mean": 3.707,
+      "n": 10
+    },
+    "Regular|preflop|-|raise": {
+      "f": 0.556,
+      "x": 0.048,
+      "c": 0.317,
+      "b": 0.0,
+      "r": 0.079,
+      "sizing_mean": 1.479,
+      "n": 63
+    },
+    "LAG|preflop|-|raise": {
+      "f": 0.158,
+      "x": 0.0,
+      "c": 0.842,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 19
+    },
+    "Passive-reg|preflop|-|raise": {
+      "f": 0.667,
+      "x": 0.0,
+      "c": 0.333,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 3
+    },
+    "Loose-passive|preflop|-|raise": {
+      "f": 0.429,
+      "x": 0.024,
+      "c": 0.5,
+      "b": 0.0,
+      "r": 0.048,
+      "sizing_mean": 1.6,
+      "n": 42
+    },
+    "Regular|flop|rainbow+pair|none": {
+      "f": 0.0,
+      "x": 0.767,
+      "c": 0.0,
+      "b": 0.233,
+      "r": 0.0,
+      "sizing_mean": 0.776,
+      "n": 30
+    },
+    "Loose-passive|flop|rainbow+pair|none": {
+      "f": 0.0,
+      "x": 0.652,
+      "c": 0.0,
+      "b": 0.348,
+      "r": 0.0,
+      "sizing_mean": 1.634,
+      "n": 23
+    },
+    "Regular|flop|rainbow+pair|bet": {
+      "f": 0.333,
+      "x": 0.0,
+      "c": 0.556,
+      "b": 0.0,
+      "r": 0.111,
+      "sizing_mean": 0.3,
+      "n": 9
+    },
+    "Regular|turn|two_tone+pair|none": {
+      "f": 0.0,
+      "x": 0.641,
+      "c": 0.0,
+      "b": 0.359,
+      "r": 0.0,
+      "sizing_mean": 0.525,
+      "n": 39
+    },
+    "Loose-passive|turn|two_tone+pair|none": {
+      "f": 0.032,
+      "x": 0.581,
+      "c": 0.0,
+      "b": 0.387,
+      "r": 0.0,
+      "sizing_mean": 0.505,
+      "n": 31
+    },
+    "Regular|turn|two_tone+pair|bet": {
+      "f": 0.4,
+      "x": 0.0,
+      "c": 0.6,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 10
+    },
+    "Regular|flop|rainbow|none": {
+      "f": 0.0,
+      "x": 0.649,
+      "c": 0.0,
+      "b": 0.351,
+      "r": 0.0,
+      "sizing_mean": 0.71,
+      "n": 74
+    },
+    "LAG|flop|rainbow|none": {
+      "f": 0.0,
+      "x": 0.533,
+      "c": 0.0,
+      "b": 0.467,
+      "r": 0.0,
+      "sizing_mean": 1.358,
+      "n": 15
+    },
+    "Loose-passive|flop|rainbow|none": {
+      "f": 0.0,
+      "x": 0.667,
+      "c": 0.0,
+      "b": 0.333,
+      "r": 0.0,
+      "sizing_mean": 1.196,
+      "n": 48
+    },
+    "Regular|flop|rainbow|bet": {
+      "f": 0.533,
+      "x": 0.0,
+      "c": 0.333,
+      "b": 0.0,
+      "r": 0.133,
+      "sizing_mean": 0.733,
+      "n": 15
+    },
+    "LAG|turn|two_tone+pair|none": {
+      "f": 0.0,
+      "x": 0.4,
+      "c": 0.0,
+      "b": 0.6,
+      "r": 0.0,
+      "sizing_mean": 0.525,
+      "n": 5
+    },
+    "Loose-passive|turn|two_tone+pair|bet": {
+      "f": 0.4,
+      "x": 0.0,
+      "c": 0.5,
+      "b": 0.0,
+      "r": 0.1,
+      "sizing_mean": 0.791,
+      "n": 10
+    },
+    "LAG|flop|rainbow|cbet": {
+      "f": 0.333,
+      "x": 0.0,
+      "c": 0.5,
+      "b": 0.0,
+      "r": 0.167,
+      "sizing_mean": 1.118,
+      "n": 6
+    },
+    "Loose-passive|flop|rainbow|raise": {
+      "f": 0.333,
+      "x": 0.0,
+      "c": 0.667,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 3
+    },
+    "Regular|flop|rainbow|raise": {
+      "f": 0.5,
+      "x": 0.0,
+      "c": 0.5,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 4
+    },
+    "LAG|river|two_tone|none": {
+      "f": 0.0,
+      "x": 0.429,
+      "c": 0.0,
+      "b": 0.571,
+      "r": 0.0,
+      "sizing_mean": 0.434,
+      "n": 7
+    },
+    "Loose-passive|flop|two_tone+pair|none": {
+      "f": 0.0,
+      "x": 0.76,
+      "c": 0.0,
+      "b": 0.2,
+      "r": 0.04,
+      "sizing_mean": 0.915,
+      "n": 25
+    },
+    "LAG|flop|two_tone+pair|none": {
+      "f": 0.0,
+      "x": 0.75,
+      "c": 0.0,
+      "b": 0.25,
+      "r": 0.0,
+      "sizing_mean": 0.133,
+      "n": 8
+    },
+    "Loose-passive|turn|rainbow+pair|none": {
+      "f": 0.0,
+      "x": 0.286,
+      "c": 0.0,
+      "b": 0.714,
+      "r": 0.0,
+      "sizing_mean": 0.567,
+      "n": 7
+    },
+    "LAG|turn|rainbow+pair|none": {
+      "f": 0.0,
+      "x": 0.667,
+      "c": 0.0,
+      "b": 0.333,
+      "r": 0.0,
+      "sizing_mean": 0.133,
+      "n": 3
+    },
+    "Loose-passive|turn|rainbow+pair|bet": {
+      "f": 1.0,
+      "x": 0.0,
+      "c": 0.0,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 3
+    },
+    "LAG|turn|rainbow+pair|bet": {
+      "f": 0.75,
+      "x": 0.0,
+      "c": 0.25,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 4
+    },
+    "Regular|flop|two_tone|cbet": {
+      "f": 0.571,
+      "x": 0.0,
+      "c": 0.381,
+      "b": 0.0,
+      "r": 0.048,
+      "sizing_mean": 0.66,
+      "n": 21
+    },
+    "Regular|river|two_tone+pair|none": {
+      "f": 0.0,
+      "x": 0.75,
+      "c": 0.0,
+      "b": 0.25,
+      "r": 0.0,
+      "sizing_mean": 1.465,
+      "n": 36
+    },
+    "Regular|river|two_tone+pair|bet": {
+      "f": 0.579,
+      "x": 0.0,
+      "c": 0.316,
+      "b": 0.0,
+      "r": 0.105,
+      "sizing_mean": 0.803,
+      "n": 19
+    },
+    "LAG|flop|monotone|none": {
+      "f": 0.0,
+      "x": 0.667,
+      "c": 0.0,
+      "b": 0.333,
+      "r": 0.0,
+      "sizing_mean": 0.15,
+      "n": 6
+    },
+    "Loose-passive|flop|monotone|none": {
+      "f": 0.0,
+      "x": 0.556,
+      "c": 0.0,
+      "b": 0.444,
+      "r": 0.0,
+      "sizing_mean": 0.398,
+      "n": 9
+    },
+    "Regular|flop|monotone|bet": {
+      "f": 0.5,
+      "x": 0.0,
+      "c": 0.5,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 6
+    },
+    "LAG|flop|rainbow+pair|none": {
+      "f": 0.0,
+      "x": 1.0,
+      "c": 0.0,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 3
+    },
+    "LAG|river|rainbow+pair|none": {
+      "f": 0.0,
+      "x": 0.0,
+      "c": 0.0,
+      "b": 1.0,
+      "r": 0.0,
+      "sizing_mean": 0.99,
+      "n": 3
+    },
+    "Loose-passive|river|rainbow+pair|bet": {
+      "f": 0.333,
+      "x": 0.0,
+      "c": 0.667,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 3
+    },
+    "Passive-reg|turn|two_tone|none": {
+      "f": 0.0,
+      "x": 0.667,
+      "c": 0.0,
+      "b": 0.333,
+      "r": 0.0,
+      "sizing_mean": 0.857,
+      "n": 3
+    },
+    "Regular|flop|monotone|none": {
+      "f": 0.0,
+      "x": 0.7,
+      "c": 0.0,
+      "b": 0.3,
+      "r": 0.0,
+      "sizing_mean": 1.167,
+      "n": 10
+    },
+    "Loose-passive|turn|monotone|none": {
+      "f": 0.0,
+      "x": 0.333,
+      "c": 0.0,
+      "b": 0.667,
+      "r": 0.0,
+      "sizing_mean": 0.346,
+      "n": 3
+    },
+    "Loose-passive|river|rainbow+pair|none": {
+      "f": 0.0,
+      "x": 0.444,
+      "c": 0.0,
+      "b": 0.556,
+      "r": 0.0,
+      "sizing_mean": 0.431,
+      "n": 9
+    },
+    "Regular|river|rainbow+pair|none": {
+      "f": 0.0,
+      "x": 0.692,
+      "c": 0.0,
+      "b": 0.308,
+      "r": 0.0,
+      "sizing_mean": 0.522,
+      "n": 13
+    },
+    "Loose-passive|flop|rainbow|bet": {
+      "f": 0.778,
+      "x": 0.0,
+      "c": 0.111,
+      "b": 0.0,
+      "r": 0.111,
+      "sizing_mean": 0.75,
+      "n": 9
+    },
+    "Regular|flop|rainbow|cbet": {
+      "f": 0.35,
+      "x": 0.0,
+      "c": 0.6,
+      "b": 0.0,
+      "r": 0.05,
+      "sizing_mean": 2.286,
+      "n": 20
+    },
+    "Regular|flop|two_tone+pair|none": {
+      "f": 0.0,
+      "x": 0.762,
+      "c": 0.0,
+      "b": 0.238,
+      "r": 0.0,
+      "sizing_mean": 1.073,
+      "n": 21
+    },
+    "Loose-passive|river|two_tone+pair|none": {
+      "f": 0.0,
+      "x": 0.393,
+      "c": 0.0,
+      "b": 0.607,
+      "r": 0.0,
+      "sizing_mean": 0.732,
+      "n": 28
+    },
+    "LAG|river|two_tone+pair|none": {
+      "f": 0.0,
+      "x": 0.0,
+      "c": 0.0,
+      "b": 1.0,
+      "r": 0.0,
+      "sizing_mean": 0.424,
+      "n": 3
+    },
+    "Loose-passive|river|two_tone+pair|bet": {
+      "f": 0.667,
+      "x": 0.0,
+      "c": 0.333,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 9
+    },
+    "LAG|river|two_tone+pair|bet": {
+      "f": 0.5,
+      "x": 0.0,
+      "c": 0.5,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 4
+    },
+    "LAG|flop|two_tone|cbet": {
+      "f": 0.75,
+      "x": 0.0,
+      "c": 0.0,
+      "b": 0.0,
+      "r": 0.25,
+      "sizing_mean": 0.333,
+      "n": 4
+    },
+    "Loose-passive|flop|two_tone+pair|cbet": {
+      "f": 0.25,
+      "x": 0.0,
+      "c": 0.25,
+      "b": 0.0,
+      "r": 0.5,
+      "sizing_mean": 1.185,
+      "n": 4
+    },
+    "Regular|turn|rainbow|none": {
+      "f": 0.0,
+      "x": 0.6,
+      "c": 0.0,
+      "b": 0.4,
+      "r": 0.0,
+      "sizing_mean": 0.664,
+      "n": 30
+    },
+    "Loose-passive|turn|rainbow|none": {
+      "f": 0.0,
+      "x": 0.588,
+      "c": 0.0,
+      "b": 0.412,
+      "r": 0.0,
+      "sizing_mean": 0.487,
+      "n": 17
+    },
+    "Regular|turn|rainbow|bet": {
+      "f": 0.333,
+      "x": 0.0,
+      "c": 0.556,
+      "b": 0.0,
+      "r": 0.111,
+      "sizing_mean": 0.423,
+      "n": 9
+    },
+    "Loose-passive|river|rainbow|none": {
+      "f": 0.0,
+      "x": 0.6,
+      "c": 0.0,
+      "b": 0.4,
+      "r": 0.0,
+      "sizing_mean": 0.307,
+      "n": 10
+    },
+    "Regular|turn|rainbow+pair|none": {
+      "f": 0.0,
+      "x": 0.545,
+      "c": 0.0,
+      "b": 0.455,
+      "r": 0.0,
+      "sizing_mean": 1.301,
+      "n": 11
+    },
+    "Regular|turn|rainbow+pair|bet": {
+      "f": 0.5,
+      "x": 0.0,
+      "c": 0.25,
+      "b": 0.0,
+      "r": 0.25,
+      "sizing_mean": 0.243,
+      "n": 4
+    },
+    "Regular|river|rainbow+pair|bet": {
+      "f": 0.25,
+      "x": 0.0,
+      "c": 0.625,
+      "b": 0.0,
+      "r": 0.125,
+      "sizing_mean": 1.478,
+      "n": 8
+    },
+    "Regular|turn|rainbow+pair|barrel": {
+      "f": 0.4,
+      "x": 0.0,
+      "c": 0.6,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 5
+    },
+    "Loose-reg|preflop|-|bet": {
+      "f": 0.625,
+      "x": 0.0,
+      "c": 0.125,
+      "b": 0.0,
+      "r": 0.25,
+      "sizing_mean": 1.5,
+      "n": 8
+    },
+    "Regular|flop|two_tone+pair|cbet": {
+      "f": 0.375,
+      "x": 0.0,
+      "c": 0.5,
+      "b": 0.0,
+      "r": 0.125,
+      "sizing_mean": 1.708,
+      "n": 8
+    },
+    "Loose-passive|flop|monotone|bet": {
+      "f": 0.667,
+      "x": 0.0,
+      "c": 0.333,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 3
+    },
+    "Loose-passive|turn|rainbow|bet": {
+      "f": 1.0,
+      "x": 0.0,
+      "c": 0.0,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 5
+    },
+    "Loose-passive|turn|rainbow+pair|barrel": {
+      "f": 1.0,
+      "x": 0.0,
+      "c": 0.0,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 3
+    },
+    "Loose-passive|flop|rainbow|cbet": {
+      "f": 0.286,
+      "x": 0.0,
+      "c": 0.524,
+      "b": 0.0,
+      "r": 0.19,
+      "sizing_mean": 0.481,
+      "n": 21
+    },
+    "Regular|turn|two_tone|bet": {
+      "f": 0.353,
+      "x": 0.0,
+      "c": 0.412,
+      "b": 0.0,
+      "r": 0.235,
+      "sizing_mean": 0.773,
+      "n": 17
+    },
+    "Regular|turn|two_tone+pair|barrel": {
+      "f": 0.333,
+      "x": 0.0,
+      "c": 0.667,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 3
+    },
+    "Loose-passive|turn|two_tone+pair|barrel": {
+      "f": 0.714,
+      "x": 0.0,
+      "c": 0.286,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 7
+    },
+    "Loose-passive|turn|two_tone|raise": {
+      "f": 0.5,
+      "x": 0.0,
+      "c": 0.5,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 6
+    },
+    "Loose-passive|river|two_tone|bet": {
+      "f": 0.636,
+      "x": 0.0,
+      "c": 0.364,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 11
+    },
+    "Regular|river|two_tone+pair|raise": {
+      "f": 0.0,
+      "x": 0.0,
+      "c": 0.5,
+      "b": 0.0,
+      "r": 0.5,
+      "sizing_mean": 0.918,
+      "n": 4
+    },
+    "Loose-reg|preflop|-|none": {
+      "f": 0.667,
+      "x": 0.111,
+      "c": 0.0,
+      "b": 0.222,
+      "r": 0.0,
+      "sizing_mean": 1.0,
+      "n": 9
+    },
+    "LAG|turn|two_tone+pair|bet": {
+      "f": 0.333,
+      "x": 0.0,
+      "c": 0.667,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 3
+    },
+    "Loose-passive|flop|two_tone|raise": {
+      "f": 0.5,
+      "x": 0.0,
+      "c": 0.5,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 4
+    },
+    "Loose-passive|river|rainbow|bet": {
+      "f": 0.4,
+      "x": 0.0,
+      "c": 0.6,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 5
+    },
+    "Loose-passive|turn|rainbow|barrel": {
+      "f": 0.5,
+      "x": 0.0,
+      "c": 0.333,
+      "b": 0.0,
+      "r": 0.167,
+      "sizing_mean": 0.462,
+      "n": 6
+    },
+    "Loose-passive|flop|rainbow+pair|cbet": {
+      "f": 1.0,
+      "x": 0.0,
+      "c": 0.0,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 4
+    },
+    "Loose-passive|flop|two_tone+pair|bet": {
+      "f": 0.571,
+      "x": 0.0,
+      "c": 0.143,
+      "b": 0.0,
+      "r": 0.286,
+      "sizing_mean": 0.656,
+      "n": 7
+    },
+    "Loose-passive|flop|two_tone+pair|raise": {
+      "f": 0.6,
+      "x": 0.0,
+      "c": 0.4,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 5
+    },
+    "Loose-passive|flop|rainbow+pair|bet": {
+      "f": 0.667,
+      "x": 0.0,
+      "c": 0.333,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 3
+    }
+  },
+  "por_facing": {
+    "Regular|preflop|none": {
+      "f": 0.63,
+      "x": 0.073,
+      "c": 0.039,
+      "b": 0.225,
+      "r": 0.033,
+      "sizing_mean": 1.368,
+      "n": 668
+    },
+    "Loose-passive|preflop|bet": {
+      "f": 0.472,
+      "x": 0.047,
+      "c": 0.425,
+      "b": 0.009,
+      "r": 0.047,
+      "sizing_mean": 1.15,
+      "n": 214
+    },
+    "Regular|preflop|bet": {
+      "f": 0.724,
+      "x": 0.041,
+      "c": 0.157,
+      "b": 0.011,
+      "r": 0.066,
+      "sizing_mean": 3.446,
+      "n": 439
+    },
+    "LAG|preflop|bet": {
+      "f": 0.225,
+      "x": 0.025,
+      "c": 0.525,
+      "b": 0.05,
+      "r": 0.175,
+      "sizing_mean": 11.366,
+      "n": 40
+    },
+    "Passive-reg|preflop|bet": {
+      "f": 0.636,
+      "x": 0.091,
+      "c": 0.212,
+      "b": 0.03,
+      "r": 0.03,
+      "sizing_mean": 0.476,
+      "n": 33
+    },
+    "LAG|flop|none": {
+      "f": 0.019,
+      "x": 0.66,
+      "c": 0.0,
+      "b": 0.321,
+      "r": 0.0,
+      "sizing_mean": 1.36,
+      "n": 53
+    },
+    "Passive-reg|flop|none": {
+      "f": 0.0,
+      "x": 0.75,
+      "c": 0.0,
+      "b": 0.25,
+      "r": 0.0,
+      "sizing_mean": 2.833,
+      "n": 12
+    },
+    "Regular|flop|none": {
+      "f": 0.0,
+      "x": 0.697,
+      "c": 0.0,
+      "b": 0.303,
+      "r": 0.0,
+      "sizing_mean": 0.774,
+      "n": 238
+    },
+    "Loose-passive|flop|none": {
+      "f": 0.0,
+      "x": 0.682,
+      "c": 0.0,
+      "b": 0.312,
+      "r": 0.006,
+      "sizing_mean": 1.16,
+      "n": 176
+    },
+    "Regular|flop|bet": {
+      "f": 0.52,
+      "x": 0.0,
+      "c": 0.42,
+      "b": 0.0,
+      "r": 0.06,
+      "sizing_mean": 0.588,
+      "n": 50
+    },
+    "LAG|flop|bet": {
+      "f": 0.545,
+      "x": 0.0,
+      "c": 0.455,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 11
+    },
+    "Passive-reg|flop|bet": {
+      "f": 0.8,
+      "x": 0.0,
+      "c": 0.0,
+      "b": 0.0,
+      "r": 0.2,
+      "sizing_mean": 0.789,
+      "n": 5
+    },
+    "Regular|turn|none": {
+      "f": 0.0,
+      "x": 0.636,
+      "c": 0.0,
+      "b": 0.364,
+      "r": 0.0,
+      "sizing_mean": 0.797,
+      "n": 154
+    },
+    "Loose-passive|turn|none": {
+      "f": 0.009,
+      "x": 0.522,
+      "c": 0.0,
+      "b": 0.47,
+      "r": 0.0,
+      "sizing_mean": 0.48,
+      "n": 115
+    },
+    "Regular|river|none": {
+      "f": 0.0,
+      "x": 0.741,
+      "c": 0.0,
+      "b": 0.259,
+      "r": 0.0,
+      "sizing_mean": 0.989,
+      "n": 112
+    },
+    "Loose-passive|river|none": {
+      "f": 0.0,
+      "x": 0.521,
+      "c": 0.0,
+      "b": 0.479,
+      "r": 0.0,
+      "sizing_mean": 0.562,
+      "n": 71
+    },
+    "LAG|preflop|none": {
+      "f": 0.149,
+      "x": 0.043,
+      "c": 0.17,
+      "b": 0.404,
+      "r": 0.234,
+      "sizing_mean": 0.5,
+      "n": 47
+    },
+    "Passive-reg|preflop|none": {
+      "f": 0.462,
+      "x": 0.077,
+      "c": 0.385,
+      "b": 0.038,
+      "r": 0.038,
+      "sizing_mean": 0.0,
+      "n": 26
+    },
+    "Loose-passive|preflop|none": {
+      "f": 0.271,
+      "x": 0.06,
+      "c": 0.459,
+      "b": 0.102,
+      "r": 0.109,
+      "sizing_mean": 0.675,
+      "n": 266
+    },
+    "Loose-passive|flop|bet": {
+      "f": 0.609,
+      "x": 0.0,
+      "c": 0.304,
+      "b": 0.0,
+      "r": 0.087,
+      "sizing_mean": 0.641,
+      "n": 46
+    },
+    "Loose-passive|flop|cbet": {
+      "f": 0.412,
+      "x": 0.0,
+      "c": 0.431,
+      "b": 0.0,
+      "r": 0.157,
+      "sizing_mean": 0.877,
+      "n": 51
+    },
+    "LAG|flop|raise": {
+      "f": 0.4,
+      "x": 0.0,
+      "c": 0.6,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 5
+    },
+    "LAG|turn|none": {
+      "f": 0.0,
+      "x": 0.625,
+      "c": 0.0,
+      "b": 0.375,
+      "r": 0.0,
+      "sizing_mean": 0.526,
+      "n": 24
+    },
+    "LAG|turn|bet": {
+      "f": 0.562,
+      "x": 0.0,
+      "c": 0.438,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 16
+    },
+    "Loose-passive|turn|bet": {
+      "f": 0.543,
+      "x": 0.0,
+      "c": 0.4,
+      "b": 0.0,
+      "r": 0.057,
+      "sizing_mean": 1.229,
+      "n": 35
+    },
+    "LAG|river|none": {
+      "f": 0.0,
+      "x": 0.294,
+      "c": 0.0,
+      "b": 0.706,
+      "r": 0.0,
+      "sizing_mean": 0.533,
+      "n": 17
+    },
+    "Regular|river|bet": {
+      "f": 0.535,
+      "x": 0.0,
+      "c": 0.326,
+      "b": 0.0,
+      "r": 0.14,
+      "sizing_mean": 2.454,
+      "n": 43
+    },
+    "LAG|turn|barrel": {
+      "f": 0.333,
+      "x": 0.0,
+      "c": 0.333,
+      "b": 0.0,
+      "r": 0.333,
+      "sizing_mean": 0.344,
+      "n": 6
+    },
+    "Regular|turn|barrel": {
+      "f": 0.333,
+      "x": 0.0,
+      "c": 0.524,
+      "b": 0.0,
+      "r": 0.143,
+      "sizing_mean": 0.733,
+      "n": 21
+    },
+    "Loose-passive|turn|barrel": {
+      "f": 0.656,
+      "x": 0.0,
+      "c": 0.25,
+      "b": 0.0,
+      "r": 0.094,
+      "sizing_mean": 0.627,
+      "n": 32
+    },
+    "Passive-reg|river|none": {
+      "f": 0.0,
+      "x": 0.667,
+      "c": 0.0,
+      "b": 0.333,
+      "r": 0.0,
+      "sizing_mean": 0.5,
+      "n": 3
+    },
+    "Regular|preflop|raise": {
+      "f": 0.556,
+      "x": 0.048,
+      "c": 0.317,
+      "b": 0.0,
+      "r": 0.079,
+      "sizing_mean": 1.479,
+      "n": 63
+    },
+    "LAG|preflop|raise": {
+      "f": 0.158,
+      "x": 0.0,
+      "c": 0.842,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 19
+    },
+    "Passive-reg|preflop|raise": {
+      "f": 0.667,
+      "x": 0.0,
+      "c": 0.333,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 3
+    },
+    "Loose-passive|preflop|raise": {
+      "f": 0.429,
+      "x": 0.024,
+      "c": 0.5,
+      "b": 0.0,
+      "r": 0.048,
+      "sizing_mean": 1.6,
+      "n": 42
+    },
+    "Regular|turn|bet": {
+      "f": 0.366,
+      "x": 0.0,
+      "c": 0.488,
+      "b": 0.0,
+      "r": 0.146,
+      "sizing_mean": 0.626,
+      "n": 41
+    },
+    "LAG|flop|cbet": {
+      "f": 0.455,
+      "x": 0.0,
+      "c": 0.364,
+      "b": 0.0,
+      "r": 0.182,
+      "sizing_mean": 0.725,
+      "n": 11
+    },
+    "Loose-passive|flop|raise": {
+      "f": 0.5,
+      "x": 0.0,
+      "c": 0.5,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 12
+    },
+    "Regular|flop|raise": {
+      "f": 0.571,
+      "x": 0.0,
+      "c": 0.429,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 7
+    },
+    "Passive-reg|turn|none": {
+      "f": 0.0,
+      "x": 0.429,
+      "c": 0.0,
+      "b": 0.571,
+      "r": 0.0,
+      "sizing_mean": 1.107,
+      "n": 7
+    },
+    "Regular|flop|cbet": {
+      "f": 0.431,
+      "x": 0.0,
+      "c": 0.51,
+      "b": 0.0,
+      "r": 0.059,
+      "sizing_mean": 1.551,
+      "n": 51
+    },
+    "Loose-passive|river|bet": {
+      "f": 0.571,
+      "x": 0.0,
+      "c": 0.429,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 28
+    },
+    "LAG|turn|raise": {
+      "f": 0.0,
+      "x": 0.0,
+      "c": 1.0,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 3
+    },
+    "Regular|turn|raise": {
+      "f": 0.333,
+      "x": 0.0,
+      "c": 0.5,
+      "b": 0.0,
+      "r": 0.167,
+      "sizing_mean": 0.315,
+      "n": 6
+    },
+    "LAG|river|bet": {
+      "f": 0.625,
+      "x": 0.0,
+      "c": 0.375,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 8
+    },
+    "Loose-passive|turn|raise": {
+      "f": 0.429,
+      "x": 0.0,
+      "c": 0.429,
+      "b": 0.0,
+      "r": 0.143,
+      "sizing_mean": 0.507,
+      "n": 7
+    },
+    "Loose-reg|preflop|bet": {
+      "f": 0.625,
+      "x": 0.0,
+      "c": 0.125,
+      "b": 0.0,
+      "r": 0.25,
+      "sizing_mean": 1.5,
+      "n": 8
+    },
+    "Regular|river|raise": {
+      "f": 0.0,
+      "x": 0.0,
+      "c": 0.5,
+      "b": 0.0,
+      "r": 0.5,
+      "sizing_mean": 0.918,
+      "n": 4
+    },
+    "Loose-reg|preflop|none": {
+      "f": 0.667,
+      "x": 0.111,
+      "c": 0.0,
+      "b": 0.222,
+      "r": 0.0,
+      "sizing_mean": 1.0,
+      "n": 9
+    },
+    "Loose-reg|flop|none": {
+      "f": 0.0,
+      "x": 0.5,
+      "c": 0.0,
+      "b": 0.5,
+      "r": 0.0,
+      "sizing_mean": 0.286,
+      "n": 4
+    }
+  }
+}

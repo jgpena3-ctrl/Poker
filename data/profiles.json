@@ -1,0 +1,1200 @@
+{
+  "Andreayjeymi": {
+    "player": "Andreayjeymi",
+    "hero": false,
+    "n": 11,
+    "stats": {
+      "vpip": 0.9091,
+      "pfr": 0.6364,
+      "wtsd": 0.2727,
+      "f2cb": 1.0,
+      "cbet": 0.2,
+      "f2bar": 0.5,
+      "wsd": 0.3333,
+      "bar": 0.5,
+      "rb": 0.0,
+      "b3": 0.25
+    },
+    "bins": {
+      "vpip": "loose",
+      "pfr": "high",
+      "b3": "high",
+      "cbet": "low",
+      "wtsd": "mid"
+    },
+    "label": "LAG",
+    "confidence": 0.785,
+    "reliability": "probable"
+  },
+  "Andresyjeymi": {
+    "player": "Andresyjeymi",
+    "hero": false,
+    "n": 1,
+    "stats": {
+      "vpip": 1.0,
+      "pfr": 1.0,
+      "wtsd": 0.0,
+      "f2cb": 1.0
+    },
+    "bins": {
+      "vpip": "loose",
+      "pfr": "high",
+      "b3": "n/a",
+      "cbet": "n/a",
+      "wtsd": "mid"
+    },
+    "label": "LAG",
+    "confidence": 0.724,
+    "reliability": "probable"
+  },
+  "Arquejandro": {
+    "player": "Arquejandro",
+    "hero": false,
+    "n": 21,
+    "stats": {
+      "vpip": 0.381,
+      "pfr": 0.2381,
+      "wtsd": 0.0,
+      "cbet": 1.0,
+      "b3": 0.1667,
+      "bar": 1.0,
+      "rb": 1.0,
+      "c2cb": 1.0,
+      "f2cb": 1.0,
+      "b4": 0.0
+    },
+    "bins": {
+      "vpip": "mid",
+      "pfr": "mid",
+      "b3": "mid",
+      "cbet": "high",
+      "wtsd": "low"
+    },
+    "label": "Regular",
+    "confidence": 0.859,
+    "reliability": "probable"
+  },
+  "CCE": {
+    "player": "CCE",
+    "hero": false,
+    "n": 10,
+    "stats": {
+      "vpip": 0.7,
+      "pfr": 0.0,
+      "wtsd": 0.3,
+      "wsd": 0.0,
+      "c2cb": 1.0,
+      "f2bar": 0.5,
+      "b3": 0.0
+    },
+    "bins": {
+      "vpip": "loose",
+      "pfr": "low",
+      "b3": "mid",
+      "cbet": "n/a",
+      "wtsd": "mid"
+    },
+    "label": "Loose-passive",
+    "confidence": 0.657,
+    "reliability": "probable"
+  },
+  "ComboHunter": {
+    "player": "ComboHunter",
+    "hero": false,
+    "n": 30,
+    "stats": {
+      "vpip": 0.1667,
+      "pfr": 0.1333,
+      "b3": 0.0,
+      "wtsd": 0.1333,
+      "wsd": 1.0,
+      "cbet": 0.5,
+      "bar": 0.0,
+      "rb": 1.0
+    },
+    "bins": {
+      "vpip": "mid",
+      "pfr": "mid",
+      "b3": "mid",
+      "cbet": "mid",
+      "wtsd": "low"
+    },
+    "label": "Regular",
+    "confidence": 0.493,
+    "reliability": "probable"
+  },
+  "DominoSaurio": {
+    "player": "DominoSaurio",
+    "hero": false,
+    "n": 107,
+    "stats": {
+      "vpip": 0.1869,
+      "pfr": 0.1682,
+      "b3": 0.0682,
+      "wtsd": 0.0308,
+      "wsd": 0.5,
+      "cbet": 0.9,
+      "bar": 0.5,
+      "f2cb": 1.0,
+      "rb": 0.6667,
+      "c2cb": 1.0,
+      "b4": 0.0
+    },
+    "bins": {
+      "vpip": "mid",
+      "pfr": "mid",
+      "b3": "mid",
+      "cbet": "high",
+      "wtsd": "low"
+    },
+    "label": "Regular",
+    "confidence": 0.697,
+    "reliability": "confiable"
+  },
+  "Elyessi27": {
+    "player": "Elyessi27",
+    "hero": false,
+    "n": 82,
+    "stats": {
+      "vpip": 0.5366,
+      "pfr": 0.122,
+      "wtsd": 0.1129,
+      "b3": 0.0741,
+      "f2cb": 1.0,
+      "cbet": 0.8333,
+      "c2cb": 1.0,
+      "f2bar": 0.3846,
+      "bar": 0.9231,
+      "b4": 0.0,
+      "wsd": 0.2857,
+      "rb": 0.6,
+      "r2cb": 1.0
+    },
+    "bins": {
+      "vpip": "loose",
+      "pfr": "mid",
+      "b3": "mid",
+      "cbet": "high",
+      "wtsd": "low"
+    },
+    "label": "Loose-passive",
+    "confidence": 0.768,
+    "reliability": "confiable"
+  },
+  "Geilyn21": {
+    "player": "Geilyn21",
+    "hero": false,
+    "n": 23,
+    "stats": {
+      "vpip": 0.6087,
+      "pfr": 0.3913,
+      "b4": 0.0,
+      "wtsd": 0.1579,
+      "b3": 0.2727,
+      "c2cb": 1.0,
+      "wsd": 0.3333,
+      "r2cb": 1.0,
+      "bar": 1.0,
+      "rb": 1.0,
+      "f2bar": 0.6,
+      "f2cb": 1.0,
+      "cbet": 0.6667
+    },
+    "bins": {
+      "vpip": "loose",
+      "pfr": "high",
+      "b3": "mid",
+      "cbet": "mid",
+      "wtsd": "low"
+    },
+    "label": "LAG",
+    "confidence": 0.83,
+    "reliability": "probable"
+  },
+  "HERO": {
+    "player": "HERO",
+    "hero": false,
+    "n": 1,
+    "stats": {
+      "vpip": 1.0,
+      "pfr": 1.0,
+      "b3": 1.0,
+      "wtsd": 1.0,
+      "wsd": 0.0,
+      "cbet": 1.0,
+      "bar": 1.0,
+      "rb": 0.0
+    },
+    "bins": {
+      "vpip": "loose",
+      "pfr": "high",
+      "b3": "high",
+      "cbet": "high",
+      "wtsd": "high"
+    },
+    "label": "LAG",
+    "confidence": 0.857,
+    "reliability": "probable"
+  },
+  "Hachirama": {
+    "player": "Hachirama",
+    "hero": false,
+    "n": 42,
+    "stats": {
+      "vpip": 0.8333,
+      "pfr": 0.381,
+      "b3": 0.1875,
+      "wtsd": 0.0513,
+      "cbet": 0.4444,
+      "c2cb": 1.0,
+      "f2bar": 0.6667,
+      "b4": 0.0,
+      "r2cb": 1.0,
+      "bar": 0.0,
+      "rb": 0.6667,
+      "f2cb": 1.0,
+      "wsd": 0.5
+    },
+    "bins": {
+      "vpip": "loose",
+      "pfr": "high",
+      "b3": "mid",
+      "cbet": "mid",
+      "wtsd": "low"
+    },
+    "label": "LAG",
+    "confidence": 0.844,
+    "reliability": "confiable"
+  },
+  "Hellfish1": {
+    "player": "Hellfish1",
+    "hero": false,
+    "n": 42,
+    "stats": {
+      "vpip": 0.3095,
+      "pfr": 0.1667,
+      "wtsd": 0.125,
+      "wsd": 0.3333,
+      "cbet": 0.6667,
+      "b3": 0.0769,
+      "f2bar": 1.0,
+      "r2cb": 1.0,
+      "bar": 0.25,
+      "rb": 0.25,
+      "b4": 0.0,
+      "f2cb": 1.0
+    },
+    "bins": {
+      "vpip": "mid",
+      "pfr": "mid",
+      "b3": "mid",
+      "cbet": "mid",
+      "wtsd": "low"
+    },
+    "label": "Regular",
+    "confidence": 0.584,
+    "reliability": "confiable"
+  },
+  "Irene_giraldo": {
+    "player": "Irene_giraldo",
+    "hero": false,
+    "n": 84,
+    "stats": {
+      "vpip": 0.2619,
+      "pfr": 0.2262,
+      "wtsd": 0.0208,
+      "b3": 0.0909,
+      "f2cb": 1.0,
+      "b4": 0.0,
+      "bar": 0.8,
+      "cbet": 0.2857,
+      "f2bar": 1.0,
+      "wsd": 0.0,
+      "c2cb": 1.0
+    },
+    "bins": {
+      "vpip": "mid",
+      "pfr": "mid",
+      "b3": "mid",
+      "cbet": "low",
+      "wtsd": "low"
+    },
+    "label": "Regular",
+    "confidence": 0.786,
+    "reliability": "confiable"
+  },
+  "JHONCACH": {
+    "player": "JHONCACH",
+    "hero": false,
+    "n": 1,
+    "stats": {
+      "vpip": 1.0,
+      "pfr": 1.0,
+      "cbet": 1.0
+    },
+    "bins": {
+      "vpip": "loose",
+      "pfr": "high",
+      "b3": "n/a",
+      "cbet": "high",
+      "wtsd": "n/a"
+    },
+    "label": "LAG",
+    "confidence": 0.822,
+    "reliability": "probable"
+  },
+  "JHONCASH": {
+    "player": "JHONCASH",
+    "hero": false,
+    "n": 110,
+    "stats": {
+      "vpip": 0.2,
+      "pfr": 0.1636,
+      "b3": 0.0909,
+      "wtsd": 0.0938,
+      "f2bar": 0.5,
+      "f2cb": 1.0,
+      "cbet": 0.2222,
+      "bar": 0.2857,
+      "wsd": 0.8333,
+      "rb": 0.3333,
+      "b4": 0.0
+    },
+    "bins": {
+      "vpip": "mid",
+      "pfr": "mid",
+      "b3": "mid",
+      "cbet": "low",
+      "wtsd": "low"
+    },
+    "label": "Regular",
+    "confidence": 0.725,
+    "reliability": "confiable"
+  },
+  "Jarduan": {
+    "player": "Jarduan",
+    "hero": true,
+    "n": 323,
+    "stats": {
+      "vpip": 0.2601,
+      "pfr": 0.2105,
+      "cbet": 0.3784,
+      "b3": 0.0841,
+      "f2bar": 0.3529,
+      "b4": 0.1,
+      "bar": 0.6364,
+      "f2cb": 1.0,
+      "rb": 0.4118,
+      "c2cb": 1.0
+    },
+    "bins": {
+      "vpip": "mid",
+      "pfr": "mid",
+      "b3": "mid",
+      "cbet": "mid",
+      "wtsd": "n/a"
+    },
+    "label": "Regular",
+    "confidence": 0.755,
+    "reliability": "confiable"
+  },
+  "Jeffer30bog": {
+    "player": "Jeffer30bog",
+    "hero": false,
+    "n": 1,
+    "stats": {
+      "vpip": 0.0,
+      "pfr": 0.0,
+      "b3": 0.0,
+      "wtsd": 0.0
+    },
+    "bins": {
+      "vpip": "mid",
+      "pfr": "mid",
+      "b3": "high",
+      "cbet": "n/a",
+      "wtsd": "mid"
+    },
+    "label": "Loose-reg",
+    "confidence": 0.576,
+    "reliability": "probable"
+  },
+  "JhonvyB": {
+    "player": "JhonvyB",
+    "hero": false,
+    "n": 13,
+    "stats": {
+      "vpip": 0.8462,
+      "pfr": 0.1538,
+      "b3": 0.0,
+      "wtsd": 0.1667,
+      "wsd": 0.5,
+      "bar": 1.0,
+      "rb": 1.0,
+      "f2bar": 1.0,
+      "f2cb": 1.0,
+      "cbet": 1.0
+    },
+    "bins": {
+      "vpip": "loose",
+      "pfr": "mid",
+      "b3": "mid",
+      "cbet": "high",
+      "wtsd": "low"
+    },
+    "label": "Loose-passive",
+    "confidence": 0.668,
+    "reliability": "probable"
+  },
+  "Johan Otero": {
+    "player": "Johan Otero",
+    "hero": false,
+    "n": 50,
+    "stats": {
+      "vpip": 0.28,
+      "pfr": 0.2,
+      "b3": 0.1364,
+      "wtsd": 0.0938,
+      "b4": 0.3333,
+      "wsd": 0.6667,
+      "cbet": 0.75,
+      "bar": 0.5,
+      "rb": 0.0,
+      "f2cb": 1.0,
+      "f2bar": 1.0
+    },
+    "bins": {
+      "vpip": "mid",
+      "pfr": "mid",
+      "b3": "mid",
+      "cbet": "high",
+      "wtsd": "low"
+    },
+    "label": "Regular",
+    "confidence": 0.777,
+    "reliability": "confiable"
+  },
+  "JuanPApada": {
+    "player": "JuanPApada",
+    "hero": false,
+    "n": 12,
+    "stats": {
+      "vpip": 0.4167,
+      "pfr": 0.25,
+      "b3": 0.0,
+      "wtsd": 0.0,
+      "f2cb": 1.0,
+      "c2cb": 1.0,
+      "f2bar": 0.0,
+      "cbet": 1.0,
+      "bar": 0.0,
+      "rb": 0.0
+    },
+    "bins": {
+      "vpip": "mid",
+      "pfr": "mid",
+      "b3": "mid",
+      "cbet": "high",
+      "wtsd": "low"
+    },
+    "label": "Regular",
+    "confidence": 0.713,
+    "reliability": "probable"
+  },
+  "Juanfelipe1": {
+    "player": "Juanfelipe1",
+    "hero": false,
+    "n": 17,
+    "stats": {
+      "vpip": 0.2941,
+      "pfr": 0.2353,
+      "wtsd": 0.0909,
+      "cbet": 0.6667,
+      "b4": 0.0,
+      "b3": 0.2857,
+      "f2cb": 1.0,
+      "wsd": 1.0,
+      "c2cb": 1.0
+    },
+    "bins": {
+      "vpip": "mid",
+      "pfr": "mid",
+      "b3": "high",
+      "cbet": "mid",
+      "wtsd": "low"
+    },
+    "label": "Loose-reg",
+    "confidence": 0.688,
+    "reliability": "probable"
+  },
+  "Juanmabm": {
+    "player": "Juanmabm",
+    "hero": false,
+    "n": 54,
+    "stats": {
+      "vpip": 0.3519,
+      "pfr": 0.0556,
+      "b3": 0.0417,
+      "wtsd": 0.05,
+      "f2bar": 0.0,
+      "b4": 0.0,
+      "r2cb": 1.0,
+      "bar": 1.0,
+      "cbet": 1.0,
+      "wsd": 0.0
+    },
+    "bins": {
+      "vpip": "mid",
+      "pfr": "low",
+      "b3": "mid",
+      "cbet": "high",
+      "wtsd": "low"
+    },
+    "label": "Passive-reg",
+    "confidence": 0.672,
+    "reliability": "confiable"
+  },
+  "KappaxSlayer": {
+    "player": "KappaxSlayer",
+    "hero": false,
+    "n": 28,
+    "stats": {
+      "f2cb": 1.0,
+      "vpip": 0.6071,
+      "pfr": 0.1786,
+      "b3": 0.0,
+      "wtsd": 0.1667,
+      "f2bar": 0.4,
+      "cbet": 1.0,
+      "c2cb": 1.0,
+      "wsd": 0.5,
+      "bar": 0.8333,
+      "rb": 0.75,
+      "b4": 0.0
+    },
+    "bins": {
+      "vpip": "loose",
+      "pfr": "mid",
+      "b3": "mid",
+      "cbet": "high",
+      "wtsd": "low"
+    },
+    "label": "Loose-passive",
+    "confidence": 0.686,
+    "reliability": "probable"
+  },
+  "LaloMora": {
+    "player": "LaloMora",
+    "hero": false,
+    "n": 5,
+    "stats": {
+      "rb": 0.0,
+      "vpip": 0.4,
+      "pfr": 0.0,
+      "b3": 0.0,
+      "wtsd": 0.0,
+      "r2cb": 1.0,
+      "bar": 1.0,
+      "f2bar": 0.0
+    },
+    "bins": {
+      "vpip": "mid",
+      "pfr": "mid",
+      "b3": "mid",
+      "cbet": "n/a",
+      "wtsd": "low"
+    },
+    "label": "Regular",
+    "confidence": 0.638,
+    "reliability": "probable"
+  },
+  "Maicolp": {
+    "player": "Maicolp",
+    "hero": false,
+    "n": 69,
+    "stats": {
+      "vpip": 0.6377,
+      "pfr": 0.1739,
+      "wtsd": 0.1017,
+      "c2cb": 1.0,
+      "b4": 0.0,
+      "b3": 0.125,
+      "rb": 0.8,
+      "wsd": 0.8333,
+      "bar": 0.6667,
+      "f2bar": 0.6316,
+      "cbet": 0.0,
+      "r2cb": 1.0,
+      "f2cb": 1.0
+    },
+    "bins": {
+      "vpip": "loose",
+      "pfr": "mid",
+      "b3": "mid",
+      "cbet": "low",
+      "wtsd": "low"
+    },
+    "label": "Loose-passive",
+    "confidence": 0.817,
+    "reliability": "confiable"
+  },
+  "Mateo": {
+    "player": "Mateo",
+    "hero": false,
+    "n": 4,
+    "stats": {
+      "vpip": 0.5,
+      "pfr": 0.25,
+      "b3": 0.0,
+      "wtsd": 0.0
+    },
+    "bins": {
+      "vpip": "loose",
+      "pfr": "mid",
+      "b3": "high",
+      "cbet": "n/a",
+      "wtsd": "low"
+    },
+    "label": "Loose-passive",
+    "confidence": 0.768,
+    "reliability": "probable"
+  },
+  "Mauroparley": {
+    "player": "Mauroparley",
+    "hero": false,
+    "n": 29,
+    "stats": {
+      "vpip": 0.4828,
+      "pfr": 0.0,
+      "b3": 0.0,
+      "wtsd": 0.0952,
+      "f2bar": 0.5,
+      "b4": 0.0,
+      "wsd": 0.0,
+      "rb": 1.0
+    },
+    "bins": {
+      "vpip": "loose",
+      "pfr": "low",
+      "b3": "mid",
+      "cbet": "n/a",
+      "wtsd": "low"
+    },
+    "label": "Loose-passive",
+    "confidence": 0.807,
+    "reliability": "probable"
+  },
+  "MegustanLas...": {
+    "player": "MegustanLas...",
+    "hero": false,
+    "n": 30,
+    "stats": {
+      "vpip": 0.5,
+      "pfr": 0.0667,
+      "wtsd": 0.2917,
+      "b3": 0.0,
+      "wsd": 0.5714,
+      "c2cb": 1.0,
+      "bar": 1.0,
+      "rb": 0.3333,
+      "f2cb": 1.0,
+      "b4": 0.0,
+      "f2bar": 0.3333,
+      "cbet": 0.0
+    },
+    "bins": {
+      "vpip": "loose",
+      "pfr": "low",
+      "b3": "mid",
+      "cbet": "low",
+      "wtsd": "mid"
+    },
+    "label": "Loose-passive",
+    "confidence": 0.624,
+    "reliability": "probable"
+  },
+  "Mira90": {
+    "player": "Mira90",
+    "hero": false,
+    "n": 38,
+    "stats": {
+      "vpip": 0.4737,
+      "pfr": 0.2105,
+      "wtsd": 0.0741,
+      "f2bar": 0.8333,
+      "b4": 0.0,
+      "cbet": 0.4,
+      "bar": 0.3333,
+      "b3": 0.2,
+      "wsd": 0.5,
+      "r2cb": 1.0,
+      "rb": 0.0,
+      "f2cb": 1.0
+    },
+    "bins": {
+      "vpip": "loose",
+      "pfr": "mid",
+      "b3": "mid",
+      "cbet": "mid",
+      "wtsd": "low"
+    },
+    "label": "Loose-passive",
+    "confidence": 0.784,
+    "reliability": "probable"
+  },
+  "NESANVAR": {
+    "player": "NESANVAR",
+    "hero": false,
+    "n": 32,
+    "stats": {
+      "vpip": 0.875,
+      "pfr": 0.3438,
+      "b3": 0.2308,
+      "wtsd": 0.0323,
+      "wsd": 0.0,
+      "bar": 0.7143,
+      "rb": 0.25,
+      "r2cb": 1.0,
+      "f2bar": 0.5,
+      "f2cb": 1.0,
+      "cbet": 0.6,
+      "b4": 0.0
+    },
+    "bins": {
+      "vpip": "loose",
+      "pfr": "mid",
+      "b3": "mid",
+      "cbet": "mid",
+      "wtsd": "low"
+    },
+    "label": "Loose-passive",
+    "confidence": 0.845,
+    "reliability": "probable"
+  },
+  "Nnn1": {
+    "player": "Nnn1",
+    "hero": false,
+    "n": 2,
+    "stats": {
+      "vpip": 0.5,
+      "pfr": 0.0,
+      "wtsd": 0.0,
+      "f2cb": 1.0,
+      "b3": 0.0
+    },
+    "bins": {
+      "vpip": "loose",
+      "pfr": "mid",
+      "b3": "high",
+      "cbet": "n/a",
+      "wtsd": "mid"
+    },
+    "label": "Loose-passive",
+    "confidence": 0.665,
+    "reliability": "probable"
+  },
+  "P1": {
+    "player": "P1",
+    "hero": false,
+    "n": 1,
+    "stats": {
+      "vpip": 0.0,
+      "pfr": 0.0,
+      "b4": 0.0,
+      "wtsd": 0.0
+    },
+    "bins": {
+      "vpip": "mid",
+      "pfr": "mid",
+      "b3": "n/a",
+      "cbet": "n/a",
+      "wtsd": "mid"
+    },
+    "label": "Regular",
+    "confidence": 0.514,
+    "reliability": "probable"
+  },
+  "P3": {
+    "player": "P3",
+    "hero": false,
+    "n": 1,
+    "stats": {
+      "vpip": 0.0,
+      "pfr": 0.0
+    },
+    "bins": {
+      "vpip": "mid",
+      "pfr": "mid",
+      "b3": "n/a",
+      "cbet": "n/a",
+      "wtsd": "n/a"
+    },
+    "label": "Regular",
+    "confidence": 0.558,
+    "reliability": "probable"
+  },
+  "P4": {
+    "player": "P4",
+    "hero": false,
+    "n": 1,
+    "stats": {
+      "vpip": 1.0,
+      "pfr": 1.0,
+      "wtsd": 0.0
+    },
+    "bins": {
+      "vpip": "loose",
+      "pfr": "high",
+      "b3": "n/a",
+      "cbet": "n/a",
+      "wtsd": "mid"
+    },
+    "label": "LAG",
+    "confidence": 0.724,
+    "reliability": "probable"
+  },
+  "P5": {
+    "player": "P5",
+    "hero": false,
+    "n": 2,
+    "stats": {
+      "vpip": 1.0,
+      "pfr": 0.5,
+      "b3": 0.5,
+      "wtsd": 0.0,
+      "cbet": 1.0,
+      "bar": 1.0,
+      "f2bar": 0.0,
+      "c2cb": 1.0
+    },
+    "bins": {
+      "vpip": "loose",
+      "pfr": "high",
+      "b3": "high",
+      "cbet": "high",
+      "wtsd": "mid"
+    },
+    "label": "LAG",
+    "confidence": 0.795,
+    "reliability": "probable"
+  },
+  "Pipaaf182": {
+    "player": "Pipaaf182",
+    "hero": false,
+    "n": 22,
+    "stats": {
+      "vpip": 0.1818,
+      "pfr": 0.1818,
+      "b3": 0.1538,
+      "wtsd": 0.0,
+      "rb": 0.0,
+      "f2cb": 1.0,
+      "cbet": 0.0,
+      "b4": 0.0
+    },
+    "bins": {
+      "vpip": "mid",
+      "pfr": "mid",
+      "b3": "mid",
+      "cbet": "low",
+      "wtsd": "low"
+    },
+    "label": "Regular",
+    "confidence": 0.695,
+    "reliability": "probable"
+  },
+  "RMF99": {
+    "player": "RMF99",
+    "hero": false,
+    "n": 7,
+    "stats": {
+      "vpip": 0.7143,
+      "pfr": 0.0,
+      "b3": 0.0,
+      "wtsd": 0.0,
+      "f2bar": 1.0,
+      "c2cb": 1.0,
+      "bar": 1.0
+    },
+    "bins": {
+      "vpip": "loose",
+      "pfr": "mid",
+      "b3": "mid",
+      "cbet": "n/a",
+      "wtsd": "low"
+    },
+    "label": "Loose-passive",
+    "confidence": 0.72,
+    "reliability": "probable"
+  },
+  "Rolitoyerda": {
+    "player": "Rolitoyerda",
+    "hero": false,
+    "n": 49,
+    "stats": {
+      "vpip": 0.4898,
+      "pfr": 0.1633,
+      "b3": 0.0,
+      "wtsd": 0.1892,
+      "wsd": 0.7143,
+      "c2cb": 1.0,
+      "bar": 0.5,
+      "f2bar": 0.75,
+      "b4": 0.0,
+      "cbet": 0.0,
+      "rb": 1.0,
+      "f2cb": 1.0
+    },
+    "bins": {
+      "vpip": "loose",
+      "pfr": "mid",
+      "b3": "mid",
+      "cbet": "low",
+      "wtsd": "low"
+    },
+    "label": "Loose-passive",
+    "confidence": 0.714,
+    "reliability": "confiable"
+  },
+  "SAE_AAAA": {
+    "player": "SAE_AAAA",
+    "hero": false,
+    "n": 19,
+    "stats": {
+      "vpip": 0.5263,
+      "pfr": 0.3158,
+      "b3": 0.1667,
+      "wtsd": 0.0769,
+      "f2bar": 0.3333,
+      "cbet": 0.75,
+      "rb": 1.0,
+      "wsd": 1.0,
+      "bar": 1.0,
+      "c2cb": 1.0
+    },
+    "bins": {
+      "vpip": "loose",
+      "pfr": "mid",
+      "b3": "mid",
+      "cbet": "high",
+      "wtsd": "low"
+    },
+    "label": "Loose-passive",
+    "confidence": 0.858,
+    "reliability": "probable"
+  },
+  "SamPachero30": {
+    "player": "SamPachero30",
+    "hero": false,
+    "n": 39,
+    "stats": {
+      "vpip": 0.2564,
+      "pfr": 0.2564,
+      "b3": 0.0714,
+      "wtsd": 0.0833,
+      "wsd": 1.0,
+      "cbet": 0.5,
+      "bar": 0.75,
+      "f2bar": 0.25,
+      "c2cb": 1.0,
+      "rb": 0.5
+    },
+    "bins": {
+      "vpip": "mid",
+      "pfr": "mid",
+      "b3": "mid",
+      "cbet": "mid",
+      "wtsd": "low"
+    },
+    "label": "Regular",
+    "confidence": 0.675,
+    "reliability": "probable"
+  },
+  "Santiago ja": {
+    "player": "Santiago ja",
+    "hero": false,
+    "n": 15,
+    "stats": {
+      "vpip": 0.6667,
+      "pfr": 0.0667,
+      "wtsd": 0.3333,
+      "wsd": 0.25,
+      "b4": 0.0,
+      "r2cb": 1.0,
+      "bar": 0.0,
+      "rb": 0.6667,
+      "b3": 0.0,
+      "c2cb": 1.0
+    },
+    "bins": {
+      "vpip": "loose",
+      "pfr": "mid",
+      "b3": "mid",
+      "cbet": "n/a",
+      "wtsd": "mid"
+    },
+    "label": "Loose-passive",
+    "confidence": 0.596,
+    "reliability": "probable"
+  },
+  "Valentina22": {
+    "player": "Valentina22",
+    "hero": false,
+    "n": 3,
+    "stats": {
+      "vpip": 0.6667,
+      "pfr": 0.6667,
+      "wtsd": 0.5,
+      "c2cb": 1.0,
+      "f2bar": 0.0,
+      "wsd": 0.0
+    },
+    "bins": {
+      "vpip": "loose",
+      "pfr": "high",
+      "b3": "n/a",
+      "cbet": "n/a",
+      "wtsd": "mid"
+    },
+    "label": "LAG",
+    "confidence": 0.83,
+    "reliability": "probable"
+  },
+  "Zenin15": {
+    "player": "Zenin15",
+    "hero": false,
+    "n": 12,
+    "stats": {
+      "vpip": 0.25,
+      "pfr": 0.0833,
+      "b3": 0.0,
+      "wtsd": 0.2857,
+      "b4": 0.0,
+      "wsd": 0.0,
+      "rb": 1.0,
+      "cbet": 1.0
+    },
+    "bins": {
+      "vpip": "mid",
+      "pfr": "mid",
+      "b3": "mid",
+      "cbet": "high",
+      "wtsd": "mid"
+    },
+    "label": "Regular",
+    "confidence": 0.481,
+    "reliability": "probable"
+  },
+  "mur420": {
+    "player": "mur420",
+    "hero": false,
+    "n": 110,
+    "stats": {
+      "vpip": 0.3909,
+      "pfr": 0.1182,
+      "b3": 0.0909,
+      "wtsd": 0.169,
+      "wsd": 0.75,
+      "cbet": 0.4286,
+      "bar": 0.25,
+      "rb": 0.25,
+      "b4": 0.0,
+      "c2cb": 1.0,
+      "f2bar": 0.25,
+      "r2cb": 1.0,
+      "f2cb": 1.0
+    },
+    "bins": {
+      "vpip": "mid",
+      "pfr": "mid",
+      "b3": "mid",
+      "cbet": "mid",
+      "wtsd": "low"
+    },
+    "label": "Regular",
+    "confidence": 0.679,
+    "reliability": "confiable"
+  },
+  "oscar123": {
+    "player": "oscar123",
+    "hero": false,
+    "n": 86,
+    "stats": {
+      "vpip": 0.2907,
+      "pfr": 0.1977,
+      "b3": 0.0667,
+      "wtsd": 0.1273,
+      "f2bar": 1.0,
+      "b4": 0.0,
+      "wsd": 0.7143,
+      "cbet": 0.5556,
+      "bar": 0.3333,
+      "rb": 0.1667,
+      "c2cb": 1.0,
+      "f2cb": 1.0
+    },
+    "bins": {
+      "vpip": "mid",
+      "pfr": "mid",
+      "b3": "mid",
+      "cbet": "mid",
+      "wtsd": "low"
+    },
+    "label": "Regular",
+    "confidence": 0.621,
+    "reliability": "confiable"
+  },
+  "triki12": {
+    "player": "triki12",
+    "hero": false,
+    "n": 68,
+    "stats": {
+      "vpip": 0.1912,
+      "pfr": 0.1471,
+      "b3": 0.037,
+      "wtsd": 0.0732,
+      "wsd": 1.0,
+      "r2cb": 1.0,
+      "bar": 0.3333,
+      "rb": 0.0,
+      "cbet": 0.5,
+      "f2bar": 0.0
+    },
+    "bins": {
+      "vpip": "mid",
+      "pfr": "mid",
+      "b3": "mid",
+      "cbet": "mid",
+      "wtsd": "low"
+    },
+    "label": "Regular",
+    "confidence": 0.587,
+    "reliability": "confiable"
+  },
+  "trombosis2.0": {
+    "player": "trombosis2.0",
+    "hero": false,
+    "n": 7,
+    "stats": {
+      "vpip": 0.8571,
+      "pfr": 0.1429,
+      "wtsd": 0.2857,
+      "cbet": 0.0,
+      "b3": 0.0,
+      "wsd": 0.5,
+      "c2cb": 1.0,
+      "f2bar": 0.0,
+      "rb": 0.0
+    },
+    "bins": {
+      "vpip": "loose",
+      "pfr": "mid",
+      "b3": "mid",
+      "cbet": "low",
+      "wtsd": "mid"
+    },
+    "label": "Loose-passive",
+    "confidence": 0.612,
+    "reliability": "probable"
+  }
+}
