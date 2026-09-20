@@ -117,21 +117,23 @@ def test_build_villain_range_extra_cards():
 
 def test_deadline_param_accepted():
     fx = _fixture()
-    rec = recommend(**fx, deadline_s=0.05)
+    # El presupuesto diminuto solicita explícitamente el modo rápido sin
+    # simulación de runouts; la recomendación normal prioriza showdown equity.
+    rec = recommend(**fx, deadline_s=0.05, runout=False)
     assert 0 <= rec.stages['budget'] < 100  # deadline de 50 ms respetado
     assert rec.action  # recomendación siempre disponible
 
 
-def test_runout_flag_uses_mc_only_off_river():
+def test_runout_is_default_and_applies_to_every_action():
     fx = _fixture()  # flop JdJh vs OR UTG
     base = recommend(**fx)
-    assert base.runout is False
-    assert 'sorteo' not in base.text
-    with_run = recommend(**fx, runout=True)
-    assert with_run.runout is True
-    assert 'sorteo de turn+river' in with_run.text
-    # las ramas agresivas no cambian (siguen con equity determinista)
-    assert with_run.evs.ev['bet_50'] == pytest.approx(base.evs.ev['bet_50'])
+    assert base.runout is True
+    assert 'sorteo de turn+river' in base.text
+    fast = recommend(**fx, runout=False)
+    assert fast.runout is False
+    assert 'sorteo' not in fast.text
+    # La misma equity a showdown alimenta ramas pasivas y agresivas.
+    assert base.evs.ev['bet_50'] != pytest.approx(fast.evs.ev['bet_50'])
     # en river no hay sorteo: la marca no aparece y nada cambia
     fx_river = dict(fx, board_codes=['Qh', '7s', '2c', '9d', '5h'])
     rec_river = recommend(**fx_river, runout=True)

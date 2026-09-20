@@ -73,9 +73,12 @@ def test_ev_con_respuesta_perfil_coherente():
     resp = OracleResponse(oracle, 'LAG', ('flop', 'cbet', 'two_tone'))
     table = compute_evs(AH, DRY_BOARD, pot=100.0, stack=50.0,
                         response_fn=resp)
-    # con fold 100% el EV de cualquier bet = pot asegurado
-    for label in ('bet_25', 'bet_50', 'bet_75'):
-        assert table.ev[label] >= 99.0
+    # El perfil foldero aumenta los folds, pero no convierte cada combo en
+    # un fold automático: la fuerza individual sigue importando.
+    weak = resp([0.05], 50.0, 100.0)[0][0]
+    strong = resp([0.95], 50.0, 100.0)[0][0]
+    assert weak > strong
+    assert table.ev['bet_50'] > 0.0
 
 
 def test_response_firma_igual_que_default():

@@ -202,7 +202,7 @@ class DigitOCR:
 
         # Classify tiny components as dots
         for c in comps:
-            if c['w'] <= 4 and c['pixels'] <= 8:
+            if c['w'] <= 4 and c['pixels'] <= 8 and c['h'] <= c['w']:
                 c['dot'] = True
 
         # Merge adjacent split components (e.g. a '3' whose strokes are detached)
@@ -368,7 +368,7 @@ class DigitOCR:
         comps = self._split_dot_components(binary, comps)
 
         for c in comps:
-            if c['w'] <= 4 and c['pixels'] <= 8:
+            if c['w'] <= 4 and c['pixels'] <= 8 and c['h'] <= c['w']:
                 c['dot'] = True
 
         dot_comps = [c for c in comps if c['dot']]
@@ -415,7 +415,40 @@ class DigitOCR:
                 best_total = total
                 best_split = split_at
         if best_split is None:
-            return [comp]
+            # Fusion de TRES cifras (p.ej. '172'): intenta dos cortes a la vez.
+            best3 = None
+            cands = thin_candidates
+            for a in range(len(cands)):
+                for b in range(a + 1, len(cands)):
+                    j1, j2 = cands[a], cands[b]
+                    p1 = sub[:, :j1]
+                    p2 = sub[:, j1:j2]
+                    p3 = sub[:, j2:]
+                    if p1.sum() < 15 or p2.sum() < 15 or p3.sum() < 15:
+                        continue
+                    w1, w2, w3 = p1.shape[1], p2.shape[1], p3.shape[1]
+                    if w1 < 3 or w2 < 3 or w3 < 3:
+                        continue
+                    c1, s1 = self._best_match(p1, pool=pool)
+                    c2, s2 = self._best_match(p2, pool=pool)
+                    c3, s3 = self._best_match(p3, pool=pool)
+                    if c1 is None or c2 is None or c3 is None:
+                        continue
+                    total = s1 + s2 + s3
+                    if best3 is None or total > best3[0]:
+                        best3 = (total, j1, j2)
+            if best3 is None:
+                return [comp]
+            _, j1, j2 = best3
+            result = []
+            for start, end in [(0, j1), (j1, j2), (j2, w)]:
+                mask = sub[:, start:end]
+                result.append({'x1': comp['x1'] + start,
+                               'x2': comp['x1'] + end - 1,
+                               'w': end - start, 'h': comp['h'],
+                               'mask': mask, 'pixels': mask.sum(),
+                               'dot': False})
+            return result
         left_mask = sub[:, :best_split]
         right_mask = sub[:, best_split:]
         result = []
@@ -456,18 +489,23 @@ class DigitOCR:
                         # plausible si el glifo siguiente está pegado a 1-2 píxeles
                         # (p.ej. '2.'+ '5'); si hay hueco mayor, el trozo es parte
                         # del propio trazo de la cifra (p.ej. el serif del '4').
-                        edge_tight = j == w and next_x1 is not None and c['x1'] + j - 1 >= next_x1 - 3
+                        edge_tight = j == w and next_x1 is not None and \
+                            c['x1'] + j - 1 >= next_x1 - 3
                         if j < w or edge_tight:
                             run_seg = sub[:, i:j]
                             if run_seg.sum() >= 3:
                                 ys = np.where(run_seg)[0]
                                 if len(ys) > 0:
-                                    # Punto refundido con el trazo de la cifra: se acepta
-                                    # si arranca en la mitad inferior o la mayoría de sus
-                                    # píxeles están en la mitad inferior (p.ej. '12.1' donde
-                                    # el punto toca la cola del '2').
+                                    # Punto refundido con el trazo de la cifra: se
+                                    # acepta si arranca en la mitad inferior o la
+                                    # mayoría de sus píxeles están en la mitad
+                                    # inferior (p.ej. '12.1' con el punto pegado
+                                    # a la cola del '2').
                                     lo = int((ys >= h * 0.5).sum())
-                                    if ys.min() >= h * 0.5 or lo >= max(2, ys.size * 0.6):
+                                    spread = int(ys.max() - ys.min())
+                                    if ys.min() >= h * 0.5 or (
+                                            (edge_tight or spread <= 2) and
+                                            lo >= max(2, ys.size * 0.6)):
                                         splits.append((i, j))
                     i = j + 1
                 else:
@@ -522,9 +560,16 @@ class DigitOCR:
             # hueco de UNION de dos cifras fusionadas ('46', '12.1'...), no un
             # punto decimal real: los puntos reales solo se adhieren a un solo
             # glifo (p.ej. '2.') y nunca quedan interiores.
+            next_c = comps[idx + 1] if idx + 1 < len(comps) else None
             for k, piece in enumerate(pieces):
-                if piece['dot'] and k < len(pieces) - 1:
-                    piece['junction_dot'] = True
+                if piece['dot']:
+                    if k < len(pieces) - 1:
+                        piece['junction_dot'] = True
+                    elif next_c is not None and next_c['x1'] - piece['x2'] <= 0:
+                        # Punto final que SOLAPA con el glifo siguiente: es un
+                        # fragmento de union (p.ej. el serif del '4' pegado al
+                        # '7'), no un punto decimal real.
+                        piece['junction_dot'] = True
             result.extend(pieces)
         result.sort(key=lambda x: x['x1'])
         return result
@@ -616,6 +661,17 @@ class DigitOCR:
         if not comps:
             return None
 
+        # Trim a leading '$'-like symbol: grupo pegado al borde izquierdo del
+        # crop, seguido de un hueco de 4+ px antes del texto (los huecos entre
+        # cifras/puntos son de 1-3 px). El grupo debe terminar antes de x=12
+        # (una cifra real partida, p.ej. el '4' de '4.5', queda excluida).
+        if comps and comps[0]['x1'] == 0 and len(comps) >= 2:
+            for i in range(len(comps) - 1):
+                if comps[i + 1]['x1'] - comps[i]['x2'] - 1 >= 4:
+                    if comps[i]['x2'] < 12:
+                        del comps[:i + 1]
+                    break
+
         # The component-based BB trims below are only needed when gap detection
         # did NOT find a clear separation (unusual layout or dense text).
         if not gap_trimmed:
@@ -645,7 +701,7 @@ class DigitOCR:
         comps = self._split_dot_components(binary, comps)
 
         for c in comps:
-            if c['w'] <= 4 and c['pixels'] <= 8 and c['h'] <= c['w']:
+            if c['w'] <= 4 and c['pixels'] <= 8 and c['h'] <= 4:
                 c['dot'] = True
 
         # Split wide digit components at optimal junction
@@ -656,15 +712,17 @@ class DigitOCR:
                 expanded.append(c)
             else:
                 parts = self._split_wide_component(binary, c, pool=pool)
-                if len(parts) == 2:
-                    p0_ch, p0_sc = self._best_match(parts[0]['mask'], pool=pool)
-                    p1_ch, p1_sc = self._best_match(parts[1]['mask'], pool=pool)
-                    if p0_ch is not None and p1_ch is not None:
-                        w0_ok = any(abs(parts[0]['w'] - tw) <= 1 for tw in templates.get(p0_ch, {}))
-                        w1_ok = any(abs(parts[1]['w'] - tw) <= 1 for tw in templates.get(p1_ch, {}))
-                        if w0_ok and w1_ok:
-                            expanded.extend(parts)
-                            continue
+                if len(parts) >= 2:
+                    all_ok = True
+                    for part in parts:
+                        pch, _ = self._best_match(part['mask'], pool=pool)
+                        if pch is None or not any(abs(part['w'] - tw) <= 1
+                                                  for tw in templates.get(pch, {})):
+                            all_ok = False
+                            break
+                    if all_ok:
+                        expanded.extend(parts)
+                        continue
                 expanded.append(c)
         comps = expanded
 
@@ -734,32 +792,39 @@ class DigitOCR:
                                 segs_l = sum(1 for k in range(i, j + 1)
                                              if dig_items[k]['x2'] < abs_split)
                                 segs_r = (j - i + 1) - segs_l
-                                if segs_l >= 1 and segs_r >= 1:
-                                    total = cur_score + sc0 + sc1
-                                    if total > dp[j + 1][0]:
-                                        dp[j + 1] = (total, dp[i][1] +
-                                                     [(ch0, segs_l),
-                                                      (ch1, segs_r)])
+                            if segs_l >= 1 and segs_r >= 1:
+                                total = cur_score + sc0 + sc1
+                                if total > dp[j + 1][0]:
+                                    dp[j + 1] = (total, dp[i][1] +
+                                                 [(ch0, segs_l, sc0),
+                                                  (ch1, segs_r, sc1)])
                     continue
                 total = cur_score + sc
                 if total > dp[j + 1][0]:
-                    dp[j + 1] = (total, dp[i][1] + [(ch, j - i + 1)])
+                    dp[j + 1] = (total, dp[i][1] + [(ch, j - i + 1, sc)])
 
-        print('DBG dig_items:', [(c['x1'], c['x2'], c['w'], int(c['pixels'])) for c in dig_items])
-        print('DBG dot_items:', [(c['x1'], c['x2'], c['w'], int(c['pixels'])) for c in dot_items])
-        print('DBG dp:', [(i, round(v[0], 3), v[1]) for i, v in enumerate(dp)])
-        print('DBG best:', best)
         best = max(range(1, m + 1), key=lambda i: dp[i][0])
         if dp[best][0] == 0.0:
             return None
 
         chars_info = dp[best][1]
 
+        # Reject glyphs that are NOT real digits: the "apostar todo" all-in
+        # badge text sits inside the stack ROI and force-matches digit
+        # templates with much lower IOU than real numbers (medido: reales
+        # >= 0.61, badge <= 0.42). Stacks also never have 7 integer digits.
+        if any(sc < 0.50 for _ch, _n, sc in chars_info):
+            return None
+        if is_stack:
+            n_digits = sum(n for _ch, n, _sc in chars_info)
+            if n_digits > 6:
+                return None
+
         # Reject crops with significant unconsumed glyphs: text like
         # 'Apostar to...' has letters left unmatched after the digit path,
         # while real numbers consume all components.
         consumed = 0
-        for _ch, n_segs in chars_info:
+        for _ch, n_segs, _sc in chars_info:
             consumed += n_segs
         if consumed < len(dig_items):
             leftover = sum(int(binary[:, c['x1']:c['x2'] + 1].sum())
@@ -773,7 +838,7 @@ class DigitOCR:
         all_items = [(c['x1'], '.') for c in dot_items
                      if dig_x1 <= c['x1'] <= dig_x2]
         consumed = 0
-        for ch, n_segs in chars_info:
+        for ch, n_segs, _sc in chars_info:
             if consumed < len(dig_items):
                 all_items.append((dig_items[consumed]['x1'], ch))
                 consumed += n_segs

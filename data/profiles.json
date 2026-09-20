@@ -22,7 +22,9 @@
       "cbet": "low",
       "wtsd": "mid"
     },
-    "label": "LAG",
+    "label": "PEZ",
+    "subtype": "LAG",
+    "stack_mean": 39.07,
     "confidence": 0.785,
     "reliability": "probable"
   },
@@ -43,7 +45,9 @@
       "cbet": "n/a",
       "wtsd": "mid"
     },
-    "label": "LAG",
+    "label": "TIBURON",
+    "subtype": "LAG",
+    "stack_mean": 58.5,
     "confidence": 0.724,
     "reliability": "probable"
   },
@@ -70,7 +74,9 @@
       "cbet": "high",
       "wtsd": "low"
     },
-    "label": "Regular",
+    "label": "TIBURON",
+    "subtype": "Regular",
+    "stack_mean": 99.95,
     "confidence": 0.859,
     "reliability": "probable"
   },
@@ -94,7 +100,9 @@
       "cbet": "n/a",
       "wtsd": "mid"
     },
-    "label": "Loose-passive",
+    "label": "PEZ",
+    "subtype": "Loose-passive",
+    "stack_mean": 16.54,
     "confidence": 0.657,
     "reliability": "probable"
   },
@@ -119,8 +127,34 @@
       "cbet": "mid",
       "wtsd": "low"
     },
-    "label": "Regular",
+    "label": "TIBURON",
+    "subtype": "Regular",
+    "stack_mean": 101.52,
     "confidence": 0.493,
+    "reliability": "probable"
+  },
+  "Danjer": {
+    "player": "Danjer",
+    "hero": false,
+    "n": 3,
+    "stats": {
+      "vpip": 0.6667,
+      "pfr": 0.0,
+      "b3": 0.0,
+      "wtsd": 0.3333,
+      "wsd": 0.0
+    },
+    "bins": {
+      "vpip": "loose",
+      "pfr": "mid",
+      "b3": "high",
+      "cbet": "n/a",
+      "wtsd": "mid"
+    },
+    "label": "PEZ",
+    "subtype": "Loose-passive",
+    "stack_mean": 67.9,
+    "confidence": 0.629,
     "reliability": "probable"
   },
   "DominoSaurio": {
@@ -147,7 +181,9 @@
       "cbet": "high",
       "wtsd": "low"
     },
-    "label": "Regular",
+    "label": "TIBURON",
+    "subtype": "Regular",
+    "stack_mean": 80.82,
     "confidence": 0.697,
     "reliability": "confiable"
   },
@@ -177,7 +213,9 @@
       "cbet": "high",
       "wtsd": "low"
     },
-    "label": "Loose-passive",
+    "label": "TIBURON",
+    "subtype": "Loose-passive",
+    "stack_mean": 97.48,
     "confidence": 0.768,
     "reliability": "confiable"
   },
@@ -207,7 +245,9 @@
       "cbet": "mid",
       "wtsd": "low"
     },
-    "label": "LAG",
+    "label": "TIBURON",
+    "subtype": "LAG",
+    "stack_mean": 138.85,
     "confidence": 0.83,
     "reliability": "probable"
   },
@@ -232,7 +272,9 @@
       "cbet": "high",
       "wtsd": "high"
     },
-    "label": "LAG",
+    "label": "TIBURON",
+    "subtype": "LAG",
+    "stack_mean": 73.2,
     "confidence": 0.857,
     "reliability": "probable"
   },
@@ -262,7 +304,9 @@
       "cbet": "mid",
       "wtsd": "low"
     },
-    "label": "LAG",
+    "label": "TIBURON",
+    "subtype": "LAG",
+    "stack_mean": 60.66,
     "confidence": 0.844,
     "reliability": "confiable"
   },
@@ -291,9 +335,34 @@
       "cbet": "mid",
       "wtsd": "low"
     },
-    "label": "Regular",
+    "label": "PEZ",
+    "subtype": "Regular",
+    "stack_mean": 40.88,
     "confidence": 0.584,
     "reliability": "confiable"
+  },
+  "Hero": {
+    "player": "Hero",
+    "hero": false,
+    "n": 3,
+    "stats": {
+      "vpip": 0.3333,
+      "pfr": 0.0,
+      "b3": 0.0,
+      "wtsd": 0.0
+    },
+    "bins": {
+      "vpip": "mid",
+      "pfr": "mid",
+      "b3": "mid",
+      "cbet": "n/a",
+      "wtsd": "mid"
+    },
+    "label": "PEZ",
+    "subtype": "Regular",
+    "stack_mean": 21.0,
+    "confidence": 0.585,
+    "reliability": "probable"
   },
   "Irene_giraldo": {
     "player": "Irene_giraldo",
@@ -319,7 +388,9 @@
       "cbet": "low",
       "wtsd": "low"
     },
-    "label": "Regular",
+    "label": "TIBURON",
+    "subtype": "Regular",
+    "stack_mean": 111.44,
     "confidence": 0.786,
     "reliability": "confiable"
   },
@@ -339,7 +410,9 @@
       "cbet": "high",
       "wtsd": "n/a"
     },
-    "label": "LAG",
+    "label": "TIBURON",
+    "subtype": "LAG",
+    "stack_mean": 140.6,
     "confidence": 0.822,
     "reliability": "probable"
   },
@@ -367,20 +440,22 @@
       "cbet": "low",
       "wtsd": "low"
     },
-    "label": "Regular",
+    "label": "TIBURON",
+    "subtype": "Regular",
+    "stack_mean": 136.81,
     "confidence": 0.725,
     "reliability": "confiable"
   },
   "Jarduan": {
     "player": "Jarduan",
     "hero": true,
-    "n": 323,
+    "n": 332,
     "stats": {
-      "vpip": 0.2601,
-      "pfr": 0.2105,
+      "vpip": 0.2651,
+      "pfr": 0.2139,
       "cbet": 0.3784,
-      "b3": 0.0841,
-      "f2bar": 0.3529,
+      "b3": 0.0833,
+      "f2bar": 0.3429,
       "b4": 0.1,
       "bar": 0.6364,
       "f2cb": 1.0,
@@ -394,8 +469,10 @@
       "cbet": "mid",
       "wtsd": "n/a"
     },
-    "label": "Regular",
-    "confidence": 0.755,
+    "label": "TIBURON",
+    "subtype": "Regular",
+    "stack_mean": 127.19,
+    "confidence": 0.761,
     "reliability": "confiable"
   },
   "Jeffer30bog": {
@@ -415,7 +492,9 @@
       "cbet": "n/a",
       "wtsd": "mid"
     },
-    "label": "Loose-reg",
+    "label": "PEZ",
+    "subtype": "Loose-reg",
+    "stack_mean": 20.0,
     "confidence": 0.576,
     "reliability": "probable"
   },
@@ -442,7 +521,9 @@
       "cbet": "high",
       "wtsd": "low"
     },
-    "label": "Loose-passive",
+    "label": "PEZ",
+    "subtype": "Loose-passive",
+    "stack_mean": 26.98,
     "confidence": 0.668,
     "reliability": "probable"
   },
@@ -470,9 +551,38 @@
       "cbet": "high",
       "wtsd": "low"
     },
-    "label": "Regular",
+    "label": "TIBURON",
+    "subtype": "Regular",
+    "stack_mean": 92.12,
     "confidence": 0.777,
     "reliability": "confiable"
+  },
+  "JohanV.": {
+    "player": "JohanV.",
+    "hero": false,
+    "n": 9,
+    "stats": {
+      "vpip": 0.5556,
+      "pfr": 0.1111,
+      "wtsd": 0.25,
+      "wsd": 0.5,
+      "b3": 0.0,
+      "cbet": 0.0,
+      "bar": 0.5,
+      "rb": 0.5
+    },
+    "bins": {
+      "vpip": "loose",
+      "pfr": "mid",
+      "b3": "mid",
+      "cbet": "low",
+      "wtsd": "mid"
+    },
+    "label": "PEZ",
+    "subtype": "Loose-passive",
+    "stack_mean": 18.82,
+    "confidence": 0.598,
+    "reliability": "probable"
   },
   "JuanPApada": {
     "player": "JuanPApada",
@@ -497,7 +607,9 @@
       "cbet": "high",
       "wtsd": "low"
     },
-    "label": "Regular",
+    "label": "TIBURON",
+    "subtype": "Regular",
+    "stack_mean": 70.24,
     "confidence": 0.713,
     "reliability": "probable"
   },
@@ -523,7 +635,9 @@
       "cbet": "mid",
       "wtsd": "low"
     },
-    "label": "Loose-reg",
+    "label": "PEZ",
+    "subtype": "Loose-reg",
+    "stack_mean": 48.13,
     "confidence": 0.688,
     "reliability": "probable"
   },
@@ -550,7 +664,9 @@
       "cbet": "high",
       "wtsd": "low"
     },
-    "label": "Passive-reg",
+    "label": "PEZ",
+    "subtype": "Passive-reg",
+    "stack_mean": 61.51,
     "confidence": 0.672,
     "reliability": "confiable"
   },
@@ -579,7 +695,9 @@
       "cbet": "high",
       "wtsd": "low"
     },
-    "label": "Loose-passive",
+    "label": "PEZ",
+    "subtype": "Loose-passive",
+    "stack_mean": 22.97,
     "confidence": 0.686,
     "reliability": "probable"
   },
@@ -604,8 +722,37 @@
       "cbet": "n/a",
       "wtsd": "low"
     },
-    "label": "Regular",
+    "label": "PEZ",
+    "subtype": "Regular",
+    "stack_mean": 48.76,
     "confidence": 0.638,
+    "reliability": "probable"
+  },
+  "LolaMora": {
+    "player": "LolaMora",
+    "hero": false,
+    "n": 8,
+    "stats": {
+      "vpip": 0.625,
+      "pfr": 0.125,
+      "wtsd": 0.1667,
+      "wsd": 1.0,
+      "f2bar": 1.0,
+      "cbet": 0.0,
+      "bar": 1.0,
+      "rb": 0.0
+    },
+    "bins": {
+      "vpip": "loose",
+      "pfr": "mid",
+      "b3": "n/a",
+      "cbet": "low",
+      "wtsd": "mid"
+    },
+    "label": "TIBURON",
+    "subtype": "Loose-passive",
+    "stack_mean": 60.11,
+    "confidence": 0.643,
     "reliability": "probable"
   },
   "Maicolp": {
@@ -634,7 +781,9 @@
       "cbet": "low",
       "wtsd": "low"
     },
-    "label": "Loose-passive",
+    "label": "PEZ",
+    "subtype": "Loose-passive",
+    "stack_mean": 34.1,
     "confidence": 0.817,
     "reliability": "confiable"
   },
@@ -655,7 +804,9 @@
       "cbet": "n/a",
       "wtsd": "low"
     },
-    "label": "Loose-passive",
+    "label": "PEZ",
+    "subtype": "Loose-passive",
+    "stack_mean": 29.62,
     "confidence": 0.768,
     "reliability": "probable"
   },
@@ -680,7 +831,9 @@
       "cbet": "n/a",
       "wtsd": "low"
     },
-    "label": "Loose-passive",
+    "label": "PEZ",
+    "subtype": "Loose-passive",
+    "stack_mean": 49.69,
     "confidence": 0.807,
     "reliability": "probable"
   },
@@ -709,7 +862,9 @@
       "cbet": "low",
       "wtsd": "mid"
     },
-    "label": "Loose-passive",
+    "label": "PEZ",
+    "subtype": "Loose-passive",
+    "stack_mean": 29.82,
     "confidence": 0.624,
     "reliability": "probable"
   },
@@ -738,8 +893,35 @@
       "cbet": "mid",
       "wtsd": "low"
     },
-    "label": "Loose-passive",
+    "label": "PEZ",
+    "subtype": "Loose-passive",
+    "stack_mean": 19.66,
     "confidence": 0.784,
+    "reliability": "probable"
+  },
+  "Mur420": {
+    "player": "Mur420",
+    "hero": false,
+    "n": 2,
+    "stats": {
+      "vpip": 0.0,
+      "pfr": 0.0,
+      "wtsd": 0.5,
+      "wsd": 0.0,
+      "f2bar": 0.0,
+      "b3": 0.0
+    },
+    "bins": {
+      "vpip": "mid",
+      "pfr": "mid",
+      "b3": "high",
+      "cbet": "n/a",
+      "wtsd": "mid"
+    },
+    "label": "PEZ",
+    "subtype": "Loose-reg",
+    "stack_mean": 18.5,
+    "confidence": 0.6,
     "reliability": "probable"
   },
   "NESANVAR": {
@@ -767,7 +949,9 @@
       "cbet": "mid",
       "wtsd": "low"
     },
-    "label": "Loose-passive",
+    "label": "TIBURON",
+    "subtype": "Loose-passive",
+    "stack_mean": 63.86,
     "confidence": 0.845,
     "reliability": "probable"
   },
@@ -789,7 +973,9 @@
       "cbet": "n/a",
       "wtsd": "mid"
     },
-    "label": "Loose-passive",
+    "label": "PEZ",
+    "subtype": "Loose-passive",
+    "stack_mean": 100.0,
     "confidence": 0.665,
     "reliability": "probable"
   },
@@ -810,7 +996,9 @@
       "cbet": "n/a",
       "wtsd": "mid"
     },
-    "label": "Regular",
+    "label": "PEZ",
+    "subtype": "Regular",
+    "stack_mean": 34.05,
     "confidence": 0.514,
     "reliability": "probable"
   },
@@ -829,7 +1017,9 @@
       "cbet": "n/a",
       "wtsd": "n/a"
     },
-    "label": "Regular",
+    "label": "TIBURON",
+    "subtype": "Regular",
+    "stack_mean": 95.1,
     "confidence": 0.558,
     "reliability": "probable"
   },
@@ -849,7 +1039,9 @@
       "cbet": "n/a",
       "wtsd": "mid"
     },
-    "label": "LAG",
+    "label": "TIBURON",
+    "subtype": "LAG",
+    "stack_mean": 143.7,
     "confidence": 0.724,
     "reliability": "probable"
   },
@@ -874,7 +1066,9 @@
       "cbet": "high",
       "wtsd": "mid"
     },
-    "label": "LAG",
+    "label": "PEZ",
+    "subtype": "LAG",
+    "stack_mean": 49.27,
     "confidence": 0.795,
     "reliability": "probable"
   },
@@ -899,8 +1093,125 @@
       "cbet": "low",
       "wtsd": "low"
     },
-    "label": "Regular",
+    "label": "TIBURON",
+    "subtype": "Regular",
+    "stack_mean": 110.47,
     "confidence": 0.695,
+    "reliability": "probable"
+  },
+  "Player1": {
+    "player": "Player1",
+    "hero": false,
+    "n": 3,
+    "stats": {
+      "vpip": 0.3333,
+      "pfr": 0.3333,
+      "cbet": 0.0,
+      "b3": 0.0,
+      "wtsd": 0.0
+    },
+    "bins": {
+      "vpip": "mid",
+      "pfr": "high",
+      "b3": "mid",
+      "cbet": "low",
+      "wtsd": "mid"
+    },
+    "label": "PEZ",
+    "subtype": "Regular",
+    "stack_mean": 30.0,
+    "confidence": 0.676,
+    "reliability": "probable"
+  },
+  "Player2": {
+    "player": "Player2",
+    "hero": false,
+    "n": 2,
+    "stats": {
+      "vpip": 0.0,
+      "pfr": 0.0,
+      "b3": 0.0,
+      "wtsd": 0.0
+    },
+    "bins": {
+      "vpip": "mid",
+      "pfr": "mid",
+      "b3": "mid",
+      "cbet": "n/a",
+      "wtsd": "mid"
+    },
+    "label": "PEZ",
+    "subtype": "Regular",
+    "stack_mean": 20.5,
+    "confidence": 0.568,
+    "reliability": "probable"
+  },
+  "Player3": {
+    "player": "Player3",
+    "hero": false,
+    "n": 2,
+    "stats": {
+      "vpip": 1.0,
+      "pfr": 1.0,
+      "wtsd": 0.0
+    },
+    "bins": {
+      "vpip": "loose",
+      "pfr": "high",
+      "b3": "n/a",
+      "cbet": "n/a",
+      "wtsd": "mid"
+    },
+    "label": "PEZ",
+    "subtype": "LAG",
+    "stack_mean": 21.0,
+    "confidence": 0.822,
+    "reliability": "probable"
+  },
+  "Player4": {
+    "player": "Player4",
+    "hero": false,
+    "n": 2,
+    "stats": {
+      "vpip": 0.0,
+      "pfr": 0.0,
+      "b3": 0.0,
+      "wtsd": 0.0
+    },
+    "bins": {
+      "vpip": "mid",
+      "pfr": "mid",
+      "b3": "mid",
+      "cbet": "n/a",
+      "wtsd": "mid"
+    },
+    "label": "PEZ",
+    "subtype": "Regular",
+    "stack_mean": 20.0,
+    "confidence": 0.568,
+    "reliability": "probable"
+  },
+  "Player5": {
+    "player": "Player5",
+    "hero": false,
+    "n": 2,
+    "stats": {
+      "vpip": 0.0,
+      "pfr": 0.0,
+      "b3": 0.0,
+      "wtsd": 0.0
+    },
+    "bins": {
+      "vpip": "mid",
+      "pfr": "mid",
+      "b3": "mid",
+      "cbet": "n/a",
+      "wtsd": "mid"
+    },
+    "label": "PEZ",
+    "subtype": "Regular",
+    "stack_mean": 20.0,
+    "confidence": 0.568,
     "reliability": "probable"
   },
   "RMF99": {
@@ -923,7 +1234,9 @@
       "cbet": "n/a",
       "wtsd": "low"
     },
-    "label": "Loose-passive",
+    "label": "PEZ",
+    "subtype": "Loose-passive",
+    "stack_mean": 21.6,
     "confidence": 0.72,
     "reliability": "probable"
   },
@@ -952,7 +1265,9 @@
       "cbet": "low",
       "wtsd": "low"
     },
-    "label": "Loose-passive",
+    "label": "PEZ",
+    "subtype": "Loose-passive",
+    "stack_mean": 20.85,
     "confidence": 0.714,
     "reliability": "confiable"
   },
@@ -979,7 +1294,9 @@
       "cbet": "high",
       "wtsd": "low"
     },
-    "label": "Loose-passive",
+    "label": "TIBURON",
+    "subtype": "Loose-passive",
+    "stack_mean": 108.78,
     "confidence": 0.858,
     "reliability": "probable"
   },
@@ -1006,7 +1323,9 @@
       "cbet": "mid",
       "wtsd": "low"
     },
-    "label": "Regular",
+    "label": "TIBURON",
+    "subtype": "Regular",
+    "stack_mean": 119.12,
     "confidence": 0.675,
     "reliability": "probable"
   },
@@ -1033,7 +1352,9 @@
       "cbet": "n/a",
       "wtsd": "mid"
     },
-    "label": "Loose-passive",
+    "label": "PEZ",
+    "subtype": "Loose-passive",
+    "stack_mean": 26.65,
     "confidence": 0.596,
     "reliability": "probable"
   },
@@ -1056,7 +1377,9 @@
       "cbet": "n/a",
       "wtsd": "mid"
     },
-    "label": "LAG",
+    "label": "TIBURON",
+    "subtype": "LAG",
+    "stack_mean": 50.3,
     "confidence": 0.83,
     "reliability": "probable"
   },
@@ -1081,7 +1404,9 @@
       "cbet": "high",
       "wtsd": "mid"
     },
-    "label": "Regular",
+    "label": "PEZ",
+    "subtype": "Regular",
+    "stack_mean": 26.17,
     "confidence": 0.481,
     "reliability": "probable"
   },
@@ -1111,7 +1436,9 @@
       "cbet": "mid",
       "wtsd": "low"
     },
-    "label": "Regular",
+    "label": "PEZ",
+    "subtype": "Regular",
+    "stack_mean": 49.91,
     "confidence": 0.679,
     "reliability": "confiable"
   },
@@ -1140,7 +1467,9 @@
       "cbet": "mid",
       "wtsd": "low"
     },
-    "label": "Regular",
+    "label": "TIBURON",
+    "subtype": "Regular",
+    "stack_mean": 134.49,
     "confidence": 0.621,
     "reliability": "confiable"
   },
@@ -1167,7 +1496,9 @@
       "cbet": "mid",
       "wtsd": "low"
     },
-    "label": "Regular",
+    "label": "TIBURON",
+    "subtype": "Regular",
+    "stack_mean": 142.73,
     "confidence": 0.587,
     "reliability": "confiable"
   },
@@ -1193,7 +1524,9 @@
       "cbet": "low",
       "wtsd": "mid"
     },
-    "label": "Loose-passive",
+    "label": "PEZ",
+    "subtype": "Loose-passive",
+    "stack_mean": 29.96,
     "confidence": 0.612,
     "reliability": "probable"
   }

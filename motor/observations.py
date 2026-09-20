@@ -12,8 +12,9 @@ Reglas:
 - `sizing` (b/r) = amount / pot_before (fracción del bote).
 - `stack_effective` = stack inicial − lo ya aportado por el jugador.
 - `facing` describe lo que ve el jugador: 'none' (sin apuesta vigente) o el
-  label de la apuesta/raise vigente ('cbet' si el apostador es el iniador
-  preflop en flop, 'barrel' en turn, 'bet' si es otro agresor, 'raise').
+  label de la apuesta/raise vigente ('cbet' si el apostador es el iniciador
+  preflop en flop, 'barrel' en turn, 'donk' si otro agresor en bote subido en
+  flop/turn, 'bet' si es otro agresor en river/limpeado, 'raise').
 - `hand_known` = tiene cartas registradas (incluye hero).
 """
 import json
@@ -84,6 +85,27 @@ def _seq(hand, street) -> List[Tuple[str, str, float]]:
     return out
 
 
+def lead_label(street: str, leader: str, pf_initiator: str,
+               pot_raised: bool) -> str:
+    """Label de un lead (primera apuesta/subida de la calle).
+
+    Fuente de verdad ÚNICA para el etiquetado de leads: lo usa el
+    entrenamiento (observations) y el servicio (asistente._villain_postflop)
+    para que ambas vías caigan en las mismas celdas (evita el skew).
+
+    - flop/turn del INICIADOR preflop en bote subido → 'cbet' / 'barrel'.
+    - flop/turn del NO iniciador en bote subido → 'donk'.
+    - resto (river, bote limpeado, preflop) → 'bet'.
+    """
+    if street == 'flop' and leader == pf_initiator:
+        return 'cbet'
+    if street == 'turn' and leader == pf_initiator:
+        return 'barrel'
+    if street in ('flop', 'turn') and pot_raised:
+        return 'donk'
+    return 'bet'
+
+
 def extract_hand(hand) -> List[Observation]:
     name_of = {p.get('pos'): (p.get('name') or p.get('pos'))
                for p in hand.get('players', [])}
@@ -134,11 +156,8 @@ def extract_hand(hand) -> List[Observation]:
                 facing = 'none'
             if act in RAISE_ACTS:
                 street_facing = ('raise' if street_facing else
-                                 'cbet' if (street == 'flop'
-                                            and pos == pf_initiator)
-                                 else 'barrel' if (street == 'turn'
-                                                   and pos == pf_initiator)
-                                 else 'bet')
+                                 lead_label(street, pos, pf_initiator,
+                                            pf_raises >= 1))
             sizing = None
             if act in RAISE_ACTS and pot_before > 0:
                 sizing = amt / pot_before

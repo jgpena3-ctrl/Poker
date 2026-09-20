@@ -60,8 +60,14 @@ def format_situation(sit: Situation) -> str:
 
 def format_insight(sit: Situation, evs: EvTable,
                    villain_label: str = 'rango',
-                   runout: bool = False) -> str:
-    """Panel completo: situación + tabla de EV + recomendación."""
+                   runout: bool = False,
+                   plan=None) -> str:
+    """Panel completo: situación + tabla de EV + recomendación.
+
+    `plan` (opcional): `RulePlan` de rules.py — añade la línea de la regla
+    postflop aplicada (pegar.txt §22) para que la recomendación sea
+    explicable (§21).
+    """
     best_label, best_value = evs.best()
     head = f'== {format_cards(sit.hero_codes)} | {sit.street} | {sit.position or "-"}'
     rule = '=' * max(len(head), 30)
@@ -71,9 +77,11 @@ def format_insight(sit: Situation, evs: EvTable,
         format_situation(sit),
         f'  Rival: {villain_label or "unformatted"}',
     ]
+    if plan is not None:
+        lines.append(f'  Regla: {plan.note or f"spot {plan.spot}"}')
     if runout and len(sit.board_codes) < 5:
-        lines.append('  Ramas pasivas: equity a showdown con sorteo de '
-                     'turn+river (MVP 2 parcial)')
+        lines.append('  Equity a showdown: sorteo de turn+river aplicado a '
+                     'todas las acciones')
     lines += [
         f'-> Mejor accion: {best_label}  (+{best_value:.2f} BB)',
         format_evs(evs, best_label),

@@ -79,7 +79,8 @@ def test_barrel_en_turn_con_otro_agresor():
     obs = [o for o in extract_hand(hand) if o.street == 'turn']
     assert obs[0].facing == 'none'           # BB lidera: no hay apuesta aún
     assert obs[0].sizing == 3.0 / 4.0
-    assert obs[1].facing == 'bet'
+    assert obs[1].facing == 'donk'           # BTN agresor preflop ve DONK del
+    #                                           no-iniciador (bote subido)
     assert obs[1].sizing is None             # el call no tiene sizing
 
 

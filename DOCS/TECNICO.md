@@ -4,8 +4,10 @@ Documento técnico de estado: qué hay, cómo funciona, qué genera y cómo se
 prueba. Complementa a `DOCS/ARQUITECTURA.md` (diseño) y
 `DOCS/APRENDIZAJE.md` (spec del pipeline de aprendizaje).
 
-Estado: **172 tests verdes** (`python -m pytest motor -q`, ~5 s).
-Datos reales: 327 manos válidas en `data/hands_db.jsonl`.
+Estado: **232 tests verdes + 2 fallos preexistentes** (`python -m pytest motor -q`,
+~16 s). Los 2 fallos son de `test_decision.py` (MC runout / árbol MVP2) y existen
+desde antes de los perfiles 2-clase (verificado con `git stash`).
+Datos reales: 339 manos válidas en `data/hands_db.jsonl`.
 
 ---
 
@@ -28,7 +30,12 @@ C:\Users\Usuario\Documents\Repos\Poker\
 │   ├── observations.py   # DecisionObservation por decisión/calle (§4)
 │   ├── behavior.py       # behavior tables por perfil + Oracle P(A|C)
 │   ├── player_ranges.py  # P(A|H, spot, perfil) preflop → RangeState (§3.7)
-│   └── test_*.py         # 13 archivos de tests
+│   ├── postflop_ranges.py# P(A|H) postflop por buckets + Oracle (§3.8)
+│   ├── asistente_live.py # bucle en vivo: captura + recomendación + registro (§3.9)
+│   ├── asistente_live_gui.py # interfaz gráfica: nombres, auto/manual, topmost (§3.10)
+│   └── test_*.py         # 14 archivos de tests
+├── recorder\            # LiveRecorder + record_hand (registro de manos reales)
+├── tools\              # capture_live, lector_estado, lector_unificado, leer_captura
 ├── data\                 # entradas, salidas y artefactos (ver §4)
 └── DOCS\                 # ARQUITECTURA.md, APRENDIZAJE.md, TECNICO.md
 ```
@@ -60,7 +67,7 @@ stats de transición → perfiles → observaciones postflop → behavior tables
 Oracle (P(A|C) por perfil) → respuesta perfilada en el EV.
 
 ```text
-hands_db.jsonl (327 manos)
+hands_db.jsonl (339 manos)
       │  load_hands()  [valida players+streets, sin duplicados,
       │                 descarta manos sin preflop; conserva la raras marcadas]
       ▼
@@ -71,6 +78,7 @@ stats.py         VPIP/PFR/3BET/4BET/CBET/F2CB/barrel/WTSD/W$SD (denominadores re
    └─ data/player_stats.json
       ▼
 profile.py       posterior Beta por stat → buckets → etiqueta + confianza + ω
+   │              ahora 2-clase: label PEZ/TIBURON (stack medio < 50 BB) + subtype fino
    └─ data/profiles.json
       ▼
 observations.py  UNA obs por decisión y calle (street, pot, SPR, textura, facing, sizing)
@@ -78,7 +86,7 @@ observations.py  UNA obs por decisión y calle (street, pot, SPR, textura, facin
       ▼
 behavior.py      frecuencias por (perfil, street, textura, facing) [granular]
                  + (perfil, street, facing) [por_facing, más volumen]
-└─ data/behavior.json + data/behavior_probs.json
+└─ data/behavior.json + data/behavior_probs.json      [regenerado con PEZ/TIBURON]
        ▼
 Oracle           P(A|C) con fallbacks: granular → por_facing → perfil → población
        ▼
@@ -87,7 +95,7 @@ OracleResponse   (pf, pc, pr) → compute_evs con rival perfilado
 postflop_ranges  P(A|H) postflop: buckets de fuerza (5) de cada combo sobre el
                  board + evidencia de mano conocida (street, facing, bucket),
                  shrinkage al prior del Oracle
-   └─ data/postflop_ranges.json
+   └─ data/postflop_ranges.json   [regenerado con PEZ/TIBURON]
        ▼
 recommend_loop   villain.update(prob_vec(P(A|H))) con villain_postflop
 ```
@@ -135,6 +143,14 @@ recommend_loop   villain.update(prob_vec(P(A|H))) con villain_postflop
 - Resultados reales: Jarduan → **Regular** (conf 76 %, confiable),
   NESANVAR → **LAG** (32 manos: probable), Elyessi27 → **Loose-passive**
   (77 %), mur420 → **Regular** 68 %.
+- **Clasificación 2-clase (PEZ/TIBURON, decisión del usuario):** `Profiles`
+  ahora etiqueta cada jugador con `label` = **PEZ** o **TIBURON** además del
+  `subtype` fino histórico. Regla (`simple_label`): stack medio (`stack_mean` =
+  media de `players[].stack` en hands_db) **< 50 BB → PEZ**; sin stack y a la
+  vez `vpip > 0.32` y `pfr < 0.10` → PEZ; el resto → TIBURON. `STACK_FISH_BB
+  = 50.0` en `profile.py`. Con 339 manos: **32 PEZ / 24 TIBURON** y los stacks
+  separan naturalmente en ~50 BB — la regla del usuario coincide con los datos.
+- `to_dict()` y `report()` incluyen `label`, `subtype` y `stack_mean`.
 - CLI: `python -m motor.profile --json` → `data/profiles.json`.
 
 ### 3.4 observations.py — observaciones (§4)
@@ -184,8 +200,10 @@ recommend_loop   villain.update(prob_vec(P(A|H))) con villain_postflop
   alpha 0,2).
 
 ### 3.7 player_ranges.py — P(A|H, spot, perfil) + ajuste individual (pegar6)
-- **Rango por PERFIL (no por jugador)**: con 327 manos la muestra por
-  jugador es mínima; el grid se agrega por perfil (etiqueta de profile.py).
+- **Rango por PERFIL (no por jugador)**: con 339 manos la muestra por
+  jugador es mínima; el grid se agrega por perfil. Desde esta iteración el
+  perfil es la **etiqueta 2-clase `label` (PEZ/TIBURON**, §3.3), no el
+  `subtype` fino — `data/profile_ranges.json` quedó regenerado con 2 claves.
 - Solo usa **manos conocidas** (`hand_known` y cartas): ~1.043 decisiones
   preflop de la DB (los eventos sin cartas quedan fuera; regla §3.1).
 - Por (perfil, spot) se acumula `opp` (todas las primeras decisiones con
@@ -225,12 +243,12 @@ recommend_loop   villain.update(prob_vec(P(A|H))) con villain_postflop
   no_raise) → +11.08 vs Mauroparley (ω<1 en no_raise).
 
 ### 3.8 postflop_ranges.py — P(A|H) postflop, buckets de fuerza + Oracle (pegar6, paso 3)
-- **P(A|H, street, facing, perfil)** con la mano conocida: la muestra por
-  (perfil, street, facing) es chica en postflop (327 manos → 1.043
-  decisiones con cartas, repartidas), así que la fuerza se **cuantiza en
-  5 buckets** por board (percentiles del score de `hand_evaluator` sobre
-  los 1128 combos legales; incompatibles con el board → bucket 0, los
-  descarta el `RangeState`).
+- **P(A|H, street, facing, perfil)** con la mano conocida (perfil = `label`
+  PEZ/TIBURON, §3.3): la muestra por (perfil, street, facing) es chica en
+  postflop (339 manos → ~1.043 decisiones con cartas, repartidas), así que la
+  fuerza se **cuantiza en 5 buckets** por board (percentiles del score de
+  `hand_evaluator` sobre los 1128 combos legales; incompatibles con el board →
+  bucket 0, los descarta el `RangeState`).
 - El bucket de una mano se busca por máscara de AMBAS cartas
   (`(HAND_MASKS & bit0) & (HAND_MASKS & bit1)`; un solo bit matchea 101
   combos — lección §6).
@@ -266,21 +284,99 @@ recommend_loop   villain.update(prob_vec(P(A|H))) con villain_postflop
 - CLI: `python -m motor.postflop_ranges --json` →
   `data/postflop_ranges.json`; `--json` persiste.
 
+### 3.9 asistente_live.py — asistente en vivo (2 perfiles PEZ/TIBURON)
+- Bucle continuo (~0.5 s, `--poll`) sobre `capture()` (`tools/capture_live.py`):
+  `state` con `pot`, `{pid}_stake`, `{pid}_bet`, `{pid}_state`
+  (`activo/inactivo`), `{pid}_cards`, `community`, `btn`.
+- **Clasificación rival en vivo (por STACK, nunca por coincidencia de
+  nombres)**: PEZ si el jugador juega **mayoritariamente** por debajo de 50 BB
+  — la media de los stacks observados en la sesión manda (`_observe_stacks`
+  acumula en `live_stacks`); sin historial de sesión se usa el stack actual;
+  sin información → TIBURON conservador. El rival elegido es el jugador activo
+  no-hero de mayor stack; su nombre configurado en la GUI solo va a la
+  etiqueta del panel (`_villain_name`) y al registro (para el reentrenamiento).
+- Modelos en memoria (`build_models`): `load_hands()` → `Profiles.from_hands`
+  → `label` PEZ/TIBURON; `ProfileRangeModel.from_hands`; `Oracle(build(...))`
+  y `PostflopRangeModel` con ese mismo `Oracle` (⚠️ no usar `load()`: el JSON
+  serializa las claves como strings y el `Oracle` pierde las tuplas →
+  `p_action` lanza `ValueError: too many values to unpack`).
+- Rango rival: `range_model.prob_vec(perfil, spot, action, pos)` según lo que
+  el rival hizo preflop (`b→open`, `r→3bet`, `c→call_open`, `x→limp`, nada→
+  `open`), + blockers (hero+board) + updates postflop con
+  `prob_vec(perfil, street, facing, board, acción)` por cada acción ya
+  observada del rival (facing: ``/cbet/barrel/bet/raise, escalado como en
+  observations).
+- Recomendación: `situation()` + `compute_evs()` y panel `format_insight` con
+  `villain_label = "PEZ|TIBURON <nombre>"`; en manual se recomienda en cada
+  captura (`require_turn=False, force_reco=True`); en auto cuando toca a hero:
+  primera detección por botón de acción (`StateMatcher.read(pil, 'hero')` en
+  `igualar/subir/pasar/apostar/apostar todo/mostrar cartas`) y, si el botón no
+  se reconoce, **fallback lógico** (`_hero_maybe_to_act`: hero activo + rival
+  activo + bote > 0). Dedupe por firma (hand_id + n_com + pot + hero_bet +
+  max_bet) — el `hand_id` hace que una MANO NUEVA siempre reinforme. Cartas
+  del hero/board con fallback a las registradas en la mano si el OCR las
+  pierde (`_hero_cards_fallback`/`_board_fallback`).
+- **Recomendación PREFLOP desde las matrices** (`_recom_preflop`, nunca EV):
+  `street == 'preflop'` sale de `data/preflop_matrices.json` (no de
+  `situation()/compute_evs()`, que exigirían >2 cartas). Spot del hero por las
+  acciones del recorder (el blind BB es `b`, **cada raise es `r`**):
+  - 0 raises → apertura con `OR_{pos}` (f ≥ 0.5 → `subir`, si no `retirar`;
+    BB sin raise → `pasar`); 1 → `3B_{pos}_vs_{raiser}` vs
+    `Call_OR_{pos}_vs_{raiser}`; 2 → `4B` vs `Call_3B`; 3 → `5B` vs
+    `Call_4B`; más → retirar.
+  - Decisión = argmax(f_rec, f_row, residuo-f = 1−min(1,Σ)) y el EvTable
+    devuelto lleva `preflop=True` (frecuencias de la matriz, no EV; la GUI lo
+    muestra como `· {f:.0%} (matriz preflop)`).
+  - Frecuencia de la mano: `probs[combo]` con el índice del combo del hero
+    (`_combo_index`); fallback por proximidad de tabla (`BASE_{pos}_vs_{vs}` →
+    `BASE_{pos}` → cualquier `BASE`).
+- **Registro continuo**: el `LiveRecorder` (`recorder/recorder_live.py`)
+  procesa cada frame en paralelo y escribe manos completas en
+  `data/hands_db.jsonl` → la base para reentrenar perfiles crece sola.
+- Comportamiento real (339 manos, smoke): As Ks en `7h 2d Jc`, pot 3, to_call
+  0.5, rival TIBURON 90 BB → `call (+1.88 BB)`; bet ≤ call.
+- CLI: `python -m motor.asistente_live [--poll 0.5] [--hero-nombre Jarduan]
+  [--quiet]`. El asistente **solo recomienda**, nunca ejecuta.
+
+### 3.10 asistente_live_gui.py — interfaz del asistente (nombres + auto/manual)
+- GUI tkinter inspirada en `poker_recorder_gui.py`:
+  - Fila por asiento (hero..p1) con **nombre** (para el registro y la etiqueta
+    del rival), `Inact` (inactivo manual), posición y cartas manuales; precarga
+    de nombres desde la última mano de `data/hands_db.jsonl`.
+  - **Modo Automático**: Iniciar/Detener; hilo con `init_reader()` + modelos
+    + `Asistente.step` por frame (registra cada mano y recomienda cuando toca a
+    hero, dedupe por firma de la situación).
+  - **Modo Manual**: `Inicializar lector + modelos` → `Capturar` (un fotograma
+    a tu ritmo: estado + mano + recomendación) → `Guardar mano` / `Cancelar
+    mano` con override de ganador, como el recorder.
+  - **Check `Ventana siempre al frente`** (`root.attributes('-topmost', ...)`).
+  - Área de **Recomendación** destacada (mejor acción grande + panel completo)
+    y log del estado de la mano.
+- Revisa en cada fotograma los nombres/cartas/posiciones del GUI
+  (`_sync_to_recorder` → `recorder_live.PLAYER_NAMES/MANUAL_*`).
+- `Asistente` solo pisa `recorder_live.PLAYER_NAMES` si siguen siendo los por
+  defecto (`_is_default_names`) — no machaca los nombres del usuario.
+- MUY IMPORTANTE: al recargar el dataset, `Asistente` reconstruye los modelos;
+  para re-arquitectura con capturas en vivo conviene reiniciar el hilo
+  (cada `Iniciar` rebuild de ~2,5 s).
+- CLI: `python -m motor.asistente_live_gui`.
+
 ---
 
 ## 4. Datos de `data\`
 
 | Archivo | Tamaño | Qué es / cómo se genera |
 |---|---|---|
-| `hands_db.jsonl` | ~450 KB | 327 manos válidas (cargadas por `load_hands`) |
+| `hands_db.jsonl` | ~460 KB | 339 manos válidas (cargadas por `load_hands`) |
 | `preflop_matrices.json` | ~285 KB | 112 tablas 13×13 `{action, pos, vs, matrix}` (5 viajes) |
 | `preflop_stats.json` | 13 KB | `learn --json` |
 | `player_stats.json` | 29 KB | `stats --json` |
-| `profiles.json` | 23 KB | `profile --json` |
+| `profiles.json` | 23 KB | `profile --json` (label PEZ/TIBURON + subtype + stack_mean) |
 | `observations.json` | 1,7 MB | `observations --json` (3.373 obs) |
-| `behavior.json` | 22 KB | `behavior --json` |
-| `behavior_probs.json` | 17 KB | `behavior --probs` |
-| `profile_ranges.json` | ~1 MB | `player_ranges --json` (grids opp/cnt por perfil y spot) |
+| `behavior.json` | 22 KB | `behavior --json` (2 perfiles) |
+| `behavior_probs.json` | 17 KB | `behavior --probs` (2 perfiles) |
+| `profile_ranges.json` | ~1 MB | `player_ranges --json` (grids opp/cnt por PEZ/TIBURON) |
+| `postflop_ranges.json` | — | `postflop_ranges --json` (2 perfiles) |
 | `golden.json`, `calib_1365.json` | — | Bench fase 2 |
 | `test_*.jsonl` | — | Registros de las pruebas |
 
@@ -289,7 +385,7 @@ recommend_loop   villain.update(prob_vec(P(A|H))) con villain_postflop
 ## 5. Comandos de prueba y generación
 
 ```powershell
-python -m pytest motor -q                    # 172 tests
+python -m pytest motor -q                    # 232 passed (2 preexistentes: test_decision)
 python -m motor.learn --json               # data/preflop_stats.json
 python -m motor.stats --json               # data/player_stats.json
 python -m motor.profile --json             # data/profiles.json
@@ -299,6 +395,8 @@ python -m motor.behavior --probs           # data/behavior_probs.json
 python -m motor.player_ranges --json     # data/profile_ranges.json
 python -m motor.postflop_ranges --json   # data/postflop_ranges.json
 python -m motor.recommend_loop             # demo anytime
+python -m motor.asistente_live             # asistente en vivo CLI (PEZ/TIBURON)
+python -m motor.asistente_live_gui         # interfaz gráfica (nombres + auto/manual)
 ```
 
 ---
@@ -320,11 +418,22 @@ python -m motor.recommend_loop             # demo anytime
 
 ## 7. Estado: hecho / pendiente
 
-**Hecho (172 tests):**
+**Hecho (232 tests verdes; 2 fallos preexistentes de MC/árbol):**
 - Fase 2 MVP: cards · ranges · preflop · hand_evaluator · situation ·
   decision · panel · recommend_loop (anytime).
 - Fase 4 aprendizaje: learn · stats · profile · observations · behavior +
   Oracle (files: `data/*.json`).
+- **Perfiles 2-clase PEZ/TIBURON**: `profile.py` con `simple_label`
+  (stack medio < 50 BB; fallback vpip>0.32 y pfr<0.10) + `stack_mean`;
+  `player_ranges`, `behavior` y `postflop_ranges` regenerados con las
+  2 etiquetas (fluyen sin cambios de código vía `Profiles.from_hands`).
+- **Asistente en vivo** (`motor/asistente_live.py`, §3.9): captura →
+  rango rival PEZ/TIBURON en vivo → situation + EV por acción → panel; nunca
+  juega solo; registra cada mano en `hands_db.jsonl` con el `LiveRecorder`
+  para el reentrenamiento.
+- **GUI del asistente** (`motor/asistente_live_gui.py`, §3.10): nombres por
+  asiento, modos automático/manual (capturar a tu ritmo + guardar/cancelar
+  mano) y check de ventana siempre al frente.
 - player_ranges: **P(A|H, spot, perfil)** preflop con shrinkage a la
   base (§3.7) + **ajuste individual** (`player_omega`/`p_player`) — el
   rango rival perfilado alimenta `RangeState.update`.
@@ -335,11 +444,14 @@ python -m motor.recommend_loop             # demo anytime
 - Integración a EV: `OracleResponse` como función de respuesta del rival.
 
 **Pendiente (decidido con el usuario):**
-1. **`facing_3bet` con `b4`**: refinar `player_omega` para el spot 4bet
+1. **Prueba en vivo con 20–50 manos reales** (siguiente paso): correr
+   `python -m motor.asistente_live` y comparar recomendación vs decisión
+   humana; verificar que la clasificación PEZ/TIBURON por stack coincide.
+2. **`facing_3bet` con `b4`**: refinar `player_omega` para el spot 4bet
    (+ evaluación formal de `profile_ranges.json`).
-2. Evaluación/mapas de desviación del hero (§8 capa 2): **postpuesto
+3. Evaluación/mapas de desviación del hero (§8 capa 2): **postpuesto
    explícitamente** por el usuario.
-3. Más adelante: árbol de calles completo con pagos intermedios (el sorteo
+4. Más adelante: árbol de calles completo con pagos intermedios (el sorteo
    del runout del MVP 2 parcial ya está en `runout_equity`) y refinar
    `P(A|H)` con `base`·ω por spot y cellas postflop por textura (más
    volumen).

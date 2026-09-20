@@ -61,3 +61,6 @@ venv/
 .svelte-kit/
 .parcel-cache/
 .vite/
+
+# Data
+*.png

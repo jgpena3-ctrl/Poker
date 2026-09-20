@@ -17,12 +17,9 @@ respuesta del perfil del rival vía `OracleResponse` (P(A|C) de la fase de
 aprendizaje, mezclada con fade-in según la muestra de su celda) y
 `equity_v` es la fracción de bote que gana el hero contra el combo rival v.
 
-Etapa MVP 2 (parcial, pegar7 §14.7): `compute_evs(runout=True)` sustituye la
-equity determinista por **equity a showdown con sorteo de runout** (todos los
-turn+river restantes, MC), en las ramas pasivas (check/call). Sin pagos
-intermedios: el árbol de decisiones de la siguiente calle queda pendiente
-(anotado en ARQUITECTURA §11 #11). `runout=False` por defecto: el pipeline
-de ~24 ms no cambia.
+Etapa MVP 2: `compute_evs` usa por defecto **equity a showdown con sorteo de
+runout** para cada acción. `runout=False` conserva el modo rápido de fuerza
+actual, útil solo para diagnósticos o presupuestos muy cortos.
 """
 from dataclasses import dataclass, field
 from typing import Dict, Tuple
@@ -35,7 +32,12 @@ from .hand_evaluator import (evaluate_batch, evaluate_hand, evaluate_n_batch,
 from .ranges import COMBO0, COMBO1, RangeState
 
 BET_LABELS = ('bet_25', 'bet_50', 'bet_75')
-ACTIONS = ('fold', 'check', 'call') + BET_LABELS + ('all_in',)
+ACTIONS = ('fold', 'check', 'call') + BET_LABELS + ('raise', 'all_in')
+
+
+def _bet_label(frac):
+    """Label de un sizing: 0.25 → 'bet_25', 0.33 → 'bet_33', 0.66 → 'bet_66'."""
+    return f'bet_{int(round(frac * 100))}'
 
 
 # ---------------------------------------------------------------------------
@@ -116,12 +118,13 @@ class OracleResponse:
         pf_e, pc_e, pr_e = _response_array(villain_equity, amount, pot)
         if self.alpha <= 0:
             return pf_e, pc_e, pr_e
-        pf = self.alpha * self.pf_p + (1 - self.alpha) * pf_e
-        pc = self.alpha * self.pc_p + (1 - self.alpha) * pc_e
-        pr = self.alpha * self.pr_p + (1 - self.alpha) * pr_e
-        pr = np.clip(pr, 0.0, 0.45)
-        pc = np.maximum(0.0, 1.0 - pf - pr)
-        return pf, pc, pr
+        base = np.column_stack((pf_e, pc_e, pr_e))
+        profile = np.clip(np.asarray((self.pf_p, self.pc_p, self.pr_p)),
+                          0.05, 0.90)
+        scale = np.power(3.0 * profile, self.alpha)
+        adjusted = base * scale
+        adjusted /= adjusted.sum(axis=-1, keepdims=True)
+        return adjusted[:, 0], adjusted[:, 1], adjusted[:, 2]
 
 
 # ---------------------------------------------------------------------------
@@ -162,60 +165,72 @@ def runout_equity(hero_codes, board_codes, villain_reach=None,
     cartas ni las del hero ni del board). En river no hay sorteo y la equity
     es exacta. Determinístico (seed fija) para reproducibilidad.
 
-    MVP 2 parcial: el sorteo de runout se incorpora a la equity (las ramas
-    pasivas de `compute_evs` la usan); no modela pagos intermedios.
+    La equity se calcula por combo rival para que también pueda usarse en las
+    ramas agresivas y en la respuesta del rival.
+    """
+    ids, weights, current_equity = _villain_arrays(
+        hero_codes, board_codes, villain_reach)
+    if len(board_codes) >= 5:
+        return float((current_equity * weights).sum())
+    equity = _showdown_equity_by_combo(
+        hero_codes, board_codes, ids, n_runouts=n_runouts, seed=seed)
+    return float((equity * weights).sum())
+
+
+def _showdown_equity_by_combo(hero_codes, board_codes, villain_ids,
+                              n_runouts=DEFAULT_RUNOUTS, seed=7):
+    """Equity a showdown de hero frente a cada combo rival legal.
+
+    Cada combo recibe sus propios runouts legales. Esto es importante para
+    valorar draws y para que el modelo de respuesta no confunda una mano que
+    va por detrás hoy con una mano sin equity. Se procesa en lotes para no
+    construir un array grande en flop.
     """
     hero = [card_id(c) for c in hero_codes]
     board = [card_id(c) for c in board_codes]
-    restantes = 5 - len(board)
-    if restantes <= 0:
-        ids, w, hero_eq = _villain_arrays(hero_codes, board_codes,
-                                          villain_reach)
-        return float((hero_eq * w).sum())
+    remaining = 5 - len(board)
+    ids = np.asarray(villain_ids, dtype=np.intp)
+    if remaining <= 0:
+        pairs = np.column_stack([COMBO0[ids], COMBO1[ids]])
+        scores = evaluate_batch(pairs, board)
+        hero_score = evaluate_hand(hero_codes, board_codes)
+        return 1.0 * (scores < hero_score) + 0.5 * (scores == hero_score)
 
-    known = 0
-    for c in hero + board:
-        known |= 1 << c
-    deck = np.asarray([c for c in range(52) if not (known >> c) & 1],
-                      dtype=np.intp)
-    legal = legal_hands(known)
-    rng = np.random.default_rng(seed)
-    if villain_reach is None or isinstance(villain_reach, RangeState):
-        ids0 = legal
-        w = np.full(len(legal), 1.0 / len(legal))
-        if isinstance(villain_reach, RangeState):
-            w = villain_reach.reach_blocked[ids0].astype(np.float64)
-    else:
-        arr = np.asarray(villain_reach, dtype=np.float64)
-        if arr.shape != (1326,):
-            raise ValueError(f'reach debe tener forma (1326,), tiene '
-                             f'{arr.shape}')
-        ids0 = legal[arr[legal] > 0]
-        w = arr[ids0]
-    if len(ids0) == 0:
+    known = cards_to_bits(list(hero_codes) + list(board_codes))
+    deck = np.asarray([card for card in range(52)
+                       if not (known >> card) & 1], dtype=np.intp)
+    p0, p1 = COMBO0[ids], COMBO1[ids]
+    n = len(ids)
+    if n == 0:
         raise ValueError('rango rival sin combos legales')
-    w = w / w.sum()
-    ids0 = np.asarray(ids0, dtype=np.intp)
+    rng = np.random.default_rng(seed)
+    hero_pair = np.asarray(hero, dtype=np.intp)
+    board_array = np.asarray(board, dtype=np.intp)
+    wins = np.zeros(n, dtype=np.float64)
+    samples = max(1, int(np.ceil(
+        min(n, DEFAULT_RUNOUT_COMBOS) * max(1, int(n_runouts)) / n)))
+    batch = 8
 
-    k = min(int(n_combos), len(ids0))
-    acc = 0.0
-    total = 0
-    hero_pair = np.asarray([[hero[0], hero[1]]], dtype=np.intp)
-    brd = np.asarray(board, dtype=np.intp)
-    for _ in range(n_runouts):
-        sel = ids0[rng.choice(len(ids0), size=k, replace=True, p=w)]
-        p0, p1 = COMBO0[sel], COMBO1[sel]
-        run = _vector_runout(p0, p1, deck, rng, restantes)
-        full = np.column_stack([p0, p1,
-                                np.broadcast_to(brd, (k, len(brd))), run])
-        scores = evaluate_n_batch(full)
-        hero_full = np.column_stack([
-            np.broadcast_to(hero_pair, (k, 2)),
-            np.broadcast_to(brd, (k, len(brd))), run])
-        hs = evaluate_n_batch(hero_full)
-        acc += float((1.0 * (scores < hs) + 0.5 * (scores == hs)).sum())
-        total += k
-    return acc / total
+    for start in range(0, samples, batch):
+        count = min(batch, samples - start)
+        p0_batch = np.tile(p0, count)
+        p1_batch = np.tile(p1, count)
+        run = _vector_runout(p0_batch, p1_batch, deck, rng, remaining)
+        rows = len(p0_batch)
+        villain_hands = np.column_stack([
+            p0_batch, p1_batch,
+            np.broadcast_to(board_array, (rows, len(board_array))), run,
+        ])
+        hero_hands = np.column_stack([
+            np.broadcast_to(hero_pair, (rows, 2)),
+            np.broadcast_to(board_array, (rows, len(board_array))), run,
+        ])
+        villain_scores = evaluate_n_batch(villain_hands)
+        hero_scores = evaluate_n_batch(hero_hands)
+        outcome = 1.0 * (villain_scores < hero_scores) + \
+            0.5 * (villain_scores == hero_scores)
+        wins += outcome.reshape(count, n).sum(axis=0)
+    return wins / samples
 
 
 # ---------------------------------------------------------------------------
@@ -262,6 +277,28 @@ def _branch_ev(amount, pot, hero_eq, villain_eq, w, all_in=False,
         branch = pf * pot + (pc + pr) * branch_call
     else:
         branch = pf * pot + pc * branch_call - pr * amount
+    return float((w * branch).sum())
+
+
+def _raise_ev(amount_to, pot, hero_eq, villain_eq, w, to_call,
+              response=None):
+    """EV de "hero sube a TOTAL `amount_to`" con una apuesta en curso.
+
+    `pot` ya incluye la apuesta rival; el hero compromete `amount_to`
+    (que incluye sus `to_call`) y el rival paga `amount_to - to_call` más
+    para igualar (pegar.txt §12): bote final = pot + amount_to + extra.
+    La respuesta del rival se evalúa contra la subida `extra`, no contra el
+    total (es lo que el rival debe pagar de más).
+    """
+    extra = amount_to - to_call
+    if extra <= 0:
+        return 0.0
+    if response is None:
+        pf, pc, pr = _response_array(villain_eq, extra, pot)
+    else:
+        pf, pc, pr = response(villain_eq, extra, pot)
+    branch_call = hero_eq * (pot + amount_to + extra) - amount_to
+    branch = pf * pot + pc * branch_call - pr * amount_to
     return float((w * branch).sum())
 
 
@@ -325,22 +362,37 @@ def _tree_values(hero_ids, board_ids, ids0, w, pot, stack, response_fn,
         else:
             pf, pc, pr = response_fn(villain_eq6, amount, pot)
 
-        card2 = _vector_runout(p0, p1, deck, rng_f, 1, extra=card1)[:, 0]
-        full7 = np.column_stack([p0, p1,
-                                 np.broadcast_to(brd, (k, n_cartas)),
-                                 card1, card2])
-        hero7 = np.column_stack([
-            np.broadcast_to(hero_pair, (k, 2)),
-            np.broadcast_to(brd, (k, n_cartas)), card1, card2])
-        sc7 = evaluate_n_batch(full7)
-        eq7 = 1.0 * (sc7 < evaluate_n_batch(hero7)) + \
-            0.5 * (sc7 == evaluate_n_batch(hero7))
-
-        check_v = eq7 * pot
-        bet_v = pf * pot + pc * (eq7 * (pot + 2 * amount) - amount) - pr * amount
-        F = np.maximum(check_v, bet_v)
-        np.add.at(sums, np.searchsorted(ids0, sel), F)
-        counts[np.searchsorted(ids0, sel)] += 1
+        if restantes == 1:
+            eq7 = eq6
+            F = np.maximum(eq7 * pot,
+                           pf * pot + pc * (eq7 * (pot + 2 * amount) - amount)
+                           - pr * amount)
+        else:
+            finals = max(1, int(n_finals))
+            p0_final = np.repeat(p0, finals)
+            p1_final = np.repeat(p1, finals)
+            card1_final = np.repeat(card1, finals)
+            card2 = _vector_runout(p0_final, p1_final, deck, rng_f, 1,
+                                    extra=card1_final)[:, 0]
+            rows = len(p0_final)
+            full7 = np.column_stack([
+                p0_final, p1_final,
+                np.broadcast_to(brd, (rows, n_cartas)),
+                card1_final, card2])
+            hero7 = np.column_stack([
+                np.broadcast_to(hero_pair, (rows, 2)),
+                np.broadcast_to(brd, (rows, n_cartas)), card1_final, card2])
+            sc7 = evaluate_n_batch(full7)
+            hero7_scores = evaluate_n_batch(hero7)
+            eq7 = 1.0 * (sc7 < hero7_scores) + 0.5 * (sc7 == hero7_scores)
+            eq7 = eq7.reshape(k, finals)
+            check_v = eq7 * pot
+            bet_v = (pf[:, None] * pot + pc[:, None] *
+                     (eq7 * (pot + 2 * amount) - amount) - pr[:, None] * amount)
+            F = np.maximum(check_v, bet_v).mean(axis=1)
+        idx = np.searchsorted(ids0, sel)
+        np.add.at(sums, idx, F)
+        np.add.at(counts, idx, 1)
         acc += float(F.sum())
         total += k
 
@@ -374,8 +426,11 @@ class EvTable:
 
 def compute_evs(hero_codes, board_codes, villain_reach=None,
                 pot=0.0, to_call=0.0, stack=0.0,
+                villain_stack=None,
                 bet_sizes=(0.25, 0.5, 0.75),
-                response_fn=None, runout=False,
+                raise_to=None,
+                candidates=None,
+                response_fn=None, runout=True,
                 n_runouts: int = DEFAULT_RUNOUTS,
                 tree: bool = False,
                 tree_n_street: int = TREE_STREET,
@@ -387,16 +442,25 @@ def compute_evs(hero_codes, board_codes, villain_reach=None,
     hero_codes    : ['As', 'Kd']
     board_codes   : 3..5 cartas
     villain_reach : None (uniforme) | RangeState | vector (1326,)
-    pot           : bote antes de actuar el hero
+    pot           : bote antes de actuar el hero (ya incluye la apuesta rival)
     to_call       : fichas a pagar si hay un bet en curso (0 = sin bet)
-    stack         : stack efectivo restante del hero
+    stack         : stack restante del hero antes de actuar
+    villain_stack : stack restante del rival que hizo/aplicará el call;
+                    limita el stack efectivo. None conserva compatibilidad
+                    con el supuesto de stacks iguales.
+    bet_sizes     : fracciones del bote para las bets (0 < to_call: solo call)
+    raise_to      : opcional — si hay bet en curso, el TOTAL al que se sube
+                    (incluye to_call; pegar.txt §12). Si no se da, no hay
+                    acción 'raise'. Si el importe no supera to_call, se omite.
+    candidates    : opcional — restraints de pegar.txt §21/§22: solo se
+                    conservan en `ev` estas acciones (¿qué tiene sentido?).
+                    El EV ya se calculó; esto filtra la tabla para el panel
+                    y para `best()`.
     response_fn   : (villain_eq, amount, pot) -> (pf, pc, pr) vectorizado;
                     None = `_response_array` (heurística). Perfiles:
                     `OracleResponse` (motor.behavior) con P(A|C) del rival.
-    runout        : MVP 2 parcial — si True y faltan cartas del board, las
-                    ramas pasivas (check/call) usan la equity a showdown con
-                    sorteo de turn+river (`runout_equity`, MC). Las ramas
-                    agresivas y el all_in conservan la equity determinista.
+    runout        : si True y faltan cartas del board, todas las acciones usan
+                    equity a showdown por combo con sorteo de turn+river.
     n_runouts     : número de sorteos del runout (MC determinista).
     tree          : MVP 2 completo — si True (y faltan cartas del board),
                     cada rama con jugada futura (check/call, y las ramas de
@@ -412,12 +476,26 @@ def compute_evs(hero_codes, board_codes, villain_reach=None,
     """
     if len(hero_codes) < 2:
         raise ValueError('MVP 1 exige la mano del hero conocida (2 códigos)')
-    ids, w, hero_eq = _villain_arrays(hero_codes, board_codes, villain_reach)
-    villain_eq = 1.0 - hero_eq
-    equity_mean = float((hero_eq * w).sum())
+    stack = max(0.0, float(stack))
+    if villain_stack is not None:
+        villain_stack = max(0.0, float(villain_stack))
+        effective_stack = min(stack, villain_stack)
+    else:
+        effective_stack = stack
+    call_amount = min(max(0.0, float(to_call)), stack)
+    call_pot = pot - max(0.0, float(to_call) - call_amount)
+    ids, w, current_hero_eq = _villain_arrays(
+        hero_codes, board_codes, villain_reach)
     hero_ids = [card_id(c) for c in hero_codes]
     board_ids = [card_id(c) for c in board_codes]
     has_next = len(board_ids) < 5
+    if runout and has_next:
+        hero_eq = _showdown_equity_by_combo(
+            hero_codes, board_codes, ids, n_runouts=n_runouts)
+    else:
+        hero_eq = current_hero_eq
+    villain_eq = 1.0 - hero_eq
+    equity_mean = float((hero_eq * w).sum())
 
     ev: Dict[str, float] = {'fold': 0.0}
 
@@ -430,14 +508,15 @@ def compute_evs(hero_codes, board_codes, villain_reach=None,
             return tau
 
         if to_call <= 0:
-            ev['check'] = float((w * tree_tau(pot, stack, 21)).sum())
+            ev['check'] = float((w * tree_tau(pot, effective_stack, 21)).sum())
         if to_call > 0:
-            ev['call'] = float((w * tree_tau(pot + 2 * to_call,
-                                             stack - to_call, 22)).sum()) \
-                - to_call
+            ev['call'] = float((w * tree_tau(call_pot + 2 * call_amount,
+                                              effective_stack - call_amount,
+                                              22)).sum()) - call_amount
 
-        for idx, (frac, label) in enumerate(zip(bet_sizes, BET_LABELS)):
-            amount = min(frac * pot, stack) if pot > 0 else 0.0
+        for idx, frac in enumerate(bet_sizes):
+            amount = min(frac * pot, effective_stack) if pot > 0 else 0.0
+            label = _bet_label(frac)
             if amount <= 0:
                 ev[label] = 0.0
                 continue
@@ -445,28 +524,40 @@ def compute_evs(hero_codes, board_codes, villain_reach=None,
                 pf, pc, pr = _response_array(villain_eq, amount, pot)
             else:
                 pf, pc, pr = response_fn(villain_eq, amount, pot)
-            tau = tree_tau(pot + 2 * amount, stack - amount, 30 + idx)
+            tau = tree_tau(pot + 2 * amount, effective_stack - amount, 30 + idx)
             branch = pf * pot + pc * tau - pr * amount
             ev[label] = float((w * branch).sum())
     else:
-        if runout and has_next:
-            equity_mean_r = runout_equity(
-                hero_codes, board_codes, villain_reach,
-                n_runouts=max(1, n_runouts))
-        else:
-            equity_mean_r = equity_mean
-
         if to_call <= 0:
-            ev['check'] = equity_mean_r * pot
+            ev['check'] = equity_mean * pot
         if to_call > 0:
-            ev['call'] = equity_mean_r * (pot + 2 * to_call) - to_call
+            ev['call'] = equity_mean * (call_pot + 2 * call_amount) - call_amount
+            max_raise_to = min(stack, to_call + (villain_stack if villain_stack is not None
+                                                 else stack))
+            if raise_to is not None and to_call < raise_to <= max_raise_to:
+                ev['raise'] = float((w * _raise_ev(
+                    raise_to, pot, hero_eq, villain_eq, w, to_call,
+                    response=response_fn)).sum())
 
-        for frac, label in zip(bet_sizes, BET_LABELS):
-            amount = min(frac * pot, stack) if pot > 0 else 0.0
+        for frac in bet_sizes:
+            label = _bet_label(frac)
+            amount = min(frac * pot, effective_stack) if pot > 0 else 0.0
             ev[label] = _branch_ev(amount, pot, hero_eq, villain_eq, w,
                                    response=response_fn)
 
-    ev['all_in'] = _branch_ev(stack, pot, hero_eq, villain_eq, w,
-                              all_in=True, response=response_fn)
+    ev['all_in'] = _branch_ev(effective_stack, pot, hero_eq, villain_eq, w,
+                               all_in=True, response=response_fn)
+
+    if to_call > 0 and raise_to is not None and to_call < raise_to <= min(
+            stack, to_call + (villain_stack if villain_stack is not None else stack)) \
+            and tree and has_next:
+        # raise también disponible en el árbol (usando la equity inmediata)
+        ev['raise'] = float((w * _raise_ev(
+            raise_to, pot, hero_eq, villain_eq, w, to_call,
+            response=response_fn)).sum())
+
+    if candidates is not None:
+        ok = set(candidates) | {'fold'}
+        ev = {k: v for k, v in ev.items() if k in ok}
 
     return EvTable(ev=ev, pot=pot, hero_equity=equity_mean)

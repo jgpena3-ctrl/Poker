@@ -79,7 +79,7 @@ def recommend(hero_codes, board_codes, *, pot: float, to_call: float = 0.0,
               range_model=None, villain_player: str = '',
               postflop_model=None, villain_postflop=None,
               deadline_s: float = 8.0,
-              runout: bool = False,
+              runout: bool = True,
               on_progress: Optional[Callable[[str], None]] = None) -> Recommendation:
     """Recomienda acción para el hero con la mano y el estado dados.
 
@@ -95,10 +95,10 @@ def recommend(hero_codes, board_codes, *, pot: float, to_call: float = 0.0,
                      `villain_postflop` (lista de (street, facing, action)
                      ya observadas del rival, e.g. [('flop', 'none', 'b')])
                      el rango rival se refina por calle con P(A|H).
-    runout      : MVP 2 parcial — si True y faltan cartas del board, las
-                  ramas pasivas (check/call) usan la equity a showdown con
-                  sorteo de turn+river (MC determinista, ~1-2 s con rango
-                  completo); las agresivas conservan la equity inmediata.
+    runout      : si True (predeterminado) y faltan cartas del board, todas
+                  las acciones usan equity a showdown por combo con sorteo
+                  determinista de turn+river. `False` habilita el modo rápido
+                  de fuerza actual.
     deadline_s  : presupuesto anytime máximo (métrico, rápido hoy)
     """
     t0 = time.perf_counter()

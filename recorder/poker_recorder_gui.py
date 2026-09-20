@@ -433,7 +433,7 @@ class RecorderGUI:
             non_folded = [p for p in self.manual_recorder.hand['players']
                           if p['active'] and
                           state.get(f'{p["_id"]}_stake') is not None and
-                          state.get(f'{p["_id"]}_state') not in (None, 'retirarse', 'ausente')]
+                          state.get(f'{p["_id"]}_state') not in (None, 'retirarse', 'ausente', 'inactivo')]
             if non_folded:
                 self.winner_var.set(','.join(p['_id'] for p in non_folded))
             self.end_hand_btn.config(state=tk.NORMAL)

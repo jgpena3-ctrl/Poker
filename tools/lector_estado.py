@@ -495,6 +495,21 @@ class StateMatcher:
 # FULL STATE READER
 # ============================================================
 class StateReader:
+    # Fila de estrella sobre cada jugador (siempre presente; se atenúa al
+    # retirarse). Coordenadas de pegar.txt, calibradas sobre
+    # 'Captura de pantalla (191).png' donde el único inactivo es p2:
+    #   activos -> max ~251-255, inactivos -> max ~139-168. Umbral 200.
+    # Formato por jugador: (x1, y, x2) fila horizontal de 1px.
+    STAR_ROWS = {
+        'hero': (663, 615, 669),
+        'p1':   (402, 573, 408),
+        'p2':   (403, 335, 409),
+        'p3':   (663, 264, 669),
+        'p4':   (923, 335, 929),
+        'p5':   (925, 573, 931),
+    }
+    STAR_ACTIVE_THR = 200
+
     # Bet text ROIs on the table felt (from user confirmation)
     BET_ROIS = {
         'hero': (685, 496, 749, 514),  # left-aligned at 685, 64×18
@@ -702,6 +717,21 @@ class StateReader:
                     return player
         return best_player if best_mb > 80 else None
 
+    def _star_brightness(self, rgb_img, player):
+        """Brillo máximo en la fila de estrella del jugador (ventana ±2px).
+        None si las coordenadas quedan fuera de la imagen."""
+        row = self.STAR_ROWS.get(player)
+        if row is None:
+            return None
+        x1, y, x2 = row
+        h, w = rgb_img.shape[:2]
+        if not (0 <= y < h and 0 <= x1 < w):
+            return None
+        win = rgb_img[max(y - 2, 0):min(y + 3, h), max(x1 - 1, 0):min(x2 + 2, w)]
+        if win.size == 0:
+            return None
+        return int(win.max())
+
     # ----------------------------------------------------------
     # Unified read
     # ----------------------------------------------------------
@@ -727,17 +757,39 @@ class StateReader:
         # Button
         result['btn'] = self.detect_button(pil_img)
 
-        # States (all detected labels: actions, BB, SB, BTN, inactive, etc.)
+        # States: ahora SOLO 'activo' o 'inactivo' por posición (nunca None).
+        # Señal primaria: fila de estrella (siempre presente; atenuada =
+        # fuera de la mano). Si el frame no trae estrellas encendidas
+        # (capturas viejas / entre manos) se usa el heurístico anterior.
+        FOLD_LABELS = ('retirarse', 'ausente', 'inactivo', 'sin jugador', 'fuera')
+        star_vals = {p: self._star_brightness(rgb_img, p)
+                     for p in ['hero', 'p1', 'p2', 'p3', 'p4', 'p5']}
+        frame_has_stars = any(v is not None and v >= self.STAR_ACTIVE_THR
+                              for v in star_vals.values())
         for player in ['hero', 'p1', 'p2', 'p3', 'p4', 'p5']:
-            state = self.sm.read(pil_img, player)
-            # If no state detected, check if the player is inactive (no bright content in ROI)
-            if state is None:
-                roi = self.sm.rois.get(player)
-                if roi:
-                    crop = rgb_img[roi[1]:roi[3], roi[0]:roi[2], :]
-                    bm = StateMatcher._bright_mask(crop)
-                    if bm.sum() < 100:
-                        state = 'inactivo'
+            btn = self.sm.read(pil_img, player)
+            if btn in FOLD_LABELS:
+                state = 'inactivo'
+            elif btn is not None:
+                # Botón de acción visible (igualar/subir/...) = en la mano.
+                state = 'activo'
+            else:
+                star = star_vals[player]
+                if star is not None and star >= self.STAR_ACTIVE_THR:
+                    state = 'activo'
+                elif frame_has_stars:
+                    # Frame con estrellas: estrella apagada = fuera.
+                    state = 'inactivo'
+                else:
+                    # Sin estrellas (régimen viejo): heurístico anterior.
+                    roi = self.sm.rois.get(player)
+                    inactivo = False
+                    if roi:
+                        crop = rgb_img[roi[1]:roi[3], roi[0]:roi[2], :]
+                        bm = StateMatcher._bright_mask(crop)
+                        if bm.sum() < 100:
+                            inactivo = True
+                    state = 'inactivo' if inactivo else 'activo'
             result[f'{player}_state'] = state
 
         # Bets: BinaryMatcher primary for p3 (unique ROI with button artifact

@@ -2,6 +2,7 @@
 import numpy as np
 import pytest
 
+from motor.cards import card_id
 from motor.decision import (
     ACTIONS, BET_LABELS, EvTable, compute_evs, default_response,
     runout_equity,
@@ -10,7 +11,8 @@ from motor.ranges import COMBO0, COMBO1, RangeState
 
 
 def test_actions_complete():
-    assert ACTIONS == ('fold', 'check', 'call', 'bet_25', 'bet_50', 'bet_75', 'all_in')
+    assert ACTIONS == ('fold', 'check', 'call', 'bet_25', 'bet_50',
+                       'bet_75', 'raise', 'all_in')
 
 
 def test_default_response_is_probability():
@@ -65,12 +67,14 @@ def test_ev_degenerate_win():
         if a // 4 == 0 and b // 4 == 0:  # 22
             reach[i] = 1.0
     ev = compute_evs(hero, board, villain_reach=reach, pot=50, to_call=0, stack=100)
-    assert ev.hero_equity == pytest.approx(1.0)
+    # La equity por defecto incorpora los runouts: 22 aún puede mejorar.
+    assert 0.80 <= ev.hero_equity < 1.0
 
     # call (si hubiera bet) = equity×pot_after − to_call
     ev_call = compute_evs(hero, board, villain_reach=reach,
                           pot=40, to_call=10, stack=100)
-    assert ev_call.ev['call'] == pytest.approx(1.0 * (40 + 20) - 10)
+    assert ev_call.ev['call'] == pytest.approx(
+        ev_call.hero_equity * (40 + 20) - 10)
 
 
 def test_ev_folding_rival_loses_value():
@@ -100,6 +104,64 @@ def test_recommend_via_best():
     assert value == max(ev.ev.values())
 
 
+def test_raise_facing_bet_uses_correct_pot_math():
+    # §12/§14: frente a un bet, 'raise' sube a un total > to_call y el pot
+    # final incluye el to_call al bote (pot + amount_to + (amount_to - to_call)).
+    ev = compute_evs(['As', 'Kd'], ['Qh', '7s', '2c'],
+                     pot=100, to_call=10, stack=90, raise_to=28)
+    assert 'raise' in ev.ev
+    assert ev.ev['call'] == ev.hero_equity * (100 + 20) - 10
+    # con villain_fold alto el raise gana el pot sin pagar el call
+    ev_fold = compute_evs(['As', 'Kd'], ['Qh', '7s', '2c'],
+                          pot=100, to_call=10, stack=90, raise_to=28,
+                          response_fn=_always_fold_response)
+    assert ev_fold.ev['raise'] == pytest.approx(100.0)
+
+
+def test_raise_too_big_falls_back_to_all_in():
+    # §12: raise >= stack → rules devuelve raise_to=None → sin 'raise'
+    from motor.rules import plan
+    rp = plan('flop', True, 9.0, ['Qh', '7s', '2c'], pot=10, stack=20,
+              n_players=2)
+    assert rp.raise_to is None
+    ev = compute_evs(['As', 'Kd'], ['Qh', '7s', '2c'],
+                     pot=10, to_call=9, stack=20,
+                     raise_to=None, candidates=rp.candidates)
+    assert 'raise' not in ev.ev
+    assert 'all_in' in ev.ev
+
+
+def test_effective_stack_caps_all_in_and_short_call():
+    hero, board, reach = ['Ah', 'Ad'], ['Qh', '7s', '9c'], _reach_single_below_pair()
+    always_call = lambda equity, amount, pot: (
+        np.zeros(len(equity)), np.ones(len(equity)), np.zeros(len(equity)))
+    ev = compute_evs(hero, board, villain_reach=reach, pot=50, stack=100,
+                     villain_stack=20, runout=False,
+                     response_fn=always_call)
+    assert ev.ev['all_in'] == pytest.approx(70.0)
+
+    short = compute_evs(hero, board, villain_reach=reach, pot=100,
+                         to_call=50, stack=20, villain_stack=100,
+                         runout=False)
+    assert short.ev['call'] == pytest.approx(90.0)
+
+
+def test_candidates_filter_ev_table():
+    # §21: con candidatos, la tabla solo muestra esas acciones (y fold)
+    ev = compute_evs(['As', 'Kd'], ['Qh', '7s', '2c'],
+                     pot=50, to_call=0, stack=90,
+                     bet_sizes=(0.25, 0.5),
+                     candidates=('fold', 'check', 'bet_25', 'bet_50'))
+    assert set(ev.ev) == {'fold', 'check', 'bet_25', 'bet_50'}
+
+
+def test_custom_bet_sizes_labels():
+    # sizing por textura (DRY→0.25, WET→0.66) genera labels bet_33/bet_66
+    ev = compute_evs(['As', 'Kd'], ['Qh', '7s', '2c'],
+                     pot=50, to_call=0, stack=90, bet_sizes=(0.33, 0.66))
+    assert 'bet_33' in ev.ev and 'bet_66' in ev.ev
+
+
 def test_compute_evs_requires_hand():
     with pytest.raises(ValueError):
         compute_evs(['As'], ['Qh', '7s', '2c'])
@@ -111,6 +173,37 @@ def _reach_single_below_pair():
         if a // 4 == 0 and b // 4 == 0:  # 22
             reach[i] = 1.0
     return reach
+
+
+def _reach_for_cards(*codes):
+    wanted = {card_id(code) for code in codes}
+    reach = np.zeros(1326, dtype=np.float32)
+    for index, (first, second) in enumerate(zip(COMBO0, COMBO1)):
+        if {first, second} == wanted:
+            reach[index] = 1.0
+    return reach
+
+
+def test_default_showdown_equity_drives_bets_and_response():
+    # QJ tiene escalera abierta contra AA en T92: va perdiendo en flop, pero
+    # no es una mano que deba foldear 98% frente a media apuesta.
+    hero = ['As', 'Ah']
+    board = ['Td', '9d', '2h']
+    reach = _reach_for_cards('Qc', 'Jc')
+    current = compute_evs(hero, board, villain_reach=reach, pot=100,
+                          stack=100, runout=False)
+    future = compute_evs(hero, board, villain_reach=reach, pot=100,
+                         stack=100, n_runouts=400)
+
+    assert current.hero_equity == pytest.approx(1.0)
+    assert 0.60 < future.hero_equity < 0.75
+    assert future.ev['bet_50'] != pytest.approx(current.ev['bet_50'])
+    assert future.ev['all_in'] != pytest.approx(current.ev['all_in'])
+
+    fold_now, _, _ = default_response(0.0, 50, 100)
+    fold_with_draw, _, _ = default_response(1.0 - future.hero_equity, 50, 100)
+    assert fold_now > 0.9
+    assert fold_with_draw < 0.3
 
 
 def test_runout_equity_river_is_deterministic():
@@ -133,7 +226,7 @@ def test_runout_equity_flop_matches_deterministic_sanity():
     re = runout_equity(hero, board, reach, n_runouts=400)
     assert 0.80 <= re <= 1.0
     det = compute_evs(hero, board, villain_reach=reach, pot=50,
-                      to_call=0, stack=100).hero_equity
+                      to_call=0, stack=100, runout=False).hero_equity
     assert re < det  # el segundo ganador (2 sobre 2) ahora cuesta no cerrar
 
 
@@ -141,7 +234,7 @@ def test_compute_evs_runout_uses_mc_only_off_river():
     hero, board, reach = ['As', 'Ad'], ['Qh', '7s', '9c'], \
         _reach_single_below_pair()
     base = compute_evs(hero, board, villain_reach=reach, pot=50,
-                       to_call=0, stack=100)
+                       to_call=0, stack=100, runout=False)
     with_run = compute_evs(hero, board, villain_reach=reach, pot=50,
                            to_call=0, stack=100, runout=True, n_runouts=300)
     assert with_run.ev['check'] != base.ev['check']
@@ -161,7 +254,7 @@ def test_compute_evs_runout_turn_uses_mc():
     hero, board, reach = ['As', 'Ad'], ['Qh', '7s', '9c', '2d'], \
         _reach_single_below_pair()
     base = compute_evs(hero, board, villain_reach=reach, pot=50,
-                       to_call=0, stack=100)
+                       to_call=0, stack=100, runout=False)
     with_run = compute_evs(hero, board, villain_reach=reach, pot=50,
                            to_call=0, stack=100, runout=True, n_runouts=300)
     assert with_run.ev['check'] != base.ev['check']
@@ -232,3 +325,12 @@ def test_tree_changes_passive_and_bet_branches():
                           to_call=5, stack=100, tree=True,
                           tree_n_street=50, tree_n_finals=4)
     assert tr_call.ev['call'] != base_call.ev['call']
+
+
+def test_tree_turn_uses_the_river_as_final_card():
+    hero, reach = ['As', 'Ad'], _reach_single_below_pair()
+    turn = ['Qh', '7s', '9c', '4d']
+    ev = compute_evs(hero, turn, villain_reach=reach, pot=50,
+                     to_call=0, stack=100, tree=True,
+                     tree_n_street=20, tree_n_finals=4)
+    assert ev.ev['check'] > 0.0

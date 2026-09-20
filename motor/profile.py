@@ -59,6 +59,54 @@ PROFILE_STATS = ('vpip', 'pfr', 'b3', 'cbet')
 # umbrales de confianza por número de manos (§5.5)
 HANDS_BANDS = ((40, 'probable'), (500, 'confiable'), (5000, 'individual'))
 
+# Perfiles simplificados para el asistente (solo 2)
+PEZ = 'PEZ'
+TIBURON = 'TIBURON'
+SIMPLE_LABELS = (PEZ, TIBURON)
+
+# un jugador con stack medio por debajo de esta cantidad de ciegas -> PEZ
+STACK_FISH_BB = 50.0
+
+
+def mean_stack_by_player(hands):
+    """Stack medio (en BB) de cada jugador a lo largo del dataset.
+
+    Recorre `players[].stack` de cada mano válida; los None/0 de manos rotas
+    se descartan y queda la media de las manos con stack registrado.
+    Devuelve {nombre: mean_stack}.  El 0 real (all-in inicial) se conserva.
+    """
+    from collections import defaultdict
+    acc = defaultdict(list)
+    for hand in hands:
+        for p in hand.get('players', []):
+            name = p.get('name')
+            if not name:
+                continue
+            try:
+                s = float(p.get('stack'))
+            except (TypeError, ValueError):
+                continue
+            if s is None:
+                continue
+            acc[name].append(s)
+    return {n: sum(ss) / len(ss) for n, ss in acc.items() if ss}
+
+
+def simple_label(vpip=None, pfr=None, stack_mean=None):
+    """PEZ / TIBURON con la regla del asistente (población real).
+
+    Orden:
+      1. stack medio < STACK_FISH_BB  -> PEZ  (regla del usuario)
+      2. fallback estadístico: vpip alto (>32 %) con pfr bajo (<10 %) -> PEZ
+      3. resto -> TIBURON (incluye jugadores desconocidos, conservador).
+    """
+    if stack_mean is not None and stack_mean < STACK_FISH_BB:
+        return PEZ
+    if vpip is not None and pfr is not None:
+        if vpip > 0.32 and pfr < 0.10:
+            return PEZ
+    return TIBURON
+
 
 def beta_mass(opp, act, lo, hi=None):
     """P(lo <= rate < hi) para rate ~ Beta(act+1, opp-act+1)."""
@@ -73,17 +121,20 @@ class PlayerProfile:
 
     def __init__(self, player, hero=False, n=0,
                  stats: Optional[Dict[str, float]] = None,
-                 counts: Optional[Dict[str, Tuple[int, int]]] = None):
+                 counts: Optional[Dict[str, Tuple[int, int]]] = None,
+                 stack_mean: Optional[float] = None):
         self.player = player
         self.hero = hero
         self.n = n
         self.stats = dict(stats or {})
         self.counts = dict(counts or {})
+        self.stack_mean = stack_mean
         self.bins: Dict[str, str] = {}
         self._bin_mass: Dict[str, float] = {}
         self._compute_bins()
-        self.label = _archetype(self.bins)
+        self.subtype = _archetype(self.bins)
         self.confidence = self._confidence()
+        self.label = self._simple_label()
 
     # ------------------------------------------------------------------
 
@@ -108,6 +159,15 @@ class PlayerProfile:
         if not masses:
             return 0.0
         return float(math.prod(masses) ** (1.0 / len(masses)))
+
+    def _simple_label(self):
+        """Etiqueta binaria del asistente: PEZ | TIBURON (solo 2 perfiles)."""
+        vpip = self.stats.get('vpip')
+        pfr = self.stats.get('pfr')
+        if vpip is None or pfr is None:
+            # sin estadísticas: solo la regla del stack (o conservador)
+            return simple_label(None, None, self.stack_mean)
+        return simple_label(vpip, pfr, self.stack_mean)
 
     def reliability(self):
         """Etiqueta según n de manos observadas (§5.5)."""
@@ -139,6 +199,9 @@ class PlayerProfile:
             'stats': {k: round(v, 4) for k, v in self.stats.items()},
             'bins': self.bins,
             'label': self.label,
+            'subtype': self.subtype,
+            'stack_mean': round(self.stack_mean, 2)
+            if self.stack_mean is not None else None,
             'confidence': round(self.confidence, 3),
             'reliability': self.reliability(),
         }
@@ -182,18 +245,20 @@ class Profiles:
         obj = cls()
         agg = TransitionStats.from_hands(hands)
         obj.base_rates = load_base_rates(matrices_path)
+        stacks = mean_stack_by_player(hands)
         for name, st in agg.players.items():
             counts = {k: (v[0], v[1]) for k, v in st.c.items()}
             stats = {k: st.freq(k) for k, v in st.c.items() if v[0]}
             stats = {k: f for k, f in stats.items() if f is not None}
             obj.profiles[name] = PlayerProfile(
                 player=name, hero=st.hero, n=counts.get('vpip', (0, 0))[0],
-                stats=stats, counts=counts)
+                stats=stats, counts=counts, stack_mean=stacks.get(name))
         return obj
 
     def report(self, players=None, cols=('vpip', 'pfr', 'b3', 'cbet')):
         head = 'PLAYER'.ljust(12) + '  n'.rjust(4) + ''.join(
-            f'{c:>6}' for c in cols) + '  ETIQUETA'.ljust(18) + ' CONF  REL'
+            f'{c:>6}' for c in cols) + ' STACK'.rjust(7) + \
+            ' ETIQUETA'.ljust(10) + ' SUB'.ljust(15) + ' CONF  REL'
         lines = [head, '-' * len(head)]
         for name in (players or sorted(self.profiles)):
             p = self.profiles[name]
@@ -203,8 +268,10 @@ class Profiles:
                 cell = p.stats.get(c)
                 cells.append(f'{cell * 100:5.0f}%' if cell is not None else '    -')
             star = '*' if p.hero else ' '
+            stack = f'{p.stack_mean:5.0f}' if p.stack_mean is not None else '    -'
             lines.append(f'{name[:12]:<12}{star}{p.n:>4}' + ''.join(cells) +
-                         f'  {p.label:<18}{p.confidence:4.0%}  {p.reliability()}')
+                         f' {stack:>6}' + f'  {p.label:<10}'
+                         + f'{p.subtype:<15}{p.confidence:4.0%}  {p.reliability()}')
         return '\n'.join(lines)
 
     def to_dict(self):

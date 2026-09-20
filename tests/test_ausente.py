@@ -1,7 +1,7 @@
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'recorder'))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'tools'))
-from recorder_live import LiveRecorder, PLAYER_IDS
+from recorder_live import LiveRecorder, PLAYER_IDS, MANUAL_INACTIVE
 
 def frame(btn='p1', states=None, stakes=None, bets=None, com=None, pot=3.0):
     st = {'btn': btn, 'pot': pot, 'community': com or []}
@@ -114,5 +114,43 @@ for pos in ['CO', 'BTN', 'UTG']:
     r6._folded_positions.add(pos)
 assert not r6._is_hand_over(s6), 'C6: mano corta check-check no debe finalizar'
 print('TEST C6 OK: silla vacía no cuenta como fold')
+
+# ---------------- TEST D: OCR 'inactivo' sin marca manual al iniciar -> pos + fold ----------------
+r = LiveRecorder()
+MANUAL_INACTIVE.clear()
+s = frame(states={'p4': 'inactivo'},
+          stakes={'hero': 21.5, 'p1': 50.0, 'p2': 40.0, 'p3': 30.0, 'p4': 60.0, 'p5': 75.0},
+          bets={'p2': 1.0, 'p3': 2.0})
+r._ensure_hand_id()
+r.start_hand(s)
+r.process_frame(s, None, log=log)
+p4 = next(p for p in r.hand['players'] if p['_id'] == 'p4')
+assert p4['active'], 'p4 (estado OCR inactivo) debe jugar la mano: no está marcado inactivo'
+assert p4['pos'], f'p4 debe recibir posición -> {p4["pos"]!r}'
+a = r.hand['streets']['preflop']['actions']
+assert any(x['pos'] == p4['pos'] and x['action'] == 'f' for x in a), \
+    f'p4 debe foldearse preflop en {p4["pos"]!r} -> {[(x["pos"], x["action"]) for x in a]}'
+assert p4['pos'] in r._folded_positions, 'p4 debe quedar en _folded_positions'
+print('TEST D OK: inactivo OCR sin marca manual -> recibe pos y fold preflop')
+
+# ---------------- TEST E: la marca manual decide quién NO jugó ----------------
+MANUAL_INACTIVE.clear()
+try:
+    MANUAL_INACTIVE.add('p5')  # el usuario declara que p5 no jugó la mano
+    r = LiveRecorder()
+    s = frame(states={'p4': 'inactivo', 'p5': 'inactivo'},
+              stakes={'hero': 21.5, 'p1': 50.0, 'p2': 40.0, 'p3': 30.0, 'p4': 60.0, 'p5': 75.0},
+              bets={'p2': 1.0, 'p3': 2.0})
+    r._ensure_hand_id()
+    r.start_hand(s)
+    r.process_frame(s, None, log=log)
+    by_id = {p['_id']: p for p in r.hand['players']}
+    assert by_id['p4']['active'] and by_id['p4']['pos'], 'p4 (inactivo OCR, sin marca) sí juega'
+    assert not by_id['p5']['active'], 'p5 (marca manual) no juega la mano'
+    assert any(x['action'] == 'f' for x in r.hand['streets']['preflop']['actions']
+               if x['pos'] == by_id['p4']['pos']), 'p4 debe foldearse preflop'
+    print('TEST E OK: solo la marca manual decide quién no jugó')
+finally:
+    MANUAL_INACTIVE.clear()
 
 print('ALL TESTS PASSED')
