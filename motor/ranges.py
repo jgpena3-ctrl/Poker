@@ -12,6 +12,7 @@ Convención matemática (ARQUITECTURA §5.2):
 legal_mask.
 """
 import numpy as np
+from typing import Dict
 
 from .cards import RANK_ORDER, card_id, card_label
 
@@ -112,6 +113,9 @@ BASE_WEIGHT_MAP = {
 _HAND_CLASS_NAME = np.empty(N_COMBOS, dtype='U24')
 _HAND_SUB_CLASS = np.empty(N_COMBOS, dtype='U24')
 _BASE_WEIGHT = np.ones(N_COMBOS, dtype=np.float32)
+# Lookup (hi, lo, suited) → combo idx para que
+# _preflop_category() use la MISMA clasificación que _compute_hand_classes()
+_HILO_IDX: Dict[tuple, int] = {}
 
 
 def _compute_hand_classes():
@@ -120,6 +124,7 @@ def _compute_hand_classes():
         c0, c1 = int(COMBO0[idx]), int(COMBO1[idx])
         hi, lo = _cards_to_rank_pair(c0, c1)
         suited = (c0 % 4 == c1 % 4)
+        _HILO_IDX[(hi, lo, suited)] = idx
 
         assigned = False
         if hi == lo:
@@ -214,13 +219,16 @@ _NONPAIR_SUBS = {
         'suited_ace': lambda hi, lo: hi == 12 and lo >= 6,
     },
     'offsuit_broadway': {
-        'offsuit_broadway': lambda hi, lo: hi >= 11 and lo >= 8 and lo <= 9,
+        'offsuit_broadway': lambda hi, lo: hi >= 10 and lo >= 8,
     },
     'offsuit_connector': {
         'offsuit_connector': lambda hi, lo: hi >= 8 and hi >= 6 and lo == hi - 1 and hi < 12,
     },
     'suited_one_gapper': {
         'suited_one_gapper': lambda hi, lo: hi >= 10 and 2 <= (hi - lo) <= 3,
+    },
+    'offsuit_one_gapper': {
+        'offsuit_one_gapper': lambda hi, lo: hi >= 10 and 2 <= (hi - lo) <= 3 and hi < 12,
     },
 }
 
@@ -481,13 +489,11 @@ def _preflop_category(hand_code) -> str:
         for sub, pred in _PAIR_SUBS.items():
             if pred(hi, lo):
                 return sub
-    for _class_name, subs in _NONPAIR_SUBS.items():
-        for sub, pred in subs.items():
-            if pred(hi, lo):
-                if suited and 'suited' in sub:
-                    return sub
-                if not suited and 'suited' not in sub:
-                    return sub
+    # Usar la clasificación precomputada por _compute_hand_classes()
+    # para garantizar coherencia con _HAND_SUB_CLASS.
+    key = (hi, lo, suited)
+    if key in _HILO_IDX:
+        return _preflop_category_from_idx(_HILO_IDX[key])
     return 'other'
 
 
