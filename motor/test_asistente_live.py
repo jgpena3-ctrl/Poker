@@ -604,20 +604,20 @@ def test_villain_postflop_flop_cbet():
                                     {'pos': 'BB', 'action': 'c',
                                      'amount': 3.0}]}})
     acts = _villain_postflop_actions(h, 'BB')
-    assert acts == [('flop', 'cbet', 'c')]
+    assert acts == [('flop', 'cbet', 'c', '')]
 
 
 def test_villain_postflop_multis_turn():
     h = _hand({'preflop': {'actions': [{'pos': 'UTG', 'action': 'b',
                                         'amount': 2.0}]},
                'flop': {'actions': [{'pos': 'UTG', 'action': 'b',
-                                     'amount': 3.0}]},
+                                      'amount': 3.0}]},
                'turn': {'actions': [{'pos': 'UTG', 'action': 'b',
-                                     'amount': 6.0},
-                                    {'pos': 'MP', 'action': 'c',
-                                     'amount': 6.0}]}})
+                                      'amount': 6.0},
+                                     {'pos': 'MP', 'action': 'c',
+                                      'amount': 6.0}]}})
     acts = _villain_postflop_actions(h, 'MP')
-    assert acts == [('turn', 'barrel', 'c')]
+    assert acts == [('turn', 'barrel', 'c', '')]
 
 
 def test_villain_postflop_con_facing_raise():
@@ -629,7 +629,7 @@ def test_villain_postflop_con_facing_raise():
                                      'amount': 9.0}]}})
     acts = _villain_postflop_actions(h, 'BB')
     # el rival (agresor preflop) vio el DONK de MP (bote subido por BB) y subió
-    assert acts == [('flop', 'donk', 'r')]
+    assert acts == [('flop', 'donk', 'r', '')]
 
 
 def test_villain_postflop_sin_mano():
@@ -640,35 +640,35 @@ def test_villain_postflop_lead_donk_bote_subido():
     h = _hand({'preflop': {'actions': [{'pos': 'CO', 'action': 'b',
                                         'amount': 2.5}]},
                'flop': {'actions': [{'pos': 'MP', 'action': 'b', 'amount': 3.0},
-                                    {'pos': 'CO', 'action': 'c', 'amount': 3.0}]}})
+                                     {'pos': 'CO', 'action': 'c', 'amount': 3.0}]}})
     acts = _villain_postflop_actions(h, 'CO')
     # MP lideró el flop sin ser agresor preflop, en bote subido → DONK
-    assert acts == [('flop', 'donk', 'c')]
+    assert acts == [('flop', 'donk', 'c', '')]
 
 
 def test_villain_postflop_lead_propia_facing_none():
     h = _hand({'preflop': {'actions': [{'pos': 'CO', 'action': 'b',
                                         'amount': 2.5}]},
                'flop': {'actions': [{'pos': 'MP', 'action': 'b', 'amount': 3.0},
-                                    {'pos': 'CO', 'action': 'f', 'amount': 0.0}],
+                                     {'pos': 'CO', 'action': 'f', 'amount': 0.0}],
                         'board': ['Qh', '7s', '2c']},
                'turn': {'actions': [{'pos': 'MP', 'action': 'b', 'amount': 6.0}],
                         'board': ['3d']}})
     acts = _villain_postflop_actions(h, 'MP')
     # la APUESTA PROPIA del rival (lead) siempre etiqueta facing 'none'
     # (paridad con observations), nunca ''
-    assert acts == [('flop', 'none', 'b'), ('turn', 'none', 'b')]
+    assert acts == [('flop', 'none', 'b', 'Qh,7s,2c'), ('turn', 'none', 'b', '3d')]
 
 
 def test_villain_postflop_limp_no_donk():
     h = _hand({'preflop': {'actions': [{'pos': 'UTG', 'action': 'x',
                                         'amount': 0.0},
-                                       {'pos': 'BB', 'action': 'x',
-                                        'amount': 0.0}]},
+                                        {'pos': 'BB', 'action': 'x',
+                                         'amount': 0.0}]},
                'flop': {'actions': [{'pos': 'MP', 'action': 'b', 'amount': 2.0},
-                                    {'pos': 'UTG', 'action': 'c', 'amount': 2.0}]}})
+                                     {'pos': 'UTG', 'action': 'c', 'amount': 2.0}]}})
     # bote LIMPEADO: el lead de MP es un 'bet' genérico, NO un donk
-    assert _villain_postflop_actions(h, 'UTG') == [('flop', 'bet', 'c')]
+    assert _villain_postflop_actions(h, 'UTG') == [('flop', 'bet', 'c', '')]
 
 
 def test_hero_bet_facing_donk():
@@ -688,7 +688,11 @@ def _obs_pairs(hand, pos):
     for o in extract_hand(hand):
         if o.pos != pos or o.street == 'preflop' or o.action == 'x':
             continue
-        out.append((o.street, o.facing, o.action))
+        # Usar el board de la calle del hand, no el acumulado
+        streets = hand.get('streets', {})
+        board_list = streets.get(o.street, {}).get('board', []) or []
+        board_str = ','.join(str(c) for c in board_list)
+        out.append((o.street, o.facing, o.action, board_str))
     return out
 
 

@@ -25,6 +25,8 @@ from .panel import format_insight
 from .preflop import opening_range
 from .ranges import RangeState
 from .situation import Situation, situation
+from . import rules
+from .hand_state import classify as classify_hand, range_advantage as ha_range_adv
 
 BB = 1.0  # big blind nominal (BB del juego); ajustarla en caso real
 
@@ -40,6 +42,7 @@ class Recommendation:
     elapsed_ms: float = 0.0
     stages: Dict[str, float] = field(default_factory=dict)
     runout: bool = False
+    rule_plan: Optional[rules.RulePlan] = None
 
     @property
     def text(self) -> str:
@@ -48,8 +51,8 @@ class Recommendation:
 
 
 def _build_villain_range(hero_codes, board_codes, villain_pos='UTG',
-                         villain_cards=(), range_model=None,
-                         villain_player=''):
+                          villain_cards=(), range_model=None,
+                          villain_player=''):
     """RangeState del rival: OR preflop + blockers, o rango perfilado si se
     pasa un ProfileRangeModel + jugador (player_ranges.py)."""
     if range_model is not None and villain_player:
@@ -64,23 +67,57 @@ def _build_villain_range(hero_codes, board_codes, villain_pos='UTG',
     return rs
 
 
+def _build_multiway_range(hero_codes, board_codes,
+                           villain_ranges: Dict[str, RangeState]):
+    """Combina múltiples RangeState en uno unión con blockers.
+
+    Para multiway: el rango rival combinado es la unión de todos
+    los rangos individuales (cada villain juega independientemente).
+    Se aplican blockers (hero + board) a cada rango antes de combinar.
+    """
+    combined = None
+    for name, rs in villain_ranges.items():
+        r = rs.copy() if hasattr(rs, 'copy') else RangeState(reach=rs.reach)
+        r.set_known_cards(list(hero_codes) + list(board_codes))
+        if combined is None:
+            combined = r
+        else:
+            combined.reach = np.maximum(combined.reach, r.reach_blocked)
+    if combined is None:
+        combined = RangeState()
+    combined.nullify_blocked()
+    return combined
+
+
 def build_villain_range(hero_codes, board_codes, villain_pos='UTG',
-                        villain_cards=(), range_model=None,
-                        villain_player=''):
-    """Público: igual que el interno pero devolviendo RangeState con `weights`."""
+                          villain_cards=(), range_model=None,
+                          villain_player='',
+                          villain_ranges: Optional[Dict[str, RangeState]] = None):
+    """Público: construye RangeState para HU o multiway."""
+    if villain_ranges is not None and len(villain_ranges) > 0:
+        return _build_multiway_range(hero_codes, board_codes, villain_ranges)
     return _build_villain_range(hero_codes, board_codes, villain_pos,
-                                villain_cards, range_model, villain_player)
+                                   villain_cards, range_model, villain_player)
 
 
 def recommend(hero_codes, board_codes, *, pot: float, to_call: float = 0.0,
-              stack: float = 0.0, street: str = 'flop', position: str = '',
-              villain_pos: str = 'UTG', villain_cards: tuple = (),
-              villain_reach: Union[None, RangeState, np.ndarray] = None,
-              range_model=None, villain_player: str = '',
-              postflop_model=None, villain_postflop=None,
-              deadline_s: float = 8.0,
-              runout: bool = True,
-              on_progress: Optional[Callable[[str], None]] = None) -> Recommendation:
+               stack: float = 0.0, street: str = 'flop', position: str = '',
+               villain_pos: str = 'UTG', villain_cards: tuple = (),
+               villain_reach: Union[None, RangeState, np.ndarray] = None,
+               villain_ranges: Optional[Dict[str, RangeState]] = None,
+               range_model=None, villain_player: str = '',
+               postflop_model=None, villain_postflop=None,
+               deadline_s: float = 8.0,
+               runout: bool = True,
+               on_progress: Optional[Callable[[str], None]] = None,
+               hero_initiator: bool = False,
+               n_players: int = 2,
+               facing_raise: bool = False,
+               hero_bet_flop: bool = False,
+               flop_checked: bool = False,
+               villain_bet_flop: bool = False,
+               hand_role: str = None,
+               range_advantage_str: str = None) -> Recommendation:
     """Recomienda acción para el hero con la mano y el estado dados.
 
     hero_codes  : ['Ah', 'Kd'] — 2 cartas conocidas
@@ -88,18 +125,29 @@ def recommend(hero_codes, board_codes, *, pot: float, to_call: float = 0.0,
     street      : 'flop' | 'turn' | 'river' (informativo/cap de board)
     pot / to_call / stack : números del bote y de la acción en curso
     villain_pos : posición del rival para su rango base (OR)
+    villain_reach : RangeState único del rival (HU)
+    villain_ranges : dict {jugador: RangeState} para multiway
     range_model : ProfileRangeModel (player_ranges) opcional; con él y
                   `villain_player` el rango rival es el perfilado (perfil·ω)
                   en lugar de la población.
     postflop_model : PostflopRangeModel (postflop_ranges) opcional; con
-                     `villain_postflop` (lista de (street, facing, action)
-                     ya observadas del rival, e.g. [('flop', 'none', 'b')])
+                     `villain_postflop` (lista de
+                     (street, facing, action, board) ya observadas del
+                     rival, e.g. [('flop', 'none', 'b', 'Qh,7s,2c')])
                      el rango rival se refina por calle con P(A|H).
     runout      : si True (predeterminado) y faltan cartas del board, todas
                   las acciones usan equity a showdown por combo con sorteo
                   determinista de turn+river. `False` habilita el modo rápido
                   de fuerza actual.
     deadline_s  : presupuesto anytime máximo (métrico, rápido hoy)
+    hero_initiator: hero fue el último agresor preflop (§3 rules.py)
+    n_players   : jugadores activos en la mano
+    facing_raise: True si la apuesta rival es un raise
+    hero_bet_flop: hero apostó en el flop
+    flop_checked: flop fue check-check
+    villain_bet_flop: rival apostó en el flop
+    hand_role   : STRONG_VALUE/VALUE/MEDIUM/STRONG_DRAW/WEAK_DRAW/AIR
+    range_advantage_str: 'HERO'|'NEUTRAL'|'VILLAIN' (si None se computa)
     """
     t0 = time.perf_counter()
     stages: Dict[str, float] = {}
@@ -108,10 +156,17 @@ def recommend(hero_codes, board_codes, *, pot: float, to_call: float = 0.0,
         stages[name] = (time.perf_counter() - t_ref) * 1000
 
     t = time.perf_counter()
-    if villain_reach is None:
+    villain_labels = []
+    if villain_ranges is not None and len(villain_ranges) > 0:
+        # Multiway: combinar rangos de todos los villains
+        villain = _build_multiway_range(hero_codes, board_codes,
+                                           villain_ranges)
+        villain_labels = list(villain_ranges.keys())
+        villain_label = 'multiway (' + ', '.join(villain_labels) + ')'
+    elif villain_reach is None:
         villain = _build_villain_range(hero_codes, board_codes, villain_pos,
-                                       villain_cards, range_model,
-                                       villain_player)
+                                        villain_cards, range_model,
+                                        villain_player)
         if range_model is not None and villain_player:
             perfil = range_model.perfil.get(villain_player, '?')
             villain_label = f'{perfil} wJ {villain_player}' \
@@ -131,10 +186,11 @@ def recommend(hero_codes, board_codes, *, pot: float, to_call: float = 0.0,
     if postflop_model is not None and villain_postflop:
         perfil = getattr(postflop_model, 'labels', {}).get(villain_player)
         if perfil:
-            for street, facing, action in villain_postflop:
-                board = board_codes
+            for street, facing, action, board in villain_postflop:
+                board_codes = ([c.strip() for c in board.split(',')]
+                               if board else board_codes)
                 vec = postflop_model.prob_vec(perfil, street, facing,
-                                              board, action)
+                                              board_codes, action)
                 villain.update(vec)
     _stage('postflop', t)
 
@@ -147,19 +203,86 @@ def recommend(hero_codes, board_codes, *, pot: float, to_call: float = 0.0,
     if on_progress:
         on_progress(f'  ... situación {stages["situation"]:.1f} ms')
 
-    t = time.perf_counter()
+    # --- Reglas y clasificación de la situación ---
+    rp = None
+    if hand_role is None or range_advantage_str is None:
+        hs = classify_hand(hero_codes, board_codes)
+        if hand_role is None:
+            hand_role = hs.role
+        if range_advantage_str is None:
+            range_advantage_str = ha_range_adv(sit.equity)
+
+    # Intentar plan de reglas (fase 5)
+    try:
+        rp = rules.plan(
+            street=street,
+            hero_initiator=hero_initiator,
+            to_call=to_call,
+            board_codes=board_codes,
+            pot=pot,
+            stack=stack,
+            n_players=n_players,
+            facing_raise=facing_raise,
+            hero_bet_flop=hero_bet_flop,
+            hero_oop=(not hero_initiator and street != 'preflop'),
+            flop_checked=flop_checked,
+            villain_bet_flop=villain_bet_flop,
+            hand_role=hand_role,
+            range_advantage=range_advantage_str,
+        )
+    except Exception:
+        rp = None
+
+    candidates = rp.candidates if rp is not None else None
+
+    # --- Anytime: EV en dos pasadas (rápido → refinado con runout) ---
+    best_action, best_value, best_evs = None, -999.0, None
+    best_runout = False
+
+    # Pasada 1: EV rápido (sin runout) → resultado provisional
     evs = compute_evs(hero_codes, board_codes, villain_reach=villain,
-                      pot=pot, to_call=to_call, stack=stack, runout=runout)
+                      pot=pot, to_call=to_call, stack=stack, runout=False)
     _stage('ev', t)
 
-    action, value = evs.best()
+    if rp is not None:
+        action, value = rules.select_best(evs, rp)
+    else:
+        action, value = evs.best()
+    best_action, best_value, best_evs, best_runout = action, value, evs, False
+
+    # Pasada 2 (opcional): runout para refinar si hay tiempo
+    if runout:
+        budget_ms = deadline_s * 1000
+        elapsed_ms = (time.perf_counter() - t0) * 1000
+        remaining = budget_ms - elapsed_ms
+        if remaining > 2000:
+            t = time.perf_counter()
+            evs_runout = compute_evs(hero_codes, board_codes,
+                                        villain_reach=villain,
+                                        pot=pot, to_call=to_call,
+                                        stack=stack, runout=True)
+            _stage('ev_runout', t)
+            if rp is not None:
+                action2, value2 = rules.select_best(evs_runout, rp)
+            else:
+                action2, value2 = evs_runout.best()
+            # Usar siempre el resultado refinado (runout) si se ejecutó
+            best_action, best_value, best_evs, best_runout = \
+                action2, value2, evs_runout, True
+    else:
+        stages['ev_runout'] = 0.0
+
     elapsed_ms = (time.perf_counter() - t0) * 1000
     stages['total'] = elapsed_ms
-    stages['budget'] = deadline_s * 1000 - elapsed_ms  # margen restante
+    stages['budget'] = deadline_s * 1000 - elapsed_ms
+    stages['anytime'] = True
 
-    return Recommendation(action=action, value=value, situation=sit, evs=evs,
-                          villain_label=villain_label, elapsed_ms=elapsed_ms,
-                          stages=stages, runout=runout)
+    return Recommendation(action=best_action, value=best_value,
+                          situation=sit, evs=best_evs,
+                          villain_label=villain_label,
+                          elapsed_ms=elapsed_ms,
+                          stages=stages, runout=best_runout,
+                          rule_plan=rp)
 
 
 def run_demo(runout: bool = False):

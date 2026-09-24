@@ -179,7 +179,7 @@ def test_recommend_con_update_postflop():
                     pot=12.5, to_call=5.0, stack=90.0,
                     range_model=m, villain_player='NESANVAR',
                     postflop_model=pm,
-                    villain_postflop=[('flop', 'bet', 'c')])
+                    villain_postflop=[('flop', 'bet', 'c', 'Qh,7s,2c')])
     assert rec.action in ('fold', 'check', 'call', 'bet_25', 'bet_50',
                           'bet_75', 'all_in')
     assert rec.elapsed_ms > 0

@@ -134,8 +134,8 @@ def _preflop_spot(hand, villain_pos):
 
 
 def _villain_postflop_actions(hand, villain_pos):
-    """[(street, facing, action)] de acciones ya observadas del rival por
-    calle (formato que consume postflop.prob_vec), para actualizar su rango.
+    """[(street, facing, action, board)] de acciones ya observadas del rival
+    por calle (formato que consume postflop.prob_vec), para actualizar su rango.
 
     Usa lead_label() (observations) para que los leads caigan en las MISMA
     celdas del entrenamiento: la apuesta propia del rival (sin apuesta
@@ -151,13 +151,15 @@ def _villain_postflop_actions(hand, villain_pos):
     pot_raised = bool(pf_initiator)
     for street in ('flop', 'turn', 'river'):
         acts = (streets.get(street, {}) or {}).get('actions', [])
+        board = streets.get(street, {}).get('board', [])
+        board_str = ','.join(str(c) for c in board) if board else ''
         facing = ''
         for a in acts:
             pos, action = a.get('pos'), a.get('action')
             if action == 'x':
                 continue
             if pos == villain_pos and action in ('b', 'c', 'r', 'f'):
-                out.append((street, facing or 'none', action))
+                out.append((street, facing or 'none', action, board_str))
             if action in ('b', 'r'):
                 facing = ('raise' if facing else
                           lead_label(street, pos, pf_initiator, pot_raised))
@@ -701,8 +703,9 @@ class Asistente:
 
         # Refina el rango con las acciones postflop ya observadas del rival
         postflop = self.models.postflop_model
-        for street, facing, act in _villain_postflop_actions(
+        for street, facing, act, board_str in _villain_postflop_actions(
                 self.rec.hand, villain_pos):
+            board = [c.strip() for c in board_str.split(',')] if board_str else []
             vec = postflop.prob_vec(perfil, street, facing, board, act)
             rs.update(vec)
 
