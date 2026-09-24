@@ -28,7 +28,24 @@ from .situation import Situation, situation
 from . import rules
 from .hand_state import classify as classify_hand, range_advantage as ha_range_adv
 
+# Orden postflop: primero en actuar → último
+# (BTN actúa último, UTG primero)
+_POSTFLOP_ORDER = ('SB', 'BB', 'CO', 'MP', 'UTG', 'BTN')
+
 BB = 1.0  # big blind nominal (BB del juego); ajustarla en caso real
+
+
+def _hero_oop(hero_pos: str, villain_pos: str) -> bool:
+    """¿Hero actúa primero postflop (OOP)?
+
+    Usa el orden de posición: hero es OOP si está antes que
+    villain en _POSTFLOP_ORDER (primer actuador = OOP).
+    Desconocido → False (conservador).
+    """
+    try:
+        return _POSTFLOP_ORDER.index(hero_pos) < _POSTFLOP_ORDER.index(villain_pos)
+    except (ValueError, TypeError):
+        return False
 
 
 @dataclass
@@ -226,7 +243,7 @@ def recommend(hero_codes, board_codes, *, pot: float, to_call: float = 0.0,
             n_players=n_players,
             facing_raise=facing_raise,
             hero_bet_flop=hero_bet_flop,
-            hero_oop=(not hero_initiator and street != 'preflop'),
+            hero_oop=_hero_oop(position, villain_pos) if street != 'preflop' else False,
             flop_checked=flop_checked,
             villain_bet_flop=villain_bet_flop,
             hand_role=hand_role,
@@ -248,10 +265,16 @@ def recommend(hero_codes, board_codes, *, pot: float, to_call: float = 0.0,
 
     # compute_evs() calcula TODAS las acciones; candidates se pasa
     # solo a rules.select_best(), NO aquí (para no filtrar prematuramente).
-    # Las pruebas test_candidates_filter_ev_table validan el filtrado
-    # directo de compute_evs, pero en recommend_loop queremos el EV completo.
-    bet_sizes = (0.25, 0.5, 0.75)
-    raise_to = None
+    # bet_sizes y raise_to SÍ vienen de RulePlan para que el EV
+    # corresponda a los sizings que las reglas consideran razonables.
+    if rp is not None and rp.bet_sizes:
+        bet_sizes = rp.bet_sizes
+        raise_to = rp.raise_to
+    else:
+        bet_sizes = (0.25, 0.5, 0.75)
+        raise_to = rp.raise_to if rp is not None else None
+
+    t = time.perf_counter()
 
     # Pasada 1: EV rápido (sin runout) → resultado provisional
     evs = compute_evs(hero_codes, current_board_codes,

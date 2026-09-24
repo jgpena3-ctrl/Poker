@@ -152,9 +152,10 @@ def _compute_hand_classes():
                         'medium_broadway_suited', 'medium_broadway',
                         'weak_broadway_suited', 'weak_broadway'):
                 _nonpair_priority.append(('broadway', bc))
-            # offsuit
-            for oc in ('offsuit_broadway', 'offsuit_connector'):
-                _nonpair_priority.append(('offsuit_broadway', oc))
+            # offsuit: offsuit_broadway y offsuit_connector tienen
+            # sus propias clases en _NONPAIR_SUBS
+            _nonpair_priority.append(('offsuit_broadway', 'offsuit_broadway'))
+            _nonpair_priority.append(('offsuit_connector', 'offsuit_connector'))
             # other como fallback
             _nonpair_priority.append(('other', 'other'))
 
