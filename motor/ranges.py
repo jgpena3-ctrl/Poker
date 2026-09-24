@@ -83,26 +83,30 @@ def _cards_to_rank_pair(c0: int, c1: int) -> tuple:
 # Pesos base por sub-clase: determinan la prior P(H) de cada combo
 # dentro de su clase. AA=1.0 (máximo), 72o=0.2 (mínimo).
 BASE_WEIGHT_MAP = {
-    'premium_pair': 1.0,     # AA, KK, QQ, AKs
+    'premium_pair': 1.0,     # AA, KK, QQ
     'strong_pair': 0.9,      # JJ, TT, 99
     'medium_pair': 0.7,      # 88, 77, 66, 55
     'small_pair': 0.4,       # 44 down to 22
     'premium_broadway_suited': 1.0,  # AKs, AQs
     'premium_broadway': 0.95,        # AKo, AQo
-    'strong_broadway_suited': 0.90,  # AJs, KQs, KJs
-    'strong_broadway': 0.80,         # AJT, KQo
-    'medium_broadway_suited': 0.65,  # ATs, QJs, JTs
-    'medium_broadway': 0.55,         # ATo, QJo
-    'weak_broadway_suited': 0.45,    # 98s, T9s, 87s
-    'weak_broadway': 0.35,           # 98o, T9o
-    'high_suited_connector': 0.65,   # 98s, 87s
-    'medium_suited_connector': 0.5,  # 76s, 65s
-    'low_suited_connector': 0.35,    # 54s, 43s
-    'suited_ace': 0.90,              # A9s+, A8s+ (no broadway match)
-    'offsuit_broadway': 0.55,        # AKo, AQo, KQo
-    'offsuit_connector': 0.45,       # 98o, 87o, ...
-    'suited_one_gapper': 0.5,        # A9s, K9s, Q9s, ...
-    'offsuit_one_gapper': 0.3,
+    'strong_broadway_suited': 0.90,  # KQs, KJs
+    'strong_broadway': 0.80,         # KQo, KJo
+    'medium_broadway_suited': 0.65,  # QJs, JTs
+    'medium_broadway': 0.55,         # QJo, JTo
+    'weak_broadway_suited': 0.45,    # T9s, 98s
+    'weak_broadway': 0.35,           # KTo, QTo
+    'high_suited_connector': 0.65,   # T9s, 98s
+    'medium_suited_connector': 0.5,  # 87s, 76s
+    'low_suited_connector': 0.35,    # 65s, 54s
+    'suited_ace': 0.90,              # AKs, AQs, AJs, ATs, A9s+
+    'premium_offsuit_ace': 0.85,     # AKo, AQo
+    'strong_offsuit_ace': 0.60,      # AJo, ATo
+    'medium_offsuit_ace': 0.40,      # A9o, A8o
+    'weak_offsuit_ace': 0.25,        # A7o-A2o
+    'offsuit_broadway': 0.55,        # KQo, KJo, KTo, QJo, QTo, JTo
+    'offsuit_connector': 0.45,       # T9o, 98o, 87o
+    'suited_one_gapper': 0.5,        # J9s, T8s, 97s, ...
+    'offsuit_one_gapper': 0.3,       # J9o, T8o, 97o, ...
     'other': 0.25,
 }
 
@@ -151,16 +155,25 @@ def _compute_hand_classes():
                 _nonpair_priority.append(('suited_connector', sc))
             # suited_one_gapper
             _nonpair_priority.append(('suited_one_gapper', 'suited_one_gapper'))
-            # broadway: de más específico a más general
-            for bc in ('premium_broadway_suited', 'premium_broadway',
-                        'strong_broadway_suited', 'strong_broadway',
-                        'medium_broadway_suited', 'medium_broadway',
-                        'weak_broadway_suited', 'weak_broadway'):
+            # suited broadway: KQs, KJs, KTs, QJs, QTs, JTs
+            for bc in ('premium_broadway_suited', 'strong_broadway_suited',
+                        'medium_broadway_suited'):
                 _nonpair_priority.append(('broadway', bc))
-            # offsuit: offsuit_broadway y offsuit_connector tienen
-            # sus propias clases en _NONPAIR_SUBS
-            _nonpair_priority.append(('offsuit_broadway', 'offsuit_broadway'))
+            # offsuit: offsuit_ace, offsuit_connector, offsuit_one_gapper,
+            # offsuit_broadway. Se ponen ANTES de broadway offsuit
+            # para evitar que weak_broadway las capture antes.
+            _nonpair_priority.append(('offsuit_ace', 'premium_offsuit_ace'))
+            _nonpair_priority.append(('offsuit_ace', 'strong_offsuit_ace'))
+            _nonpair_priority.append(('offsuit_ace', 'medium_offsuit_ace'))
+            _nonpair_priority.append(('offsuit_ace', 'weak_offsuit_ace'))
             _nonpair_priority.append(('offsuit_connector', 'offsuit_connector'))
+            _nonpair_priority.append(('offsuit_one_gapper', 'offsuit_one_gapper'))
+            _nonpair_priority.append(('offsuit_broadway', 'offsuit_broadway'))
+            # broadway offsuit (solo manos sin As, las As ya están arriba)
+            _nonpair_priority.append(('broadway', 'premium_broadway'))
+            _nonpair_priority.append(('broadway', 'strong_broadway'))
+            _nonpair_priority.append(('broadway', 'medium_broadway'))
+            _nonpair_priority.append(('broadway', 'weak_broadway'))
             # other como fallback
             _nonpair_priority.append(('other', 'other'))
 
@@ -219,16 +232,22 @@ _NONPAIR_SUBS = {
         'suited_ace': lambda hi, lo: hi == 12 and lo >= 6,
     },
     'offsuit_broadway': {
-        'offsuit_broadway': lambda hi, lo: hi >= 10 and lo >= 8,
+        'offsuit_broadway': lambda hi, lo: hi >= 9 and lo >= 8,
+    },
+    'offsuit_ace': {
+        'premium_offsuit_ace': lambda hi, lo: hi == 12 and lo >= 10,
+        'strong_offsuit_ace':  lambda hi, lo: hi == 12 and 8 <= lo <= 9,
+        'medium_offsuit_ace':  lambda hi, lo: hi == 12 and 6 <= lo <= 7,
+        'weak_offsuit_ace':    lambda hi, lo: hi == 12 and lo <= 5,
     },
     'offsuit_connector': {
-        'offsuit_connector': lambda hi, lo: hi >= 8 and hi >= 6 and lo == hi - 1 and hi < 12,
+        'offsuit_connector': lambda hi, lo: hi >= 8 and lo == hi - 1 and hi < 12,
     },
     'suited_one_gapper': {
-        'suited_one_gapper': lambda hi, lo: hi >= 10 and 2 <= (hi - lo) <= 3,
+        'suited_one_gapper': lambda hi, lo: hi >= 4 and 2 <= (hi - lo) <= 3 and lo < 8,
     },
     'offsuit_one_gapper': {
-        'offsuit_one_gapper': lambda hi, lo: hi >= 10 and 2 <= (hi - lo) <= 3 and hi < 12,
+        'offsuit_one_gapper': lambda hi, lo: hi >= 9 and 2 <= (hi - lo) <= 3 and lo < 8,
     },
 }
 
@@ -445,6 +464,10 @@ _ACTION_PROBS = {
     'medium_suited_connector':{'r': 0.05, 'b': 0.35, 'c': 0.55, 'f': 0.60},
     'low_suited_connector':   {'r': 0.03, 'b': 0.25, 'c': 0.45, 'f': 0.70},
     'suited_ace':       {'r': 0.70, 'b': 0.85, 'c': 0.85, 'f': 0.15},
+    'premium_offsuit_ace': {'r': 0.85, 'b': 0.95, 'c': 0.90, 'f': 0.10},
+    'strong_offsuit_ace':  {'r': 0.45, 'b': 0.70, 'c': 0.80, 'f': 0.20},
+    'medium_offsuit_ace':  {'r': 0.20, 'b': 0.50, 'c': 0.65, 'f': 0.35},
+    'weak_offsuit_ace':    {'r': 0.08, 'b': 0.30, 'c': 0.45, 'f': 0.60},
     'offsuit_broadway': {'r': 0.40, 'b': 0.75, 'c': 0.80, 'f': 0.20},
     'offsuit_connector':{'r': 0.05, 'b': 0.30, 'c': 0.45, 'f': 0.65},
     'suited_one_gapper':{'r': 0.20, 'b': 0.50, 'c': 0.65, 'f': 0.35},
