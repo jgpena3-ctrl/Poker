@@ -69,7 +69,7 @@ _RANK_IDX = {r: i for i, r in enumerate(_RANKS)} # rank -> índice 0..12
 
 
 def _rank_of_idx(card_idx: int) -> int:
-    """Índice de rango (0=A, ..., 12=2) de un card 0..51."""
+    """Índice de rango (0=2, ..., 12=A) de un card 0..51."""
     return card_idx // 4
 
 
@@ -133,23 +133,47 @@ def _compute_hand_classes():
                     break
         if not assigned:
             # No pair: buscar la mejor sub-clase no-pair por prioridad.
-            # Se recorre _NONPAIR_SUBS en orden; el primer predicado que
-            # coincida (con compatibilidad suited/offsuit) gana.
-            for class_name, subs in _NONPAIR_SUBS.items():
-                for sub, pred in subs.items():
-                    if not pred(hi, lo):
-                        continue
-                    if suited and 'suited' not in sub:
-                        continue
-                    if not suited and 'suited' in sub:
-                        continue
-                    _HAND_CLASS_NAME[idx] = class_name
-                    _HAND_SUB_CLASS[idx] = sub
-                    _BASE_WEIGHT[idx] = BASE_WEIGHT_MAP[sub]
-                    assigned = True
-                    break
-                if assigned:
-                    break
+            # El orden importa: las categorías más específicas primero
+            # (suited aces, suited connectors, broadway) para evitar
+            # que categorías anchas como weak_broadway_suited eclipsen
+            # sub-clases más específicas (high_suited_connector, suited_ace).
+            _nonpair_priority = [
+                ('suited_aces', 'suited_ace'),
+            ]
+            # suited connectors: check de más específico a más general
+            for sc in ('high_suited_connector', 'medium_suited_connector',
+                        'low_suited_connector'):
+                _nonpair_priority.append(('suited_connector', sc))
+            # suited_one_gapper
+            _nonpair_priority.append(('suited_one_gapper', 'suited_one_gapper'))
+            # broadway: de más específico a más general
+            for bc in ('premium_broadway_suited', 'premium_broadway',
+                        'strong_broadway_suited', 'strong_broadway',
+                        'medium_broadway_suited', 'medium_broadway',
+                        'weak_broadway_suited', 'weak_broadway'):
+                _nonpair_priority.append(('broadway', bc))
+            # offsuit
+            for oc in ('offsuit_broadway', 'offsuit_connector'):
+                _nonpair_priority.append(('offsuit_broadway', oc))
+            # other como fallback
+            _nonpair_priority.append(('other', 'other'))
+
+            for class_name, sub in _nonpair_priority:
+                subs = _NONPAIR_SUBS.get(class_name, {})
+                pred = subs.get(sub)
+                if pred is None:
+                    continue
+                if not pred(hi, lo):
+                    continue
+                if suited and 'suited' not in sub:
+                    continue
+                if not suited and 'suited' in sub:
+                    continue
+                _HAND_CLASS_NAME[idx] = class_name
+                _HAND_SUB_CLASS[idx] = sub
+                _BASE_WEIGHT[idx] = BASE_WEIGHT_MAP[sub]
+                assigned = True
+                break
 
         if not assigned:
             # Fallback genérico
@@ -254,11 +278,6 @@ def hand_class_of_label(label: str) -> tuple:
     return hand_class(idx)
 
 
-# Propiedad derivada: weight ponderado por clase para normalización
-# weight_class[idx] = base_weight[idx] * (1.0 si es la clase base)
-# Se usa para el scaling del reach inicial
-
-
 def class_weights_vector() -> np.ndarray:
     """Vector (1326,) con los pesos base por clase para cada combo."""
     return _BASE_WEIGHT.copy()
@@ -274,12 +293,8 @@ def combos_by_class(hand_class_name: str) -> np.ndarray:
     return np.where(_HAND_CLASS_NAME == hand_class_name)[0]
 
 
-# Propiedad derivada de RangeState para pesos de clase
 def class_weights_for_reach(reach: np.ndarray) -> np.ndarray:
-    """reach normalizado ponderado por clase base.
-    
-    Útil para inicializar ranges donde cada clase debe tener
-    representación proporcional a su peso base."""
+    """reach normalizado ponderado por clase base."""
     w = reach.copy()
     w *= _BASE_WEIGHT
     total = w.sum()

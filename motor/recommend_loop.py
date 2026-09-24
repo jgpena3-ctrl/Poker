@@ -186,11 +186,11 @@ def recommend(hero_codes, board_codes, *, pot: float, to_call: float = 0.0,
     if postflop_model is not None and villain_postflop:
         perfil = getattr(postflop_model, 'labels', {}).get(villain_player)
         if perfil:
-            for street, facing, action, board in villain_postflop:
-                board_codes = ([c.strip() for c in board.split(',')]
-                               if board else board_codes)
-                vec = postflop_model.prob_vec(perfil, street, facing,
-                                              board_codes, action)
+            for sp, facing, action, board_str in villain_postflop:
+                board_for_update = ([c.strip() for c in board_str.split(',')]
+                                     if board_str else [])
+                vec = postflop_model.prob_vec(perfil, sp, facing,
+                                              board_for_update, action)
                 villain.update(vec)
     _stage('postflop', t)
 
@@ -213,6 +213,8 @@ def recommend(hero_codes, board_codes, *, pot: float, to_call: float = 0.0,
             range_advantage_str = ha_range_adv(sit.equity)
 
     # Intentar plan de reglas (fase 5)
+    # Durante desarrollo: excepciones visibles.
+    # Producción: fallback controlado + logging.
     try:
         rp = rules.plan(
             street=street,
@@ -230,7 +232,9 @@ def recommend(hero_codes, board_codes, *, pot: float, to_call: float = 0.0,
             hand_role=hand_role,
             range_advantage=range_advantage_str,
         )
-    except Exception:
+    except Exception as e:
+        import sys
+        print(f'[rules.plan] error: {e}', file=sys.stderr)
         rp = None
 
     candidates = rp.candidates if rp is not None else None
@@ -239,9 +243,21 @@ def recommend(hero_codes, board_codes, *, pot: float, to_call: float = 0.0,
     best_action, best_value, best_evs = None, -999.0, None
     best_runout = False
 
+    # Guardar board actual para situation() (no se modifica)
+    current_board_codes = board_codes
+
+    # compute_evs() calcula TODAS las acciones; candidates se pasa
+    # solo a rules.select_best(), NO aquí (para no filtrar prematuramente).
+    # Las pruebas test_candidates_filter_ev_table validan el filtrado
+    # directo de compute_evs, pero en recommend_loop queremos el EV completo.
+    bet_sizes = (0.25, 0.5, 0.75)
+    raise_to = None
+
     # Pasada 1: EV rápido (sin runout) → resultado provisional
-    evs = compute_evs(hero_codes, board_codes, villain_reach=villain,
-                      pot=pot, to_call=to_call, stack=stack, runout=False)
+    evs = compute_evs(hero_codes, current_board_codes,
+                        villain_reach=villain,
+                        pot=pot, to_call=to_call, stack=stack, runout=False,
+                        bet_sizes=bet_sizes, raise_to=raise_to)
     _stage('ev', t)
 
     if rp is not None:
@@ -257,10 +273,12 @@ def recommend(hero_codes, board_codes, *, pot: float, to_call: float = 0.0,
         remaining = budget_ms - elapsed_ms
         if remaining > 2000:
             t = time.perf_counter()
-            evs_runout = compute_evs(hero_codes, board_codes,
+            evs_runout = compute_evs(hero_codes, current_board_codes,
                                         villain_reach=villain,
                                         pot=pot, to_call=to_call,
-                                        stack=stack, runout=True)
+                                        stack=stack, runout=True,
+                                        bet_sizes=bet_sizes,
+                                        raise_to=raise_to)
             _stage('ev_runout', t)
             if rp is not None:
                 action2, value2 = rules.select_best(evs_runout, rp)
