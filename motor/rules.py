@@ -209,6 +209,9 @@ class RulePlan:
     note: str = ''
     n_players: int = 1
 
+    def kind_facing(self) -> bool:
+        """True si el spot es 'facing_bet' o 'facing_raise' (no hay bets pasivas)."""
+        return self.spot.startswith('facing')
 
 # ---------------------------------------------------------------------------
 # Tabla de reglas v1 (pegar.txt §18-§19): IF → filtros → acciones → sizing
@@ -313,7 +316,8 @@ def _en_barrel(c):
 
 
 def _en_probe(c):
-    return c.street == 'turn' and c.flop_checked
+    # §16 probe = OOP apuesta tras check-check en flop
+    return c.street == 'turn' and c.flop_checked and c.hero_oop
 
 
 def _en_turn(c):
@@ -426,7 +430,9 @@ def _apply(ctx, row):
     for guarda in row.filtering:
         nota = guarda(ctx)
         if nota:
-            return RulePlan(row.spot, ctx.tx, ('check',), note=nota,
+            # En spots "facing" no se puede checkear: el fallback es fold.
+            fallback = ('fold',) if row.kind == 'facing' else ('check',)
+            return RulePlan(row.spot, ctx.tx, fallback, note=nota,
                             n_players=ctx.n_players)
     if row.kind == 'facing':
         return _facing_plan(ctx, row)
@@ -476,6 +482,12 @@ def plan(street, hero_initiator, to_call, board_codes, pot, stack,
     range_advantage  : 'HERO' | 'NEUTRAL' | 'VILLAIN' (equity vs rango rival).
     nut_advantage    : 'HERO' | 'NEUTRAL' | 'VILLAIN' (aproximado).
     """
+    if street not in ('flop', 'turn', 'river'):
+        raise ValueError(f'street inválida: {street!r}')
+    if to_call < 0:
+        raise ValueError(f'to_call negativo: {to_call}')
+    if facing_raise and to_call <= 0:
+        raise ValueError('facing_raise=True con to_call=0')
     ctx = Ctx(street, hero_initiator, hero_oop, to_call, board_codes,
               pot, stack, n_players, facing_raise, hero_bet_flop,
               flop_checked, villain_bet_flop, hand_role, range_advantage,
@@ -498,6 +510,9 @@ def select_best(evs, rp=None):
     Si no hay plan, devuelve el equivalente a `evs.best()`.
     """
     labels = rp.candidates if rp is not None else tuple(evs.ev)
+    if 'fold' not in labels:
+        labels = ('fold',) + tuple(labels)
+    # baseline = EV real del fold (no asumir 0.0)
     best_label = 'fold'
     best_ev = evs.ev.get('fold', 0.0)
     for label in labels:

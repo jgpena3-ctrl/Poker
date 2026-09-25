@@ -30,7 +30,7 @@ from .hand_state import classify as classify_hand, range_advantage as ha_range_a
 
 # Orden postflop: primero en actuar → último
 # (BTN actúa último, UTG primero)
-_POSTFLOP_ORDER = ('SB', 'BB', 'CO', 'MP', 'UTG', 'BTN')
+_POSTFLOP_ORDER = ('SB', 'BB', 'UTG', 'MP', 'CO', 'BTN')
 
 BB = 1.0  # big blind nominal (BB del juego); ajustarla en caso real
 
@@ -40,12 +40,13 @@ def _hero_oop(hero_pos: str, villain_pos: str) -> bool:
 
     Usa el orden de posición: hero es OOP si está antes que
     villain en _POSTFLOP_ORDER (primer actuador = OOP).
-    Desconocido → False (conservador).
+    Desconocido → True (OOP) por defecto: asumir IP sesga hacia
+    call/raise; OOP es la suposición conservadora.
     """
     try:
         return _POSTFLOP_ORDER.index(hero_pos) < _POSTFLOP_ORDER.index(villain_pos)
     except (ValueError, TypeError):
-        return False
+        return True
 
 
 @dataclass
@@ -91,19 +92,18 @@ def _build_multiway_range(hero_codes, board_codes,
     Para multiway: el rango rival combinado es la unión de todos
     los rangos individuales (cada villain juega independientemente).
     Se aplican blockers (hero + board) a cada rango antes de combinar.
+    el modelo multiway sigue siendo aproximado.
     """
+    if not villain_ranges:
+        return RangeState()
     combined = None
-    for name, rs in villain_ranges.items():
+    known = list(hero_codes) + list(board_codes)
+    for rs in villain_ranges.values():
         r = rs.copy() if hasattr(rs, 'copy') else RangeState(reach=rs.reach)
-        r.set_known_cards(list(hero_codes) + list(board_codes))
-        if combined is None:
-            combined = r
-        else:
-            combined.reach = np.maximum(combined.reach, r.reach_blocked)
-    if combined is None:
-        combined = RangeState()
-    combined.nullify_blocked()
-    return combined
+        r.set_known_cards(known)
+        r.nullify_blocked()                      # blockers aplicados ANTES de unir
+        combined = r if combined is None else combined.union(r)
+    return combined if combined is not None else RangeState()
 
 
 def build_villain_range(hero_codes, board_codes, villain_pos='UTG',
@@ -171,6 +171,17 @@ def recommend(hero_codes, board_codes, *, pot: float, to_call: float = 0.0,
 
     def _stage(name, t_ref):
         stages[name] = (time.perf_counter() - t_ref) * 1000
+
+    # --- Validaciones de input (evitan EVs absurdos aguas abajo) ---
+    if pot < 0 or to_call < 0 or stack < 0:
+        raise ValueError(f'pot/to_call/stack negativos: {pot}, {to_call}, {stack}')
+    if to_call > stack:
+        # all-in efectivo: no se puede pagar más de lo que hay
+        to_call = stack
+    if facing_raise and to_call <= 0:
+        raise ValueError('facing_raise=True con to_call=0')
+    if villain_ranges:
+        n_players = max(n_players, len(villain_ranges) + 1)
 
     t = time.perf_counter()
     villain_labels = []
@@ -270,6 +281,10 @@ def recommend(hero_codes, board_codes, *, pot: float, to_call: float = 0.0,
     if rp is not None and rp.bet_sizes:
         bet_sizes = rp.bet_sizes
         raise_to = rp.raise_to
+    elif rp is not None and rp.kind_facing():
+        # spot "facing": no hay bets pasivas; solo call/raise/all_in/fold
+        bet_sizes = ()
+        raise_to = rp.raise_to
     else:
         bet_sizes = (0.25, 0.5, 0.75)
         raise_to = rp.raise_to if rp is not None else None
@@ -294,7 +309,8 @@ def recommend(hero_codes, board_codes, *, pot: float, to_call: float = 0.0,
         budget_ms = deadline_s * 1000
         elapsed_ms = (time.perf_counter() - t0) * 1000
         remaining = budget_ms - elapsed_ms
-        if remaining > 2000:
+        t_pass1_ms = stages.get('ev', 0.0)
+        if remaining > max(200.0, 2.5 * t_pass1_ms):
             t = time.perf_counter()
             evs_runout = compute_evs(hero_codes, current_board_codes,
                                         villain_reach=villain,
@@ -307,7 +323,13 @@ def recommend(hero_codes, board_codes, *, pot: float, to_call: float = 0.0,
                 action2, value2 = rules.select_best(evs_runout, rp)
             else:
                 action2, value2 = evs_runout.best()
-            # Usar siempre el resultado refinado (runout) si se ejecutó
+            # Anytime honesto: la pasada 2 refina, se reporta siempre.
+            # Si la acción cambia, se registra para telemetría.
+            if action2 != best_action:
+                stages['runout_action_changed'] = 1.0
+            else:
+                stages['runout_action_changed'] = 0.0
+            stages['runout_delta'] = value2 - best_value
             best_action, best_value, best_evs, best_runout = \
                 action2, value2, evs_runout, True
     else:
