@@ -7,7 +7,7 @@ from motor.ranges import (
     N_COMBOS, COMBO0, COMBO1, HAND_LABELS, HAND_MASKS, IS_PAIR, IS_SUITED,
     RangeState, uniform_range, default_action_prob, _HAND_CLASS_NAME,
     _NONPAIR_SUBS, _PAIR_SUBS, BASE_WEIGHT_MAP, _ACTION_PROBS, _HILO_IDX,
-    _preflop_category,
+    _preflop_category, RangeError, validate_reach,
 )
 from motor.ranges import _HAND_CLASS_NAME
 
@@ -105,11 +105,48 @@ def test_update_bayes():
     rs = uniform_range()
     w0 = rs.weights
     probs = np.full(N_COMBOS, 0.1, dtype=np.float32)
-    probs[0] = 10.0
+    probs[0] = 1.0
     rs.update(probs)
     w1 = rs.weights
     assert np.isclose(w1.sum(), 1.0)
-    assert w1[0] > 10 * w0[0]
+    assert w1[0] > 5 * w0[0]
+
+
+def test_update_rejects_invalid_probs():
+    """update() valida que P(A|H) sea una probabilidad real.
+
+    Un valor > 1 contaminaría todo el rango de forma silenciosa
+    (pegar_3, hallazgo P1). Antes `update()` solo miraba la forma.
+    """
+    rs = uniform_range()
+
+    # NaN
+    probs = np.full(N_COMBOS, 0.1, dtype=np.float32)
+    probs[3] = np.nan
+    with pytest.raises(RangeError):
+        rs.update(probs)
+
+    # infinito
+    probs = np.full(N_COMBOS, 0.1, dtype=np.float32)
+    probs[3] = np.inf
+    with pytest.raises(RangeError):
+        rs.update(probs)
+
+    # negativo
+    probs = np.full(N_COMBOS, 0.1, dtype=np.float32)
+    probs[3] = -0.5
+    with pytest.raises(RangeError):
+        rs.update(probs)
+
+    # fuera de [0, 1]
+    probs = np.full(N_COMBOS, 0.1, dtype=np.float32)
+    probs[0] = 10.0
+    with pytest.raises(RangeError):
+        rs.update(probs)
+
+    # forma incorrecta
+    with pytest.raises(RangeError):
+        rs.update(np.full(100, 0.5, dtype=np.float32))
 
 
 def test_update_action_zero_combos():

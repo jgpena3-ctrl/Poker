@@ -239,9 +239,14 @@ observaciones**.
 | `OR`, `ROL` | 5 c/u | | UTG | 16 |
 | `Over_Call` | 3 | | | |
 
-**No existe `OR_BB`.** `opening_range('BB')` (`preflop.py:97`) no tiene tabla de
-open para la BB y cae al comportamiento de fallback. Es el hueco más visible del
-prior, y BB es la posición con más decisiones en la muestra.
+**No existe `OR_BB`.** `opening_range('BB')` no tiene tabla de open para la BB.
+
+> **Corregido (Fase A.4).** `prob()` y `opening_range()` devuelven ahora `None`
+> cuando no hay tabla, en vez de ceros. `prob_or_fallback()` /
+> `opening_range_or_fallback()` devuelven `(vector, fuente)` con
+> `fuente ∈ {'table', 'uniform'}`, y `RangeState.source` registra esa
+> procedencia. La etiqueta del panel marca el caso uniforme. No se inventó
+> una tabla `OR_BB`.
 
 Ningún código del repo escribe este archivo. Es el eslabón que convierte datos en
 probabilidad **y está desconectado de los datos**.
@@ -348,7 +353,45 @@ la posición se captura en `PreflopEvent.pos` y se descarta al agregar.
 
 ---
 
-## 8. Conclusión
+## 8. Robustez previa a la calibración (Fase A/B/C — implementada)
+
+`pegar_2.txt` y `pegar_3.txt` coinciden en un punto: **no se puede calibrar
+antes de que el motor construya rangos válidos.** Antes de tocar `DEFAULT_ALPHA`,
+`_BASE_WEIGHT` o `_ACTION_PROBS` había que cerrar el contrato numérico. Eso ya
+está hecho.
+
+### Corregido
+
+| Hallazgo | Cambio |
+|---|---|
+| Rango vacío → `equity = 0.0` silencioso | `situation._weights_for` lanza `RangeError`; nunca hay una equity inventada |
+| `decision` lanzaba y `situation` devolvía 0.0 | Ambos usan `ranges.villain_weights`, fuente única compartida |
+| `prob()` devolvía ceros sin tabla | Devuelve `None`; el fallback uniforme queda marcado en `RangeState.source` |
+| `OR_BB` → rango vacío | Fallback uniforme auditable; no se inventa tabla |
+| `villain_cards` bloqueaba la mano del rival | `restrict_to_combo()` la conserva; `extra_blockers()` para cartas que no puede tener |
+| `villain_ids` se aceptaban a ciegas | `_legal_ids` rechaza combos que chocan con hero+board |
+| `update()` sin validar | Rechaza NaN, infinito, negativos y valores fuera de `[0,1]` |
+| `pot`/`to_call`/`stack` sin validar | `compute_evs` rechaza negativos y no finitos |
+| `copy()`/`union()` inexistentes | Implementados; la ruta multiway reventaba con `AttributeError` |
+| `prob_vec_player(..., 'no_raise','open')` fijo | `recommend()` acepta `villain_spot` y `villain_action` |
+| `'-'` como código de carta | `cards.is_card_code()`; `postflop_ranges` descarta manos no capturadas |
+
+### Nuevo contrato de errores
+
+`ranges.RangeError` (subclase de `ValueError`) distingue "no pude evaluar una
+distribución" de un fallo de programación. Un rango vacío nunca se convierte
+en una equity.
+
+### Lo que sigue bloqueado
+
+Fase D queda intacta a propósito: **no se han tocado `DEFAULT_ALPHA`,
+`BASE_WEIGHT_MAP` ni `_ACTION_PROBS`.** Sus problemas (posición ausente en los
+conteos, `fold` sin modelo, `other` al 34.5%, artefactos desfasados) siguen
+abiertos y son los del §5 y §7.
+
+---
+
+## 9. Conclusión
 
 Los mecanismos de calibración **existen y están bien construidos**: comparten una
 estadística coherente (encogimiento a prior con pseudo-conteos), degradan con

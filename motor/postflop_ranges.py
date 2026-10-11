@@ -144,10 +144,16 @@ class PostflopRangeModel:
             perfil = labels.get(o.player)
             if perfil is None:
                 continue
-            from .cards import card_id
+            from .cards import card_id, is_card_code
 
             cs = o.cards if isinstance(o.cards, (list, tuple)) \
                 else [o.cards[i:i + 2] for i in range(0, len(o.cards), 2)]
+            # El historial puede traer marcadores ('-', '') cuando el
+            # recorder no capturó la mano: no son una mano, y no pueden
+            # entrar al estimador de fuerza.
+            cs = [c for c in cs if is_card_code(c)]
+            if len(cs) != 2:
+                continue
             cards = np.asarray([card_id(c) for c in cs], dtype=np.intp)
             bucket = model._bucket_of(cards, bid)
             key = (perfil, o.street, o.facing, bucket)

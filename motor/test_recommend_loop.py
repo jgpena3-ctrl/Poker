@@ -4,6 +4,7 @@ import pytest
 
 from motor.decision import compute_evs
 from motor.panel import format_evs, format_cards, format_insight, format_situation
+from motor.ranges import RangeError
 from motor.recommend_loop import Recommendation, build_villain_range, recommend
 from motor.situation import situation
 
@@ -109,10 +110,34 @@ def test_build_villain_range_blockers():
     assert known & (1 << card_of('2c'))  # 2c del board marcado como blocker
 
 
-def test_build_villain_range_extra_cards():
+def test_build_villain_range_extra_blockers():
+    """Cartas que el rival NO puede tener -> sí se bloquean."""
     rs = build_villain_range(['Jd', 'Jh'], ['Qh', '7s', '2c'], 'UTG',
-                             villain_cards=['Ts'])
+                             extra_blockers=['Ts'])
     assert int(rs.legal_mask.sum()) == 1035  # C(46,2): una carta conocida más
+
+
+def test_build_villain_range_known_hand_is_kept():
+    """`villain_cards` = mano real: se conserva, no se bloquea.
+
+    Antes se pasaban por set_known_cards, lo que eliminaba precisamente
+    el combo que se sabía que el rival tenía (pegar_3, P0).
+    """
+    rs = build_villain_range(['Jd', 'Jh'], ['Qh', '7s', '2c'], 'UTG',
+                             villain_cards=['Ts', '9s'])
+    top = rs.top_hands(3)
+    assert {top[0][0][0:2], top[0][0][2:4]} == {'Ts', '9s'}
+    assert np.isclose(top[0][1], 1.0)   # todo el peso en ese combo
+    # y la mano sigue siendo legal: no se autobloqueó
+    assert not rs.is_empty
+
+
+def test_build_villain_range_known_hand_conflicting_raises():
+    """Si la mano conocida choca con el board, el rango queda vacío:
+    debesmanship detectable, no una equity 0.0 silenciosa."""
+    with pytest.raises(RangeError):
+        build_villain_range(['Jd', 'Jh'], ['Qh', '7s', '2c'], 'UTG',
+                            villain_cards=['Qh', '9s'])
 
 
 def test_deadline_param_accepted():

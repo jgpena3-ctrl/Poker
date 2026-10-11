@@ -22,8 +22,8 @@ import numpy as np
 
 from .decision import EvTable, compute_evs
 from .panel import format_insight
-from .preflop import opening_range
-from .ranges import RangeState
+from .preflop import opening_range_or_fallback
+from .ranges import RangeError, RangeState
 from .situation import Situation, situation
 from . import rules
 from .hand_state import classify as classify_hand, range_advantage as ha_range_adv
@@ -70,18 +70,50 @@ class Recommendation:
 
 def _build_villain_range(hero_codes, board_codes, villain_pos='UTG',
                           villain_cards=(), range_model=None,
-                          villain_player=''):
+                          villain_player='',
+                          villain_spot='no_raise', villain_action='open',
+                          extra_blockers=()):
     """RangeState del rival: OR preflop + blockers, o rango perfilado si se
-    pasa un ProfileRangeModel + jugador (player_ranges.py)."""
+    pasa un ProfileRangeModel + jugador (player_ranges.py).
+
+    `villain_spot` / `villain_action` describen lo que el rival HA HECHO
+    (denominador y categoría en la nomenclatura de learn.py). Antes se
+    pasaban fijos como ('no_raise', 'open'), así que un rival que pagaba
+    o hacía 3-bet recibía un rango de apertura: numéricamente válido,
+    pero estrategicamente incorrecto.
+
+    Las dos operaciones sobre cartas son DISTINTAS y antes se confundían
+    (pegar_2 §2.B, pegar_3 §5):
+
+      - `villain_cards`  : las 2 cartas REALES del rival cuando se conocen.
+        No se bloquean: se conservan. Se restringe el rango a ese combo.
+      - `extra_blockers` : cartas que el rival NO puede tener (p. ej. ya
+        vistas en la mesa). Estas sí se bloquean.
+
+    Bloquear `villain_cards` eliminaba justo la mano que sabemos que tiene.
+    """
+    source = 'profile'
     if range_model is not None and villain_player:
         reach = range_model.prob_vec_player(
-            villain_player, 'no_raise', 'open', villain_pos)
+            villain_player, villain_spot, villain_action, villain_pos)
     else:
-        reach = opening_range(villain_pos)
-    rs = RangeState(reach=reach)
+        reach, source = opening_range_or_fallback(villain_pos)
+    rs = RangeState(reach=np.asarray(reach, dtype=np.float32))
     rs.set_known_cards(list(hero_codes) + list(board_codes))
+    if extra_blockers:
+        rs.set_known_cards(list(extra_blockers))
     if villain_cards:
-        rs.set_known_cards(list(villain_cards))
+        rs.restrict_to_combo(list(villain_cards))
+    # Valida sobre el rango que se consumirá de verdad, es decir tras
+    # blockers. Un rango con masa cruta pero toda bloqueada es tan inválido
+    # como uno con ceros (p. ej. si villain_cards chocan con el board).
+    rs.validate()
+    if rs.is_empty:
+        raise RangeError(
+            'rango rival vacío tras blockers '
+            f'(villain_cards={list(villain_cards) if villain_cards else None}, '
+            f'extra_blockers={list(extra_blockers) if extra_blockers else None})')
+    rs.source = source
     return rs
 
 
@@ -92,6 +124,8 @@ def _build_multiway_range(hero_codes, board_codes,
     Para multiway: el rango rival combinado es la unión de todos
     los rangos individuales (cada villain juega independientemente).
     Se aplican blockers (hero + board) a cada rango antes de combinar.
+    `union()` suma masas y NO normaliza: la normalización ocurre en
+    `weights`, en el punto donde hace falta una distribución.
     el modelo multiway sigue siendo aproximado.
     """
     if not villain_ranges:
@@ -99,30 +133,39 @@ def _build_multiway_range(hero_codes, board_codes,
     combined = None
     known = list(hero_codes) + list(board_codes)
     for rs in villain_ranges.values():
-        r = rs.copy() if hasattr(rs, 'copy') else RangeState(reach=rs.reach)
+        r = rs.copy()
         r.set_known_cards(known)
         r.nullify_blocked()                      # blockers aplicados ANTES de unir
         combined = r if combined is None else combined.union(r)
-    return combined if combined is not None else RangeState()
+    if combined is None or combined.is_empty:
+        raise RangeError('rango multiway vacío tras blockers')
+    return combined
 
 
 def build_villain_range(hero_codes, board_codes, villain_pos='UTG',
                           villain_cards=(), range_model=None,
                           villain_player='',
+                          villain_spot='no_raise', villain_action='open',
+                          extra_blockers=(),
                           villain_ranges: Optional[Dict[str, RangeState]] = None):
     """Público: construye RangeState para HU o multiway."""
     if villain_ranges is not None and len(villain_ranges) > 0:
         return _build_multiway_range(hero_codes, board_codes, villain_ranges)
     return _build_villain_range(hero_codes, board_codes, villain_pos,
-                                   villain_cards, range_model, villain_player)
+                                   villain_cards, range_model, villain_player,
+                                   villain_spot, villain_action,
+                                   extra_blockers)
 
 
 def recommend(hero_codes, board_codes, *, pot: float, to_call: float = 0.0,
                stack: float = 0.0, street: str = 'flop', position: str = '',
                villain_pos: str = 'UTG', villain_cards: tuple = (),
+               extra_blockers: tuple = (),
                villain_reach: Union[None, RangeState, np.ndarray] = None,
                villain_ranges: Optional[Dict[str, RangeState]] = None,
                range_model=None, villain_player: str = '',
+               villain_spot: str = 'no_raise',
+               villain_action: str = 'open',
                postflop_model=None, villain_postflop=None,
                deadline_s: float = 8.0,
                runout: bool = True,
@@ -194,12 +237,18 @@ def recommend(hero_codes, board_codes, *, pot: float, to_call: float = 0.0,
     elif villain_reach is None:
         villain = _build_villain_range(hero_codes, board_codes, villain_pos,
                                         villain_cards, range_model,
-                                        villain_player)
+                                        villain_player,
+                                        villain_spot, villain_action,
+                                        extra_blockers)
         if range_model is not None and villain_player:
             perfil = range_model.perfil.get(villain_player, '?')
             villain_label = f'{perfil} wJ {villain_player}' \
-                if range_model.player_omega(villain_player, 'no_raise') != 1.0 \
+                if range_model.player_omega(villain_player, villain_spot) != 1.0 \
                 else f'{perfil} {villain_player}'
+        elif villain.source == 'uniform':
+            # Sin tabla poblacional para esa posición (p. ej. no hay OR_BB).
+            # Se marca en la etiqueta para que no se lea como un rango estimado.
+            villain_label = f'OR {villain_pos} (uniforme, sin tabla)'
         else:
             villain_label = f'OR {villain_pos}'
     else:

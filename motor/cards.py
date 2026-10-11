@@ -23,6 +23,18 @@ N_RANKS = len(RANK_ORDER)
 N_SUITS = len(SUIT_ORDER)
 
 
+def is_card_code(code) -> bool:
+    """True si `code` es un código de carta válido ('Ah', 'Td', ...).
+
+    Útil al leer del historial: el recorder deja marcadores como '-'
+    o '' cuando no capturó la mano, y esos no son cartas.
+    """
+    if not isinstance(code, str) or len(code) != 2:
+        return False
+    return (code[0].upper() in _RANK_INDEX
+            and code[1].lower() in _SUIT_INDEX)
+
+
 def card_id(code):
     """'Ah' -> entero 0..51."""
     if not isinstance(code, str) or len(code) != 2:

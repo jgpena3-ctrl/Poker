@@ -373,6 +373,83 @@ def class_weights_for_reach(reach: np.ndarray) -> np.ndarray:
     return w / total
 
 
+# ---------------------------------------------------------------------------
+# Contrato de validación de pesos (Fase A — robustez numérica)
+# ---------------------------------------------------------------------------
+
+# Índice (carta_a, carta_b) -> combo idx, para restrict_to_combo().
+_PAIR_IDX: Dict[tuple, int] = {
+    (int(COMBO0[i]), int(COMBO1[i])): i for i in range(N_COMBOS)
+}
+
+
+class RangeError(ValueError):
+    """Rango rival inválido o degenerado.
+
+    Se distingue de un ValueError genérico para que el llamador pueda
+    tratar "no pude evaluar una distribución" de forma distinta a un
+    fallo de programación. Un rango vacío NUNCA debe convertirse
+    silenciosamente en una equity de 0.0.
+    """
+
+
+def validate_reach(reach, *, allow_empty: bool = False):
+    """Valida un vector de pesos y devuelve (array float64, suma).
+
+    Comprueba forma (N_COMBOS,), finitud, no negatividad y suma positiva.
+    Lanza RangeError si algo falla, salvo que `allow_empty` y la única
+    falla sea la suma nula.
+
+    Usar en cualquier punto donde un vector de reach entre al motor: así
+    "no hay distribución" nunca se confunde con "el rival no tiene mano".
+    """
+    arr = np.asarray(reach, dtype=np.float64)
+    if arr.shape != (N_COMBOS,):
+        raise RangeError(
+            f'reach debe tener forma ({N_COMBOS},), tiene {arr.shape}')
+    if not np.all(np.isfinite(arr)):
+        raise RangeError('reach contiene NaN o infinito')
+    if np.any(arr < 0):
+        raise RangeError('reach contiene valores negativos')
+    total = float(arr.sum())
+    if total <= 0 and not allow_empty:
+        raise RangeError('reach vacío (suma cero)')
+    return arr, total
+
+
+def villain_weights(villain_reach, villain_ids):
+    """Pesos normalizados sobre `villain_ids`. Fuente única de verdad.
+
+    - None → uniforme (1/N)
+    - RangeState → reach_blocked[ids] (respeta sus blockers)
+    - vector (N_COMBOS,) → valores en bruto, normalizados sobre `ids`
+
+    La usan tanto `situation.equity_vs_range` (panel) como
+    `decision.compute_evs` (motor de EV). Antes cada una tenía su propia
+    copia y podían divergir: una devolvía ceros en rango vacío y la otra
+    lanzaba. Aquí el rango vacío es siempre un RangeError.
+    """
+    ids = np.asarray(villain_ids, dtype=np.intp)
+    n = int(ids.size)
+    if n == 0:
+        raise RangeError('villain_ids vacío')
+    if villain_reach is None:
+        return np.full(n, 1.0 / n, dtype=np.float64)
+    if isinstance(villain_reach, RangeState):
+        w = villain_reach.reach_blocked[ids].astype(np.float64)
+    else:
+        arr, _total = validate_reach(villain_reach, allow_empty=True)
+        w = arr[ids]
+    if not np.all(np.isfinite(w)):
+        raise RangeError('pesos del rango con NaN o infinito')
+    if np.any(w < 0):
+        raise RangeError('pesos del rango negativos')
+    total = float(w.sum())
+    if total <= 0:
+        raise RangeError('rango rival vacío tras blockers')
+    return w / total
+
+
 class RangeState:
     """Estado de rango bayesiano sobre las 1326 combinaciones.
 
@@ -384,14 +461,19 @@ class RangeState:
     confidence : 0..1 — confianza en el modelo del rival
     """
 
-    __slots__ = ('reach', 'blockers', 'position', 'confidence')
+    __slots__ = ('reach', 'blockers', 'position', 'confidence', 'source')
 
-    def __init__(self, reach=None, blockers=0, position='', confidence=0.5):
+    def __init__(self, reach=None, blockers=0, position='', confidence=0.5,
+                 source=''):
         self.reach = np.zeros(N_COMBOS, dtype=np.float32) if reach is None \
             else np.asarray(reach, dtype=np.float32).copy()
         self.blockers = int(blockers)
         self.position = position
         self.confidence = float(confidence)
+        # Procedencia del reach: 'table', 'uniform', 'profile', '' (sin marcar).
+        # Permite auditar si un rango viene de una estimación real o de un
+        # fallback técnico.
+        self.source = source
 
     # ---------------------------------------------------------------
     # derivadas
@@ -434,6 +516,67 @@ class RangeState:
         self.reach[~self.legal_mask] = 0.0
         return self
 
+    # ---------------------------------------------------------------
+    # construcción y combinación (Fase B.3)
+    # ---------------------------------------------------------------
+
+    def copy(self):
+        """Copia independiente del estado (reach, blockers y metadatos)."""
+        return RangeState(reach=self.reach.copy(), blockers=self.blockers,
+                          position=self.position, confidence=self.confidence,
+                          source=self.source)
+
+    def union(self, other):
+        """Unión de dos reaches: suma de pesos, SIN normalizar.
+
+        Cada rango representa a un rival distinto que actúa de forma
+        independiente, así que las masas se suman. La suma resultante
+        no es 1 y no debe serlo: la normalización ocurre en `weights`,
+        en el punto donde se necesita una distribución.
+        """
+        if not isinstance(other, RangeState):
+            raise TypeError('union exige otro RangeState')
+        return RangeState(reach=self.reach + other.reach,
+                          blockers=self.blockers | other.blockers,
+                          position=self.position,
+                          confidence=min(self.confidence, other.confidence))
+
+    def restrict_to_combo(self, cards):
+        """Restringe el rango al combo exacto formado por 2 cartas.
+
+        Operación opuesta a `set_known_cards`: aquí las cartas SÍ son
+        del jugador, así que no se bloquean, se conservan. Es lo que
+        corresponde cuando se conoce la mano real del rival.
+
+        Si el prior daba peso 0 a ese combo, se le asigna un peso
+        positivo mínimo: la información del llamador ("el rival tiene
+        esta mano") es más fuerte que una estimación poblacional, y sin
+        esto restringir un combo ausente produciría un rango vacío.
+        """
+        codes = list(cards)
+        if len(codes) != 2:
+            raise ValueError('restrict_to_combo exige exactamente 2 cartas')
+        ids = sorted(card_id(c) for c in codes)
+        idx = _PAIR_IDX.get((ids[0], ids[1]))
+        if idx is None:
+            raise ValueError(f'combo no encontrado para {list(cards)}')
+        mask = np.zeros(N_COMBOS, dtype=bool)
+        mask[idx] = True
+        self.reach[~mask] = 0.0
+        if self.reach[idx] <= 0:
+            self.reach[idx] = 1.0
+        return self
+
+    def validate(self, *, allow_empty: bool = False) -> float:
+        """Valida el reach y devuelve su suma. Lanza RangeError si falla."""
+        _, total = validate_reach(self.reach, allow_empty=allow_empty)
+        return total
+
+    @property
+    def is_empty(self) -> bool:
+        """True si no queda ninguna combinación con peso positivo."""
+        return bool(not np.any(self.reach_blocked > 0))
+
     def top_hands(self, k=10):
         """Top-k combos por weight con (etiqueta, weight)."""
         w = self.weights
@@ -448,10 +591,21 @@ class RangeState:
         """P(H|A) ∝ P(A|H)·P(H): reach = reach * P(A|H) por combo.
 
         prob_action: vector float (1326,) con P(A|H) por combinación.
+        Debe ser finito, no negativo y estar en [0, 1]: es una
+        probabilidad, no un peso. Un NaN o un valor > 1 aquí
+        contaminaría todo el rango de forma silenciosa.
         """
         p = np.asarray(prob_action, dtype=np.float32)
         if p.shape != (N_COMBOS,):
-            raise ValueError(f'P(A|H) debe tener forma ({N_COMBOS},), tiene {p.shape}')
+            raise RangeError(
+                f'P(A|H) debe tener forma ({N_COMBOS},), tiene {p.shape}')
+        if not np.all(np.isfinite(p)):
+            raise RangeError('P(A|H) contiene NaN o infinito')
+        if np.any(p < 0):
+            raise RangeError('P(A|H) contiene valores negativos')
+        if np.any(p > 1.0 + 1e-6):
+            raise RangeError(
+                f'P(A|H) fuera de [0,1]: max={float(p.max()):.4f}')
         self.reach = self.reach * p
         return self
 

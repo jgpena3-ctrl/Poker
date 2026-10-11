@@ -29,7 +29,8 @@ import numpy as np
 from .cards import card_id, cards_to_bits
 from .hand_evaluator import (evaluate_batch, evaluate_hand, evaluate_n_batch,
                              legal_hands)
-from .ranges import COMBO0, COMBO1, RangeState
+from .ranges import (COMBO0, COMBO1, N_COMBOS, RangeError, RangeState,
+                     validate_reach, villain_weights)
 
 BET_LABELS = ('bet_25', 'bet_50', 'bet_75')
 ACTIONS = ('fold', 'check', 'call') + BET_LABELS + ('raise', 'all_in')
@@ -240,7 +241,12 @@ def _showdown_equity_by_combo(hero_codes, board_codes, villain_ids,
 
 def _villain_arrays(hero_codes, board_codes, villain_reach):
     """(ids, w, hero_eq) — combos rivales legales, masas normalizadas y
-    equity del hero contra cada combo (0/0.5/1 según la fuerza actual)."""
+    equity del hero contra cada combo (0/0.5/1 según la fuerza actual).
+
+    Los pesos salen de `ranges.villain_weights`, la misma función que usa
+    `situation.equity_vs_range`: el panel y el motor de EV deben ver
+    exactamente el mismo rango.
+    """
     known = cards_to_bits(list(hero_codes) + list(board_codes))
     ids = legal_hands(known)
     # invariant: legal_hands devuelve índices estrictamente crecientes
@@ -249,20 +255,7 @@ def _villain_arrays(hero_codes, board_codes, villain_reach):
     scores = evaluate_batch(pairs, [card_id(c) for c in board_codes])
     hero = evaluate_hand(hero_codes, board_codes)
 
-    if villain_reach is None:
-        w = np.full(len(ids), 1.0 / len(ids), dtype=np.float64)
-    elif isinstance(villain_reach, RangeState):
-        w = villain_reach.reach_blocked[ids].astype(np.float64)
-    else:
-        arr = np.asarray(villain_reach, dtype=np.float64)
-        if arr.shape != (1326,):
-            raise ValueError(f'reach debe tener forma (1326,), tiene {arr.shape}')
-        w = arr[ids]
-    total = w.sum()
-    if total <= 0:
-        raise ValueError('rango rival vacío tras blockers')
-    w = w / total
-
+    w = villain_weights(villain_reach, ids)
     hero_eq = 1.0 * (scores < hero) + 0.5 * (scores == hero)
     return ids, w, hero_eq
 
@@ -500,6 +493,17 @@ def compute_evs(hero_codes, board_codes, villain_reach=None,
     """
     if len(hero_codes) < 2:
         raise ValueError('MVP 1 exige la mano del hero conocida (2 códigos)')
+    # Validación de entradas: un pot negativo o un NaN aquí se propagaría
+    # al EV sin que nada lo delate (pegar_3 A.5). Se rechazan aquí en lugar
+    # de seguir y producir números sin sentido.
+    pot = float(pot)
+    to_call = float(to_call)
+    stack = float(stack)
+    for name, val in (('pot', pot), ('to_call', to_call), ('stack', stack)):
+        if not np.isfinite(val):
+            raise ValueError(f'{name} no es finito: {val!r}')
+        if val < 0:
+            raise ValueError(f'{name} negativo: {val}')
     stack = max(0.0, float(stack))
     if villain_stack is not None:
         villain_stack = max(0.0, float(villain_stack))

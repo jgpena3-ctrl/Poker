@@ -20,7 +20,8 @@ import numpy as np
 
 from .cards import card_id, cards_to_bits, suit_of, rank_of
 from .hand_evaluator import evaluate_batch, evaluate_hand, legal_hands, compare_ranks
-from .ranges import COMBO0, COMBO1, RangeState
+from .ranges import (COMBO0, COMBO1, HAND_MASKS, N_COMBOS, RangeError,
+                     RangeState, validate_reach, villain_weights)
 
 SUITS_LABEL = {0: 'c', 1: 'd', 2: 'h', 3: 's'}
 
@@ -41,24 +42,11 @@ def _range_scores(hero_codes, board_codes, villain_ids):
 def _weights_for(villain_reach, villain_ids):
     """Pesos normalizados (N,) sobre los combos rivales.
 
-    - None        → uniforme (1/N)
-    - RangeState  → reach_blocked[ids] (solo combos legales para él)
-    - vector (1326,) → valores en bruto, normalizados sobre `ids`
+    Delegado en `ranges.villain_weights`, la fuente única compartida con
+    `decision.compute_evs`, para que panel y motor de EV no puedan
+    divergir en el tratamiento del rango vacío.
     """
-    n = len(villain_ids)
-    if villain_reach is None:
-        return np.full(n, 1.0 / n, dtype=np.float64)
-    if isinstance(villain_reach, RangeState):
-        w = villain_reach.reach_blocked[villain_ids].astype(np.float64)
-    else:
-        arr = np.asarray(villain_reach, dtype=np.float64)
-        if arr.shape != (1326,):
-            raise ValueError(f'reach debe tener forma (1326,), tiene {arr.shape}')
-        w = arr[villain_ids]
-    total = w.sum()
-    if total <= 0:
-        return np.zeros(n, dtype=np.float64)
-    return w / total
+    return villain_weights(villain_reach, villain_ids)
 
 
 def equity_vs_range(hero_codes, board_codes, villain_reach=None,
@@ -89,10 +77,32 @@ def hero_percentile(hero_codes, board_codes, villain_reach=None,
 
 
 def _legal_ids(hero_codes, board_codes, villain_ids=None):
+    """Combos rivales a evaluar.
+
+    Si `villain_ids` viene del llamador se valida que sean compatibles
+    con hero+board: aceptar IDs a ciegas permite calcular equity con
+    manos imposibles (una combinación que contiene una carta del board).
+    """
     if villain_ids is None:
         known = cards_to_bits(list(hero_codes) + list(board_codes))
         return legal_hands(known)
-    return np.asarray(villain_ids, dtype=np.intp)
+    ids = np.asarray(villain_ids, dtype=np.intp)
+    if ids.size == 0:
+        raise RangeError('villain_ids vacío')
+    if ids.ndim != 1:
+        raise RangeError(f'villain_ids debe ser 1-D, tiene forma {ids.shape}')
+    if ids.min() < 0 or ids.max() >= N_COMBOS:
+        raise RangeError(
+            f'villain_ids fuera de rango [0,{N_COMBOS}): '
+            f'min={int(ids.min())} max={int(ids.max())}')
+    known = cards_to_bits(list(hero_codes) + list(board_codes))
+    if known:
+        bad = (HAND_MASKS[ids] & known) != 0
+        if np.any(bad):
+            raise RangeError(
+                f'{int(bad.sum())} de {ids.size} combos de villain_ids '
+                f'chocan con cartas conocidas de hero+board')
+    return ids
 
 
 # ---------------------------------------------------------------------------

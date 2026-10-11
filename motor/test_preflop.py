@@ -4,7 +4,7 @@ import pytest
 
 from motor.preflop import (
     GRID_INDEX, matrix_to_probs, load_tables, table_key,
-    prob, opening_range,
+    prob, prob_or_fallback, has_table, opening_range, opening_range_or_fallback,
 )
 from motor.ranges import N_COMBOS, HAND_MASKS, RangeState
 
@@ -82,10 +82,40 @@ def test_table_key():
     assert table_key('3B', 'BB', 'SB') == '3B_BB_vs_SB'
 
 
-def test_prob_missing_table_zeros():
+def test_prob_missing_table_returns_none():
+    """Tabla ausente -> None, NO un vector de ceros.
+
+    Devolver ceros convertía "no modelado" en "imposible": el update
+    bayesiano vaciaba el rango entero ante esa acción (pegar_2, P0).
+    """
     v = prob('OR', 'ZZZ')  # tabla inexistente
-    assert v.shape == (N_COMBOS,)
-    assert np.count_nonzero(v) == 0
+    assert v is None
+    assert not has_table('OR', 'ZZZ')
+
+
+def test_prob_or_fallback_marks_source():
+    """El fallback es usable pero queda marcado como 'uniform'."""
+    vec, src = prob_or_fallback('OR', 'ZZZ')
+    assert src == 'uniform'
+    assert vec.shape == (N_COMBOS,)
+    assert np.all(vec > 0)          # nunca un rango vacío
+
+    vec2, src2 = prob_or_fallback('OR', 'UTG')
+    assert src2 == 'table'
+    assert vec2.sum() > 0
+
+
+def test_opening_range_bb_has_no_table():
+    """No existe OR_BB: debe devolverse None, no inventar una tabla."""
+    assert opening_range('BB') is None
+    vec, src = opening_range_or_fallback('BB')
+    assert src == 'uniform'
+    assert vec.sum() > 0            # uniforme pero no vacío
+
+
+def test_opening_range_utg_has_table():
+    assert opening_range('UTG') is not None
+    assert has_table('OR', 'UTG')
 
 
 def test_integration_utg_open_bb_3bet():

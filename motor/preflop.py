@@ -84,19 +84,58 @@ def table_key(action, pos, vs=''):
     return f'{action}_{pos}_vs_{vs}' if vs else f'{action}_{pos}'
 
 
-def prob(action, pos, vs=''):
-    """Vector P(A|H) (1326,) para (action, pos, vs).
+def has_table(action, pos, vs='') -> bool:
+    """True si existe una tabla válida para (action, pos, vs)."""
+    return table_key(action, pos, vs) in load_tables()
 
-    Sin tabla para esa combinación devuelve ceros: el update bayesiano
-    vaciará el rango ante esa acción (no modelada).
+
+def prob(action, pos, vs=''):
+    """Vector P(A|H) (1326,) para (action, pos, vs), o None si no hay tabla.
+
+    Distingue tres estados (pegar_2 §3):
+
+      - tabla presente y válida -> se usa;
+      - tabla AUSENTE           -> None. La ausencia de una estimación no
+        es una estimación: devolver ceros hacía que el update bayesiano
+        vaciara el rango entero, convirtiendo "no modelado" en "imposible";
+      - tabla inválida          -> matrix_to_probs() lanza al cargar.
+
+    Quien necesite un valor numérico debe llamar a
+    `prob_or_fallback()` y registrar de dónde salió el valor.
     """
     t = load_tables().get(table_key(action, pos, vs))
-    return t['probs'] if t is not None else np.zeros(N_COMBOS, dtype=np.float32)
+    return None if t is None else t['probs']
+
+
+def prob_or_fallback(action, pos, vs='', fallback=None):
+    """Como `prob`, pero devuelve un vector usable. Devuelve (vec, fuente).
+
+    fuente ∈ {'table', 'uniform'}. Permite que el consumidor registre
+    cuándo está usando un rango uniforme en lugar de una estimación,
+    en vez de indistinguishable de un rango real.
+    """
+    v = prob(action, pos, vs)
+    if v is not None:
+        return v, 'table'
+    if fallback is None:
+        fallback = np.full(N_COMBOS, 1.0 / N_COMBOS, dtype=np.float32)
+    return np.asarray(fallback, dtype=np.float32).copy(), 'uniform'
 
 
 def opening_range(pos):
-    """Rango de apertura (OR) de `pos` -> vector (1326,) de masas."""
+    """Rango de apertura (OR) de `pos` -> vector (1326,) de masas, o None.
+
+    Devuelve None si no hay tabla OR para esa posición. Notar que la BB
+    no "abre" en el mismo sentido que el resto: no existe OR_BB en
+    preflop_matrices.json, y no debe inventarse una. Quien necesite un
+    vector debe usar `opening_range_or_fallback()`.
+    """
     return prob('OR', pos, '')
+
+
+def opening_range_or_fallback(pos, fallback=None):
+    """(vector, fuente) del rango de apertura; fuente ∈ {'table','uniform'}."""
+    return prob_or_fallback('OR', pos, '', fallback)
 
 
 def preload():
