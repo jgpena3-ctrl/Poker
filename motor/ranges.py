@@ -102,6 +102,12 @@ BASE_WEIGHT_MAP = {
     'low_suited_connector': 0.35,     # 65s, 54s
     # SUITED_GAPPER
     'suited_gapper': 0.50,            # J9s, T8s, 97s, ...
+    'medium_suited_gapper_1': 0.45,   # J9s, T8s, 97s, 65s
+    'low_suited_gapper_1': 0.35,      # 53s, 43s, 32s
+    'medium_suited_gapper_2': 0.40,   # T7s, 96s, 85s
+    'low_suited_gapper_2': 0.30,      # 52s, 42s, 31s
+    'medium_suited_gapper_3': 0.35,   # 95s, 84s, 73s
+    'low_suited_gapper_3': 0.25,      # 51s, 41s
     # OFFSUIT_ACE
     'premium_offsuit_ace': 0.85,      # AKo, AQo
     'strong_offsuit_ace': 0.60,       # AJo, ATo
@@ -117,6 +123,12 @@ BASE_WEIGHT_MAP = {
     'low_offsuit_connector': 0.25,    # 65o, 54o, 43o, 32o
     # OFFSUIT_GAPPER
     'offsuit_gapper': 0.30,           # 64o, 75o, 86o, 97o, T8o, J9o
+    'medium_offsuit_gapper_1': 0.25,  # J9o, T8o, 97s
+    'low_offsuit_gapper_1': 0.18,     # 53o, 43o, 32o
+    'medium_offsuit_gapper_2': 0.20,  # T7o, 96o, 85o
+    'low_offsuit_gapper_2': 0.15,     # 52o, 42o, 31o
+    'medium_offsuit_gapper_3': 0.18,  # 95o, 84o, 73o
+    'low_offsuit_gapper_3': 0.12,     # 51o, 41o
     'other': 0.25,
 }
 
@@ -154,9 +166,10 @@ def _compute_hand_classes():
         if not assigned:
             # No pair: buscar la mejor sub-clase no-pair por prioridad.
             # El orden importa: las categorías más específicas primero
-            # (suited aces, suited connectors, broadway) para evitar
-            # que categorías anchas como weak_broadway_suited eclipsen
-            # sub-clases más específicas (high_suited_connector, suited_ace).
+            # (suited aces → suited broadway → suited connector → gapper
+            # → offsuit ace → offsuit broadway → offsuit connector → gapper)
+            # para evitar que categorías anchas como offsuit_gapper
+            # eclipsen sub-clases más específicas.
             _nonpair_priority = [
                 ('suited_ace', 'premium_suited_ace'),
                 ('suited_ace', 'strong_suited_ace'),
@@ -170,8 +183,9 @@ def _compute_hand_classes():
             for sc in ('high_suited_connector', 'medium_suited_connector',
                         'low_suited_connector'):
                 _nonpair_priority.append(('suited_connector', sc))
-            # suited_gapper
-            _nonpair_priority.append(('suited_gapper', 'suited_gapper'))
+            # suited_gapper: iterar todas las sub-clases
+            for sc in _NONPAIR_SUBS['suited_gapper']:
+                _nonpair_priority.append(('suited_gapper', sc))
             # offsuit: offsuit_ace, offsuit_broadway, offsuit_connector,
             # offsuit_gapper
             for sc in ('premium_offsuit_ace', 'strong_offsuit_ace',
@@ -183,7 +197,8 @@ def _compute_hand_classes():
             for sc in ('high_offsuit_connector', 'medium_offsuit_connector',
                         'low_offsuit_connector'):
                 _nonpair_priority.append(('offsuit_connector', sc))
-            _nonpair_priority.append(('offsuit_gapper', 'offsuit_gapper'))
+            for sc in _NONPAIR_SUBS['offsuit_gapper']:
+                _nonpair_priority.append(('offsuit_gapper', sc))
             # other como fallback
             _nonpair_priority.append(('other', 'other'))
 
@@ -205,13 +220,10 @@ def _compute_hand_classes():
                 break
 
         if not assigned:
-            # Fallback genérico
-            if suited:
-                _HAND_CLASS_NAME[idx] = 'suited_connector'
-                _HAND_SUB_CLASS[idx] = 'other'
-            else:
-                _HAND_CLASS_NAME[idx] = 'offsuit_connector'
-                _HAND_SUB_CLASS[idx] = 'other'
+            # Fallback genérico: manos de muy bajo rango
+            # que no encajan en ninguna categoría específica.
+            _HAND_CLASS_NAME[idx] = 'other'
+            _HAND_SUB_CLASS[idx] = 'other'
             _BASE_WEIGHT[idx] = BASE_WEIGHT_MAP['other']
 
 
@@ -241,9 +253,14 @@ _NONPAIR_SUBS = {
         'medium_suited_connector':  lambda hi, lo: hi in (6, 5) and lo == hi - 1,
         'low_suited_connector':     lambda hi, lo: hi in (4, 3, 2, 1) and lo == hi - 1,
     },
-    # SUITED_GAPPER: suited with gap >= 2 (J9s, T8s, 97s, etc.)
+    # SUITED_GAPPER: suited with gap = 1, 2, 3 (J9s, T7s, 95s, etc.)
     'suited_gapper': {
-        'suited_gapper': lambda hi, lo: hi >= 4 and 2 <= (hi - lo) <= 3 and lo < 8,
+        'medium_suited_gapper_1': lambda hi, lo: hi in (9, 8, 7, 6) and lo == hi - 2,
+        'low_suited_gapper_1': lambda hi, lo: hi in (5, 4, 3, 2) and lo == hi - 2,
+        'medium_suited_gapper_2': lambda hi, lo: hi in (9, 8, 7, 6) and lo == hi - 3,
+        'low_suited_gapper_2': lambda hi, lo: hi in (5, 4, 3) and lo == hi - 3,
+        'medium_suited_gapper_3': lambda hi, lo: hi in (9, 8, 7) and lo == hi - 4,
+        'low_suited_gapper_3': lambda hi, lo: hi in (5, 4) and lo == hi - 4,
     },
     # OFFSUIT_ACE: offsuit A-x combos
     'offsuit_ace': {
@@ -264,9 +281,14 @@ _NONPAIR_SUBS = {
         'medium_offsuit_connector':  lambda hi, lo: hi in (6, 5) and lo == hi - 1,  # 87o, 76o
         'low_offsuit_connector':     lambda hi, lo: hi in (4, 3, 2, 1) and lo == hi - 1,  # 32o, 43o, 54o, 65o
     },
-    # OFFSUIT_GAPPER: offsuit with gap >= 2 (J9o, T8o, 97o, etc.)
+    # OFFSUIT_GAPPER: offsuit with gap = 1, 2, 3 (J9o, T7o, 95o, etc.)
     'offsuit_gapper': {
-        'offsuit_gapper': lambda hi, lo: hi >= 9 and 2 <= (hi - lo) <= 3 and lo < 8,
+        'medium_offsuit_gapper_1': lambda hi, lo: hi in (9, 8, 7, 6) and lo == hi - 2,
+        'low_offsuit_gapper_1': lambda hi, lo: hi in (5, 4, 3, 2) and lo == hi - 2,
+        'medium_offsuit_gapper_2': lambda hi, lo: hi in (9, 8, 7, 6) and lo == hi - 3,
+        'low_offsuit_gapper_2': lambda hi, lo: hi in (5, 4, 3) and lo == hi - 3,
+        'medium_offsuit_gapper_3': lambda hi, lo: hi in (9, 8, 7) and lo == hi - 4,
+        'low_offsuit_gapper_3': lambda hi, lo: hi in (5, 4) and lo == hi - 4,
     },
 }
 
@@ -483,9 +505,15 @@ _ACTION_PROBS = {
     # SUITED_CONNECTOR
     'high_suited_connector':  {'r': 0.10, 'b': 0.45, 'c': 0.60, 'f': 0.50},
     'medium_suited_connector':{'r': 0.05, 'b': 0.35, 'c': 0.55, 'f': 0.60},
-    'low_suited_connector':   {'r': 0.03, 'b': 0.25, 'c': 0.45, 'f': 0.70},
-    # SUITED_GAPPER
-    'suited_gapper':      {'r': 0.20, 'b': 0.50, 'c': 0.65, 'f': 0.35},
+     'low_suited_connector':   {'r': 0.03, 'b': 0.25, 'c': 0.45, 'f': 0.70},
+     # SUITED_GAPPER
+     'suited_gapper':      {'r': 0.20, 'b': 0.50, 'c': 0.65, 'f': 0.35},
+     'medium_suited_gapper_1': {'r': 0.18, 'b': 0.45, 'c': 0.60, 'f': 0.38},
+     'low_suited_gapper_1':  {'r': 0.08, 'b': 0.30, 'c': 0.45, 'f': 0.55},
+     'medium_suited_gapper_2': {'r': 0.12, 'b': 0.38, 'c': 0.55, 'f': 0.45},
+     'low_suited_gapper_2':  {'r': 0.05, 'b': 0.22, 'c': 0.35, 'f': 0.65},
+     'medium_suited_gapper_3': {'r': 0.10, 'b': 0.35, 'c': 0.50, 'f': 0.50},
+     'low_suited_gapper_3':  {'r': 0.04, 'b': 0.18, 'c': 0.30, 'f': 0.62},
     # OFFSUIT_ACE
     'premium_offsuit_ace': {'r': 0.85, 'b': 0.95, 'c': 0.90, 'f': 0.10},
     'strong_offsuit_ace':  {'r': 0.45, 'b': 0.70, 'c': 0.80, 'f': 0.20},
@@ -500,9 +528,15 @@ _ACTION_PROBS = {
     'medium_offsuit_connector':{'r': 0.03, 'b': 0.25, 'c': 0.45, 'f': 0.70},
     'low_offsuit_connector':   {'r': 0.02, 'b': 0.20, 'c': 0.35, 'f': 0.75},
     # OFFSUIT_GAPPER
-    'offsuit_gapper': {'r': 0.08, 'b': 0.30, 'c': 0.40, 'f': 0.65},
-    'other':              {'r': 0.05, 'b': 0.20, 'c': 0.35, 'f': 0.75},
-}
+     'offsuit_gapper': {'r': 0.08, 'b': 0.30, 'c': 0.40, 'f': 0.65},
+     'medium_offsuit_gapper_1': {'r': 0.07, 'b': 0.28, 'c': 0.38, 'f': 0.68},
+     'low_offsuit_gapper_1': {'r': 0.04, 'b': 0.18, 'c': 0.25, 'f': 0.78},
+     'medium_offsuit_gapper_2': {'r': 0.05, 'b': 0.22, 'c': 0.30, 'f': 0.72},
+     'low_offsuit_gapper_2': {'r': 0.03, 'b': 0.15, 'c': 0.20, 'f': 0.80},
+     'medium_offsuit_gapper_3': {'r': 0.04, 'b': 0.20, 'c': 0.28, 'f': 0.75},
+     'low_offsuit_gapper_3': {'r': 0.02, 'b': 0.12, 'c': 0.18, 'f': 0.82},
+     'other':              {'r': 0.05, 'b': 0.20, 'c': 0.35, 'f': 0.75},
+ }
 
 
 def _preflop_category_from_idx(idx: int) -> str:

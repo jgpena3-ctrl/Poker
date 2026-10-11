@@ -151,11 +151,19 @@ def test_plan_donk_requires_oop():
     assert rp2.spot == 'donk'
 
 def test_plan_probe_turn_requires_flop_check():
-    # §16: probe solo tras flop check-check (§13 del doc)
+    # §16: probe = OOP tras flop check-check (§13 del doc)
     rp = plan('turn', False, 0.0, ['Qh', '7s', '2c', '9d'], pot=20, stack=90,
-              n_players=2, flop_checked=True)
+              n_players=2, flop_checked=True, hero_oop=True)
     assert rp.spot == 'probe'
     assert rp.bet_sizes == (0.25, 0.5)
+
+
+def test_plan_turn_ip_after_check_check_is_not_probe():
+    # §16: IP tras check-check no es probe → turn con barrel sizes
+    rp = plan('turn', False, 0.0, ['Qh', '7s', '2c', '9d'], pot=20, stack=90,
+              n_players=2, flop_checked=True, hero_oop=False)
+    assert rp.spot == 'turn'
+    assert rp.bet_sizes == (0.5, 0.66)
 
 
 def test_plan_probe_turn_after_flop_action():

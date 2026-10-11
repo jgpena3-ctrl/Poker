@@ -274,16 +274,13 @@ def recommend(hero_codes, board_codes, *, pot: float, to_call: float = 0.0,
     # Guardar board actual para situation() (no se modifica)
     current_board_codes = board_codes
 
-    # compute_evs() calcula TODAS las acciones; candidates se pasa
-    # solo a rules.select_best(), NO aquí (para no filtrar prematuramente).
-    # bet_sizes y raise_to SÍ vienen de RulePlan para que el EV
-    # corresponda a los sizings que las reglas consideran razonables.
+    # compute_evs() calcula TODAS las acciones (bet_sizes completo).
+    # El filtro lógico va en rules.select_best() vía rp.candidates.
+    # NO usar bet_sizes=() para "desactivar" acciones: usar candidates.
+    # bet_sizes y raise_to SÍ vienen de RulePlan cuando existen;
+    # si rp.bet_sizes es vacío, se usan valores por defecto.
     if rp is not None and rp.bet_sizes:
         bet_sizes = rp.bet_sizes
-        raise_to = rp.raise_to
-    elif rp is not None and rp.kind_facing():
-        # spot "facing": no hay bets pasivas; solo call/raise/all_in/fold
-        bet_sizes = ()
         raise_to = rp.raise_to
     else:
         bet_sizes = (0.25, 0.5, 0.75)

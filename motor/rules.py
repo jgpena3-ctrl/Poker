@@ -209,10 +209,6 @@ class RulePlan:
     note: str = ''
     n_players: int = 1
 
-    def kind_facing(self) -> bool:
-        """True si el spot es 'facing_bet' o 'facing_raise' (no hay bets pasivas)."""
-        return self.spot.startswith('facing')
-
 # ---------------------------------------------------------------------------
 # Tabla de reglas v1 (pegar.txt §18-§19): IF → filtros → acciones → sizing
 # ---------------------------------------------------------------------------

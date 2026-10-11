@@ -367,14 +367,13 @@ def _tree_values(hero_ids, board_ids, ids0, w, pot, stack, response_fn,
             pf, pc, pr = response_fn(villain_eq6, amount, pot)
 
         if restantes == 1:
-            # turn: sortear el river para tener equity a showdown
-            card2 = _vector_runout(p0, p1, deck, rng_f, 1, extra=card1)[:, 0]
+            # turn: card1 ya es el river. Board final = brd + card1 (5 cartas)
             full7 = np.column_stack([p0, p1,
                                      np.broadcast_to(brd, (k, n_cartas)),
-                                     card1, card2])
+                                     card1])
             hero7 = np.column_stack([
                 np.broadcast_to(hero_pair, (k, 2)),
-                np.broadcast_to(brd, (k, n_cartas)), card1, card2])
+                np.broadcast_to(brd, (k, n_cartas)), card1])
             sc7 = evaluate_n_batch(full7)
             hero7_scores = evaluate_n_batch(hero7)
             eq7 = 1.0 * (sc7 < hero7_scores) + 0.5 * (sc7 == hero7_scores)
@@ -470,7 +469,10 @@ def compute_evs(hero_codes, board_codes, villain_reach=None,
     villain_stack : stack restante del rival que hizo/aplicará el call;
                     limita el stack efectivo. None conserva compatibilidad
                     con el supuesto de stacks iguales.
-    bet_sizes     : fracciones del bote para las bets (0 < to_call: solo call)
+    bet_sizes     : fracciones del bote para las bets (0 < to_call: solo call).
+                    compute_evs() calcula TODAS las acciones; el filtro lógico
+                    de qué acciones son razonables va en rules.select_best()
+                    vía rp.candidates, NO filtrando bet_sizes a vacío.
     raise_to      : opcional — si hay bet en curso, el TOTAL al que se sube
                     (incluye to_call; pegar.txt §12). Si no se da, no hay
                     acción 'raise'. Si el importe no supera to_call, se omite.
@@ -541,14 +543,14 @@ def compute_evs(hero_codes, board_codes, villain_reach=None,
             label = _bet_label(frac)
             if amount <= 0:
                 ev[label] = 0.0
-                continue
-            if response_fn is None:
-                pf, pc, pr = _response_array(villain_eq, amount, pot)
             else:
-                pf, pc, pr = response_fn(villain_eq, amount, pot)
-            tau = tree_tau(pot + 2 * amount, effective_stack - amount, 30 + idx)
-            branch = pf * pot + pc * tau - pr * amount
-            ev[label] = float((w * branch).sum())
+                if response_fn is None:
+                    pf, pc, pr = _response_array(villain_eq, amount, pot)
+                else:
+                    pf, pc, pr = response_fn(villain_eq, amount, pot)
+                tau = tree_tau(pot + 2 * amount, effective_stack - amount, 30 + idx)
+                branch = pf * pot + pc * tau - pr * amount
+                ev[label] = float((w * branch).sum())
     else:
         if to_call <= 0:
             ev['check'] = equity_mean * pot
@@ -564,8 +566,6 @@ def compute_evs(hero_codes, board_codes, villain_reach=None,
         for frac in bet_sizes:
             label = _bet_label(frac)
             amount = min(frac * pot, effective_stack) if pot > 0 else 0.0
-            if amount <= 0:
-                continue  # no añadir labels de bets de importe 0
             ev[label] = _branch_ev(amount, pot, hero_eq, villain_eq, w,
                                    response=response_fn)
 
