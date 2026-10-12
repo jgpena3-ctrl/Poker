@@ -85,10 +85,17 @@ def _build_villain_range(hero_codes, board_codes, villain_pos='UTG',
     Las dos operaciones sobre cartas son DISTINTAS y antes se confundían
     (pegar_2 §2.B, pegar_3 §5):
 
-      - `villain_cards`  : las 2 cartas REALES del rival cuando se conocen.
-        No se bloquean: se conservan. Se restringe el rango a ese combo.
-      - `extra_blockers` : cartas que el rival NO puede tener (p. ej. ya
-        vistas en la mesa). Estas sí se bloquean.
+      - `extra_blockers` : cartas de OTROS jugadores conocidos que no
+        pueden tener los villanos. En online son las del SEGUNDO HERO
+        (y las del propio hero, que ya se añaden aparte). Estas sí se
+        bloquean.
+
+      - `villain_cards`  : las 2 cartas reales de UN rival concreto
+        cuando se conocen. NO debe usarse en online: allí no hay
+        conocimiento de la mano rival antes del showdown, y restrict_to_combo
+        fabricaría una certeza que no existe. Su único uso legítimo es el
+        estudio posterior de la base de datos, donde el showdown sí
+        registró las cartas. Se conserva por eso, fuera del path online.
 
     Bloquear `villain_cards` eliminaba justo la mano que sabemos que tiene.
     """

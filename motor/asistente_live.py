@@ -410,6 +410,50 @@ class Asistente:
             cards = _cards_to_codes(state.get('hero_cards'))
         return [c for c in cards if c][:2]
 
+    def _cards_of_pid(self, pid, state):
+        """Cartas conocidas de un asiento cualquiera, o [] si no las hay.
+
+        Una mano conocida y activa convierte a ese jugador en 'lado
+        conocido': no puede estar en el rango de nadie más. En la práctica
+        el hero principal es el que tiene el nombre configurado, pero si
+        además conocemos la mano de otro jugador activo, se le trata como
+        segundo hero (recomendación propia y bloqueo para los villanos).
+        """
+        cards = _cards_to_codes(state.get(f'{pid}_cards'))
+        if not cards and pid == HERO_PID:
+            cards = _cards_to_codes(state.get('hero_cards'))
+        return [c for c in cards if c][:2]
+
+    def _heroes_conocidos(self, state):
+        """[(pid, cartas)] de los jugadores activos cuya mano conocemos.
+
+        El primero es el hero principal (el del nombre configurado); el
+        resto son heroes secundarios. Orden estable = orden de PLAYER_IDS.
+        """
+        hp = self._hero_pid()
+        out = []
+        for pid in PLAYER_IDS:
+            if state.get(f'{pid}_state') != 'activo':
+                continue
+            cards = self._cards_of_pid(pid, state)
+            if not cards:
+                cards = self._cards_hand_registrada(pid)
+            if len(cards) == 2:
+                out.append((pid, cards))
+        # el hero principal primero, aunque su asiento no sea el primero
+        out.sort(key=lambda pc: 0 if pc[0] == hp else 1)
+        return out
+
+    def _cards_hand_registrada(self, pid):
+        """Cartas del asiento en la mano en curso (fuente de verdad al inicio)."""
+        h = self.rec.hand
+        if h is None:
+            return []
+        for p in h.get('players', []):
+            if p.get('_id') == pid:
+                return [c for c in _cards_to_codes(p.get('cards') or '') if c][:2]
+        return []
+
     def _observe_stacks(self, state):
         """Acumula los stacks visibles por jugador (un registro por cambio)
         para el perfilado en vivo por media de la sesión."""
@@ -450,16 +494,23 @@ class Asistente:
             return name
         return villain_id
 
-    def _villain_id(self, state):
+    def _villain_id(self, state, known_pids=()):
         """Rival para recomendar: si el hero ENFRENTA una apuesta, quien la
         hizo (máximo {pid}_bet → el agresor real; su rango estrecha de
         verdad la equity). Si el hero apuesta (to_call=0), el activo de
-        mayor stack (rival principal para value)."""
+        mayor stack (rival principal para value).
+
+        `known_pids` son los jugadores cuya mano conocemos (heroes). No
+        pueden ser rival de nadie: si sabemos qué cartas tiene, no está en
+        el rango de otro. Sin esto, un segundo hero acabaría modelado como
+        villano suyo propio.
+        """
         hero_pid = self._hero_pid()
         hero_bet = state.get(f'{hero_pid}_bet') or 0.0
+        excluded = set(known_pids) | {hero_pid}
         max_bet, aggressor = 0.0, None
         for pid in PLAYER_IDS:
-            if pid == hero_pid:
+            if pid in excluded:
                 continue
             if state.get(f'{pid}_state') != 'activo':
                 continue
@@ -470,7 +521,7 @@ class Asistente:
             return aggressor
         best, best_stack = None, -1
         for pid in PLAYER_IDS:
-            if pid == hero_pid:
+            if pid in excluded:
                 continue
             if state.get(f'{pid}_state') != 'activo':
                 continue
@@ -652,31 +703,53 @@ class Asistente:
             print(text)
         return evs
 
-    def recomendacion(self, state, verbose=None, on_reco=None, runout=None,
-                      seed=None):
-        """Calcula la recomendación actual (None si el hero no está en mano).
+    def recomendaciones(self, state, verbose=None, on_reco=None, runout=None,
+                        seed=None):
+        """[(pid, evs)] con una recomendación por hero conocido y activo.
 
-        `on_reco(texto, evs, sit, label)` se invoca con el panel formateado;
-        si no, se imprime en consola (según `verbose`). `seed` fijo →
-        determinista el sorteo preflop (tests)."""
-        hero = self._hero_cards_fallback()
-        if len(hero) < 2:
-            hero = self._hero_cards_of(state)
-        if len(hero) < 2:
-            return None
-        board = _board_codes(state)
-        if not board:
-            board = self._board_fallback()
-        villain = self._villain_id(state)
+        Si solo se conoce la mano del hero principal, devuelve un único
+        elemento (mismo resultado que `recomendacion()`).
+
+        Si además se conoce la mano de otro jugador activo, ese jugador es
+        un segundo hero: recibe su propia recomendación y sus cartas
+        bloquean el rango de los villanos, igual que las del hero principal.
+        Cada rango de villano se estima excluyendo las cartas de AMBOS
+        heroes: ninguno de los dos puede estar en el rango del otro.
+        """
+        heroes = self._heroes_conocidos(state)
+        if not heroes:
+            return []
+        board = _board_codes(state) or self._board_fallback()
+        known_pids = [pid for pid, _cards in heroes]
+        villain = self._villain_id(state, known_pids=known_pids)
         if villain is None:
-            return None
+            return []
 
+        out = []
+        for hero_pid, hero in heroes:
+            others = [c for pid, cards in heroes if pid != hero_pid
+                      for c in cards]
+            evs = self._recomendacion_para(
+                state, hero_pid, hero, board, villain, others,
+                verbose=verbose, on_reco=on_reco, runout=runout, seed=seed)
+            if evs is not None:
+                out.append((hero_pid, evs))
+        return out
+
+    def _recomendacion_para(self, state, hero_pid, hero, board, villain,
+                            blockers, verbose=None, on_reco=None, runout=None,
+                            seed=None):
+        """Recomendación de un hero concreto contra `villain`.
+
+        `blockers` son las cartas de los OTROS jugadores conocidos (el
+        segundo hero). Se añaden a las del propio hero y al board para
+        estimar el rango del rival.
+        """
         # Perfil PEZ/TIBURON del rival (por STACK, sin coincidencia de nombres)
         perfil = self._perfil_for(villain, state)
         villain_pos = self._pos_of(villain, state) or 'UTG'
 
         pot = state.get('pot') or 0.0
-        hero_pid = self._hero_pid()
         hero_bet = state.get(f'{hero_pid}_bet') or 0.0
         to_call = max(self._max_bet(state) - hero_bet, 0.0)
         hero_stake = state.get(f'{hero_pid}_stake')
@@ -694,19 +767,24 @@ class Asistente:
                                        to_call, perfil, name, on_reco,
                                        verbose, seed=seed)
 
-        # Rango inicial del rival según su preflop + blockers
+        # Rango inicial del rival según su preflop + blockers de todos los
+        # heroes conocidos (no solo el propio: el segundo hero tampoco puede
+        # estar en el rango de nadie).
         spot, action = _preflop_spot(self.rec.hand, villain_pos)
         reach = self.models.range_model.prob_vec(perfil, spot, action,
                                                  pos=villain_pos)
         rs = RangeState(reach=reach)
-        rs.set_known_cards(list(hero) + list(board))
+        rs.set_known_cards(list(hero) + list(board) + list(blockers))
 
-        # Refina el rango con las acciones postflop ya observadas del rival
+        # Refina el rango con las acciones postflop ya observadas del rival.
+        # Ojo: `street` y `board` NO se reasignan aquí; antes este bucle los
+        # sobrescribía y la situación/EV se calculaban sobre el board de la
+        # última acción del rival en vez del board real.
         postflop = self.models.postflop_model
-        for street, facing, act, board_str in _villain_postflop_actions(
+        for st_v, facing, act, board_str in _villain_postflop_actions(
                 self.rec.hand, villain_pos):
-            board = [c.strip() for c in board_str.split(',')] if board_str else []
-            vec = postflop.prob_vec(perfil, street, facing, board, act)
+            board_v = [c.strip() for c in board_str.split(',')] if board_str else []
+            vec = postflop.prob_vec(perfil, st_v, facing, board_v, act)
             rs.update(vec)
 
         sit = situation(hero, board, villain_reach=rs,
@@ -774,19 +852,65 @@ class Asistente:
             print(text)
         return evs
 
+    def recomendacion(self, state, verbose=None, on_reco=None, runout=None,
+                      seed=None):
+        """Calcula la recomendación actual (None si el hero no está en mano).
+
+        Devuelve solo la del hero principal. Para recomendar a varios heroes
+        conocidos a la vez usar `recomendaciones()`.
+
+        `on_reco(texto, evs, sit, label)` se invoca con el panel formateado;
+        si no, se imprime en consola (según `verbose`). `seed` fijo →
+        determinista el sorteo preflop (tests)."""
+        hero = self._hero_cards_fallback()
+        if len(hero) < 2:
+            hero = self._hero_cards_of(state)
+        if len(hero) < 2:
+            return None
+        board = _board_codes(state)
+        if not board:
+            board = self._board_fallback()
+        hero_pid = self._hero_pid()
+        villanos = self._villain_id(state, known_pids=[hero_pid])
+        if villanos is None:
+            return None
+        others = self._otros_heroes(state, hero_pid, board)
+        return self._recomendacion_para(
+            state, hero_pid, hero, board, villanos, others,
+            verbose=verbose, on_reco=on_reco, runout=runout, seed=seed)
+
+    def _otros_heroes(self, state, hero_pid, board):
+        """Cartas de los heroes conocidos distintos de `hero_pid`.
+
+        Si no hay un segundo hero, devuelve []. Suficiente para que el
+        rango del villano excluya a los dos sin duplicar trabajo.
+        """
+        fuera = set(board) | set(self._hero_cards_of(state))
+        out = []
+        for pid in self._heroes_conocidos(state):
+            if pid[0] == hero_pid:
+                continue
+            out.extend(c for c in pid[1] if c not in fuera)
+        return out
+
     # ------------------------------------------------------------------
 
     def step(self, state, img_arr, pil, log=print, on_reco=None,
-             require_turn=True, force_reco=False, runout=None):
+             require_turn=True, force_reco=False, runout=None,
+             all_heroes=False):
         """Procesa UN fotograma: registro continuo + recomendación (si toca a
         hero y la situación cambió). Lo usan `run()` y la GUI.
 
         require_turn=True  → solo recomienda si `_hero_act` (botón o fallback
                             lógico). require_turn=False (manual) → recomienda
                             en cada frame si cambió la situación.
-        force_reco=True    → ignora el dedupe (un clic manual = una reconsulta).
+force_reco=True    → ignora el dedupe (un clic manual = una reconsulta).
         runout             → True: EV a showdown con sorteo de runout en ramas
-                            pasivas (modo manual, ~1-2 s); None: usa self.runout.
+                             pasivas (modo manual, ~1-2 s); None: usa self.runout.
+        all_heroes=True    → devuelve [(pid, EvTable)] con una recomendación
+                             por cada hero conocido y activo (ver
+                             `recomendaciones`). False (defecto) devuelve
+                             solo la EvTable del hero principal.
         Devuelve la EvTable de la recomendación o None."""
         try:
             self.rec.process_frame(state, img_arr, log=log)
@@ -798,8 +922,12 @@ class Asistente:
                 key = self._state_key(state)
                 if force_reco or key != self.last_reco_key:
                     try:
-                        res = self.recomendacion(state, verbose=False,
-                                                 on_reco=on_reco)
+                        if all_heroes:
+                            res = self.recomendaciones(
+                                state, verbose=False, on_reco=on_reco)
+                        else:
+                            res = self.recomendacion(state, verbose=False,
+                                                     on_reco=on_reco)
                         self.last_reco_key = key
                     except Exception as e:
                         log(f'  [rec] error: {e}')

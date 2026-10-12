@@ -793,3 +793,119 @@ def test_recomendacion_postflop_filtra_por_reglas():
     assert 'all_in' not in evs.ev
     assert evs.chosen in ('check', 'bet_25')
     assert 'c-bet' in getattr(evs, 'rule_note', '')
+
+
+# ---------------------------------------------------------------------------
+# segundo hero (multi-heroe)
+# ---------------------------------------------------------------------------
+
+def _cards(*codes):
+    """['As','Kd'] -> [{'rank':'A','suit':'s'}, ...] (formato del state)."""
+    return [{'rank': c[0], 'suit': c[1]} for c in codes]
+
+
+def test_heroes_conocidos_detecta_segundo_hero(asis):
+    """Un jugador activo con cartas conocidas es un hero más."""
+    state = {'hero_state': 'activo', 'hero_cards': _cards('As', 'Kd'),
+             'p1_state': 'activo', 'p1_cards': _cards('7c', '2s'),
+             'p2_state': 'activo', 'p2_cards': _cards('Qh', 'Jh'),
+             'p3_state': 'inactivo', 'p3_cards': _cards('2d', '3d')}
+    heroes = asis._heroes_conocidos(state)
+    pids = [p for p, _ in heroes]
+    assert pids[0] == asis._hero_pid()      # el principal va primero
+    assert 'p1' in pids and 'p2' in pids
+    assert 'p3' not in pids                 # inactivo: no juega
+
+
+def test_heroes_conocidos_ignora_sin_cartas(asis):
+    """Activo pero sin cartas conocidas sigue siendo villano posible."""
+    state = {'hero_state': 'activo', 'hero_cards': _cards('As', 'Kd'),
+             'p1_state': 'activo', 'p1_cards': _cards('7c', '2s'),
+             'p2_state': 'activo', 'p2_bet': 0.0, 'p2_stake': 90.0}
+    pids = [p for p, _ in asis._heroes_conocidos(state)]
+    assert pids == [asis._hero_pid(), 'p1']
+
+
+def test_villain_excluye_heroes_conocidos(asis):
+    """El segundo hero no puede ser villano del hero principal."""
+    state = {'hero_state': 'activo', 'hero_bet': 0.0, 'hero_stake': 100.0,
+             'p1_state': 'activo', 'p1_stake': 500.0, 'p1_bet': 0.0,
+             'p2_state': 'activo', 'p2_stake': 50.0, 'p2_bet': 0.0}
+    # sin excluirlo, p1 (mayor stack) sería el rival
+    assert asis._villain_id(state, known_pids=['p1']) == 'p2'
+
+
+def _asis_postflop(asis):
+    """Asistente con modelos y mano en curso, listo para calcular EV."""
+    import numpy as np
+
+    class _Rng:
+        def prob_vec(self, *a, **k):
+            return np.ones(1326, dtype=np.float32)
+
+    class _Pf:
+        def prob_vec(self, *a, **k):
+            return np.ones(1326, dtype=np.float32)
+
+    class _Ora:
+        def p_action(self, *a, **k):
+            return None
+
+    asis.models = SimpleNamespace(range_model=_Rng(), postflop_model=_Pf())
+    asis.oracle = _Ora()
+    asis.runout = False
+    asis.rec.hand = {
+        'hand_id': 'H_Y', 'btn_player': 'p2',
+        'streets': {
+            'preflop': {'actions': [
+                {'pos': 'hero', 'action': 'b', 'amount': 3.0},
+                {'pos': 'p2', 'action': 'c', 'amount': 3.0}]},
+            'flop': {'actions': []},
+            'turn': {'actions': []},
+            'river': {'actions': []},
+        },
+        'current_street': 'flop',
+    }
+    asis.rec._hand_positions = {'hero': 'UTG', 'p1': 'MP',
+                                'p2': 'BTN', 'p3': 'SB', 'p4': 'BB',
+                                'p5': 'BB'}
+    return asis
+
+
+def _estado_dos_heroes():
+    return {
+        'hero_cards': _cards('As', 'Kd'),
+        'p1_cards': _cards('7c', '2s'),
+        'community': _cards('Qh', '9d', '3c'),
+        'pot': 25.0,
+        'hero_state': 'activo', 'hero_stake': 85.0, 'hero_bet': 0.0,
+        'p1_state': 'activo', 'p1_stake': 85.0, 'p1_bet': 0.0,
+        'p2_state': 'activo', 'p2_stake': 90.0, 'p2_bet': 5.0,
+        'p3_state': 'inactivo', 'p4_state': 'inactivo', 'p5_state': 'inactivo',
+    }
+
+
+def test_recomendaciones_dos_heroes(asis):
+    """Con dos manos conocidas hay una recomendación por hero."""
+    _asis_postflop(asis)
+    res = asis.recomendaciones(_estado_dos_heroes(), verbose=False)
+    pids = [p for p, _ in res]
+    assert pids == [asis._hero_pid(), 'p1']
+    for _pid, evs in res:
+        assert evs is not None
+        assert evs.chosen
+
+
+def test_recomendaciones_bloquea_cartas_del_otro_hero(asis):
+    """Las cartas del segundo hero salen del rango del villano."""
+    otros = asis._otros_heroes(_estado_dos_heroes(), asis._hero_pid(),
+                               ['Qh', '9d', '3c'])
+    assert sorted(otros) == ['2s', '7c']
+
+
+def test_recomendacion_simple_no_recomienda_al_villano(asis):
+    """`recomendacion()` sigue devolviendo una sola EvTable (compat)."""
+    _asis_postflop(asis)
+    evs = asis.recomendacion(_estado_dos_heroes(), verbose=False)
+    assert evs is not None
+    assert hasattr(evs, 'ev')
