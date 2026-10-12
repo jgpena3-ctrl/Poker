@@ -260,8 +260,13 @@ def recommend(hero_codes, board_codes, *, pot: float, to_call: float = 0.0,
         n_rivales = len(villain_ranges)
         etiqueta = (f'multiway aprox. ({n_rivales} rivales, '
                     f'no es equity multiway)')
-        if hierarchy and hierarchy.get('checkers'):
-            etiqueta += f' +{len(hierarchy["checkers"])} checker(s)'
+        # Los pendientes también son relevantes: son amenaza activa, y
+        # callarlos daría a entender que solo hay checkers (pegar_2 §2.6).
+        if hierarchy:
+            n_chk = len(hierarchy.get('checkers') or ())
+            n_pend = len(hierarchy.get('pending') or ())
+            if n_chk or n_pend:
+                etiqueta += f' +{n_chk} checker(s), {n_pend} pendiente(s)'
         villain_label = etiqueta
     elif villain_reach is None:
         villain = _build_villain_range(hero_codes, board_codes, villain_pos,
@@ -432,8 +437,13 @@ def recommend(hero_codes, board_codes, *, pot: float, to_call: float = 0.0,
     shadow_info = None
     if hierarchy:
         try:
+            # `sit.equity` se calculó contra el rival que construyó el llamador,
+            # (pegar_3 §1, P0). Se deja constancia en vez de suponer
+            # que coinciden.
+            eq_source = (villain_label if villain_ranges else villain_pos)
             shadow_info = shadow_equity(sit.equity, current_board_codes,
-                                       street, hierarchy)
+                                       street, hierarchy,
+                                       equity_source=eq_source)
             # El registro es opcional; el cálculo no. Con `hierarchy` el
             # llamador ya pidió la comparación, aunque no la persista.
             if shadow_log is not None:

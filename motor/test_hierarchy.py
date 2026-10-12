@@ -146,6 +146,136 @@ def test_hero_sin_acciones_devuelve_estructura_vacia():
     assert h['pending'] == []
 
 
+# --- P0 corregidos (pegar_3 §1) ----------------------------------------
+
+def test_hero_no_aparece_en_sus_pendientes():
+    """El hero no puede estar en su propia lista de pendientes.
+
+    Regresión: se comparaba un PID contra una POSICIÓN, así que la
+    comparación siempre era verdadera y el hero nunca se excluía.
+    """
+    acts = _acts(('UTG', 'x'), ('CO', 'x'), ('BTN', 'x'))
+    h = classify_villains(acts, 'BTN', pending_positions=['UTG', 'CO', 'BTN'])
+    assert 'BTN' not in h['pending']
+    assert h['pending'] == []
+
+
+def test_quien_ya_actuo_no_es_pendiente():
+    """Estar activo no significa tener una decisión pendiente."""
+    acts = _acts(('UTG', 'x'), ('CO', 'x'), ('BTN', 'x'))
+    # BTN y SB están activos pero BTN ya actuó y SB no aparece en la calle
+    h = classify_villains(acts, 'BTN', pending_positions=['UTG', 'CO', 'BTN', 'SB'])
+    assert h['pending'] == ['SB']
+
+
+def test_agresion_posterior_al_hero_se_reconoce():
+    """Ronda que vuelve: la resubida posterior es la que el hero enfrenta.
+
+    Regresión: se tomaba la PRIMERA aparición del hero como corte, así
+    que todo lo posterior caía en 'pendientes' y `main` quedaba None.
+    """
+    acts = _acts(('BTN', 'x'), ('CO', 'b'), ('MP', 'r'))
+    h = classify_villains(acts, 'BTN')
+    assert h['main'] == 'MP'
+    assert 'ronda que vuelve' in h['main_reason']
+    assert h['aggressors'] == ['CO', 'MP']
+    assert 'CO' not in h['pending']
+    assert 'MP' not in h['pending']
+
+
+def test_agresor_mas_reciente_gana():
+    acts = _acts(('UTG', 'b'), ('MP', 'r'), ('CO', 'r'))
+    h = classify_villains(acts, 'BTN')
+    assert h['main'] == 'CO'
+
+
+def test_check_que_va_seguido_de_bet_es_agresor():
+    """Checkear no compromete la mano si después hay resubida.
+
+    Detectado al auditar 400 manos: dos jugadores aparecían a la vez
+    como checker y como agresor.
+    """
+    acts = _acts(('UTG', 'x'), ('CO', 'x'), ('UTG', 'b'), ('BTN', 'x'))
+    h = classify_villains(acts, 'BTN')
+    assert 'UTG' in h['aggressors']
+    assert 'UTG' not in h['checkers']
+
+
+def test_jerarquia_no_mezcla_pids_y_posiciones():
+    """Todo en hierarchy.py son posiciones; el llamador traduce."""
+    acts = _acts(('BTN', 'x'))
+    h = classify_villains(acts, 'BTN', pending_positions=['SB'])
+    for grupo in ('aggressors', 'checkers', 'pending'):
+        for pos in h[grupo]:
+            assert pos in ('SB', 'BB', 'UTG', 'MP', 'CO', 'BTN'), pos
+
+
+# --- penalización absoluta (pegar_3 §1 P1) ------------------------------
+
+def test_penalizacion_es_absoluta():
+    """El dato medido es 69% -> 67%: dos puntos ABSOLUTOS.
+
+    Aplicarla como factor (69 * 0.98) daría 67.62, que no es el dato.
+    """
+    s = shadow_equity(0.69, BOARD_FLOOP, 'turn', {'checkers': ['UTG']})
+    assert s['penalty_basis'] == 'absolute'
+    assert s['equity_shadow'] == pytest.approx(0.67, abs=1e-6)
+    assert s['delta'] == pytest.approx(-0.02, abs=1e-6)
+
+
+@pytest.mark.parametrize('eq', [0.20, 0.50, 0.69, 0.90])
+def test_reduccion_constante_independiente_de_la_equity(eq):
+    """Una penalización ABSOLUTA quita lo mismo a cualquier equity."""
+    s = shadow_equity(eq, BOARD_FLOOP, 'turn', {'checkers': ['UTG']})
+    assert eq - s['equity_shadow'] == pytest.approx(0.02, abs=1e-6)
+
+
+def test_penalty_source_distingue_medido_de_extrapolado():
+    """Solo turn+lliso (rainbow) tiene dato directo (pegar_2 §2.1)."""
+    medido = shadow_equity(0.5, ['Qh', '7s', '2c'], 'turn',
+                           {'checkers': ['UTG']})
+    assert medido['penalty_source'] == 'measured'
+    flop = shadow_equity(0.5, ['Qh', '7s', '2c'], 'flop',
+                         {'checkers': ['UTG']})
+    assert flop['penalty_source'] == 'extrapolated'
+    river = shadow_equity(0.5, ['Qh', '7s', '2c'], 'river',
+                          {'checkers': ['UTG']})
+    assert river['penalty_source'] == 'extrapolated'
+    # monotone y two_tone también son extrapolación
+    monotono = shadow_equity(0.5, ['9h', '8h', '7h'], 'turn',
+                             {'checkers': ['UTG']})
+    assert monotono['penalty_source'] == 'extrapolated'
+    two_tone = shadow_equity(0.5, ['9h', '8s', '7h'], 'turn',
+                            {'checkers': ['UTG']})
+    assert two_tone['penalty_source'] == 'extrapolated'
+
+
+def test_equity_shadow_no_se_hace_negativa():
+    s = shadow_equity(0.02, BOARD_FLOOP, 'turn', {'checkers': ['UTG'] * 40})
+    assert s['equity_shadow'] >= 0.0
+
+
+def test_registro_identifica_contra_que_rango():
+    """El registro dice contra qué rival se calculó la equity (P0)."""
+    rec = shadow_record('H_1', 'flop', BOARD_FLOOP, HERO,
+                        classify_villains(_acts(('MP', 'b')), 'BTN'),
+                        shadow_equity(0.5, BOARD_FLOOP, 'flop',
+                                      {'checkers': []}, equity_source='CO'),
+                        10.0, 0.0, 90.0, 'bet_25')
+    assert rec['villain_used_for_equity'] == 'CO'
+    assert rec['main_matches_equity_range'] is False
+
+
+def test_registro_detecta_coincidencia_de_rango():
+    rec = shadow_record('H_1', 'flop', BOARD_FLOOP, HERO,
+                        classify_villains(_acts(('MP', 'b')), 'BTN'),
+                        shadow_equity(0.5, BOARD_FLOOP, 'flop',
+                                      {'checkers': []}, equity_source='MP'),
+                        10.0, 0.0, 90.0, 'bet_25')
+    assert rec['villain_used_for_equity'] == 'MP'
+    assert rec['main_matches_equity_range'] is True
+
+
 # --- cálculo sombra ------------------------------------------------------
 
 def test_shadow_equity_reduce_y_marca_experimental():

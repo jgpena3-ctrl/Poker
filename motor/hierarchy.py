@@ -89,14 +89,19 @@ def texture_key(board_codes) -> str:
 
 
 def passive_penalty(board_codes, street: str, n_checker: int) -> float:
-    """Penalización por `n_checker` jugadores que checkearon.
+    """Penalización ABSOLUTA por `n_checker` jugadores que checkearon.
+
+    ABSOLUTA, no relativa. El dato es 69% -> 67%: dos puntos
+    porcentuales. Aplicarlo como factor (eq * (1-0.02) = 0.6762) daría
+    1.38 puntos, no 2. Es la diferencia entre reproducir la medición y
+    reproducir una regla parecida (pegar_3 §1, P1).
 
     Lineal y pequeña a propósito. NO es `eq ** n`: esa forma es
     exponencial y con rango uniforme quitaría ~50 puntos cuando el dato
     medido dice ~2.
 
-    Devuelve 0.0 si no hay checkers. El resultado se satura en 0.5 para
-    que un número absurdo de checkers no pueda invertir la equity.
+    Se satura en 0.5 para que un número absurdo de checkers no pueda
+    invertir la equity.
     """
     n = max(0, int(n_checker))
     if n == 0:
@@ -109,6 +114,19 @@ def passive_penalty(board_codes, street: str, n_checker: int) -> float:
     return min(0.5, base * sf * n)
 
 
+def penalty_source(board_codes, street: str) -> str:
+    """'measured' si la combinación tiene dato directo; si no, extrapolada.
+
+    Solo turn + board liso está anclado a una medición. Todo lo demás
+    son hipótesis de trabajo (pegar_2 §2.1, pegar_3 §3): sin este campo
+    no se puede separar en el análisis posterior lo que tiene base
+    empírica de lo que no.
+    """
+    if street == 'turn' and texture_key(board_codes) == 'rainbow':
+        return 'measured'
+    return 'extrapolated'
+
+
 # ---------------------------------------------------------------------------
 # Clasificación de rivales
 # ---------------------------------------------------------------------------
@@ -117,64 +135,67 @@ def classify_villains(acts: List[dict], hero_pos: str,
                       pending_positions=()) -> Dict:
     """Elige el rival principal y clasifica al resto.
 
-    `acts` son las acciones de la calle en orden, tal como las guarda el
-    recorder: [{'pos': 'UTG', 'action': 'b', ...}, ...].
+    `acts`: acciones de la calle en orden, tal como las guarda el recorder.
+    TODAS las posiciones son POSICIONES (UTG, CO, BTN...). Los pids
+    ('hero', 'p1'...) no mezclan aquí: el llamador traduce.
 
-    Jerarquía (pegar_2 §4, con el matiz de pegar_3 §1):
+    Jerarquía (pegar_2 §4 con el matiz de pegar_3 §1 y §P0):
 
-      1. El agresor más reciente que está ENFRENTANDO al hero. Si el hero
-         ya actuar (check), ese agresor es el rival principal.
-      2. Si no hay ninguna acción hasta el hero, no hay agresor: se usa
-         posición relativa, primero IP y luego el OOP más cercano al IP.
-      3. Los pendientes NO compiten: pueden resubir, así que se marcan
-         como amenaza activa en vez de penalizarlos como si hubieran
-         checkeado.
+      1. El agresor MÁS RECIENTE de la calle. Da igual que venga antes o
+         después de la acción del hero: en una ronda que vuelve a pasar,
+         la resubida que se produce después es precisamente la que el
+         hero enfrenta. Por eso no se parte la lista en la posición del
+         hero, sino que se recorre entera.
+      2. Si nadie ha hecho agresión, el último que checkeó, por posición.
+      3. Los pendientes solo son los que NO han actuado en la calle. Estar
+         activo no significa tener una decisión pendiente.
 
-    Devuelve dict con `main`, `main_reason`, `aggressors`, `checkers`,
-    `pending`, `other_positions`.
+    `pending_positions`: posiciones candidatas a pendiente. Se filtra
+    contra quienes ya actuaron en `acts`.
     """
-    antes, despues = [], []
-    corte = None
-    for i, a in enumerate(acts):
-        if a.get('pos') == hero_pos:
-            corte = i
-            break
-    if corte is None:
-        antes = list(acts)
-        despues = []
-    else:
-        antes = list(acts[:corte])
-        despues = list(acts[corte + 1:])
+    hero_pos = hero_pos or ''
+    hero_acts = [i for i, a in enumerate(acts) if a.get('pos') == hero_pos]
+    hero_last = hero_acts[-1] if hero_acts else None
 
     agresores, checkers = [], []
-    for a in antes:
+    acted = set()
+    for a in acts:
         pos, acc = a.get('pos'), a.get('action')
-        if not pos:
+        if not pos or pos == hero_pos:
             continue
+        acted.add(pos)
         if acc in ('b', 'r'):
             agresores.append(pos)
         elif acc == 'x':
             checkers.append(pos)
 
-    pending = []
-    for a in despues:
-        pos = a.get('pos')
-        if pos and pos != hero_pos:
-            pending.append(pos)
-    # los pendientes declarados por el llamador y que aún no aparecen
-    for pos in (pending_positions or ()):
-        if pos and pos != hero_pos and pos not in pending:
-            pending.append(pos)
-
     main, reason = None, 'sin rivales identificados'
     if agresores:
         main = agresores[-1]
-        reason = ('agresor más reciente que enfrenta al hero'
-                  if corte is not None
-                  else 'agresor más reciente de la calle')
+        pos_agresion = max(i for i, a in enumerate(acts)
+                           if a.get('pos') == main
+                           and a.get('action') in ('b', 'r'))
+        if hero_last is None:
+            reason = 'agresor más reciente de la calle'
+        elif pos_agresion > hero_last:
+            reason = 'agresor posterior al hero (ronda que vuelve)'
+        else:
+            reason = 'agresor más reciente que enfrenta al hero'
     elif checkers:
         main = checkers[-1]
-        reason = 'sin agresión: el último que	checkeó, por posición'
+        reason = 'sin agresión: último que checkeó, por posición'
+
+    # Quien checkeó y LUEGO apuesto es agresor, no un pasivo: checkear en
+    # una ronda no compromete la mano si después hay resubida. La última
+    # acción agresiva manda sobre el check anterior.
+    checkers = [c for c in checkers if c not in agresores]
+
+    # Pendientes = candidatos que además NO han actuado en esta calle.
+    pending = []
+    for pos in (pending_positions or ()):
+        if pos and pos != hero_pos and pos not in acted \
+                and pos not in pending:
+            pending.append(pos)
 
     return {
         'main': main,
@@ -182,6 +203,7 @@ def classify_villains(acts: List[dict], hero_pos: str,
         'aggressors': agresores,
         'checkers': [c for c in checkers if c != main],
         'pending': pending,
+        'hero_pos': hero_pos,
     }
 
 
@@ -190,29 +212,38 @@ def classify_villains(acts: List[dict], hero_pos: str,
 # ---------------------------------------------------------------------------
 
 def shadow_equity(equity_main: float, board_codes, street: str,
-                  hierarchy: Dict) -> Dict:
+                  hierarchy: Dict, equity_source: str = '') -> Dict:
     """Equity ajustada por los checkers. NO se usa para decidir.
 
-    Estructura (pegar_2 §2.1): lineal y pequeña, no `eq ** n`.
+    Estructura ABSOLUTA, que es la que reproduce el dato medido:
 
-        eq_shadow = eq_vs_principal * (1 - penalización)
+        eq_shadow = eq_vs_principal - penalización
 
     El agresor principal ya está dentro de `equity_main` (su rango se
     modeló, no se corrigió). Los pendientes no entran: siguen siendo
     amenaza activa y registrarlos es más honesto que inventarles una
     penalización.
+
+    `equity_source` documenta contra qué rango se calculó
+    `equity_main`. Es importante: puede NO ser el rival que la jerarquía
+    considera principal, y sin decirlo el registro sería engañoso
+    (pegar_3 §1, P0).
     """
     n_chk = len(hierarchy.get('checkers') or ())
     n_pend = len(hierarchy.get('pending') or ())
     pen = passive_penalty(board_codes, street, n_chk)
-    adjusted = float(equity_main) * (1.0 - pen)
+    eq_main = float(equity_main)
+    adjusted = max(0.0, eq_main - pen)
     return {
-        'equity_main': float(equity_main),
+        'equity_main': eq_main,
+        'equity_source': equity_source or 'desconocido',
         'penalty': round(pen, 5),
+        'penalty_basis': 'absolute',
+        'penalty_source': penalty_source(board_codes, street),
         'n_checker': n_chk,
         'n_pending': n_pend,
         'equity_shadow': round(adjusted, 5),
-        'delta': round(adjusted - float(equity_main), 5),
+        'delta': round(adjusted - eq_main, 5),
         # unmistakable: esto NO es una equity multiway
         'experimental': True,
     }
@@ -238,6 +269,11 @@ def shadow_record(hand_id: str, street: str, board_codes, hero_codes,
         'stack': stack,
         'villain_main': hierarchy.get('main'),
         'main_reason': hierarchy.get('main_reason'),
+        'villain_used_for_equity': shadow.get('equity_source'),
+        'main_matches_equity_range': (
+            shadow.get('equity_source') == (hierarchy.get('main') or '')
+            or shadow.get('equity_source', '').startswith('unión')
+            or shadow.get('equity_source') == 'desconocido'),
         'aggressors': hierarchy.get('aggressors'),
         'checkers': hierarchy.get('checkers'),
         'pending': hierarchy.get('pending'),
@@ -245,6 +281,8 @@ def shadow_record(hand_id: str, street: str, board_codes, hero_codes,
         'equity_production': shadow.get('equity_main'),
         'equity_shadow': shadow.get('equity_shadow'),
         'penalty': shadow.get('penalty'),
+        'penalty_basis': shadow.get('penalty_basis'),
+        'penalty_source': shadow.get('penalty_source'),
         'n_checker': shadow.get('n_checker'),
         'n_pending': shadow.get('n_pending'),
         'delta': shadow.get('delta'),

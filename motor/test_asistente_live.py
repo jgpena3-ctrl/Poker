@@ -1005,3 +1005,51 @@ def test_alguna_hero_act_false_sin_heroes_activos(asis):
     state['hero_state'] = 'inactivo'
     state['p1_state'] = 'inactivo'
     assert asis._heroes_conocidos(state) == []
+
+
+def test_jerarquia_no_mete_al_hero_en_pendientes(asis):
+    """P0: pids y posiciones son espacios distintos.
+
+    Comparar un PID con la POS del hero hacía que la condición fuera
+    siempre verdadera, y el hero acababa en su propia lista de
+    pendientes.
+    """
+    asis.rec._hand_positions = {'hero': 'BTN', 'p1': 'UTG', 'p2': 'CO'}
+    state = {'p1_state': 'activo', 'p1_stake': 90.0, 'p1_bet': 0.0,
+             'p2_state': 'activo', 'p2_stake': 90.0, 'p2_bet': 0.0,
+             'p3_state': 'activo', 'p3_stake': 90.0, 'p3_bet': 0.0,
+             'p4_state': 'inactivo', 'p5_state': 'inactivo',
+             'community': _cards('Qh', '7s', '2c')}
+    asis.rec.hand = {
+        'hand_id': 'H_J', 'streets': {
+            'flop': {'actions': [{'pos': 'UTG', 'action': 'x'},
+                                 {'pos': 'CO', 'action': 'x'}]},
+            'turn': {'actions': []}, 'river': {'actions': []}},
+        'current_street': 'flop'}
+    jer = asis._jerarquia('hero', state)
+    assert jer is not None
+    assert 'BTN' not in jer['pending']
+    assert 'hero' not in jer['pending']
+    # UTG y CO ya actuaron en el flop: no son pendientes
+    assert 'UTG' not in jer['pending']
+    assert 'CO' not in jer['pending']
+
+
+def test_jerarquia_registra_ronda_que_vuelve(asis):
+    """P0: si el hero actuó primero y vuelven aتربirle, el agresor
+    posterior es el rival principal, no un pendiente."""
+    asis.rec._hand_positions = {'hero': 'BTN', 'p1': 'MP', 'p2': 'CO'}
+    state = {'p1_state': 'activo', 'p2_state': 'activo',
+             'p3_state': 'activo',
+             'community': _cards('Qh', '7s', '2c')}
+    asis.rec.hand = {
+        'hand_id': 'H_K', 'streets': {
+            'flop': {'actions': [{'pos': 'BTN', 'action': 'x'},
+                                 {'pos': 'CO', 'action': 'b'},
+                                 {'pos': 'MP', 'action': 'r'}]},
+            'turn': {'actions': []}, 'river': {'actions': []}},
+        'current_street': 'flop'}
+    jer = asis._jerarquia('hero', state)
+    assert jer['main'] == 'MP'
+    assert 'MP' not in jer['pending']
+    assert 'CO' not in jer['pending']

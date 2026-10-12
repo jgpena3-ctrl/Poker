@@ -647,9 +647,13 @@ class Asistente:
     def _jerarquia(self, hero_pid, state):
         """Contexto de rivales para el modo sombra (motor/hierarchy.py).
 
-        Reconstruye las acciones de la calle actual desde la mano
-        registrada y clasifica a cada rival en agresor / checker /
-        pendiente. Devuelve None si no hay mano en curso.
+        Todo se traduce a POSICIONES antes de llamar a hierarchy.py: los
+        pids ('hero', 'p1'...) y las posiciones ('BTN', 'CO'...) son
+        espacios distintos y mezclarlos hacía que el hero acabara en su
+        propia lista de pendientes.
+
+        Los pendientes son los jugadores activos que NO han acted en esta
+        calle. Estar activo no significa tener una decisión pendiente.
 
         No cambia la recomendación: solo alimenta el registro sombra.
         """
@@ -665,11 +669,18 @@ class Asistente:
             'actions', []) or []
         if not acts:
             return None
-        # pendientes: los que aún deben actuar y siguen activos
-        pending = [p for p in PLAYER_IDS
-                   if p != hero_pos and state.get(f'{p}_state') == 'activo']
+        ya_actuaron = {a.get('pos') for a in acts if a.get('pos')}
+        pendientes = []
+        for pid in PLAYER_IDS:
+            if pid == hero_pid:              # comparación entre PIDS
+                continue
+            if state.get(f'{pid}_state') != 'activo':
+                continue
+            pos = self._pos_of(pid, state)
+            if pos and pos != hero_pos and pos not in ya_actuaron:
+                pendientes.append(pos)
         return classify_villains(acts, hero_pos,
-                                 pending_positions=pending)
+                                 pending_positions=pendientes)
 
     def _state_key(self, state):
         """Firma de la situación para deduplicar recomendaciones (incluye el
@@ -955,21 +966,20 @@ class Asistente:
                           candidates=rp.candidates)
         label = f'{perfil} {name}'
 
-        # Modo sombra: registra qué cambiaría si los checkers se
-        # penalizaran. NO toca `action` ni el EV de producción.
+        # Modo sombra: se CALCULA antes (no depende de la acción) pero se
+        # REGISTRA después, cuando ya existe `action`. Persistir antes
+        # dejaría action_production vacío y el log no serviría para
+        # comparar predicción contra decisión (pegar_3 §1, P1).
+        _shadow_ctx = None
         if getattr(self, 'shadow', True):
             jer = self._jerarquia(hero_pid, state)
-            if jer and (jer.get('checkers') or len(jer.get('pending') or ()) > 1):
-                _reg = shadow_equity(sit.equity, board, street, jer)
-                try:
-                    self._shadow_log().append(shadow_record(
-                        hand_id=(self.rec.hand or {}).get('hand_id', ''),
-                        street=street, board_codes=board,
-                        hero_codes=hero, hierarchy=jer, shadow=_reg,
-                        pot=pot, to_call=to_call, stack=stack,
-                        action_production=''))
-                except Exception:
-                    pass       # el log nunca rompe la recomendación
+            # Se registra cualquier situación con rivales clasificados,
+            # no solo las que tienen penalización: para medir la
+            # jerarquía completa interesa también la penalización cero.
+            if jer and jer.get('main'):
+                _reg = shadow_equity(sit.equity, board, street, jer,
+                                     equity_source=villain_pos)
+                _shadow_ctx = (jer, _reg)
                 label += (f' | jerarquía: principal={jer.get("main")}'
                           f' ({jer.get("main_reason")})'
                           f', {len(jer.get("checkers") or ())} checker(s)'
@@ -980,6 +990,18 @@ class Asistente:
         evs.rule_note = rp.note
         action = rules_select_best(evs, rp)[0]
         evs.chosen = action
+
+        if _shadow_ctx is not None:
+            try:
+                self._shadow_log().append(shadow_record(
+                    hand_id=(self.rec.hand or {}).get('hand_id', ''),
+                    street=street, board_codes=board,
+                    hero_codes=hero, hierarchy=_shadow_ctx[0],
+                    shadow=_shadow_ctx[1], pot=pot, to_call=to_call,
+                    stack=stack, action_production=action))
+            except Exception:
+                pass       # el log nunca rompe la recomendación
+
         text = format_insight(sit, evs, villain_label=label, plan=rp)
         if on_reco is not None:
             on_reco(text, evs, sit, label)
