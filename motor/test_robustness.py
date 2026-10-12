@@ -206,3 +206,86 @@ def test_multiway_union_works():
     assert combined.reach.sum() > a.reach.sum()   # suma, no normaliza
     combined.norm_to()
     assert np.isclose(combined.reach.sum(), 1.0)
+
+
+def test_union_of_two_empty_ranges_is_empty():
+    vacio_a = RangeState(reach=np.zeros(N_COMBOS, dtype=np.float32))
+    vacio_b = RangeState(reach=np.zeros(N_COMBOS, dtype=np.float32))
+    u = vacio_a.copy().union(vacio_b)
+    assert u.is_empty
+
+
+def test_union_respects_disjoint_blockers():
+    """unir NO debe perder los blockers de ninguna de las dos."""
+    from motor.cards import card_id
+    a = RangeState(reach=np.ones(N_COMBOS, dtype=np.float32))
+    b = RangeState(reach=np.ones(N_COMBOS, dtype=np.float32))
+    a.set_known_cards(['As'])
+    b.set_known_cards(['Kd'])
+    u = a.union(b)
+    assert (u.known_mask & (1 << card_id('As'))) != 0
+    assert (u.known_mask & (1 << card_id('Kd'))) != 0
+
+
+def test_restrict_to_combo_conflicting_with_blocker_raises():
+    """Si la mano conocida choca con el board, el rango queda vacío y
+    debe detectarse, no convertirse en una distribución silenciosa."""
+    rs = build_villain_range(HERO, BOARD, 'UTG')
+    rs.restrict_to_combo(['Qh', '9s'])          # Qh está en el board
+    assert rs.is_empty
+
+
+# --- extra_blockers también con villain_reach explícito -----------------
+
+def test_extra_blockers_applied_with_explicit_villain_reach():
+    """pegar_2 §2.3: la rama explícita ignoraba extra_blockers.
+
+    Las cartas de otro hero conocido no pueden estar en el rango aunque
+    el llamador pase su propio vector.
+    """
+    rec = recommend(HERO, BOARD, pot=50.0, to_call=0.0, stack=90.0,
+                    street='flop', villain_pos='UTG',
+                    villain_reach=np.ones(N_COMBOS, dtype=np.float32),
+                    extra_blockers=('Ts', '9s'))
+    assert rec.action in ('fold', 'check', 'call', 'bet_25', 'bet_50',
+                          'bet_75', 'raise', 'all_in')
+
+
+def test_extra_blockers_empty_range_raises():
+    """Si los blockers vacían el rango explícito, debe ser RangeError."""
+    from motor.cards import card_id
+    # un rango con masa solo en 7cTs, y 7c/7s como blockers -> vacío
+    vec = np.zeros(N_COMBOS, dtype=np.float32)
+    from motor.ranges import _PAIR_IDX
+    vec[_PAIR_IDX[(card_id('7c'), card_id('Ts'))]] = 1.0
+    with pytest.raises(RangeError):
+        recommend(HERO, BOARD, pot=50.0, to_call=0.0, stack=90.0,
+                  street='flop', villain_pos='UTG',
+                  villain_reach=vec, extra_blockers=('7c', 'Ts'))
+
+
+# --- contrato de validación uniforme (pegar_3 paso 1) -------------------
+
+def test_range_state_validated_before_indexing():
+    """villain_weights() valida el reach completo, no solo los ids pedidos.
+
+    Si el RangeState está corrupto fuera de la ventana consultada, debe
+    seguir siendo visible como error.
+    """
+    rs = RangeState(reach=np.full(N_COMBOS, 0.5, dtype=np.float32))
+    rs.reach[1234] = np.nan
+    from motor.hand_evaluator import legal_hands
+    from motor.cards import cards_to_bits
+    ids = legal_hands(cards_to_bits(HERO + BOARD))
+    # el índice 1234 puede no caer en `ids`; la validación es del vector entero
+    with pytest.raises(RangeError):
+        villain_weights(rs, ids)
+
+
+def test_villain_weights_rejects_negative_in_range_state():
+    rs = RangeState(reach=np.full(N_COMBOS, -0.5, dtype=np.float32))
+    from motor.hand_evaluator import legal_hands
+    from motor.cards import cards_to_bits
+    ids = legal_hands(cards_to_bits(HERO + BOARD))
+    with pytest.raises(RangeError):
+        villain_weights(rs, ids)

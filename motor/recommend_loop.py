@@ -140,9 +140,15 @@ def _build_multiway_range(hero_codes, board_codes,
     combined = None
     known = list(hero_codes) + list(board_codes)
     for rs in villain_ranges.values():
+        rs.validate(allow_empty=True)
         r = rs.copy()
         r.set_known_cards(known)
         r.nullify_blocked()                      # blockers aplicados ANTES de unir
+        # Se valida cada rango por separado: si uno se queda sin masa legal,
+        # se dice CUÁL, no se descubre al final como un total vacío.
+        if r.is_empty:
+            raise RangeError(
+                'rango de un villano vacío tras blockers en multiway')
         combined = r if combined is None else combined.union(r)
     if combined is None or combined.is_empty:
         raise RangeError('rango multiway vacío tras blockers')
@@ -262,6 +268,15 @@ def recommend(hero_codes, board_codes, *, pot: float, to_call: float = 0.0,
         rs = (villain_reach if isinstance(villain_reach, RangeState)
               else RangeState(reach=villain_reach))
         rs.set_known_cards(list(hero_codes) + list(board_codes))
+        # Aunque el llamador pase su propio rango, las cartas de otros
+        # heroes conocidos tampoco pueden estar en él: es la misma regla
+        # que en la rama anterior (pegar_2 §2.3).
+        if extra_blockers:
+            rs.set_known_cards(list(extra_blockers))
+        rs.validate()
+        if rs.is_empty:
+            raise RangeError('rango rival vacío tras blockers '
+                             f'(extra_blockers={list(extra_blockers)})')
         villain = rs
         villain_label = 'rango dado'
     _stage('range', t)

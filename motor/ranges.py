@@ -364,7 +364,16 @@ def combos_by_class(hand_class_name: str) -> np.ndarray:
 
 
 def class_weights_for_reach(reach: np.ndarray) -> np.ndarray:
-    """reach normalizado ponderado por clase base."""
+    """reach normalizado ponderado por la clase base.
+
+    DEPRECADO: no se invoca desde ningún punto de producción. Se conserva
+    como utilería y mantiene el contrato viejo (devuelve ceros si el rango
+    es vacío) en lugar de lanzar, para no romper callers externos; por eso
+    NO debe usarse en el motor: devolver ceros reproduce el P0 de "rango
+    vacío silencioso". Lo que debe usarse es `villain_weights()`.
+
+    Si algún día se conecta a producción, migrar antes a RangeError.
+    """
     w = reach.copy()
     w *= _BASE_WEIGHT
     total = w.sum()
@@ -436,6 +445,11 @@ def villain_weights(villain_reach, villain_ids):
     if villain_reach is None:
         return np.full(n, 1.0 / n, dtype=np.float64)
     if isinstance(villain_reach, RangeState):
+        # Se valida el reach COMPLETO antes de indexar, no solo los ids
+        # pedidos: si el RangeState llega corrupto en una zona que esta
+        # llamada no lee, debe seguir siendo un error visible (pegar_3,
+        # paso 1: contrato uniforme objeto vs vector).
+        villain_reach.validate(allow_empty=True)
         w = villain_reach.reach_blocked[ids].astype(np.float64)
     else:
         arr, _total = validate_reach(villain_reach, allow_empty=True)

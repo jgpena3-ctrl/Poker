@@ -427,8 +427,22 @@ class Asistente:
     def _heroes_conocidos(self, state):
         """[(pid, cartas)] de los jugadores activos cuya mano conocemos.
 
+        ELEGIBLES PARA RECOMENDACIÓN, no solo conocidos. Los dos criterios
+        se mantienen separados a propósito:
+
+          - blockers:      toda carta conocida sirve para excluirla del
+                           rango de un villano, siempre.
+          - recomendación: solo si el jugador sigue ACTIVO y tiene una
+                           decisión abierta.
+
+        En showdown ya no hay decisión que tomar, así que no se recomienda
+        a nadie aunque las cartas se conocieran. (En la práctica el
+        recorder tampoco captura el showdown: se anota a mano en la base
+        para su estudio posterior.)
+
         El primero es el hero principal (el del nombre configurado); el
-        resto son heroes secundarios. Orden estable = orden de PLAYER_IDS.
+        resto son heroes secundarios. Orden estable = hero principal
+        primero, luego PLAYER_IDS.
         """
         hp = self._hero_pid()
         out = []
@@ -440,8 +454,31 @@ class Asistente:
                 cards = self._cards_hand_registrada(pid)
             if len(cards) == 2:
                 out.append((pid, cards))
-        # el hero principal primero, aunque su asiento no sea el primero
         out.sort(key=lambda pc: 0 if pc[0] == hp else 1)
+        return out
+
+    def _cartas_bloqueantes(self, state):
+        """Todas las cartas conocidas de jugadores que NO son el hero.
+
+        Se usan para excluir manos de los rangos rivales. A diferencia de
+        _heroes_conocidos(), no exige que el jugador esté activo: una
+        carta conocida sigue siendo una mano imposible para un villano
+        aunque su dueño se haya folded o la mano haya terminado.
+
+        Es lo que permite que un jugador que conocemos pero que ya no juega
+        (se ha folded, o la mano terminó) siga excluido del rango sin
+        recibir recomendación.
+        """
+        hp = self._hero_pid()
+        fuera = set(self._hero_cards_of(state))
+        out = []
+        for pid in PLAYER_IDS:
+            if pid == hp:
+                continue
+            cards = self._cards_of_pid(pid, state)
+            if not cards:
+                cards = self._cards_hand_registrada(pid)
+            out.extend(c for c in cards if c and c not in fuera)
         return out
 
     def _cards_hand_registrada(self, pid):
@@ -494,18 +531,24 @@ class Asistente:
             return name
         return villain_id
 
-    def _villain_id(self, state, known_pids=()):
-        """Rival para recomendar: si el hero ENFRENTA una apuesta, quien la
-        hizo (máximo {pid}_bet → el agresor real; su rango estrecha de
-        verdad la equity). Si el hero apuesta (to_call=0), el activo de
-        mayor stack (rival principal para value).
+    def _villain_id(self, state, hero_pid=None, known_pids=()):
+        """Rival que ENFRENTA `hero_pid` en esta situación.
+
+        Si ese hero tiene una apuesta encima, el rival es quien tiene la
+        apuesta mayor (el agresor real: es el que estrecha el rango de
+        verdad). Si no hay bet encima, es el activo de mayor stack.
+
+        El villain se resuelve POR HERO, no globalmente: con dos heroes
+        cuyas apuestas difieren, el agresor relevante puede no ser el mismo
+        para los dos. Por eso `hero_pid` es un parámetro y no siempre el
+        hero principal.
 
         `known_pids` son los jugadores cuya mano conocemos (heroes). No
         pueden ser rival de nadie: si sabemos qué cartas tiene, no está en
-        el rango de otro. Sin esto, un segundo hero acabaría modelado como
-        villano suyo propio.
+        el rango de otro.
         """
-        hero_pid = self._hero_pid()
+        if hero_pid is None:
+            hero_pid = self._hero_pid()
         hero_bet = state.get(f'{hero_pid}_bet') or 0.0
         excluded = set(known_pids) | {hero_pid}
         max_bet, aggressor = 0.0, None
@@ -562,6 +605,31 @@ class Asistente:
         if self._villain_id(state) is None:
             return False
         return (state.get('pot') or 0.0) > 0
+
+    def _pid_act(self, pid, state, pil):
+        """True si a ESE asiento le toca actuar ahora."""
+        if state.get(f'{pid}_state') != 'activo':
+            return False
+        try:
+            label = self.reader.sm.read(pil, pid)
+        except Exception:
+            label = None
+        if label in HERO_ACTION_LABELS:
+            return True
+        return self._villain_id(state, hero_pid=pid) is not None \
+            and (state.get('pot') or 0.0) > 0
+
+    def _alguna_hero_act(self, state, pil):
+        """True si algún hero conocido y activo tiene decisión abierta.
+
+        Con dos heroes, el turno puede ser del segundo. Si ninguno la
+        tiene (ambos folded, o la mano ya en showdown), devuelve False: no
+        se calcula nada y el registro de la mano sigue su curso.
+        """
+        for pid, _cards in self._heroes_conocidos(state):
+            if self._pid_act(pid, state, pil):
+                return True
+        return False
 
     # ------------------------------------------------------------------
 
@@ -705,32 +773,41 @@ class Asistente:
 
     def recomendaciones(self, state, verbose=None, on_reco=None, runout=None,
                         seed=None):
-        """[(pid, evs)] con una recomendación por hero conocido y activo.
+        """[(pid, evs)] con una recomendación INDEPENDIENTE por hero activo.
 
-        Si solo se conoce la mano del hero principal, devuelve un único
-        elemento (mismo resultado que `recomendacion()`).
+        Cada hero tiene su propio villano: `_villain_id(state, hero_pid)`
+        compara las apuestas contra la de ESE hero, no contra la del hero
+        principal. Con dos heroes en situaciones distintas, el agresor
+        relevante puede no ser el mismo.
 
-        Si además se conoce la mano de otro jugador activo, ese jugador es
-        un segundo hero: recibe su propia recomendación y sus cartas
-        bloquean el rango de los villanos, igual que las del hero principal.
-        Cada rango de villano se estima excluyendo las cartas de AMBOS
-        heroes: ninguno de los dos puede estar en el rango del otro.
+        Solo entran los heroes ELEGIBLES: activos y con una decisión
+        abierta. Si ninguno lo está (los dos folded, o la mano en
+        showdown), devuelve [] y no se calcula nada — el bucle `step()`
+        sigue registrando la mano igualmente.
+
+        Las cartas de los jugadores conocidos que NO son hero (porque se
+        han folded o la mano terminó) siguen bloqueando los rangos: son
+        manos imposibles para cualquier villano, recomendada o no.
         """
         heroes = self._heroes_conocidos(state)
         if not heroes:
             return []
         board = _board_codes(state) or self._board_fallback()
         known_pids = [pid for pid, _cards in heroes]
-        villain = self._villain_id(state, known_pids=known_pids)
-        if villain is None:
-            return []
+        # Bloqueadores: todo lo conocido salvo las cartas de este hero, que
+        # ya se añaden dentro. Incluye a los conocidos que ya no juegan.
+        bloqueantes = [c for c in self._cartas_bloqueantes(state)
+                       if c not in set(board)]
 
         out = []
         for hero_pid, hero in heroes:
-            others = [c for pid, cards in heroes if pid != hero_pid
-                      for c in cards]
+            villano = self._villain_id(state, hero_pid=hero_pid,
+                                       known_pids=known_pids)
+            if villano is None:
+                continue
+            otros = [c for c in bloqueantes if c not in set(hero)]
             evs = self._recomendacion_para(
-                state, hero_pid, hero, board, villain, others,
+                state, hero_pid, hero, board, villano, otros,
                 verbose=verbose, on_reco=on_reco, runout=runout, seed=seed)
             if evs is not None:
                 out.append((hero_pid, evs))
@@ -871,7 +948,9 @@ class Asistente:
         if not board:
             board = self._board_fallback()
         hero_pid = self._hero_pid()
-        villanos = self._villain_id(state, known_pids=[hero_pid])
+        conocidos = [p for p, _ in self._heroes_conocidos(state)]
+        villanos = self._villain_id(state, hero_pid=hero_pid,
+                                    known_pids=conocidos)
         if villanos is None:
             return None
         others = self._otros_heroes(state, hero_pid, board)
@@ -887,10 +966,10 @@ class Asistente:
         """
         fuera = set(board) | set(self._hero_cards_of(state))
         out = []
-        for pid in self._heroes_conocidos(state):
-            if pid[0] == hero_pid:
+        for other_pid, other_cards in self._heroes_conocidos(state):
+            if other_pid == hero_pid:
                 continue
-            out.extend(c for c in pid[1] if c not in fuera)
+            out.extend(c for c in other_cards if c not in fuera)
         return out
 
     # ------------------------------------------------------------------
@@ -916,7 +995,14 @@ force_reco=True    → ignora el dedupe (un clic manual = una reconsulta).
             self.rec.process_frame(state, img_arr, log=log)
             self._observe_stacks(state)
 
-            turn = self._hero_act(state, pil) if require_turn else True
+            if all_heroes:
+                # Turno de CUALQUIER hero conocido y activo. Si ninguno
+                # tiene decisión abierta, no se calcula nada pero el
+                # registro de la mano continúa (fold, showdown, etc.).
+                turn = self._alguna_hero_act(state, pil) \
+                    if require_turn else True
+            else:
+                turn = self._hero_act(state, pil) if require_turn else True
             res = None
             if turn:
                 key = self._state_key(state)

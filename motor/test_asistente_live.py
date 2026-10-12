@@ -909,3 +909,99 @@ def test_recomendacion_simple_no_recomienda_al_villano(asis):
     evs = asis.recomendacion(_estado_dos_heroes(), verbose=False)
     assert evs is not None
     assert hasattr(evs, 'ev')
+
+
+# ---------------------------------------------------------------------------
+# reglas de elegibilidad y villano por hero
+# ---------------------------------------------------------------------------
+
+def test_sin_heroes_activos_no_hay_recomendacion(asis):
+    """Ambos inactivos: [] y no se calcula nada. El registro sigue aparte."""
+    state = _estado_dos_heroes()
+    state['hero_state'] = 'inactivo'
+    state['p1_state'] = 'inactivo'
+    assert asis.recomendaciones(state, verbose=False) == []
+
+
+def test_showdown_no_recomienda_a_ninguno(asis):
+    """En showdown no hay decisión abierta: aunque se conozcan las cartas,
+    nadie recibe recomendación (el recorder tampoco capta el showdown)."""
+    _asis_postflop(asis)
+    state = _estado_dos_heroes()
+    state['hero_state'] = 'inactivo'
+    state['p1_state'] = 'inactivo'
+    # las cartas siguen conocidas...
+    assert state['hero_cards'] and state['p1_cards']
+    # ...pero no hay heroes elegibles
+    assert asis._heroes_conocidos(state) == []
+    assert asis.recomendaciones(state, verbose=False) == []
+
+
+def test_cards_known_but_folded_still_block(asis):
+    """Un jugador conocido que se ha folded sigue excluida del rango.
+
+    Conocer una carta la hace imposible para cualquier villano, se
+    recomiende o no a su dueño.
+    """
+    state = _estado_dos_heroes()
+    state['p1_state'] = 'inactivo'          # p1 se folded
+    # p1 ya no es hero elegible...
+    pids = [p for p, _ in asis._heroes_conocidos(state)]
+    assert 'p1' not in pids
+    # ...pero sus cartas siguen bloqueando
+    bloqueantes = asis._cartas_bloqueantes(state)
+    assert sorted(bloqueantes) == ['2s', '7c']
+
+
+def test_villain_por_hero_es_relativo_a_cada_uno(asis):
+    """Cada hero enfrenta al agresor que le corresponde a ÉL.
+
+    La selección es relativa a la apuesta de ESE hero. El segundo hero no
+    ha apostar, así que la mayor apuesta (20 de p2) está por encima y su
+    agresor es p2. El hero principal ya tiene 30, por encima de todo: no
+    hay agresor y cae al fallback por stack, que da p3 (el mayor stack).
+
+    El mismo estado produce villanos DISTINTOS según el hero, lo que
+    demuestra que la selección no es global.
+    """
+    hp = asis._hero_pid()
+    state = {}
+    state[f'{hp}_state'] = 'activo'
+    state[f'{hp}_bet'] = 30.0
+    state[f'{hp}_stake'] = 100.0
+    state['p1_state'] = 'activo'
+    state['p1_bet'] = 0.0
+    state['p1_stake'] = 70.0
+    state['p2_state'] = 'activo'
+    state['p2_bet'] = 20.0
+    state['p2_stake'] = 60.0
+    state['p3_state'] = 'activo'
+    state['p3_bet'] = 5.0
+    state['p3_stake'] = 90.0
+    heroes = [hp, 'p1']
+
+    v_p1 = asis._villain_id(state, hero_pid='p1', known_pids=heroes)
+    v_hp = asis._villain_id(state, hero_pid=hp, known_pids=heroes)
+
+    assert v_p1 == 'p2'      # agresor: apuesta mayor por encima de la suya
+    assert v_hp == 'p3'      # fallback por stack: 30 supera cualquier bet
+    assert v_p1 != v_hp
+
+
+def test_villain_excluye_a_todos_los_heroes_conocidos(asis):
+    """Ningún hero conocido puede salir como rival de otro."""
+    state = {
+        'hero_state': 'activo', 'hero_bet': 0.0, 'hero_stake': 100.0,
+        'p1_state': 'activo', 'p1_bet': 0.0, 'p1_stake': 100.0,
+        'p2_state': 'activo', 'p2_bet': 50.0, 'p2_stake': 90.0,
+    }
+    v = asis._villain_id(state, hero_pid='hero', known_pids=['hero', 'p1'])
+    assert v == 'p2'
+
+
+def test_alguna_hero_act_false_sin_heroes_activos(asis):
+    """Si ningún hero activo tiene decisión abierta, no se recomienda."""
+    state = _estado_dos_heroes()
+    state['hero_state'] = 'inactivo'
+    state['p1_state'] = 'inactivo'
+    assert asis._heroes_conocidos(state) == []
