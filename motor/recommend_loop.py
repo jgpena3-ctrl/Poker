@@ -21,6 +21,7 @@ from typing import Callable, Dict, List, Optional, Union
 import numpy as np
 
 from .decision import EvTable, compute_evs
+from .hierarchy import shadow_equity, shadow_record
 from .panel import format_insight
 from .preflop import opening_range_or_fallback
 from .ranges import RangeError, RangeState
@@ -61,6 +62,11 @@ class Recommendation:
     stages: Dict[str, float] = field(default_factory=dict)
     runout: bool = False
     rule_plan: Optional[rules.RulePlan] = None
+    # Jerarquía de rivales en modo sombra. `shadow` es lo que HABRÍA dado
+    # la equity ajustada por checkers; no interviene en `action` ni en
+    # `value`, que son siempre los de producción. Ver hierarchy.py.
+    shadow: Optional[Dict] = None
+    hierarchy: Optional[Dict] = None
 
     @property
     def text(self) -> str:
@@ -190,7 +196,10 @@ def recommend(hero_codes, board_codes, *, pot: float, to_call: float = 0.0,
                flop_checked: bool = False,
                villain_bet_flop: bool = False,
                hand_role: str = None,
-               range_advantage_str: str = None) -> Recommendation:
+               range_advantage_str: str = None,
+               hierarchy: Optional[Dict] = None,
+               shadow_log=None,
+               hand_id: str = '') -> Recommendation:
     """Recomienda acción para el hero con la mano y el estado dados.
 
     hero_codes  : ['Ah', 'Kd'] — 2 cartas conocidas
@@ -246,7 +255,14 @@ def recommend(hero_codes, board_codes, *, pot: float, to_call: float = 0.0,
         villain = _build_multiway_range(hero_codes, board_codes,
                                            villain_ranges)
         villain_labels = list(villain_ranges.keys())
-        villain_label = 'multiway (' + ', '.join(villain_labels) + ')'
+        # La unión de reaches NO es una equity multiway (mezcla un rival
+        # elegido al azar). Se deja constancia en la etiqueta (pegar_2 §5).
+        n_rivales = len(villain_ranges)
+        etiqueta = (f'multiway aprox. ({n_rivales} rivales, '
+                    f'no es equity multiway)')
+        if hierarchy and hierarchy.get('checkers'):
+            etiqueta += f' +{len(hierarchy["checkers"])} checker(s)'
+        villain_label = etiqueta
     elif villain_reach is None:
         villain = _build_villain_range(hero_codes, board_codes, villain_pos,
                                         villain_cards, range_model,
@@ -408,12 +424,36 @@ def recommend(hero_codes, board_codes, *, pot: float, to_call: float = 0.0,
     stages['budget'] = deadline_s * 1000 - elapsed_ms
     stages['anytime'] = True
 
+    # --- Jerarquía de rivales: MODO SOMBRA ---
+    # NO altera `best_action` ni `best_value`. Solo estima qué cambiaría
+    # si los checkers se penalizaran, y lo registra para poder compararlo
+    # contra resultados reales. Activarlo sin muestra sería calibrar a
+    # ciegas, así que por ahora es solo un instrumento de medición.
+    shadow_info = None
+    if hierarchy:
+        try:
+            shadow_info = shadow_equity(sit.equity, current_board_codes,
+                                       street, hierarchy)
+            # El registro es opcional; el cálculo no. Con `hierarchy` el
+            # llamador ya pidió la comparación, aunque no la persista.
+            if shadow_log is not None:
+                shadow_log.append(shadow_record(
+                    hand_id=hand_id or '', street=street,
+                    board_codes=current_board_codes, hero_codes=hero_codes,
+                    hierarchy=hierarchy, shadow=shadow_info, pot=pot,
+                    to_call=to_call, stack=stack,
+                    action_production=best_action))
+        except Exception as e:      # nunca romper la recomendación
+            import sys
+            print(f'[hierarchy.sombra] error: {e}', file=sys.stderr)
+
     return Recommendation(action=best_action, value=best_value,
                           situation=sit, evs=best_evs,
                           villain_label=villain_label,
                           elapsed_ms=elapsed_ms,
                           stages=stages, runout=best_runout,
-                          rule_plan=rp)
+                          rule_plan=rp, shadow=shadow_info,
+                          hierarchy=hierarchy)
 
 
 def run_demo(runout: bool = False):

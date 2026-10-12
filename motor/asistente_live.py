@@ -32,6 +32,8 @@ from recorder_live import LiveRecorder, POSITION_ORDER
 from .behavior import Oracle, build
 from .cards import card_id
 from .decision import EvTable, OracleResponse, compute_evs
+from .hierarchy import (ShadowLog, classify_villains, shadow_equity,
+                        shadow_record)
 from .learn import load_hands
 from .observations import _texture_class, lead_label
 from .panel import format_insight
@@ -634,16 +636,49 @@ class Asistente:
     # ------------------------------------------------------------------
 
     def _max_bet(self, state):
-        vals = [state.get(f'{p}_bet') or 0 for p in PLAYER_IDS]
-        return max(vals)
+        """(max_bet, pid) de la mayor apuesta en la mesa."""
+        best, best_pid = 0.0, None
+        for p in PLAYER_IDS:
+            b = state.get(f'{p}_bet') or 0.0
+            if b > best:
+                best, best_pid = b, p
+        return best, best_pid
+
+    def _jerarquia(self, hero_pid, state):
+        """Contexto de rivales para el modo sombra (motor/hierarchy.py).
+
+        Reconstruye las acciones de la calle actual desde la mano
+        registrada y clasifica a cada rival en agresor / checker /
+        pendiente. Devuelve None si no hay mano en curso.
+
+        No cambia la recomendación: solo alimenta el registro sombra.
+        """
+        h = self.rec.hand
+        if h is None:
+            return None
+        hero_pos = self._pos_of(hero_pid, state) or ''
+        if not hero_pos:
+            return None
+        n_coms = len(_board_codes(state))
+        street = _street_of(n_coms)
+        acts = ((h.get('streets', {}) or {}).get(street, {}) or {}).get(
+            'actions', []) or []
+        if not acts:
+            return None
+        # pendientes: los que aún deben actuar y siguen activos
+        pending = [p for p in PLAYER_IDS
+                   if p != hero_pos and state.get(f'{p}_state') == 'activo']
+        return classify_villains(acts, hero_pos,
+                                 pending_positions=pending)
 
     def _state_key(self, state):
         """Firma de la situación para deduplicar recomendaciones (incluye el
         hand_id para que una MANO NUEVA siempre recomiende de nuevo)."""
         hid = self.rec.hand.get('hand_id') if self.rec.hand is not None else ''
+        max_bet, _aggr = self._max_bet(state)
         return (hid, len(_board_codes(state)), (state.get('pot') or 0.0),
                 (state.get(f'{self._hero_pid()}_bet') or 0.0),
-                self._max_bet(state))
+                max_bet)
 
     # ------------------------------------------------------------------
 
@@ -828,7 +863,8 @@ class Asistente:
 
         pot = state.get('pot') or 0.0
         hero_bet = state.get(f'{hero_pid}_bet') or 0.0
-        to_call = max(self._max_bet(state) - hero_bet, 0.0)
+        max_bet, _aggr = self._max_bet(state)
+        to_call = max(max_bet - hero_bet, 0.0)
         hero_stake = state.get(f'{hero_pid}_stake')
         stack = hero_stake or 0.0
         villain_stack = state.get(f'{villain}_stake') or 0.0
@@ -918,6 +954,28 @@ class Asistente:
                           raise_to=rp.raise_to,
                           candidates=rp.candidates)
         label = f'{perfil} {name}'
+
+        # Modo sombra: registra qué cambiaría si los checkers se
+        # penalizaran. NO toca `action` ni el EV de producción.
+        if getattr(self, 'shadow', True):
+            jer = self._jerarquia(hero_pid, state)
+            if jer and (jer.get('checkers') or len(jer.get('pending') or ()) > 1):
+                _reg = shadow_equity(sit.equity, board, street, jer)
+                try:
+                    self._shadow_log().append(shadow_record(
+                        hand_id=(self.rec.hand or {}).get('hand_id', ''),
+                        street=street, board_codes=board,
+                        hero_codes=hero, hierarchy=jer, shadow=_reg,
+                        pot=pot, to_call=to_call, stack=stack,
+                        action_production=''))
+                except Exception:
+                    pass       # el log nunca rompe la recomendación
+                label += (f' | jerarquía: principal={jer.get("main")}'
+                          f' ({jer.get("main_reason")})'
+                          f', {len(jer.get("checkers") or ())} checker(s)'
+                          f', {len(jer.get("pending") or ())} pendiente(s)'
+                          f' [sombra, no aplicado]')
+
         evs.spot = rp.spot
         evs.rule_note = rp.note
         action = rules_select_best(evs, rp)[0]
@@ -928,6 +986,14 @@ class Asistente:
         elif self.verbose or verbose:
             print(text)
         return evs
+
+    def _shadow_log(self):
+        """ShadowLog perezoso: no se crea hasta la primera escritura."""
+        lg = getattr(self, '_shadow_log_obj', None)
+        if lg is None:
+            lg = ShadowLog(enabled=bool(getattr(self, 'shadow', True)))
+            self._shadow_log_obj = lg
+        return lg
 
     def recomendacion(self, state, verbose=None, on_reco=None, runout=None,
                       seed=None):
