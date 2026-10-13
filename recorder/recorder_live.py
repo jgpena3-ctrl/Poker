@@ -435,30 +435,31 @@ class LiveRecorder:
         a su primer movimiento. En frame inicial puede no haber bets aun: la
         referencia a igualar es la ciega BB (_blind_bb).
 
-        LIMITACION CONOCIDA: EL ORDEN ES INFERIDO, NO OBSERVADO
-        ---------------------------------------------------
-        Este metodo reconstruye la secuencia preflop desde UN snapshot y la
-        recorre en orden fijo de posicion (UTG, MP, CO, BTN, SB, BB). Ese
-        orden NO es necesariamente el orden real en que actuaron los
-        jugadores: quien paga una subida desde posicion temprana queda
-        registrado ANTES que quien la hizo.
+        ORDEN: INFERIDO POR POSICION, NO OBSERVADO frame a frame
+        ------------------------------------------------------------
+        Este metodo reconstruye la secuencia preflop desde UN snapshot. Ya
+        no emite los folds por delante de los movimientos (eso producia
+        secuencias imposibles y clasificaba mal a quien foldeaba despues
+        de una subida): ahora recorre PREFLOP_ORDER una sola vez y cada
+        posicion emite su accion donde corresponde.
+
+        Lo que SIGUE siendo inferido: el instante exacto dentro de la
+        calle. PREFLOP_ORDER (UTG, MP, CO, BTN, SB, BB) SI es el orden real
+        de actuacion en 6-max, asi que para primera decision de cada
+        jugador la inferencia coincide con la realidad. Lo que no puede
+        reconstruir es una segunda actuacion del mismo jugador.
 
         `motor.learn.preflop_events()` calcula raises/limps/callers a partir
-        de las acciones PRECEDENTES, asi que este orden inferido influye en
-        las categorias aunque la deteccion de la ciega sea correcta.
+        de las acciones PRECEDENTES, asi que este orden influye en las
+        categorias. Medido con `tools/auditar_orden_folds.py`:
 
-        Medido sobre las 900 manos fiables con
-        `tools/auditar_orden_preflop.py` (422 manos con >=2 voluntarias):
-
-            orden grabado no respeta "bet ascendente"        218  (51.7%)
-              explicable por amount=delta (PROYECTO 6.1)   151  (35.8%)
+            manos cuyo orden no respeta "bet ascendente"     218  (51.7%)
+              explicable por amount=delta (PROYECTO 6.1)    151  (35.8%)
               desorden temporal genuino                     67  (15.9%)
 
         NO se ordena por importe para "arreglarlo": `amount` mezcla niveles
         observados e incrementos calculados (PROYECTO 6.1), asi que esa
-        senal no es fiable y ordenar por ella seria INVENTAR un orden. La
-        correccion real exige que el recorder deje de mezclar semanticas y
-        emita el orden temporal real (Fase 3 del plan).
+        senal no es fiable y ordenar por ella seria INVENTAR un orden.
 
         Lo que si es exacto aqui: la APORTACION de cada jugador (`bids`),
         que se lee de una vez y no depende del orden de recorrido.
@@ -473,56 +474,60 @@ class LiveRecorder:
             if pid is not None:
                 bids[pos_name] = state.get(f'{pid}_bet')
 
-        # 1) Folds visibles en el snapshot inicial
-        for pos_name in PREFLOP_ORDER:
-            pid = pos_map.get(pos_name)
-            if pid is None:
-                continue
-            st = state.get(f'{pid}_state')
-            if st in ('retirarse', 'ausente', 'inactivo') or pid in self._inactive_players:
-                self._add_action('preflop', pos_name, 'f', 0.0, 'observed')
-
         # Referencia a igualar = ciega BB (el primer movimiento por encima
         # de ella es raise; los que igualan son calls)
         max_bet = self._blind_bb
 
-        # 2) La ciega del BB abre la ronda (primera apuesta 'b')
         bb_pid = pos_map.get('BB')
         bb_bet = bids.get('BB')
         bb_open = bb_bet if (bb_bet is not None and bb_bet > 0) else self._blind_bb
-        if bb_pid is not None and bb_open > 0:
-            existing = next(
-                (a for a in self.hand['streets']['preflop']['actions']
-                 if a['pos'] == 'BB' and a['action'] == 'b'), None)
-            if existing is None:
-                # `blind: True` da identidad explícita a la ciega: learn.py no
-                # necesita deducirla por el índice de la secuencia.
-                self.hand['streets']['preflop']['actions'].append(
-                    {'pos': 'BB', 'action': 'b', 'amount': round(bb_open, 2),
-                     'amount_type': 'observed', 'blind': True})
-            elif _es_ciega_obligatoria(existing, bb_open, self._blind_bb):
-                # Ya había un 'b' del BB y ES la ciega: se normaliza con la
-                # marca explícita, sin duplicar el evento (revision_2, P1).
-                existing['amount'] = round(bb_open, 2)
-                existing['amount_type'] = 'observed'
-                existing['blind'] = True
-            # Si el 'b' del BB ya existente es MAYOR que una ciega, es una
-            # subida voluntaria: no se marca (marcarla sería inventar).
-            max_bet = max(max_bet, bb_open)
 
-        # 3) Movimientos voluntarios de los demás (c / r)
+        # UNA sola pasada en PREFLOP_ORDER (que en 6-max es el orden real de
+        # actuacion: UTG -> MP -> CO -> BTN -> SB -> BB).
+        #
+        # Antes se emitian TODOS los folds primero y despues los movimientos
+        # voluntarios. Eso producia secuencias imposibles (un fold posterior a
+        # una subida quedaba antes) y clasificaba mal a ese jugador.
+        # Medido: 139 de las 900 manos fiables (15.4%) tenian este origen
+        # (`tools/auditar_orden_folds.py`).
         for pos_name in PREFLOP_ORDER:
-            if pos_name == 'BB':
-                continue
             pid = pos_map.get(pos_name)
-            if pid is None:
+            if pid is None or pid in self._inactive_players:
                 continue
+            st = state.get(f'{pid}_state')
+
+            # Fold: visible en el snapshot. Se emite EN SU POSICION, no antes
+            # de los movimientos de las posiciones anteriores.
+            if st in ('retirarse', 'ausente', 'inactivo'):
+                self._add_action('preflop', pos_name, 'f', 0.0, 'observed')
+                continue
+
+            if pos_name == 'BB':
+                # La ciega del BB se registra con identidad explicita; si el BB
+                # ya tiene un 'b' en la calle se normaliza (sin duplicar).
+                if bb_open > 0:
+                    existing = next(
+                        (a for a in self.hand['streets']['preflop']['actions']
+                         if a['pos'] == 'BB' and a['action'] == 'b'), None)
+                    if existing is None:
+                        self.hand['streets']['preflop']['actions'].append(
+                            {'pos': 'BB', 'action': 'b',
+                             'amount': round(bb_open, 2),
+                             'amount_type': 'observed', 'blind': True})
+                    elif _es_ciega_obligatoria(existing, bb_open,
+                                               self._blind_bb):
+                        existing['amount'] = round(bb_open, 2)
+                        existing['amount_type'] = 'observed'
+                        existing['blind'] = True
+                    max_bet = max(max_bet, bb_open)
+                continue
+
             bet = bids.get(pos_name)
             blind = self._blind_of(pos_name)
             if bet is None or bet <= 0:
                 continue
             if bet <= blind + 0.05:
-                # Solo su ciega (sin movimiento voluntario aún) → pendiente
+                # Solo su ciega (sin movimiento voluntario aun) -> pendiente
                 self._blinds_by_pos[pos_name] = bet
                 continue
             amt = round(bet, 2)

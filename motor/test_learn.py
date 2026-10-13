@@ -35,8 +35,14 @@ def test_classify_no_raise_state():
 def test_classify_facing_open():
     assert classify_first_action('c', 2.5, 1, 0)[:2] == ('call_open', 'facing_open')
     assert classify_first_action('r', 4.0, 1, 0)[:2] == ('3bet', 'facing_open')
-    assert classify_first_action('r', 4.0, 1, 1)[:2] == ('squeeze', 'facing_open')
     assert classify_first_action('f', 0, 1, 0)[:2] == ('fold_vs_open', 'facing_open')
+    # squeeze exige un CALLER del open (callers>=1), no un limpe.
+    # OJO: `callers` va por keyword; el 5o positional es `bb`.
+    assert classify_first_action('r', 4.0, 1, 0, callers=1)[:2] == \
+        ('squeeze', 'facing_open')
+    # un limpe anterior al open NO convierte en squeeze el 3bet posterior
+    assert classify_first_action('r', 4.0, 1, 1, callers=0)[:2] == \
+        ('3bet', 'facing_open')
 
 
 def test_classify_facing_3bet():
@@ -363,21 +369,41 @@ def test_aceptacion_4_folds_antes_no_alteran_la_ciega():
 
 
 def test_aceptacion_5_squeeze_necesita_apuesta_previa():
-    """squeeze = subida con llamadas detrás de una apuesta.
+    """squeeze = subir cuando alguien YA PAGO la apuesta vigente.
 
-    Sin apuesta previa (sólo limpes) es raise-over-limp, no squeeze.
-    Con una llamada detrás de un open, es squeeze; sin ella, 3bet.
+    Secuencias exactas (revision_2 pide fijar esta semantica con test):
+      - open -> call -> raise = squeeze (hay un caller del open)
+      - open -> raise = 3bet pelado
+      - limp -> open over limp -> raise = 3bet (el limp NO es caller)
     """
-    # open -> call -> raise  = squeeze
     squeeze = _hand('A', preflop=[('UTG', 'b', 2.5), ('CO', 'c', 2.5),
                                   ('BTN', 'r', 8.0)])
     assert preflop_events(squeeze)[2].category == 'squeeze'
-    # open -> raise = 3bet pelado
+
     tresbet = _hand('B', preflop=[('UTG', 'b', 2.5), ('CO', 'r', 8.0)])
     assert preflop_events(tresbet)[1].category == '3bet'
-    # limp -> raise (sin ninguna apuesta previa) = raise over limp
-    rol = _hand('C', preflop=[('MP', 'c', 1.0), ('CO', 'r', 3.0)])
-    assert preflop_events(rol)[1].category == 'rol'
+
+    # El caso que la revision_1 destapo (13 falsos squeezes en las 900):
+    # un limpe NO convierte en squeeze el 3bet posterior, porque el limpe
+    # ocurrio ANTES del open y por tanto nadie ha pagado ese open.
+    falso = _hand('C', preflop=[('UTG', 'c', 1.0),      # limp
+                                ('MP', 'r', 3.0),       # open over limp
+                                ('CO', 'r', 8.0)])      # 3bet del CO
+    assert preflop_events(falso)[2].category == '3bet'
+
+
+def test_squeeze_regresion_sobre_las_900():
+    """Progreso de la correccion de squeeze: 95 -> 7 -> 32 -> 26.
+
+    - 95 : `limps` contaba cualquier 'c' (los callers del open contaban como
+           limpes), lo que inflaba squeeze.
+    - 7  : se conto `limps` solo con raises==0 y se rompio squeeze del todo.
+    - 32 : se separo `callers`, pero `limps_before` seguia contando.
+    - 26 : squeeze = `callers >= 1` unicamente (estado actual).
+    """
+    st = PreflopStats.from_hands(load_hands(reliable_only=True))
+    total = sum(st.cats[p]['squeeze'] for p in st.cats)
+    assert total == 26, 'squeeze=%d, se esperaba 26' % total
 
 
 def test_aceptacion_6_bb_no_detectado_si_hay_limp_antes():

@@ -540,13 +540,36 @@ se terminó. Es una función a medio acabar, no un error de diseño.
 
 Denominadores en la ventana fiable: `facing_open` 2326 · `no_raise` 1635 · `facing_3bet` 734.
 
-**Simulación del arreglo.** Contando una subida sólo cuando el importe supera la ciega:
+**Simulación del arreglo.** ¿Qué regla produce la fila "Corregida" de abajo? Hay TRES
+reglas distintas en este documento y la ambiguedad ya fue resuelta midiéndolas
+(`python tools/que_regla_da_1599.py`, ventana fiable de 900):
+
+| Regla | Qué hace | fold/no_raise | vs_open | vs_3bet |
+|---|---|---|---|---|
+| R1 "Actual" | toda `'b'/'r'` cuenta como subida, ciega incluida | 527 | 1437 | 524 |
+| R2 "Ignorando sólo la ciega del BB" | la ciega no cuenta como subida | 1537 | 873 | 78 |
+| **R3 "Sólo importes > 1.0"** | solo `'b'/'r'` con importe > 1BB | **1599** | **825** | **64** |
+
+> ⚠️ **La fila "Corregida" de la tabla siguiente es R3, no R2.** El texto
+> "contando una subida sólo cuando el importe supera la ciega" describe R3, y
+> R3 es la única que reproduce 1599/825/64 exactamente.
+>
+> **R3 no es la regla correcta para `learn.py`.** Descarta del conteo de
+> subidas cualquier `'b'/'r'` de ≤1BB, lo que incluye los **limpes cortos**:
+> un limpe de 1BB así cuenta como limpe. `learn.py` hace otra cosa (R2 + fix de
+> limpes): ignora **solo** la ciega del BB y clasifica los limpes cortos como
+> `limp`. Difieren en **50 manos** de la ventana fiable.
+>
+> Por eso las cifras de la tabla siguiente **no son un objetivo de regresión**:
+> son la medición de una regla que el código no implementa. El baseline real
+> está en `DOCS/baseline_folds_900.txt` y se regenera con
+> `python tools/comparar_folds.py`.
 
 | Regla | Acciones con conteo divergente |
 |---|---|
 | Actual (`a in ('b','r')`) | **3252** |
-| Ignorando sólo la ciega del BB | 184 |
-| Sólo importes > 1.0 | **0** |
+| Ignorando sólo la ciega del BB (R2) | 184 |
+| Sólo importes > 1.0 (R3) | **0** |
 
 Efecto sobre la clasificación de `fold`, que es donde más se nota:
 

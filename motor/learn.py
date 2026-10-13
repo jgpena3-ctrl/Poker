@@ -152,11 +152,17 @@ def classify_first_action(action, amount, raises_before, limps_before, bb=BB, ca
         if raises_before == 0:
             return 'open' if limps_before == 0 else 'rol', 'no_raise'
         if raises_before == 1:
-            # squeeze = subida cuando ya hay llamadas detras de una
-            # apuesta previa. `callers` son esas llamadas; `limps`
-            # son calls SIN subida previa y no cuentan para el squeeze.
-            hay_callers = (callers >= 1) or (limps_before >= 1)
-            return ('squeeze' if hay_callers else '3bet'), 'facing_open'
+            # squeeze = subir cuando ALGUIEN YA HA PAGADO la apuesta
+            # vigente. Ese es exactamente `callers` (calls con subida
+            # previa).
+            #
+            # `limps_before` NO cuenta: un limpe ocurre ANTES del open,
+            # asi que el open se hizo 'sobre limp' y quien paga la subida
+            # actual no se esta levantando por nadie -> es un 3bet normal.
+            #   UTG c1.0 (limp) | MP r3.0 (open over limp) | CO r8.0
+            #     -> raises=1, limps=1, callers=0 -> 3bet, NO squeeze.
+            # Mezclar ambos daba 13 falsos squeezes en las 900 fiables.
+            return ('squeeze' if callers >= 1 else '3bet'), 'facing_open'
         return '4bet', 'facing_3bet'
     raise ValueError(f'acción preflop desconocida: {action!r}')
 

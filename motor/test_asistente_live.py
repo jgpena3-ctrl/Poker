@@ -17,6 +17,53 @@ def _pf_hand(acts):
     return {'streets': {'preflop': {'actions': acts}}}
 
 
+def _pf_hand2(acts):
+    return {'streets': {'preflop': {'actions': acts}}}
+
+
+# --- T3 (revision_1 §6): el rival del prior no depende del orden de folds ---
+
+def test_t3_rival_del_prior_estable_ante_folds_reordenados():
+    """Si el agresor es el mismo, reordenar los folds no cambia el rival."""
+    for spot, agresor in (('facing_open', 'UTG'), ('facing_3bet', 'CO')):
+        if spot == 'facing_open':
+            reales = [{'pos': 'UTG', 'action': 'b', 'amount': 2.5},
+                      {'pos': 'CO', 'action': 'c', 'amount': 2.5},
+                      {'pos': 'BTN', 'action': 'c', 'amount': 2.5}]
+        else:
+            reales = [{'pos': 'UTG', 'action': 'b', 'amount': 2.5},
+                      {'pos': 'CO', 'action': 'r', 'amount': 9.0},
+                      {'pos': 'BTN', 'action': 'c', 'amount': 9.0}]
+        folds = [{'pos': 'MP', 'action': 'f', 'amount': 0.0},
+                 {'pos': 'SB', 'action': 'f', 'amount': 0.0}]
+        from motor.asistente_live import _pf_rival_pos
+        assert _pf_rival_pos(_pf_hand2(reales + folds), 'BTN', spot) == agresor
+        assert _pf_rival_pos(_pf_hand2(folds + reales), 'BTN', spot) == agresor
+
+
+def test_t3_b_tras_una_subida_no_se_trata_como_limpe():
+    """Un 'b' de <=BB DESPUES de un 'r' no es limpe (revision_1 §3)."""
+    from motor.asistente_live import _pf_rival_pos
+    h = _pf_hand([{'pos': 'UTG', 'action': 'r', 'amount': 4.0},
+                  {'pos': 'MP', 'action': 'b', 'amount': 1.0},
+                  {'pos': 'BTN', 'action': 'c', 'amount': 4.0}])
+    assert _pf_rival_pos(h, 'BTN', 'facing_open') == 'UTG'
+    h2 = _pf_hand([{'pos': 'MP', 'action': 'b', 'amount': 1.0},
+                   {'pos': 'UTG', 'action': 'r', 'amount': 4.0},
+                   {'pos': 'BTN', 'action': 'c', 'amount': 4.0}])
+    assert _pf_rival_pos(h2, 'BTN', 'facing_open') == 'UTG'
+
+
+def test_es_limpe_corto_usa_bb_nominal_no_hardcodeado():
+    """El nivel de ciega viene de una constante, no de un 1.0 en el cuerpo."""
+    from motor.asistente_live import BB_NOMINAL, _es_limpe_corto
+    assert BB_NOMINAL == 1.0
+    assert _es_limpe_corto({'action': 'b', 'amount': 1.0}) is True
+    assert _es_limpe_corto({'action': 'b', 'amount': 2.0}) is False
+    # con otra ciega el criterio cambia -> prueba de que no esta hardcodeado
+    assert _es_limpe_corto({'action': 'b', 'amount': 2.0}, bb=2.5) is True
+
+
 def test_es_limpe_corto():
     from motor.asistente_live import _es_limpe_corto
     assert _es_limpe_corto({'action': 'b', 'amount': 1.0}) is True
