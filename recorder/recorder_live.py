@@ -428,11 +428,41 @@ class LiveRecorder:
 
     def _reconstruct_preflop(self, state):
         """Detecta acciones preflop desde bets/pot/stack (sin labels).
-        La ciega del BB abre la ronda ('b 1.0'); los limps son calls ('c') y
-        el primer subidor es raise ('r'). Las ciegas pendientes (SB) se
-        acumulan en _blinds_by_pos para sumarlas a su primer movimiento.
-        En frame inicial puede no haber bets aún: la referencia a igualar
-        es la ciega BB (_blind_bb)."""
+
+        La ciega del BB abre la ronda ('b 1.0', marcada `blind: True`); los
+        limpes son calls ('c') y el primer subidor es raise ('r'). Las
+        ciegas pendientes (SB) se acumulan en _blinds_by_pos para sumarlas
+        a su primer movimiento. En frame inicial puede no haber bets aun: la
+        referencia a igualar es la ciega BB (_blind_bb).
+
+        LIMITACION CONOCIDA: EL ORDEN ES INFERIDO, NO OBSERVADO
+        ---------------------------------------------------
+        Este metodo reconstruye la secuencia preflop desde UN snapshot y la
+        recorre en orden fijo de posicion (UTG, MP, CO, BTN, SB, BB). Ese
+        orden NO es necesariamente el orden real en que actuaron los
+        jugadores: quien paga una subida desde posicion temprana queda
+        registrado ANTES que quien la hizo.
+
+        `motor.learn.preflop_events()` calcula raises/limps/callers a partir
+        de las acciones PRECEDENTES, asi que este orden inferido influye en
+        las categorias aunque la deteccion de la ciega sea correcta.
+
+        Medido sobre las 900 manos fiables con
+        `tools/auditar_orden_preflop.py` (422 manos con >=2 voluntarias):
+
+            orden grabado no respeta "bet ascendente"        218  (51.7%)
+              explicable por amount=delta (PROYECTO 6.1)   151  (35.8%)
+              desorden temporal genuino                     67  (15.9%)
+
+        NO se ordena por importe para "arreglarlo": `amount` mezcla niveles
+        observados e incrementos calculados (PROYECTO 6.1), asi que esa
+        senal no es fiable y ordenar por ella seria INVENTAR un orden. La
+        correccion real exige que el recorder deje de mezclar semanticas y
+        emita el orden temporal real (Fase 3 del plan).
+
+        Lo que si es exacto aqui: la APORTACION de cada jugador (`bids`),
+        que se lee de una vez y no depende del orden de recorrido.
+        """
         PREFLOP_ORDER = ['UTG', 'MP', 'CO', 'BTN', 'SB', 'BB']
         pos_map = self._get_pos_map(state)
         self._blinds_by_pos = {}
