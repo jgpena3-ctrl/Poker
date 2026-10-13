@@ -313,14 +313,33 @@ def test_caso_principal_no_coincide_con_el_de_la_equity():
 # --- penalización absoluta (pegar_3 §1 P1) ------------------------------
 
 def test_penalizacion_es_absoluta():
-    """El dato medido es 69% -> 67%: dos puntos ABSOLUTOS.
+    """El efecto observado se registered como puntos, no como factor.
 
-    Aplicarla como factor (69 * 0.98) daría 67.62, que no es el dato.
+    (win 69% -> 67% dá -0.02 absoluto; como factor daría -0.0138.)
     """
     s = shadow_equity(0.69, BOARD_FLOOP, 'turn', {'checkers': ['UTG']})
-    assert s['penalty_basis'] == 'absolute'
+    assert s['penalty_basis'] == 'absolute_unvalidated'
     assert s['equity_shadow'] == pytest.approx(0.67, abs=1e-6)
     assert s['delta'] == pytest.approx(-0.02, abs=1e-6)
+
+
+def test_penalizacion_no_se_vende_como_correccion_de_equity():
+    """pegar_3 §1: lo medido es win rate, no equity, y el signo difiere.
+
+    Este test fija la razón por la que el modo sombra NO puede activarse
+    como corrección.
+    """
+    s = shadow_equity(0.69, BOARD_FLOOP, 'turn', {'checkers': ['UTG']})
+    assert s['penalty_basis_note']
+    anchor = s['penalty_anchor']
+    if anchor is not None:
+        assert anchor['is_equity'] is False
+        assert anchor['quantity'] == 'observed_win_rate'
+        assert anchor['used_as_equity_penalty'] is False
+        # el sentido se invierte al reconstruir como equity
+        assert anchor['delta_win_rate'] < 0
+        assert anchor['delta_equity'] > 0
+        assert anchor['signs_agree'] is False
 
 
 @pytest.mark.parametrize('eq', [0.20, 0.50, 0.69, 0.90])
@@ -330,24 +349,86 @@ def test_reduccion_constante_independiente_de_la_equity(eq):
     assert eq - s['equity_shadow'] == pytest.approx(0.02, abs=1e-6)
 
 
-def test_penalty_source_distingue_medido_de_extrapolado():
-    """Solo turn+lliso (rainbow) tiene dato directo (pegar_2 §2.1)."""
-    medido = shadow_equity(0.5, ['Qh', '7s', '2c'], 'turn',
-                           {'checkers': ['UTG']})
-    assert medido['penalty_source'] == 'measured'
-    flop = shadow_equity(0.5, ['Qh', '7s', '2c'], 'flop',
-                         {'checkers': ['UTG']})
-    assert flop['penalty_source'] == 'extrapolated'
-    river = shadow_equity(0.5, ['Qh', '7s', '2c'], 'river',
-                          {'checkers': ['UTG']})
-    assert river['penalty_source'] == 'extrapolated'
-    # monotone y two_tone también son extrapolación
-    monotono = shadow_equity(0.5, ['9h', '8h', '7h'], 'turn',
-                             {'checkers': ['UTG']})
-    assert monotono['penalty_source'] == 'extrapolated'
-    two_tone = shadow_equity(0.5, ['9h', '8s', '7h'], 'turn',
-                            {'checkers': ['UTG']})
-    assert two_tone['penalty_source'] == 'extrapolated'
+def _jerarquia_ancla(hero_bet=True):
+    """Jerarquía que reproduce EXACTAMENTE el escenario del ancla:
+    turn, board liso, hero que apuesta, sin agresor, 1 checker, 1 pendiente.
+    """
+    return {'main': None,
+            'hero_bet': hero_bet,
+            'aggressors': [],
+            'checkers': ['UTG'],
+            'pending': ['CO'],
+            'callers': []}
+
+
+def test_penalty_source_exige_el_escenario_completo():
+    """pegar_3 §2 P0: no basta calle+textura.
+
+    Antes cualquier turn con board rainbow se etiquetaba 'measured'. El
+    ancla es un escenario de seis condiciones; si no se cumplen todas,
+    el registro no puede '__heredado__' el respaldo.
+    """
+    ok = shadow_equity(0.69, BOARD_FLOOP, 'turn', _jerarquia_ancla())
+    assert ok['penalty_source'] == 'anchor_match'
+    assert ok['penalty_anchor'] is not None
+
+    # misma calle y textura, pero el hero NO apuesta
+    no_bet = shadow_equity(0.69, BOARD_FLOOP, 'turn',
+                           _jerarquia_ancla(hero_bet=False))
+    assert no_bet['penalty_source'] == 'partial_support'
+    assert no_bet['penalty_anchor'] is None
+
+    # hay agresor
+    con_agresor = _jerarquia_ancla()
+    con_agresor['aggressors'] = ['MP']
+    r = shadow_equity(0.69, BOARD_FLOOP, 'turn', con_agresor)
+    assert r['penalty_source'] == 'partial_support'
+
+    # dos checkers en vez de uno
+    dos = _jerarquia_ancla()
+    dos['checkers'] = ['UTG', 'MP']
+    r2 = shadow_equity(0.69, BOARD_FLOOP, 'turn', dos)
+    assert r2['penalty_source'] == 'partial_support'
+
+    # dos pendientes
+    dos_pend = _jerarquia_ancla()
+    dos_pend['pending'] = ['CO', 'SB']
+    r3 = shadow_equity(0.69, BOARD_FLOOP, 'turn', dos_pend)
+    assert r3['penalty_source'] == 'partial_support'
+
+
+def test_penalty_source_otra_calle_sin_respaldo():
+    for st in ('flop', 'river'):
+        s = shadow_equity(0.5, BOARD_FLOOP, st, _jerarquia_ancla())
+        assert s['penalty_source'] == 'none'
+        assert s['penalty_anchor'] is None
+
+
+def test_penalty_source_otra_textura_soporte_parcial():
+    s = shadow_equity(0.5, ['Qh', '7h', '2h'], 'turn', _jerarquia_ancla())
+    assert s['penalty_source'] == 'partial_support'
+    assert s['penalty_anchor'] is None
+
+
+def test_penalty_anchor_documenta_incertidumbre():
+    """`measured` significa una celda concreta, con n y sin intervalo
+    calculado. El registro debe llevar ese contexto."""
+    s = shadow_equity(0.69, BOARD_FLOOP, 'turn', _jerarquia_ancla())
+    anchor = s['penalty_anchor']
+    assert anchor['n_per_cell'] == 36
+    assert anchor['uncertainty'] is None
+    assert anchor['ci_note']
+    assert anchor['criterion']
+    assert anchor['source']
+
+
+def test_hero_bet_se_expone_en_la_jerarquia():
+    """El ancla exige que el hero aposte: es condición, no suposición."""
+    bet = classify_villains(_acts(('UTG', 'x'), ('MP', 'b'), ('BTN', 'b')),
+                            'BTN')
+    assert bet['hero_bet'] is True
+    check = classify_villains(_acts(('MP', 'b'), ('BTN', 'x')), 'BTN')
+    assert check['hero_bet'] is False
 
 
 def test_equity_shadow_no_se_hace_negativa():
@@ -393,21 +474,21 @@ def test_equity_main_no_se_confunde_con_produccion():
 
 
 def test_penalty_anchor_documenta_la_muestra():
-    """`measured` significa una celda concreta, con n y sin incertidumbre
-    calculada. El registro debe llevar ese contexto (pegar_3 §2, P1)."""
-    s = shadow_equity(0.69, BOARD_FLOOP, 'turn', {'checkers': ['UTG']})
+    """`anchor_match` significa una celda concreta, con n y sin intervalo
+    calculado. El registro debe llevar ese contexto."""
+    s = shadow_equity(0.69, BOARD_FLOOP, 'turn', _jerarquia_ancla())
     anchor = s['penalty_anchor']
     assert anchor is not None
     assert anchor['n_per_cell'] == 36
-    assert anchor['delta_absolute'] == 0.02
-    assert anchor['uncertainty'] is None       # no se ha calculado
+    assert anchor['uncertainty'] is None
+    assert anchor['ci_note']
     assert anchor['criterion']
     assert anchor['source']
 
 
-def test_penalty_anchor_ausente_en_extrapolado():
-    s = shadow_equity(0.5, BOARD_FLOOP, 'flop', {'checkers': ['UTG']})
-    assert s['penalty_source'] == 'extrapolated'
+def test_penalty_anchor_ausente_cuando_no_hay_anchor_match():
+    s = shadow_equity(0.5, BOARD_FLOOP, 'flop', _jerarquia_ancla())
+    assert s['penalty_source'] == 'none'
     assert s['penalty_anchor'] is None
 
 
@@ -491,6 +572,38 @@ def test_shadow_no_altera_la_accion():
     assert con.shadow is not None
     assert con.shadow['n_checker'] == 2
     assert con.shadow['equity_shadow'] < con.shadow['equity_production']
+
+
+@pytest.mark.parametrize('variante', ['log', 'callers', 'pending', 'ancla'])
+def test_shadow_no_altera_la_accion_en_cada_variante(variante, tmp_path):
+    """pegar_2 §2.5: la garantía debe cubrir todos los caminos.
+
+    Con log, con callers, con pendientes y con el escenario exacto del
+    ancla. La acción no puede cambiar en ninguno.
+    """
+    jer = classify_villains(_acts(('UTG', 'x'), ('MP', 'b'), ('CO', 'c')),
+                            'BTN', pending_positions=['SB', 'HJ'])
+    jer.setdefault('callers', ['CO'])
+    if variante == 'callers':
+        jer['checkers'] = ['UTG']
+    elif variante == 'pending':
+        jer['checkers'] = []
+    elif variante == 'ancla':
+        jer = {'main': 'MP', 'hero_bet': True, 'aggressors': ['MP'],
+               'checkers': ['UTG'], 'pending': ['CO'], 'callers': []}
+
+    base = dict(hero_codes=HERO, board_codes=BOARD_FLOOP, pot=25.0,
+                to_call=0.0, stack=90.0, street='flop', position='BTN',
+                villain_pos='MP', deadline_s=5.0, runout=False)
+    kwargs = {}
+    if variante == 'log':
+        kwargs['shadow_log'] = ShadowLog(path=str(tmp_path / 's.jsonl'))
+    sin = recommend(**base)
+    con = recommend(**base, hierarchy=jer, **kwargs)
+    assert con.action == sin.action
+    assert con.value == pytest.approx(sin.value, abs=1e-12)
+    if variante == 'log':
+        assert (tmp_path / 's.jsonl').exists()
 
 
 def test_shadow_sin_contexto_no_hay_registro():

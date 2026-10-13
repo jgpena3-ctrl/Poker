@@ -983,8 +983,9 @@ class Asistente:
                 label += (f' | jerarquía: principal={jer.get("main")}'
                           f' ({jer.get("main_reason")})'
                           f', {len(jer.get("checkers") or ())} checker(s)'
+                          f', {len(jer.get("callers") or ())} caller(s)'
                           f', {len(jer.get("pending") or ())} pendiente(s)'
-                          f' [sombra, no aplicado]')
+                          f' [ajuste NO validado, sombra]')
 
         evs.spot = rp.spot
         evs.rule_note = rp.note

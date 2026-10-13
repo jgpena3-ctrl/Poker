@@ -47,9 +47,14 @@ REPO_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SHADOW_PATH = os.path.join(REPO_DIR, 'data', 'shadow_hierarchy.jsonl')
 
 # Categorías de rival respecto al hero en la calle actual.
-AGGRESSOR = 'aggressor'      #[ELECCIONADO] modelado, no penalizado
-CHECKER = 'checker'          # actuó y pasó: penalización pequeña
+AGGRESSOR = 'aggressor'      # modelado, no penalizado
+CHECKER = 'checker'          # actuó y pasó (x): penalización pequeña
+CALLER = 'caller'            # igualó (c): registrado, sin penalizar
 PENDING = 'pending'          # no ha actuado: amenaza activa
+
+# El ajuste NO está validado. `penalty_source()` clasifica el respaldo
+# real de cada registro; con los datos actuales NINGUNO coincide con el
+# escenario del ancla. Ver OBSERVED_ANCHOR['support_note'].
 
 
 # ---------------------------------------------------------------------------
@@ -89,16 +94,20 @@ def texture_key(board_codes) -> str:
 
 
 def passive_penalty(board_codes, street: str, n_checker: int) -> float:
-    """Penalización ABSOLUTA por `n_checker` jugadores que checkearon.
+    """Penalización por `n_checker` jugadores que checkearon.
 
-    ABSOLUTA, no relativa. El dato es 69% -> 67%: dos puntos
-    porcentuales. Aplicarlo como factor (eq * (1-0.02) = 0.6762) daría
-    1.38 puntos, no 2. Es la diferencia entre reproducir la medición y
-    reproducir una regla parecida (pegar_3 §1, P1).
+    NO ESTÁ CALIBRADA COMO EQUITY (pegar_3 §1). El 0.02 procede de una
+    diferencia en tasa de victorias; reconstruida como equity, la
+    diferencia cambia de signo. Ver OBSERVED_ANCHOR. Se mantiene porque el
+    modo sombra no altera ninguna decisión, pero no debe reutilizarse
+    como corrección de equity.
 
-    Lineal y pequeña a propósito. NO es `eq ** n`: esa forma es
-    exponencial y con rango uniforme quitaría ~50 puntos cuando el dato
-    medido dice ~2.
+    ABSOLUTA, no relativa, por la misma razón que arriba: el efecto se
+    observada, no como factor multiplicativo.
+
+    Lineal y pequeña. NO es `eq ** n`: esa forma es exponencial y con
+    rango uniforme quitaría ~50 puntos cuando el orden de magnitud
+    observado es ~2.
 
     Se satura en 0.5 para que un número absurdo de checkers no pueda
     invertir la equity.
@@ -115,45 +124,99 @@ def passive_penalty(board_codes, street: str, n_checker: int) -> float:
 
 
 # ---------------------------------------------------------------------------
-# Ancla empírica de la penalización
+# Ancla observada — NO es una corrección de equity calibrada
 # ---------------------------------------------------------------------------
-# Qué significa exactamente 'measured'. No es "una observación": es UNA
-# celda concreta de una medición sobre la DB real (1269 manos con hero
-# identificado, tools/medir_multiway.py):
+# Advertencia metodológica (pegar_3 §1, P0). Lo medido es FRECUENCIA DE
+# VICTORIAS, no equity. Son magnitudes distintas: la equity es la parte
+# esperada del bote e incluye empates y repartos; el win rate es
+# binario por mano. Y el campo `winner` del DB es la lista de TODOS los
+# que cobran: 18% de las manos tienen más de un ganador, así que contar
+# "el hero está en la lista" infla el resultado.
 #
-#     escenario                                      n    gana el hero
-#     turn, apuesta, sin agresor ni checker          36      69%
-#     turn, apuesta, 1 checker + 1 pendiente         36      67%
-#     turn, check, agresor enfrente                  30      23%
+# Al reconstruir la misma medición como equity (repartos = 1/n), el
+# sentido de la diferencia SE INVIERTE:
 #
-# De ahí sale 0.02 de reducción ABSOLUTA. Es el ÚNICO escenario con
-# respaldo. Todo lo demás es hipótesis de trabajo.
+#     escenario                                    n    WIN%   EQUITY
+#     turn, apuesto, sin agresor ni checker         36     69%     58.3%
+#     turn, apuesto, 1 checker + 1 pendiente        36     67%     61.1%
+#     ------------------------------------------------------------------
+#     delta al añadir un checker            WIN -2.0 pts   EQUITY +2.8 pts
 #
-# `uncertainty` es None a propósito: no se ha calculado el intervalo de
-# confianza. Decirlo evita que el número se lea más firme de lo que es.
-PENALTY_ANCHOR = {
+# (Ninguna de las dos es una comparación controlada: son manos
+# distintas, no el mismo grupo antes y después. Pero el punto se
+# mantiene: no puede affirmed que un checker REDUCE la equity en 0.02.
+# Lo único respaldado es una diferencia en|win rate| sobre dos muestras
+# de 36 manos que podrían diferir por muestreo.)
+#
+# `uncertainty` es None porque no se ha calculado. Y el intervalo de
+# confianza de un delta de 2 puntos sobre 36 manos es aproximadamente
+# ±16 puntos, muy por encima del efecto. Es decir: el dato no
+# distingue ni el signo.
+OBSERVED_ANCHOR = {
+    'quantity': 'observed_win_rate',
+    'is_equity': False,
     'street': 'turn',
     'texture': 'rainbow',
+    'hero_action': 'bet',
     'n_per_cell': 36,
-    'eq_without_checker': 0.69,
-    'eq_with_checker': 0.67,
-    'delta_absolute': 0.02,
+    'win_rate_without_checker': 0.69,
+    'win_rate_with_checker': 0.67,
+    'delta_win_rate': -0.02,
+    'equity_without_checker': 0.583,
+    'equity_with_checker': 0.611,
+    'delta_equity': +0.028,
+    'signs_agree': False,
     'uncertainty': None,
-    'criterion': ('exactamente una celda con n>=30 en la medición de '
-                  'tools/medir_multiway.py; el resto es extrapolación'),
+    'ci_note': ('con n=36 el intervalo del delta de win rate es de '
+                'orden ±0.16, muy por encima del efecto medido'),
+    'criterion': ('las seis condiciones deben cumplirse a la vez: calle '
+                  'turn, textura rainbow, hero que apuesta, sin agresor, '
+                  'exactamente 1 checker y 1 pendiente'),
     'source': 'data/hands_db.jsonl (1269 manos con hero identificado)',
+    'used_as_equity_penalty': False,
+    'verdict': ('observación de win rate con signo distinto en equity; '
+                'NO justifica una penalización de equity'),
+    # Verificado sobre las 654 observaciones de la DB (tools/auditar_anchor.py):
+    'records_matching_anchor': 0,
+    'records_previously_labelled_measured': 199,
+    'support_note': (
+        'label_measured exigía solo calle+textura, así que 199 registros '
+        'lo resultaron siendo. Al exigir las SEIS condiciones del ancla '
+        '(turn, rainbow, hero que apuesta, sin agresor, 1 checker, '
+        '1 pendiente) ninguno coincide: la forma más frecuente es '
+        '(hero_apuesta, 0 agresores, 0 checkers, 3-4 pendientes). '
+        'El escenario medido no aparece en los datos.'),
 }
 
 
-def penalty_source(board_codes, street: str) -> str:
-    """'measured' si la combinación tiene dato directo; si no, extrapolada.
+def penalty_source(board_codes, street: str, hierarchy: Dict = None) -> str:
+    """Clasifica el respaldo de la penalización para ESTE registro.
 
-    Solo turn + board liso está anclado a una medición. Ver
-    PENALTY_ANCHOR para el tamaño de muestra y el criterio exacto.
+    Antes solo comprobaba calle y textura, así que etiquetaba como
+    'measured' a cualquier turn con board rainbow. Eso inflaba la cifra:
+    el ancla es un escenario concreto, con seis condiciones a la vez
+    (pegar_3 §2, P0).
+
+    Reglas:
+      - 'anchor_match'    : se cumplen las seis condiciones del ancla.
+      - 'partial_support' : misma calle, pero otra textura.
+      - 'none'            : otra calle. Sin ninguna medición.
     """
-    if street == 'turn' and texture_key(board_codes) == 'rainbow':
-        return 'measured'
-    return 'extrapolated'
+    if street != 'turn':
+        return 'none'
+    if texture_key(board_codes) != 'rainbow':
+        return 'partial_support'
+    if hierarchy is None:
+        return 'partial_support'   # no hay contexto para verificar
+    if not hierarchy.get('hero_bet'):
+        return 'partial_support'
+    if hierarchy.get('aggressors'):
+        return 'partial_support'
+    if len(hierarchy.get('checkers') or ()) != 1:
+        return 'partial_support'
+    if len(hierarchy.get('pending') or ()) != 1:
+        return 'partial_support'
+    return 'anchor_match'
 
 
 # ---------------------------------------------------------------------------
@@ -240,6 +303,10 @@ def classify_villains(acts: List[dict], hero_pos: str,
     return {
         'main': main,
         'main_reason': reason,
+        # El ancla observada exige que el hero APUESTE. Es una condición
+        # más del experimento original, no una suposición.
+        'hero_bet': bool(hero_acts
+                         and acts[hero_last].get('action') in ('b', 'r')),
         'aggressors': agresores,
         'checkers': [c for c in checkers if c != main],
         # Un 'c' NO es un 'x'. Quien igualó ha aportado fichas
@@ -292,6 +359,7 @@ def shadow_equity(equity_production: float, board_codes, street: str,
     src = equity_source or 'desconocido'
     main = hierarchy.get('main')
     coincide = bool(main) and src == main
+    psource = penalty_source(board_codes, street, hierarchy)
     return {
         # la que el motor usó de verdad
         'equity_production': eq_prod,
@@ -306,12 +374,17 @@ def shadow_equity(equity_production: float, board_codes, street: str,
             'calcularla contra hierarchy["main"] explícitamente.'),
         'equity_shadow': round(adjusted, 5),
         'penalty': round(pen, 5),
-        'penalty_basis': 'absolute',
-        'penalty_source': penalty_source(board_codes, street),
-        'penalty_anchor': dict(PENALTY_ANCHOR)
-        if penalty_source(board_codes, street) == 'measured' else None,
+        'penalty_basis': 'absolute_unvalidated',
+        'penalty_basis_note': (
+            'el 0.02 procede de una diferencia en TASA DE VICTORIAS, no '
+            'de equity. Reconstruido como equity el signo se invierte. '
+            'No usar como corrección de equity (pegar_3 §1).'),
+        'penalty_source': psource,
+        'penalty_anchor': dict(OBSERVED_ANCHOR)
+        if psource == 'anchor_match' else None,
         'n_checker': n_chk,
         'n_pending': n_pend,
+        'n_caller': len(hierarchy.get('callers') or ()),
         'delta': round(adjusted - eq_prod, 5),
         # unmistakable: esto NO es una equity multiway
         'experimental': True,
@@ -353,10 +426,12 @@ def shadow_record(hand_id: str, street: str, board_codes, hero_codes,
         'equity_shadow': shadow.get('equity_shadow'),
         'penalty': shadow.get('penalty'),
         'penalty_basis': shadow.get('penalty_basis'),
+        'penalty_basis_note': shadow.get('penalty_basis_note'),
         'penalty_source': shadow.get('penalty_source'),
         'penalty_anchor': shadow.get('penalty_anchor'),
         'n_checker': shadow.get('n_checker'),
         'n_pending': shadow.get('n_pending'),
+        'n_caller': shadow.get('n_caller'),
         'delta': shadow.get('delta'),
         'action_production': action_production,
         'action_shadow': action_shadow,

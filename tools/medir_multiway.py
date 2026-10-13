@@ -17,17 +17,28 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from motor.observations import _texture_class
 
 HERO_NAME = 'jarduan'
-CALLERS = collections.defaultdict(lambda: [0, 0])   # clave -> [gana, n]
+CALLERS = collections.defaultdict(lambda: [0, 0, 0.0])  # n, gana, equity
+n_sin_showdown = 0
 
 
 def _gana(h):
+    """True si el hero aparece entre los ganadores.
+
+    OJO: `winner` es la lista de TODOS los que cobran parte del bote. Una
+    mano con 2 ganadores es un reparto. Contar 'hero in winners' infla el
+    valor, porque suma un bote partido como bote entero. Por eso también
+    se calcula `equity`, la parte del bote que realmente se lleva.
+    """
     w = h.get('winner')
     if isinstance(w, str):
-        return w == 'hero'
+        return w == 'hero', 1.0
     if isinstance(w, list):
-        return 'hero' in w
-    sw = (h.get('showdown') or {}).get('winner1', '')
-    return 'hero' in sw.lower()
+        if not w:
+            return False, None          # sin showdown
+        if 'hero' not in w:
+            return False, 0.0
+        return True, 1.0 / len(w)      # reparto entre len(w)
+    return False, None
 
 
 def _hero_pos(h):
@@ -46,7 +57,9 @@ for line in io.open(os.path.join(
     if not hp:
         continue
     n_manos += 1
-    win = _gana(h)
+    win, share = _gana(h)
+    if share is None:
+        n_sin_showdown += 1
     streets = h.get('streets') or {}
 
     for st in ('flop', 'turn', 'river'):
@@ -87,23 +100,32 @@ for line in io.open(os.path.join(
                  'pend%d' % min(len(pending), 2),
                  t)
         CALLERS[clave][1] += 1
+        if share is None:
+            continue            # sin showdown: no aporta a la media
         CALLERS[clave][0] += 1 if win else 0
+        CALLERS[clave][2] += share
 
 print('Manos con hero (Jarduan) identificado:', n_manos)
+print('  de ellas, sin showdown (winner vacio): %d' % n_sin_showdown)
 print()
-print('MUESTRA POR ESCENARIO  —  win% del hero acota P(hero > pasivos)')
+print('MUESTRA POR ESCENARIO')
+print('WIN%    = veces que el hero aparece en la lista de ganadores')
+print('EQUITY% = parte del bote que se lleva (repartos = 1/n)')
+print('Los dos NO son la misma magnitud: 18% de las manos tienen >1 ganador.')
 print('n<30 = no calibrable con esta base')
 print()
-hdr = ('%-6s %-9s %-7s %-8s %-6s %-5s %6s %6s' %
-       ('calle', 'hero', 'agresor', 'checkea', 'pend', 'text', 'n', 'win%'))
+hdr = ('%-6s %-9s %-7s %-8s %-6s %-5s %6s %7s %8s' %
+       ('calle', 'hero', 'agresor', 'checkea', 'pend', 'text', 'n',
+        'WIN%', 'EQUITY'))
 print(hdr)
 print('-' * len(hdr))
 for clave in sorted(CALLERS, key=lambda k: (k[0], k[2], k[3], k[4], k[5])):
-    g, t = CALLERS[clave]
-    flag = '' if t >= 30 else '  <-- n bajo'
-    print('%-6s %-9s %-7s %-8s %-6s %-5s %6d %5.0f%%%s'
+    g, t, eq = CALLERS[clave]
+    if t < 30:
+        continue
+    print('%-6s %-9s %-7s %-8s %-6s %-5s %6d %6.0f%% %7.1f%%'
           % (clave[0], clave[1], clave[2], clave[3], clave[4], clave[5], t,
-             100.0 * g / t, flag))
+             100.0 * g / t, 100.0 * eq / t))
 
 print()
 print('RESUMEN DE MUESTRA CALIBRABLE')
