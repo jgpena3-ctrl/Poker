@@ -89,7 +89,9 @@ def test_pf_rival_pos_facing_open_usa_el_primer_agresor():
                   {'pos': 'MP', 'action': 'r', 'amount': 9.0},    # 3bet
                   {'pos': 'BTN', 'action': 'c', 'amount': 9.0}])  # hero call
     assert _pf_rival_pos(h, 'BTN', 'facing_open') == 'UTG'
-    assert _pf_rival_pos(h, 'MP', 'facing_3bet') == 'UTG'
+    # Si el propio jugador es el 3bettor, queda como unico agresor y no hay
+    # segundo agresor al que preguntar: facing_3bet devuelve ''.
+    assert _pf_rival_pos(h, 'MP', 'facing_3bet') == ''
 
 
 def test_pf_rival_pos_facing_3bet_usa_el_segundo_agresor():

@@ -480,7 +480,11 @@ class LiveRecorder:
 
         bb_pid = pos_map.get('BB')
         bb_bet = bids.get('BB')
-        bb_open = bb_bet if (bb_bet is not None and bb_bet > 0) else self._blind_bb
+        # La ciega es una cantidad FIJA del juego (`_blind_bb`), no la
+        # aportacion actual del BB: si el BB igualo una subida, `bb_bet` es el
+        # nivel al que llego, y usarlo como ciega confundia su accion
+        # voluntaria con la ciega obligatoria (la marcaba `blind: True`).
+        bb_open = self._blind_bb
 
         # UNA sola pasada en PREFLOP_ORDER (que en 6-max es el orden real de
         # actuacion: UTG -> MP -> CO -> BTN -> SB -> BB).
@@ -503,8 +507,9 @@ class LiveRecorder:
                 continue
 
             if pos_name == 'BB':
-                # La ciega del BB se registra con identidad explicita; si el BB
-                # ya tiene un 'b' en la calle se normaliza (sin duplicar).
+                # 1) La ciega del BB, con identidad explicita. Su importe es
+                #    SIEMPRE `_blind_bb` (revision_2, punto 3): usar el bet
+                #    actual marcaba como ciega la accion voluntaria del BB.
                 if bb_open > 0:
                     existing = next(
                         (a for a in self.hand['streets']['preflop']['actions']
@@ -520,12 +525,13 @@ class LiveRecorder:
                         existing['amount_type'] = 'observed'
                         existing['blind'] = True
                     max_bet = max(max_bet, bb_open)
-                # NO se hace `continue`: el BB actua el ultimo y su decision
-                # voluntaria (call / raise / check) tambien sale del snapshot.
-                # Sin esto se perdia (revision_2, punto 3).
-                bet = bids.get(pos_name)
-                if bet is not None and bet > bb_open + 0.05:
-                    amt = round(bet, 2)
+
+                # 2) Su decision voluntaria, si la hubo (el BB actua el
+                #    ultimo). Antes se hacia `continue` aqui y se perdia.
+                #    `bb_bet` es el nivel al que llego; solo cuenta como
+                #    movimiento si supera la ciega.
+                if bb_bet is not None and bb_bet > bb_open + 0.05:
+                    amt = round(bb_bet, 2)
                     if amt > max_bet + 0.15:
                         self._add_action('preflop', pos_name, 'r', amt,
                                          'observed')
