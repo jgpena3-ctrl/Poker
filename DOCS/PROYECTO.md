@@ -452,6 +452,42 @@ Ordenadas por commit, de la más antigua a la más reciente.
 Los tres módulos siguientes son la base estadística del motor y **no han sido auditados**. Sin ellos no se
 puede empezar a calibrar con garantías.
 
+#### El campo `amount` mezcla dos semánticas — 🔴 invalida el arreglo por importe
+
+El recorder graba el dinero comprometido de **dos maneras distintas en el mismo campo**:
+
+- **Observado**: cuando el lector ve la apuesta en pantalla, graba el **nivel absoluto** ("subió a 3").
+- **Calculado**: cuando no lo ve, lo deduce de la caída del stake (`recorder_live.py:601`):
+  `delta = round((prev_stake or 0) - cur_stake, 2)` y graba el **incremento** ("puso 1 más").
+
+Y se mezclan sin marcar. La acción guardada sólo tiene tres claves — `pos`, `action`, `amount` — **sin
+ningún indicador del origen**, así que a posteriori es imposible distinguirlas.
+
+**Evidencia medida** (primeras 900): hay **271 calls con importe menor que el nivel actual de la ronda**, lo
+que es imposible si el importe fuera absoluto:
+
+```
+H_0021  ['UTG:b:6.8', 'MP:f', 'CO:f', 'BTN:c:6.7', 'SB:f']        call 6.7 tras bet 6.8  → delta
+H_0022  ['UTG:b:2.0', 'MP:f', 'CO:r:8.0', 'BTN:c:7.5', ...]      call 7.5 tras raise 8  → delta
+H_0026  ['MP:r:6.0', 'CO:b:1.0', 'BTN:f', 'SB:c:1.0', 'SB:c:5.0']  importes que no cuadran
+```
+
+**Consecuencia grave.** El recorder decide `b` / `c` / `r` comparando un **delta** contra `run_max`, que es
+un **nivel** (`recorder_live.py:606-611`):
+
+```python
+if not has_bet:            atype = 'b'
+elif amt <= run_max + 0.15: atype = 'c'
+else:                      atype = 'r'
+```
+
+Una subida real a 3 cuyo delta observado sea 1 se clasifica como `'c'`, porque 1 ≤ run_max. **La propia
+etiqueta `b`/`c`/`r` es poco fiable cuando el monto vino por delta**, no sólo el número.
+
+**Esto invalida el arreglo por importe que se proponía antes.** No se puede usar `amount <= 1.0` para
+identificar ciegas o limpes mientras `amount` sea unas veces un nivel y otras un incremento. El arreglo
+seguro para la ciega del BB es **estructural** (posición BB + ser la primera acción), no basado en importe.
+
 #### `motor/learn.py` — 🔴 defecto grave y medible
 
 **No es un error del recorder.** Grabar la ciega del BB como `{'pos':'BB','action':'b'}` es una decisión
@@ -463,15 +499,20 @@ subida"* **a partir del código de acción** en vez de a partir del importe.
 raises = sum(1 for p, a, m in seq[:i] if a in ('b', 'r'))   # learn.py:175
 ```
 
-**Hay dos causas distintas, no una.** Descomposición de las 3252 acciones con conteo divergente:
+**Hay dos causas distintas, no una.** Descomposición de las 3252 decisiones con conteo divergente:
 
-| Causa | Acciones | % |
+| Causa | Decisiones mal clasificadas | Ciegas que las originan |
 |---|---|---|
-| **Ciega del BB** (importe ≤ 1.0, posición BB, al principio) | **3085** | 94.7% |
-| **Limpe corto grabado como `'b'`** (importe ≤ 1.0, otra posición) | **165** | 5.1% |
-| Ambas a la vez | 2 | 0.1% |
+| **Ciega del BB** (importe ≤ 1.0, posición BB) | **3085** (94.7%) | **560** |
+| **Limpe corto grabado como `'b'`** (importe ≤ 1.0, otra posición) | **165** (5.1%) | 20 |
+| Ambas a la vez | 2 (0.1%) | — |
 
-La segunda es independiente y no la había detectado: un limpe de 1BB se graba como `'b'`, no como `'c'`.
+⚠️ **Ojo con las magnitudes:** 3085 **no** es el número de ciegas registradas, sino el número de
+*decisiones posteriores* cuyo conteo de subidas quedó inflado. Hay **560 ciegas reales** (586 manos), y cada
+una corrompe ~5.3 decisiones de su mano (3085 ≈ 560 × 5.3). No puede haber más ciegas que manos: lo que se
+multiplica son las decisiones afectadas, no las ciegas.
+
+La segunda causa es independiente y no la había detectado: un limpe de 1BB se graba como `'b'`, no como `'c'`.
 Ejemplos reales: `H_0004` → `MP:b:1.0` · `H_0006` → `UTG:b:1.0` · `H_0008` → `CO:b:1.0`.
 El doble daño es que un limpe contabiliza como **subida** y además **no** como limpe, así que la categoría
 `rol` (raise over limp) nunca se dispara para esos casos.
@@ -517,10 +558,13 @@ Efecto sobre la clasificación de `fold`, que es donde más se nota:
 Es decir: los folds sin subida están **subcontados 3 veces** (527 → 1599) y los folds contra 3-bet
 **sobrecontados 8 veces** (524 → 64). Cualquier apertura o VPIP derivado de esas cifras está mal.
 
-**Qué habría que tocar (todo en `learn.py`, nada en el recorder):**
-1. `preflop_events()` línea 175: no contar como subida un `'b'` de BB con importe ≤ `BB`.
-2. Contar como limpe un `'b'` con importe ≤ `BB` **sin subida previa**, en vez de como open.
-3. Opcionalmente, hacer que `classify_first_action` use por fin los parámetros `amount` y `bb` que ya recibe.
+**Qué habría que tocar. Todo en `learn.py`, nada en el recorder (grabar la ciega como `'b'` es correcto):**
+1. `preflop_events()` línea 175: no contar como subida la ciega del BB, identificándola **estructuralmente**
+   (posición `BB` + primera acción de la mano), **no** por importe — ver arriba, `amount` no es fiable.
+2. La etiqueta `b`/`c`/`r` en sí misma es poco fiable cuando el monto vino por delta; a medio plazo hay que
+   arreglar el recorder (§ siguiente) antes de afinar la taxonomía.
+3. Opcionalmente, hacer que `classify_first_action` use por fin los parámetros `amount` y `bb` que ya recibe
+   — pero sólo cuando `amount` vuelva a ser fiable.
 
 Medido: de los 625 `'b'` con importe ≤ 1.0, **561 son separables sin ambigüedad** (ciega del BB al inicio,
 o cortina corta tras una subida real) y sólo **64 son ambiguos** — un `'b'` a 1.0 sin subida previa, donde
@@ -691,6 +735,40 @@ Esto refuerza, no debilita, la decisión de no activar la penalización.
 `reliable_only=True`) y propagarlo a todos los consumidores, de modo que la ventana sea una decisión
 explícita y no una convención implícita.
 
+### 6.4a ¿Hay que corregir la DB a mano?
+
+**Recomendación: no, y no todavía.** Es una pregunta legítima y la respuesta corta es que corregir la DB
+*antes* de arreglar el código y el recorder sería tratar el síntoma y además caro. El razonamiento:
+
+**Los `b:1` de preflop no están "mal".** Son 560 entradas que registran algo que ocurrió de verdad: el BB
+posted 1.0 antes de que nadie actuara. Borrarlas elimina un hecho real (que hubo ciega) y rompe el cálculo
+del bote. Lo que está mal es que `learn.py` los lea como "alguien subió". Se arregla interpretando, no
+borrando.
+
+**El problema real no son esos 560 registros, sino la semántica mixta de `amount`**, que afecta a llamadas y
+subidas por delta — 271 casos ya demostrados, y probablemente muchos más que no se manifiestan como
+"imposibles" pero siguen siendo incorrectos. Eso **no se arregla con una edición dirigida**: para
+reconstruir tendrías que adivinar qué entradas eran observadas y cuáles calculadas, y el fichero **no guarda
+ningún indicador** que lo permita.
+
+**Orden recomendado:**
+
+1. **Arreglar `learn.py`** con detección estructural de la ciega (posición + índice), que es correcta
+   aunque `amount` siga siendo dudoso. Inmediato y sin riesgo.
+2. **Arreglar el recorder** para que deje de mezclar semánticas: guardar el importe observado y el
+   calculado por separado, o añadir un campo `amount_type: 'observed' | 'delta'`, y no usar deltas para
+   decidir `b`/`c`/`r` (comparar siempre contra el nivel, no contra el incremento).
+3. **Regrabar** o **migrar** la DB sólo después, con un script versionado y auditable — nunca a mano. La
+   migración podría normalizar los montos a absolutos usando el máximo acumulado, pero necesita el paso 2
+   para saber qué trustworthy cada valor.
+4. Mientras tanto, **excluir las 380 manos no fiables** (el límite de ventana, §6.4) y aceptar que el resto
+   arrastra las estadísticas heredadas de los dos defectos anteriores.
+
+Lo que sí conviene decidir pronto: **si la DB se va a re-grabar desde cero** cuando se arregle el recorder,
+o si hay que migrar. Si se regraba, el orden 1-3 se simplifica mucho; si hay que migrar, hace falta el
+script. Depende de cuánto más lejos vaya la corrección manual de la DB, y eso sólo lo sabe quien la está
+manteniendo.
+
 ### 6.5 Definiciones por unificar
 
 `pending` significa dos cosas distintas:
@@ -763,22 +841,31 @@ python tools/calculadora_outs_gui.py
 2. **Auditar `learn.py`** y corregir la inferencia de subida. Es el defecto más grave y contamina toda la
    cadena estadística aguas abajo. Ninguna calibración es válida antes de arreglarlo.
    *Acción concreta* (todo dentro de `learn.py`, **el recorder no se toca** — grabar la ciega como `'b'`
-   es correcto): contar subida sólo si el importe supera la ciega, y tratar un `'b'` ≤ 1BB sin subida
-   previa como limpe. Simulado: divergencias 3252 → 0, folds `no_raise` 527 → 1599.
-3. **Auditar `player_ranges.py`**, en este orden:
+   es correcto): identificar la ciega del BB **estructuralmente** (posición `BB` + primera acción) y no
+   contarla como subida. **No usar `amount`**, porque mezcla niveles e incrementos.
+   Simulado: divergencias 3252 → 184, folds `no_raise` 527 → 1537. Las 184 restantes dependen de arreglar
+   el recorder.
+3. **Arreglar el recorder** (`recorder_live.py:599-616`): no decidir `b`/`c`/`r` comparando un delta contra
+   un nivel, y registrar por separado el importe observado del calculado. Sin esto la taxonomía preflop
+   queda coja aunque se arregle `learn.py`.
+4. **Auditar `player_ranges.py`**, en este orden:
    - `_prior_grid`: indexar las tablas por par de posiciones (o dejar de usarlas como prior) y **avisar**
      cuando hay fallback, en vez de devolver la tabla de otro spot sin marcarlo.
    - `load()`: restaurar `profiles` y `omega`.
    - ω: excluir al propio jugador de `peers` y renormalizar por celda.
-4. **Auditar `rules.py`**: contrato de `candidates`, `nut_advantage`, `villain_bet_flop`, `_en_flop_ip`.
-5. **Unificar la definición de `pending`** y repetir `tools/auditar_anchor.py` ya sobre la ventana fiable.
-6. **Cablear `equity_main`** en el flujo real y verificar que no altera la decisión.
-7. **Decidir el alcance de multiway**: rediseño conjunto o limitación explícita a HU.
-8. Sólo entonces, **Fase D**: recalcular derivados y empezar a calibrar `BASE_WEIGHT_MAP` y `_ACTION_PROBS`.
+5. **Auditar `rules.py`**: contrato de `candidates`, `nut_advantage`, `villain_bet_flop`, `_en_flop_ip`.
+6. **Unificar la definición de `pending`** y repetir `tools/auditar_anchor.py` ya sobre la ventana fiable.
+7. **Cablear `equity_main`** en el flujo real y verificar que no altera la decisión.
+8. **Decidir el alcance de multiway**: rediseño conjunto o limitación explícita a HU.
+9. Sólo entonces, **Fase D**: recalcular derivados y empezar a calibrar `BASE_WEIGHT_MAP` y `_ACTION_PROBS`.
 
-> Nota: los pasos 1–3 invalidan los derivados actuales (`preflop_stats.json`, `player_stats.json`,
+> Nota: los pasos 1–4 invalidan los derivados actuales (`preflop_stats.json`, `player_stats.json`,
 > `profiles.json`, `behavior.json`, `profile_ranges.json`, `observations.json`). Hay que reconstruirlos
 > antes de volver a medir nada. Por eso el orden importa: medir ahora daría cifras que luego habría que tirar.
+>
+> **Decisión pendiente para quien mantiene la DB:** ¿se regraba desde cero cuando se arregle el recorder, o
+> hay que migrar las 900? Si se regraba, los pasos 2–3 se simplifican mucho; si hay que migrar, hace falta
+> un script versionado. Ver §6.4a.
 >
 > Y una advertencia sobre el paso 1: al recortar a 900 la muestra baja de 1280 a 900 y varios `opp` caen
 > por debajo de 50 (PEZ `facing_3bet` queda en **15**). Restringir la ventana **hace el problema de
