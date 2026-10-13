@@ -163,7 +163,18 @@ class ProfileRangeModel:
         tables = _load_tables()
         chosen = None
         if pos:
-            chosen = tables.get(f'{prefix}_{pos}')
+            # 1) tabla exacta por posición simple (p.ej. OR_BB no existe)
+            # 2) primera tabla de par donde `pos` es el jugador que actúa
+            #    (p.ej. 3B_BB_vs_*) — evita caer siempre en la primera global
+            exact = tables.get(f'{prefix}_{pos}')
+            if exact is not None:
+                chosen = exact
+            else:
+                pair_keys = (name for name in tables
+                             if name.startswith(f'{prefix}_{pos}_vs_'))
+                first_pair = next(pair_keys, None)
+                if first_pair is not None:
+                    chosen = tables[first_pair]
         if chosen is None:
             for name, t in tables.items():
                 if t.get('action') == prefix:
