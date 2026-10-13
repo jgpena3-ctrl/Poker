@@ -449,9 +449,11 @@ class LiveRecorder:
         if bb_pid is not None and bb_open > 0:
             if not any(a['pos'] == 'BB' and a['action'] == 'b' for a
                        in self.hand['streets']['preflop']['actions']):
+                # `blind: True` da identidad explícita a la ciega: learn.py no
+                # necesita deducirla por el índice de la secuencia.
                 self.hand['streets']['preflop']['actions'].append(
                     {'pos': 'BB', 'action': 'b', 'amount': round(bb_open, 2),
-                     'amount_type': 'observed'})
+                     'amount_type': 'observed', 'blind': True})
             max_bet = max(max_bet, bb_open)
 
         # 3) Movimientos voluntarios de los demás (c / r)

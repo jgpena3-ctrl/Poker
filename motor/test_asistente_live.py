@@ -735,7 +735,7 @@ def test_recomendacion_postflop_filtra_por_reglas():
     from motor.asistente_live import Asistente
 
     class _Rng:
-        def prob_vec(self, perfil, spot, action, pos=None):
+        def prob_vec(self, perfil, spot, action, pos=None, villain_pos=''):
             return np.ones(1326, dtype=np.float32)
 
     class _Ora:

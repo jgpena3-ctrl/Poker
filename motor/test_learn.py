@@ -242,6 +242,74 @@ def test_load_hands_reliable_only_usa_constante(tmp_path, monkeypatch):
     assert len(load_hands(str(p), reliable_only=True, max_hands=50)) == 50
 
 
+# ---------------------------------------------------------------------------
+# Regresión F2: ciega del BB, limps y folds (revision_1/2)
+# ---------------------------------------------------------------------------
+
+def test_ciega_bb_no_es_decision():
+    """El 'b' inicial del BB es ciega: no emite evento."""
+    h = _hand(preflop=[('BB', 'b', 1.0), ('UTG', 'f', 0), ('MP', 'f', 0)])
+    evs = preflop_events(h)
+    assert [e.pos for e in evs] == ['UTG', 'MP']
+    assert all(e.category != 'limp' for e in evs)
+
+
+def test_folds_contra_ciega_son_no_raise():
+    """Tras la ciega (no una subida) todo fold es `fold`, no `fold_vs_open`."""
+    h = _hand(preflop=[('BB', 'b', 1.0), ('UTG', 'f', 0), ('MP', 'f', 0),
+                       ('CO', 'f', 0)])
+    cats = [e.category for e in preflop_events(h)]
+    assert cats == ['fold', 'fold', 'fold']
+    assert all(c == 'fold' for c in cats)
+
+
+def test_ciega_bb_detectada_aunque_haya_folds_antes():
+    """Folds antes del 'b' del BB no deben romper la detección de la ciega."""
+    h = _hand(preflop=[('UTG', 'f', 0), ('MP', 'f', 0), ('BB', 'b', 1.0),
+                       ('CO', 'f', 0)])
+    evs = preflop_events(h)
+    bb = [e for e in evs if e.pos == 'BB']
+    assert bb == []          # la ciega sigue sin ser decisión
+    assert [e.category for e in evs] == ['fold', 'fold', 'fold']
+
+
+def test_call_contra_raise_no_es_limp():
+    """Un 'c' que enfrenta una subida no cuenta como limpe posterior."""
+    h = _hand(preflop=[('UTG', 'r', 3.0), ('MP', 'c', 3.0), ('CO', 'b', 9.0)])
+    evs = preflop_events(h)
+    assert evs[0].category == 'open'
+    assert evs[1].category == 'call_open'
+    # CO sube con raises_before=1 y limps_before=0 -> 3bet, no squeeze
+    assert evs[2].category == '3bet'
+
+
+def test_limp_corto_es_limp_no_open():
+    """'b' de 1BB sin subida previa es limpe (F2.2), incluso con limpes previos."""
+    assert classify_first_action('b', 1.0, 0, 0) == ('limp', 'no_raise')
+    assert classify_first_action('b', 1.0, 0, 2) == ('limp', 'no_raise')
+    assert classify_first_action('b', 2.5, 0, 0) == ('open', 'no_raise')
+    assert classify_first_action('b', 2.5, 0, 1) == ('rol', 'no_raise')
+
+
+def test_stats_agrega_por_posicion():
+    """from_hands agrega por (jugador, posición) además de por jugador."""
+    hands = [_hand('A', preflop=[('CO', 'b', 2.5), ('BB', 'f', 0)])]
+    st = PreflopStats.from_hands(hands)
+    assert sum(st.denoms_pos[('Jarduan', 'CO')].values()) == 1
+    assert st.opportunities('Jarduan', pos='CO') == 1
+    assert st.opportunities('Jarduan', 'open', pos='CO') == 1
+    assert st.freq('Jarduan', 'open', pos='CO') == pytest.approx(1.0)
+    # el total NO es el denominador de 'open': no_raise != facing_open
+    assert st.opportunities('Jarduan') == 1
+
+
+def test_stats_to_dict_incluye_posiciones():
+    st = PreflopStats.from_hands([_hand('A', preflop=[('CO', 'b', 2.5)])])
+    d = st.to_dict()
+    assert 'denoms_pos' in d and 'cats_pos' in d
+    assert 'Jarduan|CO' in d['denoms_pos']
+
+
 def test_hero_names_default():
     assert 'Jarduan' in HERO_NAMES
     assert hand_known('Jarduan', '') is False

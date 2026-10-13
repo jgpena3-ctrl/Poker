@@ -158,9 +158,11 @@ def classify_first_action(action, amount, raises_before, limps_before, bb=BB):
 
 
 def _preflop_sequence(hand):
-    """Secuencia preflop normalizada: [(pos, action, amount)] válidos.
+    """Secuencia preflop normalizada: [(pos, action, amount, is_blind)] válidos.
 
-    Acepta entradas del recorder (dicts) o tuplas (pos, action, amount).
+    `is_blind` es la identidad explícita de una ciega obligatoria (no una
+    decisión voluntaria). El recorder la marca; para datos antiguos sin marca
+    se infiere estructuralmente en `_es_ciega_bb`.
     """
     actions = (hand.get('streets', {}).get('preflop', {}) or {}).get('actions', [])
     seq = []
@@ -171,15 +173,34 @@ def _preflop_sequence(hand):
                 amount = float(a.get('amount') or 0.0)
             except (TypeError, ValueError):
                 amount = 0.0
+            is_blind = bool(a.get('blind') or a.get('is_blind'))
         else:
             try:
                 pos, act, amount = a[0], a[1], float(a[2] or 0.0)
             except (IndexError, TypeError, ValueError):
                 continue
+            is_blind = bool(a[3]) if len(a) > 3 else False
         if not pos or not act:
             continue
-        seq.append((pos, act, amount))
+        seq.append((pos, act, amount, is_blind))
     return seq
+
+
+def _es_ciega_bb(i, pos, act, amount, is_blind, prev_aggr, bb=BB):
+    """True si esta acción es la ciega obligatoria del BB (no una decisión).
+
+    Orden de confianza (revision_2, Hallazgo 3):
+      1. Marca explícita del recorder (`blind`) — no depende del índice.
+      2. Respaldo estructural para datos antiguos: posición BB, acción 'b',
+         importe de una ciega y sin ninguna subida/limpe anterior. No se usa
+         "i == 0" porque el recorder puede emitir folds antes de la ciega.
+    """
+    if is_blind:
+        return True
+    if pos == 'BB' and act == 'b' and not prev_aggr \
+            and amount is not None and amount <= bb + 1e-9:
+        return True
+    return False
 
 
 def preflop_events(hand, bb=BB):
@@ -189,15 +210,19 @@ def preflop_events(hand, bb=BB):
     decided = set()
     raises = 0
     limps = 0
-    for i, (pos, act, amount) in enumerate(seq):
-        es_ciega_bb = (i == 0 and pos == 'BB' and act == 'b')
+    prev_aggr = False          # ¿hubo ya una subida o un limpe antes?
+    for i, (pos, act, amount, is_blind) in enumerate(seq):
+        es_ciega_bb = _es_ciega_bb(i, pos, act, amount, is_blind,
+                                   prev_aggr, bb)
         if es_ciega_bb:
             continue
         if pos in decided:
             if act in ('b', 'r'):
                 raises += 1
+                prev_aggr = True
             elif act == 'c' and raises == 0:
                 limps += 1
+                prev_aggr = True
             continue
         decided.add(pos)
         category, denom = classify_first_action(act, amount, raises, limps, bb)
@@ -211,12 +236,14 @@ def preflop_events(hand, bb=BB):
             amount=amount,
             hand_known=hand_known(player_of_pos(hand, pos), cards),
             cards=cards,
-            prereq=tuple(f'{p}:{a}' for p, a, _ in seq[:i]),
+            prereq=tuple(f'{p}:{a}' for p, a, _m, _b in seq[:i]),
         ))
         if act in ('b', 'r'):
             raises += 1
+            prev_aggr = True
         elif act == 'c' and raises == 0:
             limps += 1
+            prev_aggr = True
     return events
 
 
@@ -231,6 +258,9 @@ class PreflopStats:
         self.cats: Dict[str, Counter] = defaultdict(Counter)
         self.denoms: Dict[str, Counter] = defaultdict(Counter)
         self.known: Dict[str, Counter] = defaultdict(Counter)   # manos conocidas por denom
+        # Agregación por (jugador, posición): validar matrices por posición
+        self.cats_pos: Dict[Tuple[str, str], Counter] = defaultdict(Counter)
+        self.denoms_pos: Dict[Tuple[str, str], Counter] = defaultdict(Counter)
         self.hands: int = 0
 
     @classmethod
@@ -243,24 +273,44 @@ class PreflopStats:
                 stats.denoms[ev.player][ev.denom] += 1
                 if ev.hand_known:
                     stats.known[ev.player][ev.denom] += 1
+                # Agregación por (jugador, posición): permite validar
+                # `preflop_matrices.json`, que sí es por posición, contra la DB.
+                key = (ev.player, ev.pos)
+                stats.cats_pos[key][ev.category] += 1
+                stats.denoms_pos[key][ev.denom] += 1
         return stats
 
-    def opportunities(self, player, category=None):
+    def opportunities(self, player, category=None, pos=None):
+        """Oportunidades de `player` (opcionalmente en una posición concreta).
+
+        `category=None` devuelve la suma de los tres denominadores, que **no**
+        es el denominador de ninguna columna de frecuencia: es sólo el total de
+        decisiones del jugador. Para una frecuencia usar siempre la categoría
+        (o su denominador explícito), nunca este total.
+        """
+        if pos is not None:
+            d = self.denoms_pos.get((player, pos))
+            if category is None:
+                return sum(d.values()) if d else 0
+            return (d or {})[CATEGORY_DENOM[category]]
         if category is None:
             return sum(self.denoms[player].values())
         return self.denoms[player][CATEGORY_DENOM[category]]
 
-    def freq(self, player, category):
+    def freq(self, player, category, pos=None):
         """Frecuencia de `category` sobre su denominador (None si sin opp)."""
-        n = self.opportunities(player, category)
+        n = self.opportunities(player, category, pos)
         if n == 0:
             return None
+        if pos is not None:
+            return self.cats_pos[(player, pos)][category] / n
         return self.cats[player][category] / n
 
     def report(self, players=None) -> str:
         cols = ('open', 'limp', 'rol', 'call_open', '3bet', 'squeeze',
                 '4bet', 'call_3bet')
-        head = ('PLAYER' ).ljust(12) + ''.join(f'{c:>9}' for c in cols) + '   opp'
+        head = ('PLAYER').ljust(12) + ''.join(f'{c:>9}' for c in cols) + \
+            '   nr    fo    f3   tot'
         lines = [head, '-' * len(head)]
         for name in (players or sorted(self.cats)):
             if not self.cats[name]:
@@ -269,8 +319,11 @@ class PreflopStats:
             for c in cols:
                 f = self.freq(name, c)
                 row.append(f'{f * 100:8.0f}%' if f is not None else '    n/a')
-            opp = sum(self.denoms[name].values())
-            lines.append(f'{name[:12]:<12}' + ''.join(row) + f'   {opp:>3}')
+            d = self.denoms[name]
+            opp = (f"{d['no_raise']:>5}{d['facing_open']:>6}"
+                   f"{d['facing_3bet']:>6}{sum(d.values()):>6}")
+            lines.append(f'{name[:12]:<12}' + ''.join(row) + '  ' + opp)
+        lines.append('nr=no_raise  fo=facing_open  f3=facing_3bet  tot=suma')
         return '\n'.join(lines)
 
     def to_dict(self):
@@ -279,6 +332,10 @@ class PreflopStats:
             'denoms': {p: dict(d) for p, d in self.denoms.items()},
             'cats': {p: dict(c) for p, c in self.cats.items()},
             'known_denoms': {p: dict(d) for p, d in self.known.items()},
+            'denoms_pos': {f'{p}|{pos}': dict(d)
+                           for (p, pos), d in self.denoms_pos.items()},
+            'cats_pos': {f'{p}|{pos}': dict(c)
+                         for (p, pos), c in self.cats_pos.items()},
         }
 
 
