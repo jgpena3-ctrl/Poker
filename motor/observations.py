@@ -15,7 +15,8 @@ Reglas:
   label de la apuesta/raise vigente ('cbet' si el apostador es el iniciador
   preflop en flop, 'barrel' en turn, 'donk' si otro agresor en bote subido en
   flop/turn, 'bet' si es otro agresor en river/limpeado, 'raise').
-- `hand_known` = tiene cartas registradas (incluye hero).
+- `hand_known` = tiene cartas registradas. Un hero sin cartas NO cuenta como
+  mano conocida (mismo contrato que `learn.hand_known`, F2.6).
 """
 import json
 import os
