@@ -116,6 +116,7 @@ class ProfileRangeModel:
         self.cnt: Dict[Tuple[str, str, str], np.ndarray] = {}  # (p,spot,c)
         self.perfil: Dict[str, str] = {}                  # jugador → perfil
         self.profiles = None                             # Profiles (stats/ω)
+        self._omega = None                               # caché cargada de disco
 
     # ------------------------------------------------------------------
 
@@ -132,6 +133,7 @@ class ProfileRangeModel:
         model = cls(alpha=alpha)
         model.perfil = dict(labels)
         model.profiles = Profiles.from_hands(hands)
+        model._omega = None
         for hand in hands:
             for ev in preflop_events(hand):
                 if not ev.hand_known or not ev.cards:
@@ -214,6 +216,10 @@ class ProfileRangeModel:
         perfil. Sin datos → 1.0. Con poca muestra propia el factor se pliega
         a 1.0 (fade-in: alpha = min(1, n_player/fade)).
         """
+        cached = getattr(self, '_omega', None)
+        if (self.profiles is None and isinstance(cached, dict)
+                and player in cached and spot in cached[player]):
+            return float(cached[player][spot])
         if self.profiles is None:
             return 1.0
         prof = self.profiles.profiles.get(player)
@@ -228,7 +234,8 @@ class ProfileRangeModel:
         peers = [s for s in (
             p.stats.get(stat)
             for p in self.profiles.profiles.values()
-            if p.label == prof.label and p.stats.get(stat) is not None)
+            if p.label == prof.label and p.player != player
+            and p.stats.get(stat) is not None)
             if s is not None]
         if not peers:
             return 1.0
@@ -288,6 +295,7 @@ class ProfileRangeModel:
         for k, v in data['cnt'].items():
             a, b, c = k.split('|')
             model.cnt[(a, b, c)] = np.asarray(v, dtype=np.float32)
+        model._omega = data.get('omega')
         return model
 
     # ----------------------------------------------------------------
