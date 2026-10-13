@@ -103,8 +103,8 @@ def cards_of_pos(hand, pos):
 
 
 def hand_known(player, cards):
-    """Mano conocida si hay cartas registradas o si es hero (Jarduan)."""
-    return bool(cards) or player in HERO_NAMES
+    """Mano conocida si hay cartas registradas."""
+    return bool(cards)
 
 
 # ---------------------------------------------------------------------------

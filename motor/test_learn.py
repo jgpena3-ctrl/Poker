@@ -212,6 +212,6 @@ def test_load_hands_skips_garbage(tmp_path):
 
 def test_hero_names_default():
     assert 'Jarduan' in HERO_NAMES
-    assert hand_known('Jarduan', '') is True
+    assert hand_known('Jarduan', '') is False
     assert hand_known('Villian', '') is False
     assert hand_known('Villian', 'KsQs') is True
