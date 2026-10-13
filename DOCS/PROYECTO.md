@@ -454,16 +454,39 @@ puede empezar a calibrar con garantías.
 
 #### `motor/learn.py` — 🔴 defecto grave y medible
 
-**La ciega del BB se cuenta como un RAISE.** `recorder_live.py` inserta la ciega del BB en la lista de
-acciones como `{'pos':'BB','action':'b'}` y la pone **delante de todo**. Pero `learn.py:175` cuenta
-cualquier `'b'` como subida:
+**No es un error del recorder.** Grabar la ciega del BB como `{'pos':'BB','action':'b'}` es una decisión
+de diseño **correcta**: la ciega es un compromiso de fichas y tiene que aparecer en la secuencia, o el
+recuento de committed chips no cuadra. El defecto está aguas abajo: `learn.py:175` infiere *"hubo una
+subida"* **a partir del código de acción** en vez de a partir del importe.
 
 ```python
-raises = sum(1 for p, a, m in seq[:i] if a in ('b', 'r'))
+raises = sum(1 for p, a, m in seq[:i] if a in ('b', 'r'))   # learn.py:175
 ```
 
-**Medido sobre las 900 manos fiables** (verificado por ejecución; entre paréntesis, el total de 1280
-que es lo que el código usa hoy):
+**Hay dos causas distintas, no una.** Descomposición de las 3252 acciones con conteo divergente:
+
+| Causa | Acciones | % |
+|---|---|---|
+| **Ciega del BB** (importe ≤ 1.0, posición BB, al principio) | **3085** | 94.7% |
+| **Limpe corto grabado como `'b'`** (importe ≤ 1.0, otra posición) | **165** | 5.1% |
+| Ambas a la vez | 2 | 0.1% |
+
+La segunda es independiente y no la había detectado: un limpe de 1BB se graba como `'b'`, no como `'c'`.
+Ejemplos reales: `H_0004` → `MP:b:1.0` · `H_0006` → `UTG:b:1.0` · `H_0008` → `CO:b:1.0`.
+El doble daño es que un limpe contabiliza como **subida** y además **no** como limpe, así que la categoría
+`rol` (raise over limp) nunca se dispara para esos casos.
+
+**La evidencia de que la intención era correcta está en la propia firma:**
+
+```python
+def classify_first_action(action, amount, raises_before, limps_before, bb=BB):   # learn.py:113
+```
+
+Recibe `amount` y `bb` — y **no usa ninguno de los dos** en el cuerpo (líneas 118-138). La función fue
+diseñada para distinguir la ciega por importe, el caller se lo pasa (línea 177), y la implementación nunca
+se terminó. Es una función a medio acabar, no un error de diseño.
+
+**Medido sobre las 900 manos fiables** (entre paréntesis, el total de 1280 que usa el código hoy):
 
 | Medición | Primeras 900 | Todas 1280 |
 |---|---|---|
@@ -476,8 +499,33 @@ que es lo que el código usa hoy):
 
 Denominadores en la ventana fiable: `facing_open` 2326 · `no_raise` 1635 · `facing_3bet` 734.
 
-Es decir: **1830 de los 4695 eventos preflop (39.0%) se clasifican contra una subida que nunca ocurrió**.
-Con las 1280 la cifra sube a 47.3%, pero esa incluye las 380 manos no fiables.
+**Simulación del arreglo.** Contando una subida sólo cuando el importe supera la ciega:
+
+| Regla | Acciones con conteo divergente |
+|---|---|
+| Actual (`a in ('b','r')`) | **3252** |
+| Ignorando sólo la ciega del BB | 184 |
+| Sólo importes > 1.0 | **0** |
+
+Efecto sobre la clasificación de `fold`, que es donde más se nota:
+
+| Regla | `no_raise` | `vs_open` | `vs_3bet` |
+|---|---|---|---|
+| Actual | 527 | 1437 | 524 |
+| Corregida | **1599** | 825 | **64** |
+
+Es decir: los folds sin subida están **subcontados 3 veces** (527 → 1599) y los folds contra 3-bet
+**sobrecontados 8 veces** (524 → 64). Cualquier apertura o VPIP derivado de esas cifras está mal.
+
+**Qué habría que tocar (todo en `learn.py`, nada en el recorder):**
+1. `preflop_events()` línea 175: no contar como subida un `'b'` de BB con importe ≤ `BB`.
+2. Contar como limpe un `'b'` con importe ≤ `BB` **sin subida previa**, en vez de como open.
+3. Opcionalmente, hacer que `classify_first_action` use por fin los parámetros `amount` y `bb` que ya recibe.
+
+Medido: de los 625 `'b'` con importe ≤ 1.0, **561 son separables sin ambigüedad** (ciega del BB al inicio,
+o cortina corta tras una subida real) y sólo **64 son ambiguos** — un `'b'` a 1.0 sin subida previa, donde
+importe no distingue limpe de open. En póker, subir exactamente a 1BB *es* un limpe, así que clasificarlos
+como `limp` es defendible y cierra los 625 sin tocar el recorder.
 
 Ejemplo real (`H_0340`, dentro de la ventana fiable):
 ```
@@ -609,7 +657,7 @@ Otros problemas de `learn.py`:
   `behavior.json` con 339. Todos, además, construidos sobre las 1280.
 - Nota operativa de `pegar_9.txt`: eliminar 20 manos concretas (`H_0339`–`H_0346`, `H_0368`, `H_0379`,
   `H_0386`, `H_0410`, `H_0422`, `H_0446`, `H_0449`, `H_0516`, `H_0583`, `H_0586`, `H_0603`, `H_0690`,
-  `H_0705`). ⚠️ `H_0340` está en ese rango y es el ejemplo del bug de la ciega del BB.
+  `H_0705`). ⚠️ `H_0340` está en ese rango y es el ejemplo de la inferencia errónea de subida.
 
 ### 6.4 Ventana de datos: nadie la respeta
 
@@ -712,9 +760,11 @@ python tools/calculadora_outs_gui.py
    *Acción concreta*: `load_hands(max_hands=900)` + `asistente_live.build_models()`, `behavior`,
    `observations`, `profile`, `stats`, `db_health`, `player_ranges`, `postflop_ranges`, `range_lab_gui`,
    `auditar_anchor`, `medir_multiway`. Luego reconstruir los derivados.
-2. **Auditar `learn.py`** y corregir la ciega del BB. Es el defecto más grave y contamina toda la cadena
-   estadística aguas abajo. Ninguna calibración es válida antes de arreglarlo.
-   *Acción concreta*: excluir la ciega del BB del conteo de `raises`, o distinguirla por `amount`.
+2. **Auditar `learn.py`** y corregir la inferencia de subida. Es el defecto más grave y contamina toda la
+   cadena estadística aguas abajo. Ninguna calibración es válida antes de arreglarlo.
+   *Acción concreta* (todo dentro de `learn.py`, **el recorder no se toca** — grabar la ciega como `'b'`
+   es correcto): contar subida sólo si el importe supera la ciega, y tratar un `'b'` ≤ 1BB sin subida
+   previa como limpe. Simulado: divergencias 3252 → 0, folds `no_raise` 527 → 1599.
 3. **Auditar `player_ranges.py`**, en este orden:
    - `_prior_grid`: indexar las tablas por par de posiciones (o dejar de usarlas como prior) y **avisar**
      cuando hay fallback, en vez de devolver la tabla de otro spot sin marcarlo.
