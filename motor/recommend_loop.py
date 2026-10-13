@@ -437,10 +437,15 @@ def recommend(hero_codes, board_codes, *, pot: float, to_call: float = 0.0,
     shadow_info = None
     if hierarchy:
         try:
-            # `sit.equity` se calculó contra el rival que construyó el llamador,
-            # (pegar_3 §1, P0). Se deja constancia en vez de suponer
-            # que coinciden.
-            eq_source = (villain_label if villain_ranges else villain_pos)
+            # `sit.equity` se calculó contra el rival que construyó el
+            # llamador, que puede NO ser `hierarchy['main']`. Se deja
+            # constancia con un IDENTIFICADOR estable, no con la etiqueta
+            # de usuario: si cambia el formato del texto, el
+            # identificador no debe cambiar con él (pegar_2 §2.3).
+            if villain_ranges:
+                eq_source = f'multiway:{len(villain_ranges)}'
+            else:
+                eq_source = str(villain_pos or 'desconocido')
             shadow_info = shadow_equity(sit.equity, current_board_codes,
                                        street, hierarchy,
                                        equity_source=eq_source)

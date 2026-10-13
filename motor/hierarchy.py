@@ -114,13 +114,42 @@ def passive_penalty(board_codes, street: str, n_checker: int) -> float:
     return min(0.5, base * sf * n)
 
 
+# ---------------------------------------------------------------------------
+# Ancla empírica de la penalización
+# ---------------------------------------------------------------------------
+# Qué significa exactamente 'measured'. No es "una observación": es UNA
+# celda concreta de una medición sobre la DB real (1269 manos con hero
+# identificado, tools/medir_multiway.py):
+#
+#     escenario                                      n    gana el hero
+#     turn, apuesta, sin agresor ni checker          36      69%
+#     turn, apuesta, 1 checker + 1 pendiente         36      67%
+#     turn, check, agresor enfrente                  30      23%
+#
+# De ahí sale 0.02 de reducción ABSOLUTA. Es el ÚNICO escenario con
+# respaldo. Todo lo demás es hipótesis de trabajo.
+#
+# `uncertainty` es None a propósito: no se ha calculado el intervalo de
+# confianza. Decirlo evita que el número se lea más firme de lo que es.
+PENALTY_ANCHOR = {
+    'street': 'turn',
+    'texture': 'rainbow',
+    'n_per_cell': 36,
+    'eq_without_checker': 0.69,
+    'eq_with_checker': 0.67,
+    'delta_absolute': 0.02,
+    'uncertainty': None,
+    'criterion': ('exactamente una celda con n>=30 en la medición de '
+                  'tools/medir_multiway.py; el resto es extrapolación'),
+    'source': 'data/hands_db.jsonl (1269 manos con hero identificado)',
+}
+
+
 def penalty_source(board_codes, street: str) -> str:
     """'measured' si la combinación tiene dato directo; si no, extrapolada.
 
-    Solo turn + board liso está anclado a una medición. Todo lo demás
-    son hipótesis de trabajo (pegar_2 §2.1, pegar_3 §3): sin este campo
-    no se puede separar en el análisis posterior lo que tiene base
-    empírica de lo que no.
+    Solo turn + board liso está anclado a una medición. Ver
+    PENALTY_ANCHOR para el tamaño de muestra y el criterio exacto.
     """
     if street == 'turn' and texture_key(board_codes) == 'rainbow':
         return 'measured'
@@ -150,14 +179,22 @@ def classify_villains(acts: List[dict], hero_pos: str,
       3. Los pendientes solo son los que NO han actuado en la calle. Estar
          activo no significa tener una decisión pendiente.
 
+    Hay CUATRO categorías, no tres: además de agresor / checker /
+    pendiente está `callers`. Un 'c' (igualar) NO es un 'x' (pasar):
+    quien igualó aporta fichas voluntariamente y su rango no está capado
+    como el de un check. No entra en la penalización porque no hay
+    ninguna medición para él, pero se registra para que no desaparezca
+    del análisis.
+
     `pending_positions`: posiciones candidatas a pendiente. Se filtra
-    contra quienes ya actuaron en `acts`.
+    contra quienes ya actuaron en `acts`. Son POSICIONES, no pids; el
+    llamador traduce antes de llamar.
     """
     hero_pos = hero_pos or ''
     hero_acts = [i for i, a in enumerate(acts) if a.get('pos') == hero_pos]
     hero_last = hero_acts[-1] if hero_acts else None
 
-    agresores, checkers = [], []
+    agresores, checkers, callers = [], [], []
     acted = set()
     for a in acts:
         pos, acc = a.get('pos'), a.get('action')
@@ -168,6 +205,8 @@ def classify_villains(acts: List[dict], hero_pos: str,
             agresores.append(pos)
         elif acc == 'x':
             checkers.append(pos)
+        elif acc == 'c':
+            callers.append(pos)
 
     main, reason = None, 'sin rivales identificados'
     if agresores:
@@ -189,6 +228,7 @@ def classify_villains(acts: List[dict], hero_pos: str,
     # una ronda no compromete la mano si después hay resubida. La última
     # acción agresiva manda sobre el check anterior.
     checkers = [c for c in checkers if c not in agresores]
+    callers = [c for c in callers if c not in agresores]
 
     # Pendientes = candidatos que además NO han actuado en esta calle.
     pending = []
@@ -202,6 +242,11 @@ def classify_villains(acts: List[dict], hero_pos: str,
         'main_reason': reason,
         'aggressors': agresores,
         'checkers': [c for c in checkers if c != main],
+        # Un 'c' NO es un 'x'. Quien igualó ha aportado fichas
+        # voluntariamente: su rango no está capado como el de un check y
+        # no entra en la penalización (no hay dato). Se registra aparte
+        # para que no desaparezca del análisis.
+        'callers': [c for c in callers if c != main],
         'pending': pending,
         'hero_pos': hero_pos,
     }
@@ -211,39 +256,63 @@ def classify_villains(acts: List[dict], hero_pos: str,
 # Cálculo sombra
 # ---------------------------------------------------------------------------
 
-def shadow_equity(equity_main: float, board_codes, street: str,
+def shadow_equity(equity_production: float, board_codes, street: str,
                   hierarchy: Dict, equity_source: str = '') -> Dict:
     """Equity ajustada por los checkers. NO se usa para decidir.
 
     Estructura ABSOLUTA, que es la que reproduce el dato medido:
 
-        eq_shadow = eq_vs_principal - penalización
+        eq_shadow = eq_produccion - penalización
 
-    El agresor principal ya está dentro de `equity_main` (su rango se
-    modeló, no se corrigió). Los pendientes no entran: siguen siendo
-    amenaza activa y registrarlos es más honesto que inventarles una
-    penalización.
+    LAS TRES EQUITY SON DISTINTAS (pegar_3 §2, P0):
 
-    `equity_source` documenta contra qué rango se calculó
-    `equity_main`. Es importante: puede NO ser el rival que la jerarquía
-    considera principal, y sin decirlo el registro sería engañoso
-    (pegar_3 §1, P0).
+      equity_production : la que el motor usó para decidir. Es la única
+                         disponible aquí. `equity_source` dice contra qué
+                         rival se calculó.
+      equity_main       : contra el rango del rival principal de la
+                         jerarquía. NO SE CALCULA. Es None, y
+                         `equity_main_available` es False. Antes este
+                         campo se llamaba igual que el de producción y
+                         sugería una equivalencia que no existe.
+      equity_shadow     : la estimación experimental.
+
+    Que `equity_source` coincida o no con `hierarchy['main']` NO convierte
+    la equity de producción en la de referencia: solo indica que se usó
+    el mismo rango. Even cuando coinciden, son cálculos distintos en
+    propósito: uno estima contra un rival, el otro contra una mesa.
+
+    Los pendientes no entran en la penalización: pueden resubir, y
+    penalizarlos como si fueran draws sobrevaloraría la apuesta.
     """
     n_chk = len(hierarchy.get('checkers') or ())
     n_pend = len(hierarchy.get('pending') or ())
     pen = passive_penalty(board_codes, street, n_chk)
-    eq_main = float(equity_main)
-    adjusted = max(0.0, eq_main - pen)
+    eq_prod = float(equity_production)
+    adjusted = max(0.0, eq_prod - pen)
+    src = equity_source or 'desconocido'
+    main = hierarchy.get('main')
+    coincide = bool(main) and src == main
     return {
-        'equity_main': eq_main,
-        'equity_source': equity_source or 'desconocido',
+        # la que el motor usó de verdad
+        'equity_production': eq_prod,
+        'equity_source': src,
+        'equity_source_is_hierarchy_main': coincide,
+        # la que NO tenemos: contra el rango del principal de la jerarquía
+        'equity_main': None,
+        'equity_main_available': False,
+        'equity_main_note': (
+            'no se calcula: el motor solo produce una equity de producción. '
+            'Para medir el efecto de los rivales secundarios hay que '
+            'calcularla contra hierarchy["main"] explícitamente.'),
+        'equity_shadow': round(adjusted, 5),
         'penalty': round(pen, 5),
         'penalty_basis': 'absolute',
         'penalty_source': penalty_source(board_codes, street),
+        'penalty_anchor': dict(PENALTY_ANCHOR)
+        if penalty_source(board_codes, street) == 'measured' else None,
         'n_checker': n_chk,
         'n_pending': n_pend,
-        'equity_shadow': round(adjusted, 5),
-        'delta': round(adjusted - eq_main, 5),
+        'delta': round(adjusted - eq_prod, 5),
         # unmistakable: esto NO es una equity multiway
         'experimental': True,
     }
@@ -269,20 +338,23 @@ def shadow_record(hand_id: str, street: str, board_codes, hero_codes,
         'stack': stack,
         'villain_main': hierarchy.get('main'),
         'main_reason': hierarchy.get('main_reason'),
+        # las tres equity, explícitamente separadas (pegar_3 §2, P0)
         'villain_used_for_equity': shadow.get('equity_source'),
-        'main_matches_equity_range': (
-            shadow.get('equity_source') == (hierarchy.get('main') or '')
-            or shadow.get('equity_source', '').startswith('unión')
-            or shadow.get('equity_source') == 'desconocido'),
+        'equity_source_is_main': shadow.get('equity_source_is_hierarchy_main'),
+        'equity_main_available': shadow.get('equity_main_available'),
+        'equity_main_note': shadow.get('equity_main_note'),
         'aggressors': hierarchy.get('aggressors'),
         'checkers': hierarchy.get('checkers'),
+        'callers': hierarchy.get('callers'),
         'pending': hierarchy.get('pending'),
         'texture': texture_key(board_codes),
-        'equity_production': shadow.get('equity_main'),
+        'equity_production': shadow.get('equity_production'),
+        'equity_main': shadow.get('equity_main'),
         'equity_shadow': shadow.get('equity_shadow'),
         'penalty': shadow.get('penalty'),
         'penalty_basis': shadow.get('penalty_basis'),
         'penalty_source': shadow.get('penalty_source'),
+        'penalty_anchor': shadow.get('penalty_anchor'),
         'n_checker': shadow.get('n_checker'),
         'n_pending': shadow.get('n_pending'),
         'delta': shadow.get('delta'),

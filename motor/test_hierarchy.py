@@ -210,6 +210,106 @@ def test_jerarquia_no_mezcla_pids_y_posiciones():
             assert pos in ('SB', 'BB', 'UTG', 'MP', 'CO', 'BTN'), pos
 
 
+# --- Casos de referencia (pegar_3 §2, P1) -------------------------------
+# Cero incoherencias NO equivale a cero errores: un registro puede ser
+# internamente consistente y aun así elegir mal al rival. Estos casos
+# tienen la clasificación correcta definida a mano.
+
+def test_caso_check_luego_apuesta():
+    """Un jugador checkea y después betting: es agresor, no pasivo."""
+    acts = _acts(('UTG', 'x'), ('MP', 'x'), ('UTG', 'b'), ('BTN', 'x'))
+    h = classify_villains(acts, 'BTN')
+    assert h['main'] == 'UTG'
+    assert 'UTG' in h['aggressors']
+    assert 'UTG' not in h['checkers']
+
+
+def test_caso_subida_y_resubida_vuelve_al_hero():
+    """BTN sube, la resubida de MP es la que el hero enfrenta."""
+    acts = _acts(('UTG', 'x'), ('MP', 'b'), ('BTN', 'r'), ('MP', 'r'))
+    h = classify_villains(acts, 'BTN')
+    assert h['main'] == 'MP'
+    # el hero no es su propio agresor, aunque su 'r' esté en la calle
+    assert 'BTN' not in h['aggressors']
+    assert 'MP' in h['aggressors']
+
+
+def test_caso_call_no_es_check():
+    """Un 'c' es una categoría propia: igualar no es pasar.
+
+    Quien igualó ha aportado fichas; su rango no está capado como el de
+    un check, así que no debe entrar en la penalización de pasivos. Pero
+    tampoco puede desaparecer del registro.
+    """
+    acts = _acts(('UTG', 'b'), ('MP', 'c'), ('CO', 'c'), ('BTN', 'x'))
+    h = classify_villains(acts, 'BTN')
+    assert h['main'] == 'UTG'
+    assert h['checkers'] == []              # nadie pasó
+    assert sorted(h['callers']) == ['CO', 'MP']
+    assert h['callers'] not in (h['aggressors'],)
+
+
+def test_caso_acciones_intercaladas():
+    """Check, apuesta y call intercalados."""
+    acts = _acts(('UTG', 'x'), ('MP', 'b'), ('CO', 'c'), ('BTN', 'x'))
+    h = classify_villains(acts, 'BTN')
+    assert h['main'] == 'MP'
+    assert h['checkers'] == ['UTG']
+    assert h['callers'] == ['CO']
+    assert h['pending'] == []
+
+
+def test_callers_no_entran_en_la_penalizacion():
+    """Sin dato para callers, no se corrige la equity por ellos."""
+    jer = classify_villains(_acts(('MP', 'b'), ('CO', 'c')), 'BTN')
+    s = shadow_equity(0.6, BOARD_FLOOP, 'flop', jer)
+    assert s['n_checker'] == 0
+    assert s['penalty'] == 0.0
+    assert s['equity_shadow'] == s['equity_production']
+
+
+def test_caso_hero_ya_acted_no_es_pendiente():
+    """El hero aparece en `acts` pero no debe salir en ningún grupo."""
+    acts = _acts(('UTG', 'b'), ('BTN', 'x'))
+    h = classify_villains(acts, 'BTN', pending_positions=['UTG', 'BTN', 'CO'])
+    assert h['main'] == 'UTG'
+    assert 'BTN' not in h['checkers']
+    assert 'BTN' not in h['aggressors']
+    assert 'BTN' not in h['pending']
+
+
+def test_caso_pendientes_segun_estado_y_accion():
+    """El pendiente se define por no haber acted, no por estar activo."""
+    acted = _acts(('UTG', 'b'), ('BTN', 'x'))
+    # CO no ha actuado en la calle: sí es pendiente, aunque esté activo
+    h = classify_villains(acted, 'BTN', pending_positions=['UTG', 'MP', 'CO'])
+    assert h['pending'] == ['MP', 'CO']     # UTG ya actuó, no MP ni CO
+    assert h['main'] == 'UTG'
+
+
+def test_caso_folded_no_aparece():
+    """Un jugador retirado no es agresor ni pasivo."""
+    acts = _acts(('UTG', 'b'), ('MP', 'f'), ('CO', 'x'), ('BTN', 'x'))
+    h = classify_villains(acts, 'BTN')
+    assert 'MP' not in h['aggressors']
+    assert 'MP' not in h['checkers']
+    assert 'MP' not in h['pending']
+
+
+def test_caso_principal_no_coincide_con_el_de_la_equity():
+    """El motor puede usar un rival distinto al principal de la jerarquía."""
+    jer = classify_villains(_acts(('MP', 'b')), 'BTN')   # main = MP
+    s = shadow_equity(0.6, BOARD_FLOOP, 'flop', jer,
+                      equity_source='UTG')               # engine usó UTG
+    rec = shadow_record('H', 'flop', BOARD_FLOOP, HERO, jer, s,
+                        10.0, 0.0, 90.0, 'bet_25')
+    assert rec['villain_main'] == 'MP'
+    assert rec['villain_used_for_equity'] == 'UTG'
+    assert rec['equity_source_is_main'] is False
+    # y la equity de referencia sigue sin existir
+    assert rec['equity_main_available'] is False
+
+
 # --- penalización absoluta (pegar_3 §1 P1) ------------------------------
 
 def test_penalizacion_es_absoluta():
@@ -257,23 +357,58 @@ def test_equity_shadow_no_se_hace_negativa():
 
 def test_registro_identifica_contra_que_rango():
     """El registro dice contra qué rival se calculó la equity (P0)."""
-    rec = shadow_record('H_1', 'flop', BOARD_FLOOP, HERO,
-                        classify_villains(_acts(('MP', 'b')), 'BTN'),
-                        shadow_equity(0.5, BOARD_FLOOP, 'flop',
-                                      {'checkers': []}, equity_source='CO'),
+    jer = classify_villains(_acts(('MP', 'b')), 'BTN')
+    sh = shadow_equity(0.5, BOARD_FLOOP, 'flop', jer, equity_source='CO')
+    rec = shadow_record('H_1', 'flop', BOARD_FLOOP, HERO, jer, sh,
                         10.0, 0.0, 90.0, 'bet_25')
     assert rec['villain_used_for_equity'] == 'CO'
-    assert rec['main_matches_equity_range'] is False
+    assert rec['equity_source_is_main'] is False
 
 
 def test_registro_detecta_coincidencia_de_rango():
-    rec = shadow_record('H_1', 'flop', BOARD_FLOOP, HERO,
-                        classify_villains(_acts(('MP', 'b')), 'BTN'),
-                        shadow_equity(0.5, BOARD_FLOOP, 'flop',
-                                      {'checkers': []}, equity_source='MP'),
+    jer = classify_villains(_acts(('MP', 'b')), 'BTN')
+    sh = shadow_equity(0.5, BOARD_FLOOP, 'flop', jer, equity_source='MP')
+    rec = shadow_record('H_1', 'flop', BOARD_FLOOP, HERO, jer, sh,
                         10.0, 0.0, 90.0, 'bet_25')
     assert rec['villain_used_for_equity'] == 'MP'
-    assert rec['main_matches_equity_range'] is True
+    assert rec['equity_source_is_main'] is True
+
+
+def test_equity_main_no_se_confunde_con_produccion():
+    """pegar_3 §2 P0: son tres equities DISTINTAS.
+
+    Antes el campo de producción se llamaba `equity_main`, lo que
+    sugería que era la equity contra el rival principal de la jerarquía.
+    No lo es, y no se calcula. Debe quedar explícito.
+    """
+    jer = classify_villains(_acts(('MP', 'b')), 'BTN')
+    s = shadow_equity(0.69, BOARD_FLOOP, 'turn', jer, equity_source='MP')
+    assert s['equity_production'] == 0.69      # la del motor
+    assert s['equity_main'] is None            # contra el principal: no hay
+    assert s['equity_main_available'] is False
+    assert s['equity_main_note']
+    # que coincidan las fuentes NO convierte una en la otra
+    assert s['equity_source_is_hierarchy_main'] is True
+    assert s['equity_main'] is not s['equity_production']
+
+
+def test_penalty_anchor_documenta_la_muestra():
+    """`measured` significa una celda concreta, con n y sin incertidumbre
+    calculada. El registro debe llevar ese contexto (pegar_3 §2, P1)."""
+    s = shadow_equity(0.69, BOARD_FLOOP, 'turn', {'checkers': ['UTG']})
+    anchor = s['penalty_anchor']
+    assert anchor is not None
+    assert anchor['n_per_cell'] == 36
+    assert anchor['delta_absolute'] == 0.02
+    assert anchor['uncertainty'] is None       # no se ha calculado
+    assert anchor['criterion']
+    assert anchor['source']
+
+
+def test_penalty_anchor_ausente_en_extrapolado():
+    s = shadow_equity(0.5, BOARD_FLOOP, 'flop', {'checkers': ['UTG']})
+    assert s['penalty_source'] == 'extrapolated'
+    assert s['penalty_anchor'] is None
 
 
 # --- cálculo sombra ------------------------------------------------------
@@ -282,7 +417,7 @@ def test_shadow_equity_reduce_y_marca_experimental():
     jer = classify_villains(_acts(('UTG', 'x'), ('MP', 'b')), 'BTN')
     jer['checkers'] = ['UTG']
     s = shadow_equity(0.50, BOARD_FLOOP, 'turn', jer)
-    assert s['equity_shadow'] < s['equity_main']
+    assert s['equity_shadow'] < s['equity_production']
     assert s['n_checker'] == 1
     assert s['penalty'] > 0
     assert s['experimental'] is True
@@ -291,7 +426,7 @@ def test_shadow_equity_reduce_y_marca_experimental():
 def test_shadow_equity_sin_checkers_no_cambia():
     jer = classify_villains(_acts(('MP', 'b')), 'BTN')
     s = shadow_equity(0.50, BOARD_FLOOP, 'turn', jer)
-    assert s['equity_shadow'] == s['equity_main']
+    assert s['equity_shadow'] == s['equity_production']
     assert s['delta'] == 0.0
 
 
@@ -355,7 +490,7 @@ def test_shadow_no_altera_la_accion():
     # y la sombra sí calculó algo
     assert con.shadow is not None
     assert con.shadow['n_checker'] == 2
-    assert con.shadow['equity_shadow'] < con.shadow['equity_main']
+    assert con.shadow['equity_shadow'] < con.shadow['equity_production']
 
 
 def test_shadow_sin_contexto_no_hay_registro():

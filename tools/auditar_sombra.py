@@ -22,9 +22,10 @@ hands = load_hands()[:400]
 stats = collections.Counter()
 motivos = collections.Counter()
 src = collections.Counter()
-pen_abs, pen_rel = [], []
+pen_abs = []
 problemas = []
 
+n_caller_total = 0
 for h in hands:
     hp = None
     for p in (h.get('players') or []):
@@ -56,9 +57,12 @@ for h in hands:
         src[s['penalty_source']] += 1
         if s['penalty'] > 0:
             pen_abs.append(s['penalty'])
+        n_caller_total += len(jer.get('callers') or ())
+        stats[st] += 1
         lg.append({'hand_id': h.get('hand_id'), 'street': st,
                    'villain_main': jer['main'],
                    'n_checker': s['n_checker'], 'n_pending': s['n_pending'],
+                   'n_caller': len(jer.get('callers') or ()),
                    'penalty': s['penalty'],
                    'penalty_source': s['penalty_source']})
         # auditorias
@@ -89,6 +93,8 @@ print()
 if pen_abs:
     print('penalizaciones: min=%.4f media=%.4f max=%.4f (ABSOLUTAS)'
           % (min(pen_abs), sum(pen_abs) / len(pen_abs), max(pen_abs)))
+print()
+print('registros con al menos un caller: %d' % n_caller_total)
 print()
 print('INCOHERENCIAS DETECTADAS: %d' % len(problemas))
 for p in problemas[:10]:
