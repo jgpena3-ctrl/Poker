@@ -1,7 +1,10 @@
-# Documento de proyecto — Motor de póker
+﻿# Documento de proyecto — Motor de póker
 
 > Estado: `82b4fab` (HEAD = `origin/main`) · 17 commits · suite: **445 passed, 1 skipped**
 > Actualizado: 2026-10-13
+>
+> ⚠️ **Todas las cifras de este documento están medidas sobre las primeras 900 manos**, la única ventana
+> con buena prosecución de acciones. El código, en cambio, usa las 1280. Ver §1 "Ventana de datos fiable".
 
 ---
 
@@ -19,6 +22,39 @@ Tres ideas gobiernan todo el diseño:
    registra, se compara, y no toca la decisión. Verificado por test.
 3. **La base estadística se audita antes de calibrar.** Un peso bonito sobre datos mal clasificados es
    peor que no tener peso.
+
+### Ventana de datos fiable — leer antes que nada
+
+> ⚠️ **La base de datos está en mantenimiento y corrección.** Sólo las **primeras 900 entradas** de
+> `data/hands_db.jsonl` (lineas 1–900, `H_0001`…`H_0902`) tienen **buena prosecución de acciones**.
+> Las **380 restantes** pueden tener errores en las acciones y **no deben usarse para medir nada**.
+
+El corte no es arbitrario: **el propio fichero muestra la discontinuidad exactamente en H_0903.**
+
+| Porcentaje de manos con ciega del BB insertada | Manos |
+|---|---|
+| primeras 900 | 586 (65.1%) |
+| líneas 901–950 | **50 de 50 (100%)** |
+| últimas 380 | 376 de 380 (98.9%) |
+
+Del mismo modo, los ganadores múltiples saltan de **2.7%** en la ventana fiable a **18.0%** en el
+total. Es la firma de dos convenciones de grabación distintas, no de una distribución real.
+
+**Y nada en el código respeta este corte.** `learn.load_hands()` no tiene parámetro de límite, y sus
+**15 consumidores** cargan las 1280 manos:
+
+| Consumidor | Ventana que usa |
+|---|---|
+| `asistente_live.build_models()` | **1280** ← los modelos que recomienda en vivo |
+| `behavior`, `observations`, `profile`, `stats`, `learn`, `db_health` | **1280** |
+| `player_ranges`, `postflop_ranges`, `range_lab_gui` | **1280** |
+| `tools/auditar_anchor.py` | **1280** |
+| `tools/medir_multiway.py` | **1280** (lee el fichero directamente) |
+| `tools/auditar_sombra.py` | `load_hands()[:400]` ✅ dentro de la ventana |
+
+Consecuencia: **todos los derivados en `data/*.json` y todos los modelos en vivo están contaminados**
+con las 380 manos no fiables. Cualquier cifra de este documento que no diga explícitamente "primeras 900"
+debe leerse como *provisional*.
 
 ### Flujo de datos
 
@@ -402,6 +438,11 @@ Ordenadas por commit, de la más antigua a la más reciente.
 - `equity_main` implementada vía `_equity_vs_rival()` y `main_range_builder()`, con motivos de fallo
   explícitos y **sin tocar la decisión**.
 
+> ⚠️ **Las cifras de las cuatro entradas anteriores (`2b309a9`, `fef0e3f`, `f817d93`, `82b4fab`) se
+> midieron sobre las 1280 manos.** Repitiéndolas sobre las 900 fiables, el `anchor_match` pasa de **3 a 1** y
+> las observaciones de 654 a 425. Las correcciones de código siguen siendo válidas —el error de construcción
+> de `penalty_source` era real— pero **su magnitud está sobrestimada**. Ver §6.4.
+
 ---
 
 ## 6. Qué falta
@@ -421,25 +462,24 @@ cualquier `'b'` como subida:
 raises = sum(1 for p, a, m in seq[:i] if a in ('b', 'r'))
 ```
 
-**Medido sobre las 1280 manos reales** (verificado por ejecución, no estimado):
+**Medido sobre las 900 manos fiables** (verificado por ejecución; entre paréntesis, el total de 1280
+que es lo que el código usa hoy):
 
-| Medición | Valor |
-|---|---|
-| Manos que contienen `{"pos":"BB","action":"b"}` | **962 / 1280 (75.2%)** |
-| De ellas, con la ciega del BB en el índice 0 | **938** |
-| Manos donde la ciega precede a al menos otra acción preflop | **957** |
-| Acciones donde `learn.py` ve una subida y **no hay ninguna real** | **3198** |
-| Acciones donde el conteo de `learn.py` difiere del real | **5252** |
-| Total de `PreflopEvent` | **6755** |
-| Eventos que caen en un denominador `facing_*` | **4723 (69.9%)** |
+| Medición | Primeras 900 | Todas 1280 |
+|---|---|---|
+| Manos que contienen `{"pos":"BB","action":"b"}` | **586 (65.1%)** | 962 (75.2%) |
+| De ellas, con la ciega del BB en el índice 0 | **562** | 938 |
+| Manos donde la ciega precede a al menos otra acción preflop | **582** | 957 |
+| Acciones donde `learn.py` ve una subida y **no hay ninguna real** | **1830** | 3198 |
+| Total de `PreflopEvent` | **4695** | 6755 |
+| Eventos en un denominador `facing_*` | **3060 (65.2%)** | 4723 (69.9%) |
 
-Distribución de denominadores: `facing_open` 3551 · `no_raise` 2032 · `facing_3bet` 1172.
+Denominadores en la ventana fiable: `facing_open` 2326 · `no_raise` 1635 · `facing_3bet` 734.
 
-Es decir: **3198 de los 6755 eventos preflop (47.4%) se clasifican contra una subida que nunca ocurrió**,
-y en 5252 el conteo difiere del real (incluye casos en que la ciega añade un nivel: un 3-bet legítimo
-pasa a contar como `facing_3bet` cuando en realidad es un 2-bet).
+Es decir: **1830 de los 4695 eventos preflop (39.0%) se clasifican contra una subida que nunca ocurrió**.
+Con las 1280 la cifra sube a 47.3%, pero esa incluye las 380 manos no fiables.
 
-Ejemplo real (`H_0340`):
+Ejemplo real (`H_0340`, dentro de la ventana fiable):
 ```
 seq: [('BB','b',1.0), ('UTG','f',0), ('MP','f',0), ('CO','f',0), ('BTN','f',0), ('SB','f',0)]
    BB  b  raises=0 -> open / no_raise     ← la ciega contada como "open"
@@ -476,44 +516,50 @@ Otros problemas de `learn.py`:
    | `Call_OR` | 8 tablas `X_vs_Y` | **todas** → `Call_OR_BB_vs_SB` |
    | `LIMP` | **ninguna** | todas → prior plano `0.15` |
 
-   Impacto real, medido (peso del prior = `alpha/(opp+alpha)`, con `alpha=2.0`):
+   Impacto real, medido sobre las **900 fiables** (peso del prior = `alpha/(opp+alpha)`, `alpha=2.0`):
 
-   | Perfil | Spot | `opp` | Peso del prior |
-   |---|---|---|---|
-   | TIBURON | no_raise | 463 | 0.4% |
-   | TIBURON | facing_open | 758 | 0.3% |
-   | TIBURON | facing_3bet | 218 | 0.9% |
-   | PEZ | no_raise | 65 | 3.0% |
-   | PEZ | facing_open | 59 | 3.3% |
-   | **PEZ** | **facing_3bet** | **16** | **11.1%** |
+   | Perfil | Spot | `opp` (900) | Peso del prior (900) | Peso con 1280 |
+   |---|---|---|---|---|
+   | TIBURON | no_raise | 393 | 0.5% | 0.4% |
+   | TIBURON | facing_open | 513 | 0.4% | 0.3% |
+   | TIBURON | facing_3bet | 146 | 1.4% | 0.9% |
+   | PEZ | no_raise | 55 | 3.5% | 3.0% |
+   | PEZ | facing_open | 50 | 3.8% | 3.3% |
+   | **PEZ** | **facing_3bet** | **15** | **11.8%** | 11.1% |
 
-   El daño es acotado donde hay datos (0.3–0.9% en TIBURON) pero **concentrado justo donde los datos
-   escasean**: para PEZ en `facing_3bet`, uno de cada nueve pesos viene de un prior que describe otro spot.
+   El daño está acotado donde hay datos (0.4–1.4% en TIBURON) pero **concentrado justo donde los datos
+   escasean**: para PEZ en `facing_3bet`, con `opp=15`, casi uno de cada nueve pesos del modelo viene de
+   un prior que describe otro spot.
 
 2. **`load()` no restaura `self.profiles` ni lee la clave `'omega'`.** Verificado:
    `m.profiles → None`, `m.player_omega('Jarduan','no_raise') → 1.0` (siempre). `to_json()` **sí escribe**
    `'omega'`, pero `load()` nunca lo lee → **el ajuste individual desaparece silenciosamente** al cargar
    de disco, y `p_player()` queda idéntico a `p_matrix()`.
-3. **ω se multiplica y se recorta sin renormalizar.** Medido en el grid `CO`/`pfr` (suma base 12.21):
+3. **ω se multiplica y se recorta sin renormalizar.** Medido sobre las 900 fiables, grid `CO`/`pfr`
+   (suma base 13.27):
 
    | Jugador | ω | Suma base | Suma ajustada |
    |---|---|---|---|
-   | Jarduan | 1.0119 | 12.21 | 12.35 |
-   | NESANVAR | 1.0122 | 12.21 | 12.36 |
-   | **Pipaaf182** | **0.5354** | **12.21** | **6.54** |
+   | Jarduan | 0.9946 | 13.27 | 13.20 |
+   | NESANVAR | 1.0154 | 13.27 | 13.48 |
+   | **Pipaaf182** | **0.5371** | **13.27** | **7.13** |
 
-   ω=0.535 deja al jugador con la mitad de masa de rango sin renormalizar. La renormalización posterior
+   ω=0.537 deja al jugador con la mitad de masa de rango sin renormalizar. La renormalización posterior
    recupera el déficit *globalmente pero no por celda*.
 4. **El jugador está incluido en sus propios `peers`** — verificado: `Jarduan` está en sus propios peers,
-   con **106** peers (los 106 TIBURON, incluyéndolo a él). Sesga el denominador de ω hacia el propio jugador.
-5. **ω es esencialmente una constante por perfil, no un ajuste individual.** Jarduan (1.0119) y NESANVAR
-   (1.0122) coinciden en tres decimales. La variación real entre jugadores del mismo perfil es despreciable.
+   con **88** peers en la ventana de 900 (los 88 TIBURON, incluyéndolo a él). Sesga el denominador de ω
+   hacia el propio jugador.
+5. **ω tiene poca resolución individual.** Jarduan (0.9946) y NESANVAR (1.0154) coinciden en ~1.0 con
+   dos decimales de diferencia, mientras Pipaaf182 (0.5371) se aparta mucho. La mayor parte de la señal es
+   **por perfil**, no por jugador — que es lo contrario de lo que promete el nombre `player_omega`.
+   Nótese además que ω **cambia de signo según la ventana** (Jarduan 1.0119 con 1280 → 0.9946 con 900),
+   señal de que está estimado sobre muy pocos datos.
 6. **`LIMP` no tiene ninguna tabla** en `preflop_matrices.json`: el spot del BB que hace `limp` usa prior
    plano 0.15 en todas las posiciones.
 
 > Contradicción docstring vs. realidad: `player_ranges.py:45-46` afirma que *"el modelo NUNCA mezcla manos
-> conocidas del HERO con las de rivales por diseño"*, pero `Jarduan` cae en TIBURON (181 jugadores:
-> 106 TIBURON / 75 PEZ) y se mezcla con los otros 105 rivales en el mismo `p_matrix`.
+> conocidas del HERO con las de rivales por diseño"*, pero `Jarduan` cae en TIBURON (en la ventana de 900:
+> 154 jugadores, 88 TIBURON / 66 PEZ) y se mezcla con los otros 87 rivales en el mismo `p_matrix`.
 
 > Nota sobre `CAT_TABLE`: sólo existen `open`, `3bet`, `call_open` y `limp` de entre las acciones que
 > `_preflop_spot` puede devolver, así que el camino de producción sí usa prior por posición para `open`.
@@ -548,28 +594,65 @@ Otros problemas de `learn.py`:
 ### 6.3 Datos y calibración
 
 - **Muestra insuficiente**: sólo **3 de 137** celdas de escenario tienen `n>=30`; **ninguna** tiene `n>=100`.
+  (Cifra medida sobre 1280; debe repetirse sobre las 900.)
 - **`other` representa 404/1172 eventos** (34.5%) de la primera ventana de 900.
-- **18% de las manos tienen múltiples ganadores.** Medido sobre las 1280: 231 con >1 ganador (18.0%),
-  1046 con exactamente 1, y **3 sin ganador registrado** (`H_0086`, `H_0342`, `H_0344`).
+- **Ganadores múltiples: 2.7% en la ventana fiable, no 18%.** Medido: 24 de 900 (2.7%) en las primeras 900,
+  frente a 231 de 1280 (18.0%) en el total. Las 207 manos multi-ganadoras adicionales están **todas fuera de
+  la ventana fiable**, lo que confirma que ese 18% es un artefacto de la convención de grabación de las 380
+  últimas, no un hecho del juego.
+- **3 manos sin ganador registrado**, todas dentro de la ventana fiable: `H_0086`, `H_0342`, `H_0344`.
 - **Win rate ≠ equity**: `winner` es una lista de todos los ganadores; la equity exige reparto del bote.
 - `data/hands_db.jsonl` tiene `cards: "-"` en `H_0350` (línea 347). El código lo tolera vía `is_card_code`,
   pero la fuente debería corregirse manualmente.
 - `preflop_matrices.json` **no contiene `OR_BB`**; hay fallback uniforme y no se ha generado la tabla.
-- Artefactos derivados potentially obsoletos: `observations.json` con 3373 registros frente a 13715
-  potenciales; `behavior.json` con 339.
+- Artefactos derivados obsoletos: `observations.json` con 3373 registros frente a 13715 potenciales;
+  `behavior.json` con 339. Todos, además, construidos sobre las 1280.
 - Nota operativa de `pegar_9.txt`: eliminar 20 manos concretas (`H_0339`–`H_0346`, `H_0368`, `H_0379`,
   `H_0386`, `H_0410`, `H_0422`, `H_0446`, `H_0449`, `H_0516`, `H_0583`, `H_0586`, `H_0603`, `H_0690`,
   `H_0705`). ⚠️ `H_0340` está en ese rango y es el ejemplo del bug de la ciega del BB.
 
-### 6.4 Definiciones por unificar
+### 6.4 Ventana de datos: nadie la respeta
+
+Este es el bloqueante transversal y el más fácil de arreglar:
+
+- **`learn.load_hands()` no tiene límite de ventana.** Lee el fichero entero y devuelve todo lo que parsea.
+  No existe ningún flag, constante ni parámetro que restrinja a las primeras 900.
+- **Sus 15 consumidores** (ver tabla en §1) cargan las 1280 manos, incluidos
+  `asistente_live.build_models()` — es decir, **las recomendaciones en vivo se calculan hoy con 380 manos
+  de acción dudosa**.
+- **Todos los derivados** (`preflop_stats.json`, `player_stats.json`, `profiles.json`, `behavior.json`,
+  `observations.json`, `profile_ranges.json`, `postflop_ranges.json`) están calculados sobre las 1280.
+- **`tools/auditar_anchor.py` y `tools/medir_multiway.py`** recorren el fichero entero, así que sus
+  conclusiones también están contaminadas.
+
+**Consecuencia sobre el ancla.** Repetida la auditoría restringida a las 900 fiables:
+
+| | Primeras 900 | Todas 1280 |
+|---|---|---|
+| `none` | 292 | 441 |
+| `partial_support` | 132 | 210 |
+| **`anchor_match`** | **1** | 3 |
+| Total observaciones | 425 | 654 |
+
+El único `anchor_match` de la ventana fiable es `('turn', ())`. Es decir: **sobre la ventana en la que se
+debería calibrar, el ancla tiene exactamente un registro de apoyo.** La conclusión de `f817d93` y
+`82b4fab` ("3 registros en vez de 0") es correcta sobre 1280 pero **queda en 1 sobre los datos fiables**.
+Esto refuerza, no debilita, la decisión de no activar la penalización.
+
+**Arreglo propuesto:** añadir un parámetro explícito a `load_hands()` (p. ej. `max_hands=900` o
+`reliable_only=True`) y propagarlo a todos los consumidores, de modo que la ventana sea una decisión
+explícita y no una convención implícita.
+
+### 6.5 Definiciones por unificar
 
 `pending` significa dos cosas distintas:
 - `tools/medir_multiway.py`: *acted después del hero en la calle*.
 - `hierarchy._jerarquia()`: *jugadores activos que aún no han acted*.
 
-Esto es exactamente lo que hace que los 3 `anchor_match` no sean una correspondencia limpia.
+Esto es exactamente lo que hace que los `anchor_match` no sean una correspondencia limpia.
+Repetido sobre la ventana fiable de 900, sólo queda **1** `anchor_match` (ver §6.4).
 
-### 6.5 Deuda técnica menor
+### 6.6 Deuda técnica menor
 
 - `motor/__init__.py`: docstring desactualizado (15 vs 24 módulos) y `rules` no está en la lista de re-export.
 - `implied_odds.py` es una isla: ningún módulo lo importa.
@@ -577,7 +660,7 @@ Esto es exactamente lo que hace que los 3 `anchor_match` no sean una corresponde
 - `rules.py` importa `cards` dentro de funciones, en el hot path de `plan()`.
 - `hand_evaluator.py` escribe una caché de 10.4 MB fuera del repo (`~/.poker_motor/`).
 
-### 6.6 Pendiente en modo sombra
+### 6.7 Pendiente en modo sombra
 
 - **`equity_main` no está cableado** desde el flujo real de `Asistente`. La función
   (`_equity_vs_rival` + `main_range_builder`) existe y está testeada, pero
@@ -623,24 +706,34 @@ python tools/calculadora_outs_gui.py
 
 ## 8. Orden sugerido de trabajo
 
-1. **Auditar `learn.py`** y corregir la ciega del BB. Es el defecto más grave, es medible, y contamina toda
-   la cadena estadística aguas abajo. Ninguna calibración es válida antes de arreglarlo.
+1. **Restringir la ventana de datos a las 900 fiables.** Añadir el límite a `load_hands()` y propagarlo a
+   los 15 consumidores. Es el paso más barato y el que más limpia todo lo demás: sin él, cualquier
+   medición posterior vuelve a estar contaminada.
+   *Acción concreta*: `load_hands(max_hands=900)` + `asistente_live.build_models()`, `behavior`,
+   `observations`, `profile`, `stats`, `db_health`, `player_ranges`, `postflop_ranges`, `range_lab_gui`,
+   `auditar_anchor`, `medir_multiway`. Luego reconstruir los derivados.
+2. **Auditar `learn.py`** y corregir la ciega del BB. Es el defecto más grave y contamina toda la cadena
+   estadística aguas abajo. Ninguna calibración es válida antes de arreglarlo.
    *Acción concreta*: excluir la ciega del BB del conteo de `raises`, o distinguirla por `amount`.
-   Reconstruir después `preflop_stats`, `player_stats`, `profiles`, `behavior`, `profile_ranges`.
-2. **Auditar `player_ranges.py`**, en este orden:
+3. **Auditar `player_ranges.py`**, en este orden:
    - `_prior_grid`: indexar las tablas por par de posiciones (o dejar de usarlas como prior) y **avisar**
      cuando hay fallback, en vez de devolver la tabla de otro spot sin marcarlo.
    - `load()`: restaurar `profiles` y `omega`.
    - ω: excluir al propio jugador de `peers` y renormalizar por celda.
-3. **Auditar `rules.py`**: contrato de `candidates`, `nut_advantage`, `villain_bet_flop`, `_en_flop_ip`.
-4. **Unificar la definición de `pending`** y repetir `tools/auditar_anchor.py`.
-5. **Cablear `equity_main`** en el flujo real y verificar que no altera la decisión.
-6. **Decidir el alcance de multiway**: rediseño conjunto o limitación explícita a HU.
-7. Sólo entonces, **Fase D**: recalcular derivados y empezar a calibrar `BASE_WEIGHT_MAP` y `_ACTION_PROBS`.
+4. **Auditar `rules.py`**: contrato de `candidates`, `nut_advantage`, `villain_bet_flop`, `_en_flop_ip`.
+5. **Unificar la definición de `pending`** y repetir `tools/auditar_anchor.py` ya sobre la ventana fiable.
+6. **Cablear `equity_main`** en el flujo real y verificar que no altera la decisión.
+7. **Decidir el alcance de multiway**: rediseño conjunto o limitación explícita a HU.
+8. Sólo entonces, **Fase D**: recalcular derivados y empezar a calibrar `BASE_WEIGHT_MAP` y `_ACTION_PROBS`.
 
-> Nota: los pasos 1 y 2 invalidan los derivados actuales (`preflop_stats.json`, `player_stats.json`,
+> Nota: los pasos 1–3 invalidan los derivados actuales (`preflop_stats.json`, `player_stats.json`,
 > `profiles.json`, `behavior.json`, `profile_ranges.json`, `observations.json`). Hay que reconstruirlos
 > antes de volver a medir nada. Por eso el orden importa: medir ahora daría cifras que luego habría que tirar.
+>
+> Y una advertencia sobre el paso 1: al recortar a 900 la muestra baja de 1280 a 900 y varios `opp` caen
+> por debajo de 50 (PEZ `facing_3bet` queda en **15**). Restringir la ventana **hace el problema de
+> escasez más visible**, no menos. Es lo correcto: prefiero 15 observaciones limpias a 21 mezcladas con
+> datos dudosos.
 
 ---
 
