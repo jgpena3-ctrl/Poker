@@ -35,6 +35,20 @@ NULL_STATES = {'retirarse', 'ausente', 'inactivo', 'sin jugador', 'fuera'}
 MANUAL_CARDS = {}    # pid -> card_str override from GUI
 MANUAL_WINNER = None  # None = auto-detect, or list of pids e.g. ['p2', 'p3']
 MANUAL_INACTIVE = set()    # set of pids marked inactive from GUI
+
+
+def _es_ciega_obligatoria(action, bb_amount, blind, tol=0.05):
+    """True si una acción existente del BB es realmente la ciega obligatoria.
+
+    No basta con que sea `pos == 'BB' and action == 'b'`: un 'b' del BB por
+    encima de la ciega es una subida voluntaria y marcarla como ciega sería
+    inventar una decisión que no ocurrió (revision_2, P1).
+    """
+    try:
+        amt = float(action.get('amount') or 0.0)
+    except (TypeError, ValueError):
+        return False
+    return amt <= blind + tol and bb_amount <= blind + tol
 MANUAL_POSITIONS = {}      # pid -> position override from GUI (e.g. {'hero': 'BTN'})
 STATE_ACTIONS = {'retirarse': 'f', 'igualar': 'c', 'subir': 'r', 'apostar': 'b', 'apostar todo': 'b', 'pasar': 'x', 'mostrar cartas': 'c'}
 
@@ -447,13 +461,23 @@ class LiveRecorder:
         bb_bet = bids.get('BB')
         bb_open = bb_bet if (bb_bet is not None and bb_bet > 0) else self._blind_bb
         if bb_pid is not None and bb_open > 0:
-            if not any(a['pos'] == 'BB' and a['action'] == 'b' for a
-                       in self.hand['streets']['preflop']['actions']):
+            existing = next(
+                (a for a in self.hand['streets']['preflop']['actions']
+                 if a['pos'] == 'BB' and a['action'] == 'b'), None)
+            if existing is None:
                 # `blind: True` da identidad explícita a la ciega: learn.py no
                 # necesita deducirla por el índice de la secuencia.
                 self.hand['streets']['preflop']['actions'].append(
                     {'pos': 'BB', 'action': 'b', 'amount': round(bb_open, 2),
                      'amount_type': 'observed', 'blind': True})
+            elif _es_ciega_obligatoria(existing, bb_open, self._blind_bb):
+                # Ya había un 'b' del BB y ES la ciega: se normaliza con la
+                # marca explícita, sin duplicar el evento (revision_2, P1).
+                existing['amount'] = round(bb_open, 2)
+                existing['amount_type'] = 'observed'
+                existing['blind'] = True
+            # Si el 'b' del BB ya existente es MAYOR que una ciega, es una
+            # subida voluntaria: no se marca (marcarla sería inventar).
             max_bet = max(max_bet, bb_open)
 
         # 3) Movimientos voluntarios de los demás (c / r)

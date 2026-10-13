@@ -190,13 +190,33 @@ def test_player_omega_fade_in():
 def test_p_player_escala_con_omega():
     m = pr.ProfileRangeModel.from_hands([HAND_OPEN], labels={'Alfa': 'R'})
     w = m.player_omega('Alfa', 'no_raise')
+    got = m.p_player('Alfa', 'no_raise', 'open')
     if w == 1.0:                     # sin perfiles reales: escala trivial
-        assert np.array_equal(m.p_player('Alfa', 'no_raise', 'open'),
-                              m.p_matrix('R', 'no_raise', 'open'))
+        assert np.array_equal(got, m.p_matrix('R', 'no_raise', 'open'))
     else:
-        m2 = m.p_matrix('R', 'no_raise', 'open') * w
-        assert np.allclose(m.p_player('Alfa', 'no_raise', 'open'),
-                           np.clip(m2, 0.0, 1.0), atol=1e-6)
+        # Contrato Opción B: ω es factor de FORMA -> tras escalar y clip,
+        # el grid se renormaliza a suma 1 (RangeState normaliza igual luego).
+        m2 = np.clip(m.p_matrix('R', 'no_raise', 'open') * w, 0.0, 1.0)
+        assert got.sum() == pytest.approx(1.0, abs=1e-6)
+        assert np.allclose(got, m2 / m2.sum(), atol=1e-6)
+
+
+def test_p_player_omega_bajo_no_deja_masa_a_la_mitad():
+    """ω<1 no debe dejar el grid con la mitad de masa (bug §6.1)."""
+    from motor.profile import PlayerProfile, Profiles
+    profs = Profiles()
+    profs.profiles = {
+        'Baja': PlayerProfile('Baja', n=40, stats={'pfr': 0.02}),
+        'P1': PlayerProfile('P1', n=40, stats={'pfr': 0.30}),
+        'P2': PlayerProfile('P2', n=40, stats={'pfr': 0.30}),
+    }
+    labels = {n: p.label for n, p in profs.profiles.items()}
+    m = pr.ProfileRangeModel.from_hands([], labels=labels)
+    m.profiles = profs
+    w = m.player_omega('Baja', 'no_raise')
+    assert w < 1.0                       # jugador mucho menos agresivo
+    got = m.p_player('Baja', 'no_raise', 'open')
+    assert got.sum() == pytest.approx(1.0, abs=1e-6)
 
 def test_to_json_incluye_omega():
     m = pr.ProfileRangeModel.from_hands([HAND_OPEN], labels={'Alfa': 'R'})

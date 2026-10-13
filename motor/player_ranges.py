@@ -171,6 +171,10 @@ class ProfileRangeModel:
         """
         prefix = CAT_TABLE.get(action)
         if not prefix:
+            warnings.warn(
+                f'_prior_grid: action={action!r} no está en CAT_TABLE; '
+                f'usando FLAT_PRIOR={FLAT_PRIOR}',
+                RuntimeWarning, stacklevel=2)
             return np.full((13, 13), FLAT_PRIOR, dtype=np.float32)
         tables = _load_tables()
         chosen, source = None, None
@@ -275,9 +279,16 @@ class ProfileRangeModel:
                  pos: str = '', villain_pos: str = '') -> np.ndarray:
         """Grid 13×13 del jugador: perfil escalado por su ω del spot.
 
-        ω multiplica celda a celda (no una masa global): al renormalizar el
-        grid completo una sola vez, un ω<0.6 dejaba celdas truncadas en 0 sin
-        renormalizar. Aquí cada celda se escala y se recorta a [0,1].
+        Contrato de ω (decidido en revision_1 §3, Opción B): ω es un factor de
+        **forma**, no de masa. Es decir, describe CÓMO se distribuye el rango
+        del jugador, no cuánto rango tiene. Por eso, tras escalar y recortar a
+        [0,1], el grid se renormaliza a suma 1: con ω<1 ya no queda con la
+        mitad de masa, y con ω>1 no se satura en celdas sueltas.
+
+        Justificación: `RangeState` normaliza los pesos al construir `.weights`,
+        así que sólo importa la forma relativa. Renormalizar a masa constante
+        (Opción A) habría limitado artificialmente el rango de los jugadores
+        más agresivos.
         """
         perfil = self.perfil.get(player)
         if perfil is None:
@@ -286,7 +297,11 @@ class ProfileRangeModel:
         w = self.player_omega(player, spot)
         if w != 1.0:
             m *= w
-        return np.clip(m, 0.0, 1.0)
+            m = np.clip(m, 0.0, 1.0)
+            s = float(m.sum())
+            if s > 0.0:
+                m /= s
+        return m
 
     def prob_vec_player(self, player: str, spot: str, action: str,
                         pos: str = '', villain_pos: str = '') -> np.ndarray:

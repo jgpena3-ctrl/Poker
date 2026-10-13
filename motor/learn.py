@@ -186,18 +186,24 @@ def _preflop_sequence(hand):
     return seq
 
 
-def _es_ciega_bb(i, pos, act, amount, is_blind, prev_aggr, bb=BB):
+def _es_ciega_bb(i, pos, act, amount, is_blind, voluntary_before, bb=BB):
     """True si esta acción es la ciega obligatoria del BB (no una decisión).
 
-    Orden de confianza (revision_2, Hallazgo 3):
-      1. Marca explícita del recorder (`blind`) — no depende del índice.
+    `i` se conserva en la firma por compatibilidad, pero **no** se usa: la
+    detección no depende de la posición en la secuencia (revision_2, Hallazgo 3).
+
+    Orden de confianza:
+      1. Marca explícita del recorder (`blind`) — identidad, no heurística.
       2. Respaldo estructural para datos antiguos: posición BB, acción 'b',
-         importe de una ciega y sin ninguna subida/limpe anterior. No se usa
-         "i == 0" porque el recorder puede emitir folds antes de la ciega.
+         importe de una ciega y sin ninguna acción voluntaria anterior.
+
+    El respaldo no usa `i == 0`: medido sobre la ventana fiable, 24 de 586
+    manos tienen la primera acción 'b' del BB en un índice > 0 (por folds o
+    limpes previos), y la regla `i == 0` las habría clasificado mal.
     """
     if is_blind:
         return True
-    if pos == 'BB' and act == 'b' and not prev_aggr \
+    if pos == 'BB' and act == 'b' and not voluntary_before \
             and amount is not None and amount <= bb + 1e-9:
         return True
     return False
@@ -210,19 +216,19 @@ def preflop_events(hand, bb=BB):
     decided = set()
     raises = 0
     limps = 0
-    prev_aggr = False          # ¿hubo ya una subida o un limpe antes?
+    voluntary_before = False   # ¿hubo ya una acción voluntaria (subida o limp)?
     for i, (pos, act, amount, is_blind) in enumerate(seq):
         es_ciega_bb = _es_ciega_bb(i, pos, act, amount, is_blind,
-                                   prev_aggr, bb)
+                                   voluntary_before, bb)
         if es_ciega_bb:
             continue
         if pos in decided:
             if act in ('b', 'r'):
                 raises += 1
-                prev_aggr = True
+                voluntary_before = True
             elif act == 'c' and raises == 0:
                 limps += 1
-                prev_aggr = True
+                voluntary_before = True
             continue
         decided.add(pos)
         category, denom = classify_first_action(act, amount, raises, limps, bb)
@@ -240,10 +246,10 @@ def preflop_events(hand, bb=BB):
         ))
         if act in ('b', 'r'):
             raises += 1
-            prev_aggr = True
+            voluntary_before = True
         elif act == 'c' and raises == 0:
             limps += 1
-            prev_aggr = True
+            voluntary_before = True
     return events
 
 

@@ -310,6 +310,64 @@ def test_stats_to_dict_incluye_posiciones():
     assert 'Jarduan|CO' in d['denoms_pos']
 
 
+# ---------------------------------------------------------------------------
+# Checklist de aceptación de revision_2 (8/8)
+# ---------------------------------------------------------------------------
+
+def test_aceptacion_1_bb_marcada_no_es_open_ni_limp():
+    """[ ] Un BB con blind explícita nunca se contabiliza como open ni limp."""
+    h = _hand(preflop=[{'pos': 'BB', 'action': 'b', 'amount': 1.0,
+                        'blind': True}, ('UTG', 'f', 0.0)])
+    evs = preflop_events(h)
+    assert [e.pos for e in evs] == ['UTG']
+    assert not any(e.pos == 'BB' for e in evs)
+
+
+def test_aceptacion_2_limp_seguido_de_raise_no_son_dos_subidas():
+    """[ ] Un limp seguido de raise produce un limp y una subida real."""
+    h = _hand(preflop=[('MP', 'c', 1.0), ('CO', 'r', 3.0), ('BTN', 'c', 3.0)])
+    evs = preflop_events(h)
+    assert [e.category for e in evs] == ['limp', 'rol', 'call_open']
+    # el BTN ve UNA subida, no dos: por eso call_open y no call_3bet
+    assert evs[2].category == 'call_open'
+
+
+def test_aceptacion_3_raise_sobre_limp_es_rol():
+    """[ ] Una subida posterior al limp se clasifica como raise-over-limp."""
+    h = _hand(preflop=[('MP', 'c', 1.0), ('CO', 'r', 3.0), ('BTN', 'f', 0.0)])
+    evs = preflop_events(h)
+    assert evs[1].category == 'rol'
+    assert evs[1].denom == 'no_raise'      # no cuenta como facing_open
+    assert evs[2].category == 'fold_vs_open'
+
+
+def test_aceptacion_4_folds_antes_no_alteran_la_ciega():
+    """[ ] Los folds previos a la ciega no alteran su clasificación."""
+    a = _hand('A', preflop=[('BB', 'b', 1.0), ('UTG', 'f', 0), ('CO', 'f', 0)])
+    b = _hand('B', preflop=[('UTG', 'f', 0), ('CO', 'f', 0), ('BB', 'b', 1.0)])
+    ca = [e.category for e in preflop_events(a)]
+    cb = [e.category for e in preflop_events(b)]
+    assert ca == ['fold', 'fold']
+    assert cb == ['fold', 'fold']
+
+
+def test_aceptacion_5_squeeze_necesita_limp_previo():
+    """squeeze = 3bet con limpe; sin limpe debe ser 3bet."""
+    con_limp = _hand('A', preflop=[('MP', 'c', 1.0), ('CO', 'r', 3.0)])
+    sin_limp = _hand('B', preflop=[('UTG', 'b', 2.5), ('CO', 'r', 8.0)])
+    assert preflop_events(con_limp)[1].category == 'squeeze'
+    assert preflop_events(sin_limp)[1].category == '3bet'
+
+
+def test_aceptacion_6_bb_no_detectado_si_hay_limp_antes():
+    """Un 'b' del BB por encima de la ciega tras un limp NO es la ciega."""
+    h = _hand(preflop=[('MP', 'c', 1.0), ('BB', 'b', 1.0)])
+    evs = preflop_events(h)
+    bb = [e for e in evs if e.pos == 'BB']
+    assert bb, 'con un limp previo no puede assumeirse que sea la ciega'
+    assert bb[0].category in ('rol', 'limp')
+
+
 def test_hero_names_default():
     assert 'Jarduan' in HERO_NAMES
     assert hand_known('Jarduan', '') is False

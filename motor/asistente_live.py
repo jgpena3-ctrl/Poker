@@ -135,20 +135,27 @@ def _preflop_spot(hand, villain_pos):
     return 'no_raise', 'open'
 
 
-def _pf_rival_pos(hand, pos_name):
-    """Posición del agresor preflop para `pos_name` ('' si no hay).
+def _pf_rival_pos(hand, pos_name, spot=''):
+    """Posición del rival relevante para el prior preflop de `spot`.
 
     Las tablas `3B_X_vs_Y` / `Call_OR_X_vs_Y` están indexadas por par, así que
-    el prior necesita saber contra quién actúa, no sólo la posición propia.
+    el prior necesita saber contra QUIÉN actúa, no sólo la posición propia.
+
+    - spot == 'no_raise'    → no hay agresor previo; '' (no aplica).
+    - spot == 'facing_open' → el rival es QUIEN ABRIÓ (el primer agresor), no
+      el último: si el open fue 3beteado, el call del hero es contra el open.
+    - spot == 'facing_3bet' → el rival es QUIEN SUBIÓ (el segundo agresor).
     """
     if hand is None:
         return ''
     acts = (hand.get('streets', {}).get('preflop', {}) or {}).get('actions', [])
-    # El último agresor *distinto* del jugador, en orden inverso de la calle.
-    for a in reversed(acts):
-        p, act = a.get('pos'), a.get('action')
-        if act in ('b', 'r') and p and p != pos_name:
-            return p
+    agresores = [a.get('pos') for a in acts
+                 if a.get('action') in ('b', 'r')
+                 and a.get('pos') and a.get('pos') != pos_name]
+    if spot == 'facing_open':
+        return agresores[0] if agresores else ''
+    if spot == 'facing_3bet':
+        return agresores[1] if len(agresores) >= 2 else ''
     return ''
 
 
@@ -912,10 +919,9 @@ class Asistente:
         # heroes conocidos (no solo el propio: el segundo hero tampoco puede
         # estar en el rango de nadie).
         spot, action = _preflop_spot(self.rec.hand, villain_pos)
-        reach = self.models.range_model.prob_vec(perfil, spot, action,
-                                                 pos=villain_pos,
-                                                 villain_pos=_pf_rival_pos(
-                                                     self.rec.hand, villain_pos))
+        reach = self.models.range_model.prob_vec(
+            perfil, spot, action, pos=villain_pos,
+            villain_pos=_pf_rival_pos(self.rec.hand, villain_pos, spot))
         rs = RangeState(reach=reach)
         rs.set_known_cards(list(hero) + list(board) + list(blockers))
 
