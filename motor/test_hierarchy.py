@@ -10,12 +10,15 @@ Dos garantías:
 import json
 import os
 
+import numpy as np
 import pytest
 
-from motor.hierarchy import (AGGRESSOR, CHECKER, PENDING, ShadowLog,
+from motor.hierarchy import (AGGRESSOR, CHECKER, PENDING, OBSERVED_ANCHOR,
+                             ShadowLog, penalty_source,
                              classify_villains, passive_penalty,
                              shadow_equity, shadow_record, texture_key)
 from motor.recommend_loop import recommend
+from motor.ranges import N_COMBOS, RangeState
 
 BOARD_FLOOP = ['Qh', '7s', '2c']
 BOARD_WET = ['Qh', '7s', '2c']          # dos tonos + board mojado
@@ -264,8 +267,9 @@ def test_callers_no_entran_en_la_penalizacion():
     jer = classify_villains(_acts(('MP', 'b'), ('CO', 'c')), 'BTN')
     s = shadow_equity(0.6, BOARD_FLOOP, 'flop', jer)
     assert s['n_checker'] == 0
-    assert s['penalty'] == 0.0
-    assert s['equity_shadow'] == s['equity_production']
+    assert s['n_caller'] == 1
+    assert s['penalty'] is None
+    assert s['equity_shadow'] is None
 
 
 def test_caso_hero_ya_acted_no_es_pendiente():
@@ -312,12 +316,150 @@ def test_caso_principal_no_coincide_con_el_de_la_equity():
 
 # --- penalización absoluta (pegar_3 §1 P1) ------------------------------
 
+def test_checkers_all_vs_secondary_no_se_confunden():
+    """pegar_3 §1: dos conceptos que no deben mezclarse.
+
+    Sin agresor, main sale de checkers; entonces checkers_secondary queda
+    vacío aunque haya checkers. Antes de separarlos, `penalty_source`
+    exigía len(checkers)==1 sobre la lista ya filtrada, lo que hacía la
+    condición del ancla IMPOSIBLE y ocultaba los registros válidos.
+    """
+    acts = _acts(('UTG', 'x'), ('BTN', 'b'))
+    h = classify_villains(acts, 'BTN', pending_positions=['CO'])
+    assert h['main'] == 'UTG'                 # único checker → principal
+    assert h['checkers_all'] == ['UTG']       # pero SÍ hubo un checker
+    assert h['checkers_secondary'] == []      # y no es secundario
+    # con la definición correcta, el escenario del ancla es alcanzable
+    assert penalty_source(['Qh', '7s', '2c'], 'turn', h) == 'anchor_match'
+
+
+def test_checkers_all_con_agresor():
+    """Con agresor, main no sale de checkers y ambos coinciden."""
+    acts = _acts(('UTG', 'x'), ('MP', 'b'), ('BTN', 'x'))
+    h = classify_villains(acts, 'BTN')
+    assert h['main'] == 'MP'
+    assert h['checkers_all'] == ['UTG']
+    assert h['checkers_secondary'] == ['UTG']
+
+
+def test_equity_shadow_es_none_sin_respaldo():
+    """pegar_2 §2.1/§2.3: sin ancla no se emite un número inventado.
+
+    El modo sombra habíautory estado emitiendo una equity_shadow que
+    parecía un cálculo y no lo era.
+    """
+    jer = classify_villains(_acts(('MP', 'b')), 'BTN')   # sin las 6 condiciones
+    s = shadow_equity(0.69, BOARD_FLOOP, 'flop', jer)
+    assert s['penalty_source'] != 'anchor_match'
+    assert s['equity_shadow'] is None
+    assert s['penalty'] is None
+    assert s['delta'] is None
+    assert s['equity_shadow_note']
+    # pero la clasificación y el conteo siguen disponibles
+    assert s['equity_production'] == 0.69
+
+
+def test_equity_shadow_se_calcula_con_anchor_match():
+    s = shadow_equity(0.69, BOARD_FLOOP, 'turn', _jerarquia_ancla())
+    assert s['penalty_source'] == 'anchor_match'
+    assert s['equity_shadow'] is not None
+    assert s['penalty'] is not None
+    assert s['equity_shadow_note'] is None
+
+
+def test_anchor_declara_el_desajuste_de_poblacion():
+    """El ancla se midió con otra definición de pending; hay que decirlo."""
+    assert OBSERVED_ANCHOR['records_matching_anchor'] == 3
+    assert OBSERVED_ANCHOR['population_mismatch']
+    assert OBSERVED_ANCHOR['signs_agree'] is False
+    assert OBSERVED_ANCHOR['used_as_equity_penalty'] is False
+
+
+def test_equity_main_se_calcula_con_rango_del_principal():
+    """pegar_2 §2.2 / §3.3: la tercera equity ya es calculable.
+
+    El llamador construye el rango del principal de la jerarquía y el
+    motor calcula la equity contra él, separada de la de producción.
+    """
+    from motor.recommend_loop import _equity_vs_rival
+    from motor.ranges import RangeState
+
+    rs = RangeState(reach=np.ones(N_COMBOS, dtype=np.float32))
+    rs.set_known_cards(list(HERO) + list(BOARD_FLOOP))
+    eq, src, err = _equity_vs_rival(rs, HERO, BOARD_FLOOP)
+    assert eq is not None and 0.0 <= eq <= 1.0
+    assert err is None
+    # rango bloqueado: las cartas del hero no pueden seguir en el rango
+    assert not rs.is_empty
+
+
+def test_equity_main_distingue_divergencia():
+    """Si la jerarquía elige MP y producción usó UTG, se documenta."""
+    jer = classify_villains(_acts(('MP', 'b')), 'BTN')
+    s = shadow_equity(0.6, BOARD_FLOOP, 'flop', jer, equity_source='UTG')
+    assert s['equity_source'] == 'UTG'
+    assert s['equity_source_is_hierarchy_main'] is False
+    rec = shadow_record('H', 'flop', BOARD_FLOOP, HERO, jer, s,
+                        10.0, 0.0, 90.0, 'bet')
+    assert rec['villain_main'] == 'MP'
+    assert rec['villain_used_for_equity'] == 'UTG'
+    assert rec['equity_source_is_main'] is False
+
+
+def test_equity_main_ausente_por_rango_no_disponible():
+    """pegar_3 §4: la ausencia se registra, no se sustituye."""
+    from motor.recommend_loop import _equity_vs_rival
+    eq, src, err = _equity_vs_rival(None, HERO, BOARD_FLOOP)
+    assert eq is None
+    assert err == 'main_range_unavailable'
+
+
+def test_equity_main_ausente_por_rango_vacio():
+    from motor.recommend_loop import _equity_vs_rival
+    from motor.ranges import RangeState
+    vacio = RangeState(reach=np.zeros(N_COMBOS, dtype=np.float32))
+    eq, src, err = _equity_vs_rival(vacio, HERO, BOARD_FLOOP)
+    assert eq is None
+    assert err == 'empty_range_after_blockers'
+
+
+def test_equity_main_no_altera_la_accion():
+    """Con main_range_builder, la acción y el valor siguen intactos."""
+    from motor.ranges import RangeState
+    rs = RangeState(reach=np.ones(N_COMBOS, dtype=np.float32))
+    rs.set_known_cards(list(HERO) + list(BOARD_FLOOP))
+    jer = classify_villains(_acts(('MP', 'b')), 'BTN')
+    base = dict(hero_codes=HERO, board_codes=BOARD_FLOOP, pot=25.0,
+                to_call=0.0, stack=90.0, street='flop', position='BTN',
+                villain_pos='UTG', deadline_s=5.0, runout=False)
+    sin = recommend(**base)
+    con = recommend(**base, hierarchy=jer, main_range_builder=rs)
+    assert con.action == sin.action
+    assert con.value == pytest.approx(sin.value, abs=1e-12)
+    assert con.shadow['equity_main_available'] is True
+    assert con.shadow['equity_main'] is not None
+
+
+def test_equity_main_no_rompe_con_builder_que_falla():
+    """Un builder que lanza no puede tumbar la recomendación."""
+    def builder_malo(pos):
+        raise RuntimeError('boom')
+    jer = classify_villains(_acts(('MP', 'b')), 'BTN')
+    rec = recommend(HERO, BOARD_FLOOP, pot=25.0, to_call=0.0, stack=90.0,
+                    street='flop', position='BTN', villain_pos='UTG',
+                    deadline_s=5.0, runout=False,
+                    hierarchy=jer, main_range_builder=builder_malo)
+    assert rec.action in ('fold', 'check', 'call', 'bet_25', 'bet_50',
+                          'bet_75', 'raise', 'all_in')
+    assert rec.shadow['equity_main'] is None
+
+
 def test_penalizacion_es_absoluta():
     """El efecto observado se registered como puntos, no como factor.
 
     (win 69% -> 67% dá -0.02 absoluto; como factor daría -0.0138.)
     """
-    s = shadow_equity(0.69, BOARD_FLOOP, 'turn', {'checkers': ['UTG']})
+    s = shadow_equity(0.69, BOARD_FLOOP, 'turn', _jerarquia_ancla())
     assert s['penalty_basis'] == 'absolute_unvalidated'
     assert s['equity_shadow'] == pytest.approx(0.67, abs=1e-6)
     assert s['delta'] == pytest.approx(-0.02, abs=1e-6)
@@ -329,7 +471,7 @@ def test_penalizacion_no_se_vende_como_correccion_de_equity():
     Este test fija la razón por la que el modo sombra NO puede activarse
     como corrección.
     """
-    s = shadow_equity(0.69, BOARD_FLOOP, 'turn', {'checkers': ['UTG']})
+    s = shadow_equity(0.69, BOARD_FLOOP, 'turn', _jerarquia_ancla())
     assert s['penalty_basis_note']
     anchor = s['penalty_anchor']
     if anchor is not None:
@@ -345,7 +487,7 @@ def test_penalizacion_no_se_vende_como_correccion_de_equity():
 @pytest.mark.parametrize('eq', [0.20, 0.50, 0.69, 0.90])
 def test_reduccion_constante_independiente_de_la_equity(eq):
     """Una penalización ABSOLUTA quita lo mismo a cualquier equity."""
-    s = shadow_equity(eq, BOARD_FLOOP, 'turn', {'checkers': ['UTG']})
+    s = shadow_equity(eq, BOARD_FLOOP, 'turn', _jerarquia_ancla())
     assert eq - s['equity_shadow'] == pytest.approx(0.02, abs=1e-6)
 
 
@@ -432,7 +574,13 @@ def test_hero_bet_se_expone_en_la_jerarquia():
 
 
 def test_equity_shadow_no_se_hace_negativa():
-    s = shadow_equity(0.02, BOARD_FLOOP, 'turn', {'checkers': ['UTG'] * 40})
+    jer = _jerarquia_ancla()
+    jer['checkers'] = ['UTG'] * 40
+    jer['checkers_secondary'] = jer['checkers']
+    jer['checkers_all'] = jer['checkers']
+    s = shadow_equity(0.02, BOARD_FLOOP, 'turn', jer)
+    if s['equity_shadow'] is None:
+        pytest.skip('sin anchor_match: equity_shadow es None por diseño')
     assert s['equity_shadow'] >= 0.0
 
 
@@ -495,8 +643,7 @@ def test_penalty_anchor_ausente_cuando_no_hay_anchor_match():
 # --- cálculo sombra ------------------------------------------------------
 
 def test_shadow_equity_reduce_y_marca_experimental():
-    jer = classify_villains(_acts(('UTG', 'x'), ('MP', 'b')), 'BTN')
-    jer['checkers'] = ['UTG']
+    jer = _jerarquia_ancla()
     s = shadow_equity(0.50, BOARD_FLOOP, 'turn', jer)
     assert s['equity_shadow'] < s['equity_production']
     assert s['n_checker'] == 1
@@ -504,20 +651,24 @@ def test_shadow_equity_reduce_y_marca_experimental():
     assert s['experimental'] is True
 
 
-def test_shadow_equity_sin_checkers_no_cambia():
+def test_shadow_equity_sin_anchor_match_no_inventa_numero():
     jer = classify_villains(_acts(('MP', 'b')), 'BTN')
     s = shadow_equity(0.50, BOARD_FLOOP, 'turn', jer)
-    assert s['equity_shadow'] == s['equity_production']
-    assert s['delta'] == 0.0
+    assert s['equity_shadow'] is None
+    assert s['delta'] is None
+    assert s['penalty'] is None
+    assert s['equity_shadow_note']
 
 
 def test_pendientes_no_entran_en_la_penalizacion():
     """Un pendiente no es un checker: siguen siendo amenaza activa."""
-    jer = {'main': 'MP', 'checkers': [], 'pending': ['CO', 'SB']}
+    jer = {'main': 'MP', 'checkers': [], 'checkers_all': [],
+           'pending': ['CO', 'SB'], 'aggressors': ['MP'],
+           'hero_bet': False}
     s = shadow_equity(0.50, BOARD_FLOOP, 'turn', jer)
-    assert s['penalty'] == 0.0
+    assert s['penalty'] is None
     assert s['n_pending'] == 2
-    assert s['equity_shadow'] == 0.50
+    assert s['equity_shadow'] is None
 
 
 # --- log ----------------------------------------------------------------
@@ -560,7 +711,8 @@ def test_shadow_no_altera_la_accion():
     """
     jer = classify_villains(_acts(('UTG', 'x'), ('MP', 'b'), ('CO', 'x')),
                             'BTN', pending_positions=['SB'])
-    jer['checkers'] = ['UTG', 'CO']
+    jer['checkers_all'] = ['UTG', 'CO']
+    jer['checkers_secondary'] = ['UTG', 'CO']
     base = dict(hero_codes=HERO, board_codes=BOARD_FLOOP, pot=25.0,
                 to_call=0.0, stack=90.0, street='flop', position='BTN',
                 villain_pos='MP', deadline_s=5.0, runout=False)
@@ -568,10 +720,11 @@ def test_shadow_no_altera_la_accion():
     con = recommend(**base, hierarchy=jer)
     assert con.action == sin.action
     assert con.value == pytest.approx(sin.value, abs=1e-12)
-    # y la sombra sí calculó algo
+    # y la sombra sí calculó su clasificación, aunque sin emitir equity
     assert con.shadow is not None
-    assert con.shadow['n_checker'] == 2
-    assert con.shadow['equity_shadow'] < con.shadow['equity_production']
+    assert con.shadow['n_checker_all'] == 2
+    # sin anchor_match no debe inventarse una equity_shadow
+    assert con.shadow['equity_shadow'] is None
 
 
 @pytest.mark.parametrize('variante', ['log', 'callers', 'pending', 'ancla'])

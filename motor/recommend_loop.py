@@ -176,6 +176,35 @@ def build_villain_range(hero_codes, board_codes, villain_pos='UTG',
                                    extra_blockers)
 
 
+def _equity_vs_rival(range_builder, hero_codes, board_codes):
+    """Equity del hero contra un rango rival construido aparte.
+
+    Para la `equity_main` del modo sombra: el rango del rival principal de
+    la jerarquía, que puede NO ser el que usa producción.
+
+    `range_builder` es un RangeState ya bloqueado con las cartas del hero
+    y del board. Si no es utilizable, se prefiere la ausencia explícita a
+    un valor calculado contra el rival equivocado (pegar_3 §2).
+
+    Devuelve (equity, fuente, nota_error). equity es None si no se pudo.
+    """
+    from .situation import equity_vs_range
+
+    rs = range_builder
+    if rs is None:
+        return None, None, 'main_range_unavailable'
+    if getattr(rs, 'is_empty', True):
+        return None, None, 'empty_range_after_blockers'
+    try:
+        # equity_vs_range devuelve (equity, wins, ties, losses)
+        eq = equity_vs_range(hero_codes, board_codes, villain_reach=rs)[0]
+        return float(eq), getattr(rs, 'position', '') or 'main', None
+    except RangeError as e:
+        return None, None, f'equity_calculation_failed: {e}'
+    except Exception as e:      # no debe tumbar la recomendación
+        return None, None, f'equity_calculation_failed: {e}'
+
+
 def recommend(hero_codes, board_codes, *, pot: float, to_call: float = 0.0,
                stack: float = 0.0, street: str = 'flop', position: str = '',
                villain_pos: str = 'UTG', villain_cards: tuple = (),
@@ -198,6 +227,7 @@ def recommend(hero_codes, board_codes, *, pot: float, to_call: float = 0.0,
                hand_role: str = None,
                range_advantage_str: str = None,
                hierarchy: Optional[Dict] = None,
+               main_range_builder=None,
                shadow_log=None,
                hand_id: str = '') -> Recommendation:
     """Recomienda acción para el hero con la mano y el estado dados.
@@ -449,6 +479,23 @@ def recommend(hero_codes, board_codes, *, pot: float, to_call: float = 0.0,
             shadow_info = shadow_equity(sit.equity, current_board_codes,
                                        street, hierarchy,
                                        equity_source=eq_source)
+            # equity_main: equity contra el rango del rival PRINCIPAL de la
+            # jerarquía, calculada aparte. Sin ella no se puede medir el
+            # efecto de los rivales secundarios. Es opcional y NUNCA toca
+            # la decisión (pegar_2 §2.2, §3.3).
+            if main_range_builder is not None and hierarchy.get('main'):
+                try:
+                    eq_main, main_src, main_err = _equity_vs_rival(
+                        main_range_builder, hero_codes, current_board_codes)
+                    shadow_info['equity_main'] = eq_main
+                    shadow_info['equity_main_available'] = eq_main is not None
+                    shadow_info['equity_main_source'] = main_src
+                    shadow_info['equity_main_note'] = main_err
+                except Exception as e:
+                    shadow_info['equity_main'] = None
+                    shadow_info['equity_main_available'] = False
+                    shadow_info['equity_main_source'] = None
+                    shadow_info['equity_main_note'] = f'error: {e}'
             # El registro es opcional; el cálculo no. Con `hierarchy` el
             # llamador ya pidió la comparación, aunque no la persista.
             if shadow_log is not None:

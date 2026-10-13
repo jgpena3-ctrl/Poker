@@ -61,19 +61,23 @@ PENDING = 'pending'          # no ha actuado: amenaza activa
 # Penalización por checkers
 # ---------------------------------------------------------------------------
 
-# Efecto marginal por UN checker, sobre la probabilidad de ganar.
-# Ancla: turn+seco medido ≈0.02 (69% -> 67%, n=36 por celda).
+# UNVALIDATED. Ninguno de estos valores viene de una medición válida:
+#   rainbow/turn = 0.02  → del ancla invalidada (ver OBSERVED_ANCHOR)
+#   monotone/two_tone    → extrapolación sin respaldo
+#   flop=1.5, river=0.5  → inventados
+#   PAIR_FACTOR          → inventado
+# No deben usarse como corrección de equity. Ver penalty_source().
 TEX_FACTOR = {
     'monotone': 0.06,     # board conectado: outs reales y frecuentes
     'two_tone': 0.04,
-    'rainbow': 0.02,      # <-- el único con dato directo
+    'rainbow': 0.02,      # el único con "dato", y no válido
 }
 
 # Factor por calle. Flop deja dos cartas por salir (más riesgo); river
 # ninguna: la amenaza no son outs nuevos sino manos que ya ganan.
 STREET_FACTOR = {
     'flop': 1.5,
-    'turn': 1.0,          # <-- calibrado contra la medición
+    'turn': 1.0,          # el que se "calibró" con el ancla invalidada
     'river': 0.5,
 }
 
@@ -176,16 +180,24 @@ OBSERVED_ANCHOR = {
     'used_as_equity_penalty': False,
     'verdict': ('observación de win rate con signo distinto en equity; '
                 'NO justifica una penalización de equity'),
-    # Verificado sobre las 654 observaciones de la DB (tools/auditar_anchor.py):
-    'records_matching_anchor': 0,
+    # Verificado sobre las 654 observaciones de la DB (tools/auditar_anchor.py).
+    # La primera vez dio 0. Era en parte ARTEFACTO PROPIO: penalty_source()
+    # exigía len(checkers)==1, pero checkers excluía al principal, y sin
+    # agresor el único checker ES el principal -> la condición era
+    # insatisfacible. Corregido separando checkers_all de
+    # checkers_secondary.
+    'records_matching_anchor': 3,
     'records_previously_labelled_measured': 199,
     'support_note': (
-        'label_measured exigía solo calle+textura, así que 199 registros '
-        'lo resultaron siendo. Al exigir las SEIS condiciones del ancla '
-        '(turn, rainbow, hero que apuesta, sin agresor, 1 checker, '
-        '1 pendiente) ninguno coincide: la forma más frecuente es '
-        '(hero_apuesta, 0 agresores, 0 checkers, 3-4 pendientes). '
-        'El escenario medido no aparece en los datos.'),
+        '199 registros llevaban la etiqueta measured porque solo se '
+        'comprobaba calle+textura. Al exigir las SEIS condiciones solo '
+        'coinciden 3 de 654. Y aun esos 3 no son correspondencia limpia: '
+        'el ancla se midió con OTRA definición de pending (posiciones que '
+        'actúan después del hero en la calle) que la que este módulo '
+        'produce (activos que aún no han actuado). Son poblaciones '
+        'distintas; los 3 son alineación accidental.'),
+    'population_mismatch': (
+        'definición de pending distinta entre la medición y el clasificador'),
 }
 
 
@@ -212,7 +224,10 @@ def penalty_source(board_codes, street: str, hierarchy: Dict = None) -> str:
         return 'partial_support'
     if hierarchy.get('aggressors'):
         return 'partial_support'
-    if len(hierarchy.get('checkers') or ()) != 1:
+    # El ancla cuenta TODOS los checkers, no solo los secundarios. Usar
+    # 'checkers' aquí hacía la condición insatisfacible: sin agresor el
+    # único checker es el principal y sale de esa lista.
+    if len(hierarchy.get('checkers_all', hierarchy.get('checkers')) or ()) != 1:
         return 'partial_support'
     if len(hierarchy.get('pending') or ()) != 1:
         return 'partial_support'
@@ -287,10 +302,19 @@ def classify_villains(acts: List[dict], hero_pos: str,
         main = checkers[-1]
         reason = 'sin agresión: último que checkeó, por posición'
 
-    # Quien checkeó y LUEGO apuesto es agresor, no un pasivo: checkear en
-    # una ronda no compromete la mano si después hay resubida. La última
-    # acción agresiva manda sobre el check anterior.
-    checkers = [c for c in checkers if c not in agresores]
+    # Dos conceptos que no deben mezclarse (pegar_3 §1):
+#   checkers_all       : todos los rivales que hicieron check. Es lo que
+#                        clasifica el ESCENARIO empírico (el ancla dice
+#                        "1 checker").
+#   checkers_secondary : los checkers que NO son el rival principal. Es
+#                        lo que Representa riesgo adicional y, en su día,
+#                        lo que penalizaría.
+# Antes solo existía el segundo, y eso hacía que la condición del ancla
+# fuera IMPOSIBLE: sin agresor, main sale de checkers, así que
+# `len(checkers)==1` nunca se cumplía. El "cero coincidencias" que se
+# reportó era en parte un artefacto de esta mezcla, no escasez de datos.
+    checkers_all = [c for c in checkers if c not in agresores]
+    checkers_secondary = [c for c in checkers_all if c != main]
     callers = [c for c in callers if c not in agresores]
 
     # Pendientes = candidatos que además NO han actuado en esta calle.
@@ -308,7 +332,10 @@ def classify_villains(acts: List[dict], hero_pos: str,
         'hero_bet': bool(hero_acts
                          and acts[hero_last].get('action') in ('b', 'r')),
         'aggressors': agresores,
-        'checkers': [c for c in checkers if c != main],
+        # Ver la nota de arriba: no son lo mismo.
+        'checkers_all': checkers_all,
+        'checkers': checkers_secondary,
+        'checkers_secondary': checkers_secondary,
         # Un 'c' NO es un 'x'. Quien igualó ha aportado fichas
         # voluntariamente: su rango no está capado como el de un check y
         # no entra en la penalización (no hay dato). Se registra aparte
@@ -351,15 +378,26 @@ def shadow_equity(equity_production: float, board_codes, street: str,
     Los pendientes no entran en la penalización: pueden resubir, y
     penalizarlos como si fueran draws sobrevaloraría la apuesta.
     """
-    n_chk = len(hierarchy.get('checkers') or ())
+    n_chk = len(hierarchy.get('checkers_secondary',
+                            hierarchy.get('checkers')) or ())
     n_pend = len(hierarchy.get('pending') or ())
-    pen = passive_penalty(board_codes, street, n_chk)
+    psource = penalty_source(board_codes, street, hierarchy)
     eq_prod = float(equity_production)
-    adjusted = max(0.0, eq_prod - pen)
+
+    # equity_shadow SOLO existe con respaldo. Sin eso, el log emitía un
+    # número inventado con apariencia de cálculo (pegar_2 §2.1/§2.3).
+    if psource == 'anchor_match':
+        pen = passive_penalty(board_codes, street, n_chk)
+        eq_shadow = round(max(0.0, eq_prod - pen), 5)
+        delta = round(eq_shadow - eq_prod, 5)
+    else:
+        pen = None
+        eq_shadow = None
+        delta = None
+
     src = equity_source or 'desconocido'
     main = hierarchy.get('main')
     coincide = bool(main) and src == main
-    psource = penalty_source(board_codes, street, hierarchy)
     return {
         # la que el motor usó de verdad
         'equity_production': eq_prod,
@@ -368,12 +406,16 @@ def shadow_equity(equity_production: float, board_codes, street: str,
         # la que NO tenemos: contra el rango del principal de la jerarquía
         'equity_main': None,
         'equity_main_available': False,
+        'equity_main_source': None,
         'equity_main_note': (
-            'no se calcula: el motor solo produce una equity de producción. '
-            'Para medir el efecto de los rivales secundarios hay que '
-            'calcularla contra hierarchy["main"] explícitamente.'),
-        'equity_shadow': round(adjusted, 5),
-        'penalty': round(pen, 5),
+            'no se calcula: el motor solo produce una equity de '
+            'producción. Para medir el efecto de los rivales secundarios '
+            'hay que calcularla contra hierarchy["main"] explícitamente.'),
+        'equity_shadow': eq_shadow,
+        'equity_shadow_note': None if eq_shadow is not None else (
+            'sin anchor_match el ajuste no tiene respaldo empírico; no se '
+            'calcula en vez de emitir un número inventado'),
+        'penalty': pen,
         'penalty_basis': 'absolute_unvalidated',
         'penalty_basis_note': (
             'el 0.02 procede de una diferencia en TASA DE VICTORIAS, no '
@@ -383,9 +425,11 @@ def shadow_equity(equity_production: float, board_codes, street: str,
         'penalty_anchor': dict(OBSERVED_ANCHOR)
         if psource == 'anchor_match' else None,
         'n_checker': n_chk,
+        'n_checker_all': len(hierarchy.get('checkers_all',
+                                           hierarchy.get('checkers')) or ()),
         'n_pending': n_pend,
         'n_caller': len(hierarchy.get('callers') or ()),
-        'delta': round(adjusted - eq_prod, 5),
+        'delta': delta,
         # unmistakable: esto NO es una equity multiway
         'experimental': True,
     }
@@ -424,12 +468,14 @@ def shadow_record(hand_id: str, street: str, board_codes, hero_codes,
         'equity_production': shadow.get('equity_production'),
         'equity_main': shadow.get('equity_main'),
         'equity_shadow': shadow.get('equity_shadow'),
+        'equity_shadow_note': shadow.get('equity_shadow_note'),
         'penalty': shadow.get('penalty'),
         'penalty_basis': shadow.get('penalty_basis'),
         'penalty_basis_note': shadow.get('penalty_basis_note'),
         'penalty_source': shadow.get('penalty_source'),
         'penalty_anchor': shadow.get('penalty_anchor'),
         'n_checker': shadow.get('n_checker'),
+        'n_checker_all': shadow.get('n_checker_all'),
         'n_pending': shadow.get('n_pending'),
         'n_caller': shadow.get('n_caller'),
         'delta': shadow.get('delta'),
