@@ -436,7 +436,7 @@ class LiveRecorder:
                 continue
             st = state.get(f'{pid}_state')
             if st in ('retirarse', 'ausente', 'inactivo') or pid in self._inactive_players:
-                self._add_action('preflop', pos_name, 'f', 0.0)
+                self._add_action('preflop', pos_name, 'f', 0.0, 'observed')
 
         # Referencia a igualar = ciega BB (el primer movimiento por encima
         # de ella es raise; los que igualan son calls)
@@ -450,7 +450,8 @@ class LiveRecorder:
             if not any(a['pos'] == 'BB' and a['action'] == 'b' for a
                        in self.hand['streets']['preflop']['actions']):
                 self.hand['streets']['preflop']['actions'].append(
-                    {'pos': 'BB', 'action': 'b', 'amount': round(bb_open, 2)})
+                    {'pos': 'BB', 'action': 'b', 'amount': round(bb_open, 2),
+                     'amount_type': 'observed'})
             max_bet = max(max_bet, bb_open)
 
         # 3) Movimientos voluntarios de los demás (c / r)
@@ -470,10 +471,10 @@ class LiveRecorder:
                 continue
             amt = round(bet, 2)
             if amt > max_bet + 0.15:
-                self._add_action('preflop', pos_name, 'r', amt)
+                self._add_action('preflop', pos_name, 'r', amt, 'observed')
                 max_bet = max(max_bet, amt)
             else:
-                self._add_action('preflop', pos_name, 'c', amt)
+                self._add_action('preflop', pos_name, 'c', amt, 'observed')
 
         # Máxima apuesta de la ronda (referencia para deltas posteriores)
         for b in bids.values():
@@ -484,7 +485,8 @@ class LiveRecorder:
         self.street_has_bet = True
         self._preflop_current_bet = max_bet
 
-    def _add_action(self, street, pos, action, amount):
+    def _add_action(self, street, pos, action, amount,
+                    amount_type='delta'):
         if self.hand is None:
             return
         # Si hay ciega pendiente para esta posici&oacute;n, sumarla al monto
@@ -492,7 +494,8 @@ class LiveRecorder:
         if pos in self._blinds_by_pos and action != 'f':
             amount += self._blinds_by_pos.pop(pos)
         self.hand['streets'][street]['actions'].append({
-            'pos': pos, 'action': action, 'amount': round(amount, 2)
+            'pos': pos, 'action': action, 'amount': round(amount, 2),
+            'amount_type': amount_type,
         })
         if action == 'f':
             self._folded_positions.add(pos)
@@ -641,7 +644,7 @@ class LiveRecorder:
         street = self.hand['current_street']
         actions = self._detect_deltas(state)
         for s, pos, a, amt in actions:
-            self._add_action(s, pos, a, amt)
+            self._add_action(s, pos, a, amt, 'delta')
         # Checks por lógica de juego (posflop): rellenar checks de los que
         # hablan antes que una apuesta, o todos si no hay apuesta.
         self._add_implied_checks(street, state)
