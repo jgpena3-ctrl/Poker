@@ -46,18 +46,41 @@ habría indicado una regresión.
 | `omega` (jugadores) | 56 | **154** | +98 |
 | `opp_keys` | 6 | 6 | 0 |
 | `cnt_keys` | 22 | 22 | 0 |
+| decisiones con cartas (`opp`) | 450 | **1157** | x2.57 |
 | bytes | 81 605 | 94 714 | +13 109 |
 
-El fichero anterior solo etiquetaba **56 de 154** jugadores: casi dos tercios de
-la base no estaban en el modelo de rangos. Ahora sí están.
+**Causa del 56 -> 154** (medida con `tools/diagnosticar_56_154.py`):
+
+- El fichero nuevo es un **superconjunto**: 98 jugadores nuevos, **0 perdidos**.
+- Las **celdas ya estaban todas**: `opp_keys` = 6 y `cnt_keys` = 22 en ambos. El
+  modelo agregado por perfil x spot estaba completo.
+- Lo que faltaba era (a) el **mapa por jugador** (`perfil` + `omega`) y (b) la
+  masa: el antiguo se construyo con el **39%** de las decisiones con cartas que
+  hay ahora (450 de 1157).
+
+> ⚠️ **Limitacion honesta:** `meta` es identico en ambos ficheros
+> (`{alpha: 2.0, origen: hands_db.jsonl}`) y **no registra que manos se
+> usaron**, asi que no es posible distinguir a posteriori si la diferencia
+> viene de menos manos o de otra version del codigo. Para que no se repita, la
+> reconstruccion deberia sellar la procedencia en `meta`.
+
+**Consecuencia practica con el fichero antiguo:** `p_player()` devuelve el
+prior **plano** cuando el jugador no esta en `self.perfil`. Con el fichero
+anterior, **98 de 154 jugadores** recibian prior plano en vez de su grid de
+perfil: el 64% de la base no tenia rango modelado en produccion.
 
 ### `postflop_ranges.json` — cobertura superior
 
 | | antes | después | delta |
 |---|---|---|---|
-| `opp_keys` | 80 | **106** | +26 |
-| `cnt_keys` | 131 | **181** | +50 |
+| `opp_keys` | 80 | **106** | +30 / -4 |
+| `cnt_keys` | 131 | **181** | +60 / -10 |
+| masa `opp` | 587 | **1398** | x2.38 |
 | bytes | 8 131 | 13 114 | +4 983 |
+
+Las celdas que **desaparecen** (4 y 10) no son una regresion: las etiquetas
+PEZ/TIBURON se recalculan con la ventana fiable, asi que un jugador puede pasar
+de un perfil al otro y su celda antigua deja de tener contradiccion.
 
 ## Observación importante sobre `_pf_rival_pos`
 
