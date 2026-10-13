@@ -59,6 +59,8 @@ def load_hands(path=None, *, max_hands=None, reliable_only=False):
     max_hands: límite duro de manos válidas (None = todas).
     reliable_only: si True, corta en las primeras RELIABLE_HANDS manos.
     """
+    if max_hands is not None and max_hands <= 0:
+        return []
     path = path or DB_PATH
     if reliable_only:
         limit = RELIABLE_HANDS if max_hands is None \
@@ -67,7 +69,9 @@ def load_hands(path=None, *, max_hands=None, reliable_only=False):
         limit = max_hands
     hands = []
     with open(path, encoding='utf-8') as f:
-        for line in f:
+        for line_no, line in enumerate(f, start=1):
+            if limit is not None and line_no > limit:
+                break
             line = line.strip()
             if not line:
                 continue
@@ -78,8 +82,6 @@ def load_hands(path=None, *, max_hands=None, reliable_only=False):
             if isinstance(hand, dict) and hand.get('streets') is not None \
                     and hand.get('players') is not None:
                 hands.append(hand)
-                if limit is not None and len(hands) >= limit:
-                    break
     return hands
 
 
@@ -146,7 +148,7 @@ def classify_first_action(action, amount, raises_before, limps_before, bb=BB):
         # Un 'b'/'r' de a lo sumo 1BB sin subida previa es un limpe corto grabado
         # como bet (ver PROYECTO.md §6.1). No se cuenta como subida real.
         if raises_before == 0 and (amount is not None) and amount <= bb + 1e-9:
-            return ('limp' if limps_before == 0 else 'rol'), 'no_raise'
+            return 'limp', 'no_raise'
         if raises_before == 0:
             return 'open' if limps_before == 0 else 'rol', 'no_raise'
         if raises_before == 1:
@@ -185,17 +187,19 @@ def preflop_events(hand, bb=BB):
     seq = _preflop_sequence(hand)
     events = []
     decided = set()
+    raises = 0
+    limps = 0
     for i, (pos, act, amount) in enumerate(seq):
+        es_ciega_bb = (i == 0 and pos == 'BB' and act == 'b')
+        if es_ciega_bb:
+            continue
         if pos in decided:
-            continue                      # solo la primera decisión
+            if act in ('b', 'r'):
+                raises += 1
+            elif act == 'c' and raises == 0:
+                limps += 1
+            continue
         decided.add(pos)
-        # La ciega del BB se graba como 'b' pero NO es una subida real.
-        # Se identifica estructuralmente: primera acción de la mano y
-        # posición BB (ver PROYECTO.md §6.1). No se usa `amount`.
-        raises = sum(1 for idx, (p, a, m) in enumerate(seq[:i])
-                     if a in ('b', 'r')
-                     and not (idx == 0 and p == 'BB'))
-        limps = sum(1 for p, a, m in seq[:i] if a == 'c')
         category, denom = classify_first_action(act, amount, raises, limps, bb)
         cards = cards_of_pos(hand, pos)
         events.append(PreflopEvent(
@@ -209,6 +213,10 @@ def preflop_events(hand, bb=BB):
             cards=cards,
             prereq=tuple(f'{p}:{a}' for p, a, _ in seq[:i]),
         ))
+        if act in ('b', 'r'):
+            raises += 1
+        elif act == 'c' and raises == 0:
+            limps += 1
     return events
 
 
