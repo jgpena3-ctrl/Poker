@@ -64,3 +64,9 @@ venv/
 
 # Data
 *.png
+
+# Snapshot de derivados previos a una reconstruccion.
+# Son copias de seguridad locales, no fuentes: se regeneran con
+# `python tools/reconstruir_derivados.py regen`.
+data/_snapshot_pre_rebuild_*/
+data/_snapshot_pre_audit/

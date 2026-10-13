@@ -1,6 +1,6 @@
 {
-  "hands": 339,
-  "observaciones": 3474,
+  "hands": 900,
+  "observaciones": 9321,
   "profiles": {
     "Jarduan": "TIBURON",
     "NESANVAR": "TIBURON",
@@ -18,11 +18,11 @@
     "Hellfish1": "PEZ",
     "Juanfelipe1": "PEZ",
     "Santiago ja": "PEZ",
-    "Andresyjeymi": "TIBURON",
+    "Andresyjeymi": "PEZ",
     "Andreayjeymi": "PEZ",
     "Valentina22": "TIBURON",
-    "Elyessi27": "TIBURON",
-    "P5": "PEZ",
+    "Elyessi27": "PEZ",
+    "P5": "TIBURON",
     "Geilyn21": "TIBURON",
     "P3": "TIBURON",
     "P4": "TIBURON",
@@ -52,290 +52,515 @@
     "LolaMora": "TIBURON",
     "Danjer": "PEZ",
     "Mur420": "PEZ",
-    "Hero": "PEZ",
+    "Hero": "TIBURON",
     "Player1": "PEZ",
+    "Player4": "TIBURON",
+    "Player5": "TIBURON",
+    "Player2": "PEZ",
     "Player3": "PEZ",
-    "Player4": "PEZ",
-    "Player5": "PEZ",
-    "Player2": "PEZ"
+    "kiluaak": "TIBURON",
+    "pardoKing": "TIBURON",
+    "HarryPoker18": "TIBURON",
+    "CamiloG208": "TIBURON",
+    "anro": "PEZ",
+    "ALKILADO": "TIBURON",
+    "Juanpablogrz": "PEZ",
+    "LUIS-DIAZ": "TIBURON",
+    "Bigmac14": "PEZ",
+    "Chang2113": "PEZ",
+    "SB": "TIBURON",
+    "Deyffan": "PEZ",
+    "Onix22": "TIBURON",
+    "Pechugo": "PEZ",
+    "man1": "TIBURON",
+    "Isagomez": "PEZ",
+    "Iker69": "PEZ",
+    "Davile": "PEZ",
+    "Jorish29": "PEZ",
+    "Jonatantarra": "PEZ",
+    "Jhordanbtc": "TIBURON",
+    "Rompechuchas": "PEZ",
+    "Goldy7": "PEZ",
+    "dollarbill": "PEZ",
+    "P2": "PEZ",
+    "santibenavides": "TIBURON",
+    "Mrcash": "TIBURON",
+    "Samuel1598": "PEZ",
+    "Deftones": "TIBURON",
+    "otb_RedBaron": "TIBURON",
+    "Edup": "PEZ",
+    "Franco1603": "PEZ",
+    "AZ de A": "TIBURON",
+    "bsaghv4": "PEZ",
+    "Lprieto11": "PEZ",
+    "Juancuellar987": "PEZ",
+    "maestrodelbluff": "TIBURON",
+    "Danielev": "TIBURON",
+    "Tatan29": "PEZ",
+    "CorajeRaise": "TIBURON",
+    "JS99": "TIBURON",
+    "Doffy707": "TIBURON",
+    "David P.": "PEZ",
+    "UTG": "PEZ",
+    "mommya": "TIBURON",
+    "Memelo": "PEZ",
+    "Matgar": "TIBURON",
+    "Freddy9212": "PEZ",
+    "CO": "TIBURON",
+    "SunGodNika": "TIBURON",
+    "Davi-Ari": "TIBURON",
+    "Hector1320": "PEZ",
+    "Ocampo99": "PEZ",
+    "Juri": "TIBURON",
+    "Juris55": "TIBURON",
+    "N.E.O": "TIBURON",
+    "PardoKing": "TIBURON",
+    "DOGO*": "PEZ",
+    "baam08": "TIBURON",
+    "JaCkFlor": "TIBURON",
+    "JuaGon": "TIBURON",
+    "Cash7": "PEZ",
+    "sergio39": "TIBURON",
+    "Antonia7": "PEZ",
+    "Aneurin": "PEZ",
+    "Krono": "TIBURON",
+    "KoKeB0y92": "PEZ",
+    "jj20": "PEZ",
+    "Waffles": "PEZ",
+    "Rio28": "TIBURON",
+    "Cazadordeputas": "PEZ",
+    "Adrugir": "PEZ",
+    "MP": "TIBURON",
+    "MuckeDBoY": "TIBURON",
+    "ANJO2017": "TIBURON",
+    "Bogotano26": "TIBURON",
+    "Edgar28": "PEZ",
+    "O$0RL0": "PEZ",
+    "Carupoker": "TIBURON",
+    "Electr0": "PEZ",
+    "Prieto9610": "PEZ",
+    "Oscar.RG": "PEZ",
+    "Capitan spiff": "PEZ",
+    "Sebas420": "PEZ",
+    "RABBUNI": "PEZ",
+    "La_Gaitana": "TIBURON",
+    "vidents": "PEZ",
+    "BLKsoul": "PEZ",
+    "Woons": "PEZ",
+    "BigPapi.": "TIBURON",
+    "Santiagoea10": "TIBURON",
+    "chupapepita": "PEZ",
+    "papa01": "PEZ",
+    "Silvio": "TIBURON",
+    "Sp1609": "PEZ",
+    "Tio88": "TIBURON",
+    "Dannykill": "TIBURON",
+    "proplayer555": "PEZ"
   },
   "granular": {
     "TIBURON|preflop|-|none": {
-      "f": 0.565,
-      "x": 0.072,
-      "c": 0.073,
-      "b": 0.244,
-      "r": 0.045,
-      "sizing_mean": 1.282,
-      "n": 708
+      "f": 0.365,
+      "x": 0.047,
+      "c": 0.03,
+      "b": 0.531,
+      "r": 0.028,
+      "sizing_mean": 0.438,
+      "n": 1049
     },
     "TIBURON|preflop|-|bet": {
-      "f": 0.683,
-      "x": 0.043,
-      "c": 0.186,
-      "b": 0.013,
-      "r": 0.076,
-      "sizing_mean": 5.018,
-      "n": 463
+      "f": 0.65,
+      "x": 0.046,
+      "c": 0.081,
+      "b": 0.008,
+      "r": 0.215,
+      "sizing_mean": 2.884,
+      "n": 1663
     },
     "PEZ|preflop|-|bet": {
-      "f": 0.534,
-      "x": 0.048,
-      "c": 0.356,
-      "b": 0.014,
-      "r": 0.048,
-      "sizing_mean": 1.75,
-      "n": 292
+      "f": 0.439,
+      "x": 0.06,
+      "c": 0.402,
+      "b": 0.009,
+      "r": 0.091,
+      "sizing_mean": 2.351,
+      "n": 916
     },
     "TIBURON|flop|two_tone|none": {
-      "f": 0.008,
-      "x": 0.625,
+      "f": 0.003,
+      "x": 0.66,
       "c": 0.0,
-      "b": 0.367,
+      "b": 0.337,
       "r": 0.0,
-      "sizing_mean": 0.868,
-      "n": 128
+      "sizing_mean": 0.664,
+      "n": 291
     },
     "PEZ|flop|two_tone|none": {
       "f": 0.0,
-      "x": 0.797,
+      "x": 0.694,
       "c": 0.0,
-      "b": 0.203,
+      "b": 0.306,
       "r": 0.0,
-      "sizing_mean": 1.9,
-      "n": 79
+      "sizing_mean": 0.862,
+      "n": 242
     },
-    "PEZ|flop|two_tone|bet": {
-      "f": 0.478,
+    "PEZ|flop|two_tone|donk": {
+      "f": 0.455,
       "x": 0.0,
-      "c": 0.478,
+      "c": 0.5,
       "b": 0.0,
-      "r": 0.043,
-      "sizing_mean": 0.5,
-      "n": 23
+      "r": 0.045,
+      "sizing_mean": 1.373,
+      "n": 44
     },
-    "TIBURON|flop|two_tone|bet": {
-      "f": 0.621,
+    "TIBURON|flop|two_tone|donk": {
+      "f": 0.612,
       "x": 0.0,
-      "c": 0.379,
+      "c": 0.343,
       "b": 0.0,
-      "r": 0.0,
-      "n": 29
+      "r": 0.045,
+      "sizing_mean": 0.855,
+      "n": 67
     },
     "TIBURON|turn|two_tone|none": {
       "f": 0.0,
-      "x": 0.571,
+      "x": 0.532,
       "c": 0.0,
-      "b": 0.429,
+      "b": 0.468,
       "r": 0.0,
-      "sizing_mean": 0.655,
-      "n": 98
+      "sizing_mean": 0.76,
+      "n": 203
     },
     "PEZ|turn|two_tone|none": {
-      "f": 0.0,
-      "x": 0.66,
+      "f": 0.006,
+      "x": 0.643,
       "c": 0.0,
-      "b": 0.34,
+      "b": 0.35,
       "r": 0.0,
-      "sizing_mean": 0.685,
-      "n": 53
+      "sizing_mean": 0.585,
+      "n": 157
     },
     "TIBURON|river|two_tone|none": {
       "f": 0.0,
-      "x": 0.634,
+      "x": 0.581,
       "c": 0.0,
-      "b": 0.366,
+      "b": 0.419,
       "r": 0.0,
-      "sizing_mean": 0.773,
-      "n": 41
+      "sizing_mean": 0.633,
+      "n": 74
     },
     "PEZ|river|two_tone|none": {
       "f": 0.0,
-      "x": 0.727,
+      "x": 0.716,
       "c": 0.0,
-      "b": 0.273,
+      "b": 0.284,
       "r": 0.0,
-      "sizing_mean": 1.032,
-      "n": 33
+      "sizing_mean": 0.896,
+      "n": 74
     },
     "PEZ|preflop|-|none": {
-      "f": 0.37,
-      "x": 0.068,
-      "c": 0.37,
-      "b": 0.092,
-      "r": 0.101,
-      "sizing_mean": 0.682,
-      "n": 338
+      "f": 0.257,
+      "x": 0.045,
+      "c": 0.261,
+      "b": 0.371,
+      "r": 0.066,
+      "sizing_mean": 0.205,
+      "n": 560
     },
-    "TIBURON|flop|two_tone|cbet": {
-      "f": 0.739,
+    "TIBURON|flop|two_tone|bet": {
+      "f": 0.833,
       "x": 0.0,
-      "c": 0.13,
-      "b": 0.0,
-      "r": 0.13,
-      "sizing_mean": 1.019,
-      "n": 23
-    },
-    "TIBURON|flop|two_tone|raise": {
-      "f": 0.0,
-      "x": 0.0,
-      "c": 1.0,
+      "c": 0.167,
       "b": 0.0,
       "r": 0.0,
-      "n": 5
+      "n": 6
     },
-    "TIBURON|turn|two_tone|bet": {
-      "f": 0.429,
+    "TIBURON|flop|two_tone|cbet": {
+      "f": 0.517,
       "x": 0.0,
-      "c": 0.429,
+      "c": 0.383,
       "b": 0.0,
-      "r": 0.143,
-      "sizing_mean": 0.773,
-      "n": 28
+      "r": 0.1,
+      "sizing_mean": 0.844,
+      "n": 60
+    },
+    "TIBURON|flop|two_tone|raise": {
+      "f": 0.385,
+      "x": 0.0,
+      "c": 0.615,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 13
+    },
+    "TIBURON|turn|two_tone|donk": {
+      "f": 0.44,
+      "x": 0.0,
+      "c": 0.44,
+      "b": 0.0,
+      "r": 0.12,
+      "sizing_mean": 0.808,
+      "n": 50
     },
     "TIBURON|river|rainbow|none": {
       "f": 0.0,
-      "x": 0.758,
+      "x": 0.672,
       "c": 0.0,
-      "b": 0.242,
+      "b": 0.328,
       "r": 0.0,
-      "sizing_mean": 0.524,
-      "n": 33
+      "sizing_mean": 0.46,
+      "n": 58
     },
     "TIBURON|river|rainbow|bet": {
       "f": 0.571,
       "x": 0.0,
-      "c": 0.429,
+      "c": 0.286,
       "b": 0.0,
-      "r": 0.0,
-      "n": 7
+      "r": 0.143,
+      "sizing_mean": 0.923,
+      "n": 21
     },
     "TIBURON|turn|two_tone|barrel": {
-      "f": 0.6,
+      "f": 0.476,
       "x": 0.0,
-      "c": 0.2,
+      "c": 0.429,
       "b": 0.0,
-      "r": 0.2,
-      "sizing_mean": 0.765,
-      "n": 15
+      "r": 0.095,
+      "sizing_mean": 0.8,
+      "n": 42
     },
     "PEZ|turn|two_tone|barrel": {
-      "f": 0.25,
+      "f": 0.424,
       "x": 0.0,
-      "c": 0.625,
+      "c": 0.492,
       "b": 0.0,
-      "r": 0.125,
-      "sizing_mean": 0.661,
-      "n": 16
+      "r": 0.085,
+      "sizing_mean": 0.729,
+      "n": 59
     },
     "PEZ|river|two_tone|bet": {
+      "f": 0.73,
+      "x": 0.0,
+      "c": 0.189,
+      "b": 0.0,
+      "r": 0.081,
+      "sizing_mean": 1.293,
+      "n": 37
+    },
+    "PEZ|preflop|-|raise": {
+      "f": 0.523,
+      "x": 0.006,
+      "c": 0.433,
+      "b": 0.0,
+      "r": 0.038,
+      "sizing_mean": 2.014,
+      "n": 501
+    },
+    "TIBURON|preflop|-|raise": {
+      "f": 0.695,
+      "x": 0.001,
+      "c": 0.238,
+      "b": 0.0,
+      "r": 0.066,
+      "sizing_mean": 2.11,
+      "n": 882
+    },
+    "TIBURON|flop|rainbow+pair|none": {
+      "f": 0.0,
+      "x": 0.733,
+      "c": 0.0,
+      "b": 0.267,
+      "r": 0.0,
+      "sizing_mean": 0.788,
+      "n": 60
+    },
+    "TIBURON|flop|rainbow+pair|donk": {
+      "f": 0.556,
+      "x": 0.0,
+      "c": 0.333,
+      "b": 0.0,
+      "r": 0.111,
+      "sizing_mean": 0.3,
+      "n": 9
+    },
+    "TIBURON|turn|two_tone+pair|none": {
+      "f": 0.0,
+      "x": 0.5,
+      "c": 0.0,
+      "b": 0.5,
+      "r": 0.0,
+      "sizing_mean": 0.491,
+      "n": 98
+    },
+    "TIBURON|turn|two_tone+pair|donk": {
+      "f": 0.471,
+      "x": 0.0,
+      "c": 0.441,
+      "b": 0.0,
+      "r": 0.088,
+      "sizing_mean": 0.847,
+      "n": 34
+    },
+    "PEZ|flop|rainbow|none": {
+      "f": 0.0,
+      "x": 0.681,
+      "c": 0.0,
+      "b": 0.319,
+      "r": 0.0,
+      "sizing_mean": 0.926,
+      "n": 182
+    },
+    "TIBURON|flop|rainbow|none": {
+      "f": 0.0,
+      "x": 0.645,
+      "c": 0.0,
+      "b": 0.355,
+      "r": 0.0,
+      "sizing_mean": 0.571,
+      "n": 197
+    },
+    "PEZ|flop|rainbow|donk": {
+      "f": 0.556,
+      "x": 0.0,
+      "c": 0.333,
+      "b": 0.0,
+      "r": 0.111,
+      "sizing_mean": 0.622,
+      "n": 27
+    },
+    "TIBURON|flop|rainbow|donk": {
+      "f": 0.514,
+      "x": 0.0,
+      "c": 0.459,
+      "b": 0.0,
+      "r": 0.027,
+      "sizing_mean": 0.5,
+      "n": 37
+    },
+    "TIBURON|flop|rainbow|cbet": {
+      "f": 0.378,
+      "x": 0.0,
+      "c": 0.578,
+      "b": 0.0,
+      "r": 0.044,
+      "sizing_mean": 1.147,
+      "n": 45
+    },
+    "TIBURON|flop|rainbow|raise": {
+      "f": 0.6,
+      "x": 0.0,
+      "c": 0.4,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 10
+    },
+    "PEZ|flop|rainbow|raise": {
+      "f": 0.167,
+      "x": 0.0,
+      "c": 0.667,
+      "b": 0.0,
+      "r": 0.167,
+      "sizing_mean": 2.522,
+      "n": 6
+    },
+    "TIBURON|flop|two_tone+pair|none": {
+      "f": 0.0,
+      "x": 0.821,
+      "c": 0.0,
+      "b": 0.164,
+      "r": 0.015,
+      "sizing_mean": 0.452,
+      "n": 67
+    },
+    "PEZ|flop|two_tone+pair|none": {
+      "f": 0.0,
+      "x": 0.785,
+      "c": 0.0,
+      "b": 0.215,
+      "r": 0.0,
+      "sizing_mean": 0.735,
+      "n": 65
+    },
+    "TIBURON|turn|rainbow+pair|none": {
+      "f": 0.0,
+      "x": 0.545,
+      "c": 0.0,
+      "b": 0.455,
+      "r": 0.0,
+      "sizing_mean": 0.91,
+      "n": 22
+    },
+    "PEZ|turn|rainbow+pair|none": {
+      "f": 0.0,
+      "x": 0.444,
+      "c": 0.0,
+      "b": 0.556,
+      "r": 0.0,
+      "sizing_mean": 0.81,
+      "n": 18
+    },
+    "TIBURON|turn|rainbow+pair|donk": {
+      "f": 0.583,
+      "x": 0.0,
+      "c": 0.25,
+      "b": 0.0,
+      "r": 0.167,
+      "sizing_mean": 0.677,
+      "n": 12
+    },
+    "PEZ|flop|rainbow+pair|none": {
+      "f": 0.0,
+      "x": 0.804,
+      "c": 0.0,
+      "b": 0.196,
+      "r": 0.0,
+      "sizing_mean": 1.518,
+      "n": 56
+    },
+    "PEZ|flop|rainbow+pair|cbet": {
       "f": 0.727,
       "x": 0.0,
       "c": 0.182,
       "b": 0.0,
       "r": 0.091,
-      "sizing_mean": 1.667,
+      "sizing_mean": 2.0,
       "n": 11
     },
-    "PEZ|preflop|-|raise": {
-      "f": 0.54,
-      "x": 0.04,
-      "c": 0.34,
+    "PEZ|flop|two_tone|cbet": {
+      "f": 0.392,
+      "x": 0.0,
+      "c": 0.554,
       "b": 0.0,
-      "r": 0.08,
-      "sizing_mean": 2.046,
-      "n": 50
+      "r": 0.054,
+      "sizing_mean": 0.715,
+      "n": 74
     },
-    "TIBURON|preflop|-|raise": {
-      "f": 0.41,
-      "x": 0.026,
-      "c": 0.526,
-      "b": 0.0,
-      "r": 0.038,
-      "sizing_mean": 0.804,
+    "TIBURON|river|two_tone+pair|none": {
+      "f": 0.0,
+      "x": 0.577,
+      "c": 0.0,
+      "b": 0.423,
+      "r": 0.0,
+      "sizing_mean": 0.478,
       "n": 78
     },
-    "TIBURON|flop|rainbow+pair|none": {
+    "PEZ|river|two_tone+pair|bet": {
+      "f": 0.517,
+      "x": 0.0,
+      "c": 0.345,
+      "b": 0.0,
+      "r": 0.138,
+      "sizing_mean": 0.795,
+      "n": 29
+    },
+    "TIBURON|flop|monotone|none": {
       "f": 0.0,
-      "x": 0.688,
+      "x": 0.657,
       "c": 0.0,
-      "b": 0.312,
+      "b": 0.343,
       "r": 0.0,
-      "sizing_mean": 0.526,
-      "n": 32
+      "sizing_mean": 0.53,
+      "n": 35
     },
-    "TIBURON|flop|rainbow+pair|bet": {
-      "f": 0.25,
-      "x": 0.0,
-      "c": 0.625,
-      "b": 0.0,
-      "r": 0.125,
-      "sizing_mean": 0.3,
-      "n": 8
-    },
-    "TIBURON|turn|two_tone+pair|none": {
-      "f": 0.0,
-      "x": 0.523,
-      "c": 0.0,
-      "b": 0.477,
-      "r": 0.0,
-      "sizing_mean": 0.503,
-      "n": 44
-    },
-    "TIBURON|turn|two_tone+pair|bet": {
-      "f": 0.412,
-      "x": 0.0,
-      "c": 0.529,
-      "b": 0.0,
-      "r": 0.059,
-      "sizing_mean": 0.791,
-      "n": 17
-    },
-    "PEZ|flop|rainbow|none": {
-      "f": 0.0,
-      "x": 0.732,
-      "c": 0.0,
-      "b": 0.268,
-      "r": 0.0,
-      "sizing_mean": 1.473,
-      "n": 56
-    },
-    "TIBURON|flop|rainbow|none": {
-      "f": 0.0,
-      "x": 0.634,
-      "c": 0.0,
-      "b": 0.366,
-      "r": 0.0,
-      "sizing_mean": 0.736,
-      "n": 93
-    },
-    "PEZ|flop|rainbow|bet": {
-      "f": 0.583,
-      "x": 0.0,
-      "c": 0.167,
-      "b": 0.0,
-      "r": 0.25,
-      "sizing_mean": 0.738,
-      "n": 12
-    },
-    "TIBURON|flop|rainbow|bet": {
-      "f": 0.643,
-      "x": 0.0,
-      "c": 0.357,
-      "b": 0.0,
-      "r": 0.0,
-      "n": 14
-    },
-    "TIBURON|flop|rainbow|cbet": {
-      "f": 0.364,
-      "x": 0.0,
-      "c": 0.545,
-      "b": 0.0,
-      "r": 0.091,
-      "sizing_mean": 0.922,
-      "n": 22
-    },
-    "TIBURON|flop|rainbow|raise": {
+    "TIBURON|flop|monotone|donk": {
       "f": 0.5,
       "x": 0.0,
       "c": 0.5,
@@ -343,377 +568,246 @@
       "r": 0.0,
       "n": 6
     },
-    "TIBURON|flop|two_tone+pair|none": {
-      "f": 0.0,
-      "x": 0.759,
-      "c": 0.0,
-      "b": 0.207,
-      "r": 0.034,
-      "sizing_mean": 0.511,
-      "n": 29
-    },
-    "PEZ|flop|two_tone+pair|none": {
+    "TIBURON|river|rainbow+pair|none": {
       "f": 0.0,
       "x": 0.724,
       "c": 0.0,
       "b": 0.276,
       "r": 0.0,
-      "sizing_mean": 1.014,
+      "sizing_mean": 0.729,
       "n": 29
     },
-    "TIBURON|turn|rainbow+pair|none": {
-      "f": 0.0,
-      "x": 0.538,
-      "c": 0.0,
-      "b": 0.462,
-      "r": 0.0,
-      "sizing_mean": 1.206,
-      "n": 13
-    },
-    "PEZ|turn|rainbow+pair|none": {
-      "f": 0.0,
-      "x": 0.3,
-      "c": 0.0,
-      "b": 0.7,
-      "r": 0.0,
-      "sizing_mean": 0.783,
-      "n": 10
-    },
-    "TIBURON|turn|rainbow+pair|bet": {
-      "f": 0.75,
+    "TIBURON|river|rainbow+pair|bet": {
+      "f": 0.474,
       "x": 0.0,
-      "c": 0.125,
+      "c": 0.368,
       "b": 0.0,
-      "r": 0.125,
-      "sizing_mean": 0.243,
-      "n": 8
-    },
-    "PEZ|flop|rainbow+pair|none": {
-      "f": 0.0,
-      "x": 0.8,
-      "c": 0.0,
-      "b": 0.2,
-      "r": 0.0,
-      "sizing_mean": 2.648,
-      "n": 25
-    },
-    "PEZ|flop|rainbow+pair|cbet": {
-      "f": 0.667,
-      "x": 0.0,
-      "c": 0.0,
-      "b": 0.0,
-      "r": 0.333,
-      "sizing_mean": 2.0,
-      "n": 3
-    },
-    "PEZ|flop|two_tone|cbet": {
-      "f": 0.318,
-      "x": 0.0,
-      "c": 0.636,
-      "b": 0.0,
-      "r": 0.045,
-      "sizing_mean": 0.66,
-      "n": 22
-    },
-    "TIBURON|river|two_tone+pair|none": {
-      "f": 0.0,
-      "x": 0.579,
-      "c": 0.0,
-      "b": 0.421,
-      "r": 0.0,
-      "sizing_mean": 0.552,
-      "n": 38
-    },
-    "PEZ|river|two_tone+pair|bet": {
-      "f": 0.625,
-      "x": 0.0,
-      "c": 0.375,
-      "b": 0.0,
-      "r": 0.0,
-      "n": 8
-    },
-    "TIBURON|flop|monotone|none": {
-      "f": 0.0,
-      "x": 0.684,
-      "c": 0.0,
-      "b": 0.316,
-      "r": 0.0,
-      "sizing_mean": 0.663,
+      "r": 0.158,
+      "sizing_mean": 1.248,
       "n": 19
     },
-    "TIBURON|flop|monotone|bet": {
-      "f": 0.625,
-      "x": 0.0,
-      "c": 0.375,
-      "b": 0.0,
-      "r": 0.0,
-      "n": 8
-    },
-    "TIBURON|river|rainbow+pair|none": {
-      "f": 0.0,
-      "x": 0.692,
-      "c": 0.0,
-      "b": 0.308,
-      "r": 0.0,
-      "sizing_mean": 0.893,
-      "n": 13
-    },
-    "TIBURON|river|rainbow+pair|bet": {
-      "f": 0.455,
-      "x": 0.0,
-      "c": 0.455,
-      "b": 0.0,
-      "r": 0.091,
-      "sizing_mean": 1.478,
-      "n": 11
-    },
     "TIBURON|turn|monotone|none": {
-      "f": 0.0,
-      "x": 0.333,
-      "c": 0.0,
-      "b": 0.667,
-      "r": 0.0,
-      "sizing_mean": 0.346,
-      "n": 3
-    },
-    "TIBURON|flop|two_tone+pair|bet": {
-      "f": 0.75,
-      "x": 0.0,
-      "c": 0.0,
-      "b": 0.0,
-      "r": 0.25,
-      "sizing_mean": 0.25,
-      "n": 4
-    },
-    "PEZ|turn|two_tone+pair|none": {
-      "f": 0.03,
-      "x": 0.697,
-      "c": 0.0,
-      "b": 0.273,
-      "r": 0.0,
-      "sizing_mean": 0.528,
-      "n": 33
-    },
-    "TIBURON|turn|two_tone+pair|raise": {
-      "f": 0.0,
-      "x": 0.0,
-      "c": 0.667,
-      "b": 0.0,
-      "r": 0.333,
-      "sizing_mean": 0.315,
-      "n": 3
-    },
-    "TIBURON|river|two_tone+pair|bet": {
-      "f": 0.583,
-      "x": 0.0,
-      "c": 0.333,
-      "b": 0.0,
-      "r": 0.083,
-      "sizing_mean": 0.803,
-      "n": 24
-    },
-    "TIBURON|flop|two_tone+pair|cbet": {
-      "f": 0.667,
-      "x": 0.0,
-      "c": 0.167,
-      "b": 0.0,
-      "r": 0.167,
-      "sizing_mean": 1.708,
-      "n": 6
-    },
-    "PEZ|flop|monotone|none": {
       "f": 0.0,
       "x": 0.667,
       "c": 0.0,
       "b": 0.333,
       "r": 0.0,
-      "sizing_mean": 0.472,
-      "n": 9
+      "sizing_mean": 0.293,
+      "n": 3
+    },
+    "TIBURON|flop|two_tone+pair|donk": {
+      "f": 0.667,
+      "x": 0.0,
+      "c": 0.0,
+      "b": 0.0,
+      "r": 0.333,
+      "sizing_mean": 0.941,
+      "n": 3
+    },
+    "PEZ|turn|two_tone+pair|none": {
+      "f": 0.011,
+      "x": 0.614,
+      "c": 0.0,
+      "b": 0.375,
+      "r": 0.0,
+      "sizing_mean": 0.486,
+      "n": 88
+    },
+    "TIBURON|turn|two_tone+pair|raise": {
+      "f": 0.333,
+      "x": 0.0,
+      "c": 0.5,
+      "b": 0.0,
+      "r": 0.167,
+      "sizing_mean": 0.315,
+      "n": 6
+    },
+    "PEZ|turn|two_tone+pair|raise": {
+      "f": 0.4,
+      "x": 0.0,
+      "c": 0.4,
+      "b": 0.0,
+      "r": 0.2,
+      "sizing_mean": 0.211,
+      "n": 5
+    },
+    "TIBURON|river|two_tone+pair|bet": {
+      "f": 0.578,
+      "x": 0.0,
+      "c": 0.333,
+      "b": 0.0,
+      "r": 0.089,
+      "sizing_mean": 1.628,
+      "n": 45
+    },
+    "TIBURON|flop|two_tone+pair|cbet": {
+      "f": 0.455,
+      "x": 0.0,
+      "c": 0.273,
+      "b": 0.0,
+      "r": 0.273,
+      "sizing_mean": 1.16,
+      "n": 11
+    },
+    "PEZ|flop|monotone|none": {
+      "f": 0.0,
+      "x": 0.739,
+      "c": 0.0,
+      "b": 0.261,
+      "r": 0.0,
+      "sizing_mean": 0.756,
+      "n": 23
+    },
+    "TIBURON|flop|monotone|bet": {
+      "f": 0.667,
+      "x": 0.0,
+      "c": 0.333,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 3
     },
     "PEZ|flop|monotone|bet": {
+      "f": 0.333,
+      "x": 0.0,
+      "c": 0.667,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 3
+    },
+    "TIBURON|turn|rainbow|none": {
+      "f": 0.0,
+      "x": 0.553,
+      "c": 0.0,
+      "b": 0.447,
+      "r": 0.0,
+      "sizing_mean": 0.524,
+      "n": 76
+    },
+    "PEZ|turn|rainbow|none": {
+      "f": 0.0,
+      "x": 0.68,
+      "c": 0.0,
+      "b": 0.32,
+      "r": 0.0,
+      "sizing_mean": 0.559,
+      "n": 75
+    },
+    "TIBURON|turn|rainbow|bet": {
+      "f": 0.333,
+      "x": 0.0,
+      "c": 0.333,
+      "b": 0.0,
+      "r": 0.333,
+      "sizing_mean": 0.423,
+      "n": 3
+    },
+    "TIBURON|turn|rainbow|raise": {
       "f": 0.25,
       "x": 0.0,
       "c": 0.5,
       "b": 0.0,
       "r": 0.25,
-      "sizing_mean": 0.789,
+      "sizing_mean": 0.507,
       "n": 4
     },
-    "TIBURON|turn|rainbow|none": {
-      "f": 0.0,
-      "x": 0.606,
-      "c": 0.0,
-      "b": 0.394,
-      "r": 0.0,
-      "sizing_mean": 0.698,
-      "n": 33
-    },
-    "PEZ|turn|rainbow|none": {
-      "f": 0.0,
-      "x": 0.708,
-      "c": 0.0,
-      "b": 0.292,
-      "r": 0.0,
-      "sizing_mean": 0.378,
-      "n": 24
-    },
-    "TIBURON|turn|rainbow|bet": {
-      "f": 0.444,
-      "x": 0.0,
-      "c": 0.444,
-      "b": 0.0,
-      "r": 0.111,
-      "sizing_mean": 0.423,
-      "n": 9
-    },
-    "TIBURON|turn|two_tone+pair|barrel": {
-      "f": 0.333,
-      "x": 0.0,
-      "c": 0.333,
-      "b": 0.0,
-      "r": 0.333,
-      "sizing_mean": 0.453,
-      "n": 3
-    },
-    "PEZ|flop|rainbow|cbet": {
-      "f": 0.28,
-      "x": 0.0,
-      "c": 0.56,
-      "b": 0.0,
-      "r": 0.16,
-      "sizing_mean": 0.871,
-      "n": 25
-    },
-    "PEZ|river|rainbow|none": {
-      "f": 0.0,
-      "x": 0.688,
-      "c": 0.0,
-      "b": 0.312,
-      "r": 0.0,
-      "sizing_mean": 0.803,
-      "n": 16
-    },
-    "TIBURON|river|two_tone|bet": {
-      "f": 0.583,
-      "x": 0.0,
-      "c": 0.333,
-      "b": 0.0,
-      "r": 0.083,
-      "sizing_mean": 5.747,
-      "n": 12
-    },
-    "PEZ|flop|rainbow+pair|bet": {
-      "f": 0.8,
-      "x": 0.0,
-      "c": 0.2,
-      "b": 0.0,
-      "r": 0.0,
-      "n": 5
-    },
-    "PEZ|turn|two_tone+pair|bet": {
-      "f": 0.286,
-      "x": 0.0,
-      "c": 0.571,
-      "b": 0.0,
-      "r": 0.143,
-      "sizing_mean": 0.269,
-      "n": 7
-    },
-    "PEZ|river|rainbow+pair|none": {
-      "f": 0.0,
-      "x": 0.333,
-      "c": 0.0,
-      "b": 0.667,
-      "r": 0.0,
-      "sizing_mean": 0.455,
-      "n": 12
-    },
-    "PEZ|turn|rainbow|bet": {
-      "f": 0.778,
-      "x": 0.0,
-      "c": 0.222,
-      "b": 0.0,
-      "r": 0.0,
-      "n": 9
-    },
-    "PEZ|river|rainbow+pair|bet": {
-      "f": 0.333,
-      "x": 0.0,
-      "c": 0.667,
-      "b": 0.0,
-      "r": 0.0,
-      "n": 3
-    },
-    "PEZ|turn|rainbow+pair|barrel": {
+    "PEZ|flop|monotone|donk": {
       "f": 0.667,
       "x": 0.0,
-      "c": 0.333,
+      "c": 0.167,
       "b": 0.0,
-      "r": 0.0,
+      "r": 0.167,
+      "sizing_mean": 0.789,
       "n": 6
     },
-    "PEZ|river|two_tone+pair|none": {
-      "f": 0.0,
-      "x": 0.552,
-      "c": 0.0,
-      "b": 0.448,
-      "r": 0.0,
-      "sizing_mean": 1.39,
-      "n": 29
-    },
-    "PEZ|turn|rainbow|barrel": {
+    "TIBURON|turn|two_tone+pair|barrel": {
       "f": 0.429,
       "x": 0.0,
       "c": 0.429,
       "b": 0.0,
       "r": 0.143,
-      "sizing_mean": 0.462,
-      "n": 7
+      "sizing_mean": 0.796,
+      "n": 14
     },
-    "PEZ|turn|two_tone|bet": {
-      "f": 0.25,
+    "PEZ|flop|rainbow|bet": {
+      "f": 0.778,
       "x": 0.0,
-      "c": 0.667,
+      "c": 0.111,
       "b": 0.0,
-      "r": 0.083,
-      "sizing_mean": 1.667,
-      "n": 12
+      "r": 0.111,
+      "sizing_mean": 0.75,
+      "n": 9
     },
-    "PEZ|river|rainbow|bet": {
-      "f": 0.571,
+    "PEZ|flop|rainbow|cbet": {
+      "f": 0.355,
       "x": 0.0,
-      "c": 0.286,
+      "c": 0.548,
       "b": 0.0,
-      "r": 0.143,
-      "sizing_mean": 4.225,
-      "n": 7
+      "r": 0.097,
+      "sizing_mean": 0.784,
+      "n": 62
     },
-    "PEZ|flop|two_tone+pair|cbet": {
+    "TIBURON|turn|rainbow|donk": {
+      "f": 0.524,
+      "x": 0.0,
+      "c": 0.429,
+      "b": 0.0,
+      "r": 0.048,
+      "sizing_mean": 0.585,
+      "n": 21
+    },
+    "PEZ|river|rainbow|none": {
+      "f": 0.02,
+      "x": 0.608,
+      "c": 0.0,
+      "b": 0.373,
+      "r": 0.0,
+      "sizing_mean": 0.669,
+      "n": 51
+    },
+    "TIBURON|river|two_tone|bet": {
+      "f": 0.609,
+      "x": 0.0,
+      "c": 0.261,
+      "b": 0.0,
+      "r": 0.13,
+      "sizing_mean": 2.52,
+      "n": 23
+    },
+    "PEZ|turn|two_tone+pair|donk": {
+      "f": 0.48,
+      "x": 0.0,
+      "c": 0.44,
+      "b": 0.0,
+      "r": 0.08,
+      "sizing_mean": 0.674,
+      "n": 25
+    },
+    "PEZ|river|rainbow+pair|none": {
       "f": 0.0,
-      "x": 0.0,
-      "c": 0.667,
-      "b": 0.0,
-      "r": 0.333,
-      "sizing_mean": 1.185,
-      "n": 6
+      "x": 0.385,
+      "c": 0.0,
+      "b": 0.615,
+      "r": 0.0,
+      "sizing_mean": 0.829,
+      "n": 26
     },
-    "PEZ|turn|two_tone+pair|barrel": {
-      "f": 0.667,
+    "PEZ|turn|rainbow|bet": {
+      "f": 0.6,
       "x": 0.0,
-      "c": 0.333,
+      "c": 0.4,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 5
+    },
+    "PEZ|river|rainbow+pair|bet": {
+      "f": 0.444,
+      "x": 0.0,
+      "c": 0.556,
       "b": 0.0,
       "r": 0.0,
       "n": 9
     },
-    "PEZ|turn|two_tone|raise": {
-      "f": 0.333,
-      "x": 0.0,
-      "c": 0.667,
-      "b": 0.0,
-      "r": 0.0,
-      "n": 3
-    },
-    "PEZ|flop|two_tone+pair|raise": {
+    "PEZ|turn|rainbow+pair|barrel": {
       "f": 0.714,
       "x": 0.0,
       "c": 0.286,
@@ -721,7 +815,86 @@
       "r": 0.0,
       "n": 7
     },
-    "PEZ|turn|rainbow+pair|bet": {
+    "PEZ|river|two_tone+pair|none": {
+      "f": 0.0,
+      "x": 0.554,
+      "c": 0.0,
+      "b": 0.446,
+      "r": 0.0,
+      "sizing_mean": 0.883,
+      "n": 74
+    },
+    "PEZ|turn|rainbow|barrel": {
+      "f": 0.346,
+      "x": 0.0,
+      "c": 0.577,
+      "b": 0.0,
+      "r": 0.077,
+      "sizing_mean": 0.391,
+      "n": 26
+    },
+    "PEZ|flop|rainbow+pair|donk": {
+      "f": 0.8,
+      "x": 0.0,
+      "c": 0.2,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 5
+    },
+    "PEZ|turn|two_tone|bet": {
+      "f": 0.273,
+      "x": 0.0,
+      "c": 0.636,
+      "b": 0.0,
+      "r": 0.091,
+      "sizing_mean": 1.667,
+      "n": 11
+    },
+    "PEZ|river|rainbow|bet": {
+      "f": 0.522,
+      "x": 0.0,
+      "c": 0.348,
+      "b": 0.0,
+      "r": 0.13,
+      "sizing_mean": 2.292,
+      "n": 23
+    },
+    "PEZ|flop|two_tone+pair|cbet": {
+      "f": 0.286,
+      "x": 0.0,
+      "c": 0.5,
+      "b": 0.0,
+      "r": 0.214,
+      "sizing_mean": 1.14,
+      "n": 14
+    },
+    "PEZ|turn|two_tone+pair|barrel": {
+      "f": 0.656,
+      "x": 0.0,
+      "c": 0.312,
+      "b": 0.0,
+      "r": 0.031,
+      "sizing_mean": 0.723,
+      "n": 32
+    },
+    "PEZ|turn|two_tone|raise": {
+      "f": 0.429,
+      "x": 0.0,
+      "c": 0.571,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 7
+    },
+    "PEZ|flop|two_tone+pair|raise": {
+      "f": 0.55,
+      "x": 0.0,
+      "c": 0.3,
+      "b": 0.0,
+      "r": 0.15,
+      "sizing_mean": 0.581,
+      "n": 20
+    },
+    "PEZ|turn|rainbow+pair|donk": {
       "f": 0.667,
       "x": 0.0,
       "c": 0.333,
@@ -729,30 +902,101 @@
       "r": 0.0,
       "n": 3
     },
-    "TIBURON|turn|rainbow+pair|barrel": {
-      "f": 0.333,
+    "PEZ|turn|rainbow|donk": {
+      "f": 0.588,
       "x": 0.0,
-      "c": 0.333,
+      "c": 0.353,
       "b": 0.0,
-      "r": 0.333,
-      "sizing_mean": 0.235,
-      "n": 3
+      "r": 0.059,
+      "sizing_mean": 0.874,
+      "n": 17
     },
-    "TIBURON|turn|two_tone|raise": {
-      "f": 0.5,
-      "x": 0.0,
-      "c": 0.5,
-      "b": 0.0,
-      "r": 0.0,
-      "n": 6
-    },
-    "TIBURON|flop|rainbow+pair|cbet": {
+    "TIBURON|flop|monotone|cbet": {
       "f": 0.5,
       "x": 0.0,
       "c": 0.5,
       "b": 0.0,
       "r": 0.0,
       "n": 4
+    },
+    "PEZ|flop|monotone|cbet": {
+      "f": 0.333,
+      "x": 0.0,
+      "c": 0.5,
+      "b": 0.0,
+      "r": 0.167,
+      "sizing_mean": 0.641,
+      "n": 6
+    },
+    "TIBURON|turn|rainbow+pair|barrel": {
+      "f": 0.4,
+      "x": 0.0,
+      "c": 0.4,
+      "b": 0.0,
+      "r": 0.2,
+      "sizing_mean": 0.235,
+      "n": 5
+    },
+    "TIBURON|turn|rainbow+pair|raise": {
+      "f": 0.333,
+      "x": 0.0,
+      "c": 0.333,
+      "b": 0.0,
+      "r": 0.333,
+      "sizing_mean": 0.658,
+      "n": 3
+    },
+    "TIBURON|turn|two_tone|raise": {
+      "f": 0.6,
+      "x": 0.0,
+      "c": 0.4,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 10
+    },
+    "PEZ|flop|two_tone|raise": {
+      "f": 0.533,
+      "x": 0.0,
+      "c": 0.4,
+      "b": 0.0,
+      "r": 0.067,
+      "sizing_mean": 1.254,
+      "n": 15
+    },
+    "PEZ|turn|two_tone|donk": {
+      "f": 0.484,
+      "x": 0.0,
+      "c": 0.452,
+      "b": 0.0,
+      "r": 0.065,
+      "sizing_mean": 1.34,
+      "n": 31
+    },
+    "TIBURON|flop|rainbow|bet": {
+      "f": 0.667,
+      "x": 0.0,
+      "c": 0.333,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 6
+    },
+    "PEZ|flop|two_tone|bet": {
+      "f": 0.4,
+      "x": 0.0,
+      "c": 0.5,
+      "b": 0.0,
+      "r": 0.1,
+      "sizing_mean": 0.5,
+      "n": 10
+    },
+    "PEZ|flop|two_tone+pair|donk": {
+      "f": 0.0,
+      "x": 0.0,
+      "c": 0.0,
+      "b": 0.0,
+      "r": 1.0,
+      "sizing_mean": 0.67,
+      "n": 3
     },
     "PEZ|flop|two_tone+pair|bet": {
       "f": 0.667,
@@ -763,256 +1007,391 @@
       "sizing_mean": 1.062,
       "n": 6
     },
-    "TIBURON|river|two_tone+pair|raise": {
+    "TIBURON|turn|two_tone|bet": {
+      "f": 0.75,
+      "x": 0.0,
+      "c": 0.25,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 4
+    },
+    "PEZ|turn|monotone|none": {
+      "f": 0.0,
+      "x": 0.6,
+      "c": 0.0,
+      "b": 0.4,
+      "r": 0.0,
+      "sizing_mean": 0.674,
+      "n": 5
+    },
+    "TIBURON|flop|rainbow+pair|bet": {
+      "f": 0.25,
+      "x": 0.0,
+      "c": 0.75,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 4
+    },
+    "TIBURON|turn|two_tone+pair|bet": {
       "f": 0.0,
       "x": 0.0,
-      "c": 0.333,
+      "c": 1.0,
       "b": 0.0,
-      "r": 0.667,
-      "sizing_mean": 0.918,
+      "r": 0.0,
       "n": 3
-    }
-  },
-  "por_facing": {
-    "TIBURON|preflop|none": {
-      "f": 0.565,
-      "x": 0.072,
-      "c": 0.073,
-      "b": 0.244,
-      "r": 0.045,
-      "sizing_mean": 1.282,
-      "n": 708
     },
-    "TIBURON|preflop|bet": {
-      "f": 0.683,
-      "x": 0.043,
-      "c": 0.186,
-      "b": 0.013,
-      "r": 0.076,
-      "sizing_mean": 5.018,
-      "n": 463
-    },
-    "PEZ|preflop|bet": {
-      "f": 0.534,
-      "x": 0.048,
-      "c": 0.356,
-      "b": 0.014,
-      "r": 0.048,
-      "sizing_mean": 1.75,
-      "n": 292
-    },
-    "TIBURON|flop|none": {
-      "f": 0.003,
-      "x": 0.651,
-      "c": 0.0,
-      "b": 0.342,
-      "r": 0.003,
-      "sizing_mean": 0.756,
-      "n": 301
-    },
-    "PEZ|flop|none": {
-      "f": 0.0,
-      "x": 0.763,
-      "c": 0.0,
-      "b": 0.237,
-      "r": 0.0,
-      "sizing_mean": 1.601,
-      "n": 198
-    },
-    "PEZ|flop|bet": {
-      "f": 0.54,
-      "x": 0.0,
-      "c": 0.34,
-      "b": 0.0,
-      "r": 0.12,
-      "sizing_mean": 0.761,
-      "n": 50
-    },
-    "TIBURON|flop|bet": {
-      "f": 0.587,
-      "x": 0.0,
-      "c": 0.381,
-      "b": 0.0,
-      "r": 0.032,
-      "sizing_mean": 0.275,
-      "n": 63
-    },
-    "TIBURON|turn|none": {
-      "f": 0.0,
-      "x": 0.562,
-      "c": 0.0,
-      "b": 0.438,
-      "r": 0.0,
-      "sizing_mean": 0.656,
-      "n": 192
-    },
-    "PEZ|turn|none": {
-      "f": 0.008,
-      "x": 0.656,
-      "c": 0.0,
-      "b": 0.336,
-      "r": 0.0,
-      "sizing_mean": 0.615,
-      "n": 122
-    },
-    "TIBURON|river|none": {
-      "f": 0.0,
-      "x": 0.659,
-      "c": 0.0,
-      "b": 0.341,
-      "r": 0.0,
-      "sizing_mean": 0.656,
-      "n": 126
-    },
-    "PEZ|river|none": {
-      "f": 0.0,
-      "x": 0.615,
-      "c": 0.0,
-      "b": 0.385,
-      "r": 0.0,
-      "sizing_mean": 1.0,
-      "n": 91
-    },
-    "PEZ|preflop|none": {
-      "f": 0.37,
-      "x": 0.068,
-      "c": 0.37,
-      "b": 0.092,
-      "r": 0.101,
-      "sizing_mean": 0.682,
-      "n": 338
-    },
-    "TIBURON|flop|cbet": {
-      "f": 0.561,
+    "TIBURON|river|two_tone+pair|raise": {
+      "f": 0.444,
       "x": 0.0,
       "c": 0.333,
       "b": 0.0,
-      "r": 0.105,
-      "sizing_mean": 1.102,
-      "n": 57
+      "r": 0.222,
+      "sizing_mean": 0.918,
+      "n": 9
     },
-    "TIBURON|flop|raise": {
+    "TIBURON|flop|rainbow+pair|cbet": {
       "f": 0.4,
       "x": 0.0,
       "c": 0.6,
       "b": 0.0,
       "r": 0.0,
-      "n": 15
+      "n": 5
     },
-    "TIBURON|turn|bet": {
-      "f": 0.469,
-      "x": 0.0,
-      "c": 0.422,
-      "b": 0.0,
-      "r": 0.109,
-      "sizing_mean": 0.65,
-      "n": 64
+    "PEZ|turn|-|none": {
+      "f": 0.0,
+      "x": 0.75,
+      "c": 0.0,
+      "b": 0.25,
+      "r": 0.0,
+      "sizing_mean": 0.28,
+      "n": 4
     },
-    "TIBURON|river|bet": {
-      "f": 0.556,
-      "x": 0.0,
-      "c": 0.37,
-      "b": 0.0,
-      "r": 0.074,
-      "sizing_mean": 2.207,
-      "n": 54
-    },
-    "TIBURON|turn|barrel": {
-      "f": 0.545,
-      "x": 0.0,
-      "c": 0.227,
-      "b": 0.0,
-      "r": 0.227,
-      "sizing_mean": 0.597,
-      "n": 22
-    },
-    "PEZ|turn|barrel": {
-      "f": 0.462,
-      "x": 0.0,
-      "c": 0.462,
-      "b": 0.0,
-      "r": 0.077,
-      "sizing_mean": 0.595,
-      "n": 39
-    },
-    "PEZ|river|bet": {
-      "f": 0.621,
-      "x": 0.0,
-      "c": 0.31,
-      "b": 0.0,
-      "r": 0.069,
-      "sizing_mean": 2.946,
-      "n": 29
-    },
-    "PEZ|preflop|raise": {
-      "f": 0.54,
-      "x": 0.04,
-      "c": 0.34,
-      "b": 0.0,
-      "r": 0.08,
-      "sizing_mean": 2.046,
-      "n": 50
-    },
-    "TIBURON|preflop|raise": {
-      "f": 0.41,
-      "x": 0.026,
-      "c": 0.526,
-      "b": 0.0,
-      "r": 0.038,
-      "sizing_mean": 0.804,
-      "n": 78
-    },
-    "PEZ|flop|raise": {
-      "f": 0.636,
-      "x": 0.0,
-      "c": 0.364,
+    "PEZ|river|-|none": {
+      "f": 0.0,
+      "x": 1.0,
+      "c": 0.0,
       "b": 0.0,
       "r": 0.0,
-      "n": 11
+      "n": 5
+    },
+    "PEZ|river|rainbow+pair|raise": {
+      "f": 0.333,
+      "x": 0.0,
+      "c": 0.667,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 3
+    },
+    "PEZ|river|rainbow|raise": {
+      "f": 0.6,
+      "x": 0.0,
+      "c": 0.4,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 5
+    },
+    "TIBURON|flop|two_tone+pair|raise": {
+      "f": 0.875,
+      "x": 0.0,
+      "c": 0.125,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 8
+    },
+    "TIBURON|river|two_tone|raise": {
+      "f": 0.333,
+      "x": 0.0,
+      "c": 0.667,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 3
+    }
+  },
+  "por_facing": {
+    "TIBURON|preflop|none": {
+      "f": 0.365,
+      "x": 0.047,
+      "c": 0.03,
+      "b": 0.531,
+      "r": 0.028,
+      "sizing_mean": 0.438,
+      "n": 1049
+    },
+    "TIBURON|preflop|bet": {
+      "f": 0.65,
+      "x": 0.046,
+      "c": 0.081,
+      "b": 0.008,
+      "r": 0.215,
+      "sizing_mean": 2.884,
+      "n": 1663
+    },
+    "PEZ|preflop|bet": {
+      "f": 0.439,
+      "x": 0.06,
+      "c": 0.402,
+      "b": 0.009,
+      "r": 0.091,
+      "sizing_mean": 2.351,
+      "n": 916
+    },
+    "TIBURON|flop|none": {
+      "f": 0.002,
+      "x": 0.678,
+      "c": 0.0,
+      "b": 0.318,
+      "r": 0.002,
+      "sizing_mean": 0.622,
+      "n": 650
+    },
+    "PEZ|flop|none": {
+      "f": 0.0,
+      "x": 0.713,
+      "c": 0.0,
+      "b": 0.287,
+      "r": 0.0,
+      "sizing_mean": 0.914,
+      "n": 568
+    },
+    "PEZ|flop|donk": {
+      "f": 0.506,
+      "x": 0.0,
+      "c": 0.388,
+      "b": 0.0,
+      "r": 0.106,
+      "sizing_mean": 0.823,
+      "n": 85
+    },
+    "TIBURON|flop|donk": {
+      "f": 0.574,
+      "x": 0.0,
+      "c": 0.377,
+      "b": 0.0,
+      "r": 0.049,
+      "sizing_mean": 0.718,
+      "n": 122
+    },
+    "TIBURON|turn|none": {
+      "f": 0.0,
+      "x": 0.531,
+      "c": 0.0,
+      "b": 0.469,
+      "r": 0.0,
+      "sizing_mean": 0.653,
+      "n": 403
+    },
+    "PEZ|turn|none": {
+      "f": 0.006,
+      "x": 0.634,
+      "c": 0.0,
+      "b": 0.36,
+      "r": 0.0,
+      "sizing_mean": 0.571,
+      "n": 347
+    },
+    "TIBURON|river|none": {
+      "f": 0.0,
+      "x": 0.618,
+      "c": 0.0,
+      "b": 0.382,
+      "r": 0.0,
+      "sizing_mean": 0.546,
+      "n": 241
+    },
+    "PEZ|river|none": {
+      "f": 0.004,
+      "x": 0.609,
+      "c": 0.0,
+      "b": 0.387,
+      "r": 0.0,
+      "sizing_mean": 0.83,
+      "n": 230
+    },
+    "PEZ|preflop|none": {
+      "f": 0.257,
+      "x": 0.045,
+      "c": 0.261,
+      "b": 0.371,
+      "r": 0.066,
+      "sizing_mean": 0.205,
+      "n": 560
+    },
+    "TIBURON|flop|bet": {
+      "f": 0.65,
+      "x": 0.0,
+      "c": 0.35,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 20
+    },
+    "TIBURON|flop|cbet": {
+      "f": 0.456,
+      "x": 0.0,
+      "c": 0.456,
+      "b": 0.0,
+      "r": 0.088,
+      "sizing_mean": 0.986,
+      "n": 125
+    },
+    "TIBURON|flop|raise": {
+      "f": 0.618,
+      "x": 0.0,
+      "c": 0.382,
+      "b": 0.0,
+      "r": 0.0,
+      "n": 34
+    },
+    "TIBURON|turn|donk": {
+      "f": 0.483,
+      "x": 0.0,
+      "c": 0.417,
+      "b": 0.0,
+      "r": 0.1,
+      "sizing_mean": 0.777,
+      "n": 120
+    },
+    "TIBURON|river|bet": {
+      "f": 0.565,
+      "x": 0.0,
+      "c": 0.315,
+      "b": 0.0,
+      "r": 0.12,
+      "sizing_mean": 1.583,
+      "n": 108
+    },
+    "TIBURON|turn|barrel": {
+      "f": 0.476,
+      "x": 0.0,
+      "c": 0.413,
+      "b": 0.0,
+      "r": 0.111,
+      "sizing_mean": 0.718,
+      "n": 63
+    },
+    "PEZ|turn|barrel": {
+      "f": 0.488,
+      "x": 0.0,
+      "c": 0.448,
+      "b": 0.0,
+      "r": 0.064,
+      "sizing_mean": 0.644,
+      "n": 125
+    },
+    "PEZ|river|bet": {
+      "f": 0.586,
+      "x": 0.0,
+      "c": 0.303,
+      "b": 0.0,
+      "r": 0.111,
+      "sizing_mean": 1.365,
+      "n": 99
+    },
+    "PEZ|preflop|raise": {
+      "f": 0.523,
+      "x": 0.006,
+      "c": 0.433,
+      "b": 0.0,
+      "r": 0.038,
+      "sizing_mean": 2.014,
+      "n": 501
+    },
+    "TIBURON|preflop|raise": {
+      "f": 0.695,
+      "x": 0.001,
+      "c": 0.238,
+      "b": 0.0,
+      "r": 0.066,
+      "sizing_mean": 2.11,
+      "n": 882
+    },
+    "PEZ|flop|raise": {
+      "f": 0.488,
+      "x": 0.0,
+      "c": 0.39,
+      "b": 0.0,
+      "r": 0.122,
+      "sizing_mean": 1.104,
+      "n": 41
     },
     "PEZ|flop|cbet": {
-      "f": 0.281,
+      "f": 0.389,
       "x": 0.0,
-      "c": 0.579,
+      "c": 0.521,
       "b": 0.0,
-      "r": 0.14,
-      "sizing_mean": 1.064,
-      "n": 57
+      "r": 0.09,
+      "sizing_mean": 0.908,
+      "n": 167
     },
     "TIBURON|turn|raise": {
-      "f": 0.273,
+      "f": 0.435,
       "x": 0.0,
-      "c": 0.545,
+      "c": 0.435,
       "b": 0.0,
-      "r": 0.182,
-      "sizing_mean": 0.411,
-      "n": 11
+      "r": 0.13,
+      "sizing_mean": 0.494,
+      "n": 23
     },
     "PEZ|turn|raise": {
+      "f": 0.5,
+      "x": 0.0,
+      "c": 0.429,
+      "b": 0.0,
+      "r": 0.071,
+      "sizing_mean": 0.211,
+      "n": 14
+    },
+    "PEZ|flop|bet": {
+      "f": 0.6,
+      "x": 0.0,
+      "c": 0.3,
+      "b": 0.0,
+      "r": 0.1,
+      "sizing_mean": 0.771,
+      "n": 30
+    },
+    "TIBURON|turn|bet": {
+      "f": 0.5,
+      "x": 0.0,
+      "c": 0.417,
+      "b": 0.0,
+      "r": 0.083,
+      "sizing_mean": 0.423,
+      "n": 12
+    },
+    "PEZ|turn|donk": {
+      "f": 0.526,
+      "x": 0.0,
+      "c": 0.41,
+      "b": 0.0,
+      "r": 0.064,
+      "sizing_mean": 0.981,
+      "n": 78
+    },
+    "PEZ|turn|bet": {
+      "f": 0.389,
+      "x": 0.0,
+      "c": 0.556,
+      "b": 0.0,
+      "r": 0.056,
+      "sizing_mean": 1.667,
+      "n": 18
+    },
+    "PEZ|river|raise": {
       "f": 0.5,
       "x": 0.0,
       "c": 0.5,
       "b": 0.0,
       "r": 0.0,
-      "n": 6
-    },
-    "PEZ|turn|bet": {
-      "f": 0.452,
-      "x": 0.0,
-      "c": 0.484,
-      "b": 0.0,
-      "r": 0.065,
-      "sizing_mean": 0.968,
-      "n": 31
+      "n": 12
     },
     "TIBURON|river|raise": {
-      "f": 0.25,
+      "f": 0.467,
       "x": 0.0,
-      "c": 0.25,
+      "c": 0.4,
       "b": 0.0,
-      "r": 0.5,
+      "r": 0.133,
       "sizing_mean": 0.918,
-      "n": 4
+      "n": 15
     }
   }
 }

@@ -1,10 +1,10 @@
 {
-  "hands": 327,
+  "hands": 900,
   "denoms": {
     "Jarduan": {
-      "no_raise": 206,
-      "facing_open": 107,
-      "facing_3bet": 10
+      "no_raise": 573,
+      "facing_open": 278,
+      "facing_3bet": 19
     },
     "NESANVAR": {
       "facing_open": 13,
@@ -17,9 +17,9 @@
       "facing_3bet": 1
     },
     "mur420": {
-      "facing_open": 44,
-      "no_raise": 62,
-      "facing_3bet": 4
+      "facing_open": 51,
+      "no_raise": 70,
+      "facing_3bet": 5
     },
     "Hachirama": {
       "facing_open": 16,
@@ -27,7 +27,7 @@
       "facing_3bet": 2
     },
     "Juanmabm": {
-      "facing_open": 24,
+      "facing_open": 25,
       "no_raise": 28,
       "facing_3bet": 2
     },
@@ -77,7 +77,8 @@
       "facing_open": 4
     },
     "Andresyjeymi": {
-      "no_raise": 1
+      "no_raise": 13,
+      "facing_open": 4
     },
     "Andreayjeymi": {
       "no_raise": 7,
@@ -92,7 +93,7 @@
       "facing_3bet": 2
     },
     "P5": {
-      "facing_open": 2
+      "facing_open": 3
     },
     "Geilyn21": {
       "facing_3bet": 1,
@@ -100,10 +101,10 @@
       "no_raise": 11
     },
     "P3": {
-      "no_raise": 1
+      "no_raise": 2
     },
     "P4": {
-      "no_raise": 1
+      "no_raise": 2
     },
     "HERO": {
       "facing_open": 1
@@ -132,16 +133,17 @@
       "facing_3bet": 1
     },
     "SamPachero30": {
-      "facing_open": 14,
-      "no_raise": 25
+      "facing_open": 18,
+      "no_raise": 32,
+      "facing_3bet": 1
     },
     "ComboHunter": {
       "facing_open": 10,
       "no_raise": 20
     },
     "LaloMora": {
-      "facing_open": 3,
-      "no_raise": 2
+      "facing_open": 13,
+      "no_raise": 26
     },
     "SAE_AAAA": {
       "facing_open": 6,
@@ -199,32 +201,479 @@
     "RMF99": {
       "facing_open": 5,
       "no_raise": 2
+    },
+    "JohanV.": {
+      "no_raise": 7,
+      "facing_open": 2
+    },
+    "LolaMora": {
+      "no_raise": 8,
+      "facing_open": 1
+    },
+    "Danjer": {
+      "facing_open": 1,
+      "no_raise": 2
+    },
+    "Mur420": {
+      "no_raise": 1,
+      "facing_open": 1
+    },
+    "Hero": {
+      "no_raise": 4
+    },
+    "Player1": {
+      "no_raise": 6
+    },
+    "Player4": {
+      "no_raise": 6
+    },
+    "Player5": {
+      "no_raise": 6
+    },
+    "Player2": {
+      "no_raise": 6
+    },
+    "Player3": {
+      "no_raise": 3
+    },
+    "kiluaak": {
+      "no_raise": 15,
+      "facing_open": 11
+    },
+    "pardoKing": {
+      "no_raise": 11,
+      "facing_open": 7
+    },
+    "HarryPoker18": {
+      "facing_open": 75,
+      "no_raise": 114,
+      "facing_3bet": 4
+    },
+    "CamiloG208": {
+      "no_raise": 10,
+      "facing_open": 5
+    },
+    "anro": {
+      "no_raise": 4,
+      "facing_open": 3
+    },
+    "ALKILADO": {
+      "no_raise": 4,
+      "facing_open": 1
+    },
+    "Juanpablogrz": {
+      "no_raise": 16,
+      "facing_open": 4
+    },
+    "LUIS-DIAZ": {
+      "no_raise": 47,
+      "facing_open": 15,
+      "facing_3bet": 1
+    },
+    "Bigmac14": {
+      "no_raise": 14,
+      "facing_open": 2
+    },
+    "Chang2113": {
+      "no_raise": 8,
+      "facing_open": 5
+    },
+    "SB": {
+      "no_raise": 1
+    },
+    "Deyffan": {
+      "no_raise": 3,
+      "facing_open": 1
+    },
+    "Onix22": {
+      "no_raise": 29,
+      "facing_open": 18,
+      "facing_3bet": 2
+    },
+    "Pechugo": {
+      "no_raise": 26,
+      "facing_open": 19,
+      "facing_3bet": 1
+    },
+    "man1": {
+      "facing_open": 8,
+      "no_raise": 15
+    },
+    "Isagomez": {
+      "facing_open": 3,
+      "no_raise": 5,
+      "facing_3bet": 1
+    },
+    "Iker69": {
+      "facing_open": 7,
+      "no_raise": 10,
+      "facing_3bet": 1
+    },
+    "Davile": {
+      "no_raise": 2,
+      "facing_open": 2
+    },
+    "Jorish29": {
+      "no_raise": 8
+    },
+    "Jonatantarra": {
+      "no_raise": 12,
+      "facing_open": 4
+    },
+    "Jhordanbtc": {
+      "facing_open": 5,
+      "no_raise": 11
+    },
+    "Rompechuchas": {
+      "facing_open": 5,
+      "no_raise": 11
+    },
+    "Goldy7": {
+      "no_raise": 5,
+      "facing_open": 3
+    },
+    "dollarbill": {
+      "facing_open": 11,
+      "no_raise": 17
+    },
+    "P2": {
+      "no_raise": 1
+    },
+    "santibenavides": {
+      "no_raise": 4,
+      "facing_open": 1
+    },
+    "Mrcash": {
+      "no_raise": 53,
+      "facing_open": 29,
+      "facing_3bet": 2
+    },
+    "Samuel1598": {
+      "no_raise": 21,
+      "facing_open": 9,
+      "facing_3bet": 3
+    },
+    "Deftones": {
+      "facing_open": 23,
+      "no_raise": 33
+    },
+    "otb_RedBaron": {
+      "facing_open": 10,
+      "no_raise": 14
+    },
+    "Edup": {
+      "no_raise": 5,
+      "facing_open": 5
+    },
+    "Franco1603": {
+      "no_raise": 39,
+      "facing_open": 14
+    },
+    "AZ de A": {
+      "no_raise": 12,
+      "facing_open": 7
+    },
+    "bsaghv4": {
+      "no_raise": 15,
+      "facing_open": 1
+    },
+    "Lprieto11": {
+      "facing_open": 6,
+      "no_raise": 12
+    },
+    "Juancuellar987": {
+      "facing_open": 2,
+      "no_raise": 11
+    },
+    "maestrodelbluff": {
+      "no_raise": 3,
+      "facing_open": 1
+    },
+    "Danielev": {
+      "no_raise": 9,
+      "facing_3bet": 1,
+      "facing_open": 6
+    },
+    "Tatan29": {
+      "facing_open": 20,
+      "no_raise": 21,
+      "facing_3bet": 4
+    },
+    "CorajeRaise": {
+      "facing_open": 20,
+      "no_raise": 27
+    },
+    "JS99": {
+      "no_raise": 29,
+      "facing_open": 23,
+      "facing_3bet": 5
+    },
+    "Doffy707": {
+      "no_raise": 11,
+      "facing_open": 7,
+      "facing_3bet": 1
+    },
+    "David P.": {
+      "no_raise": 9,
+      "facing_open": 9,
+      "facing_3bet": 1
+    },
+    "UTG": {
+      "no_raise": 3
+    },
+    "mommya": {
+      "no_raise": 20,
+      "facing_open": 12
+    },
+    "Memelo": {
+      "no_raise": 7,
+      "facing_open": 1
+    },
+    "Matgar": {
+      "no_raise": 1
+    },
+    "Freddy9212": {
+      "facing_open": 2,
+      "no_raise": 6
+    },
+    "CO": {
+      "no_raise": 1
+    },
+    "SunGodNika": {
+      "facing_open": 2,
+      "no_raise": 1
+    },
+    "Davi-Ari": {
+      "no_raise": 69,
+      "facing_open": 28,
+      "facing_3bet": 7
+    },
+    "Hector1320": {
+      "no_raise": 28,
+      "facing_open": 18,
+      "facing_3bet": 3
+    },
+    "Ocampo99": {
+      "no_raise": 1,
+      "facing_open": 1
+    },
+    "Juri": {
+      "facing_open": 1
+    },
+    "Juris55": {
+      "facing_open": 14,
+      "no_raise": 30,
+      "facing_3bet": 3
+    },
+    "N.E.O": {
+      "no_raise": 23,
+      "facing_open": 18,
+      "facing_3bet": 1
+    },
+    "PardoKing": {
+      "no_raise": 5,
+      "facing_open": 1
+    },
+    "DOGO*": {
+      "no_raise": 21,
+      "facing_open": 11,
+      "facing_3bet": 1
+    },
+    "baam08": {
+      "facing_open": 6,
+      "no_raise": 13,
+      "facing_3bet": 2
+    },
+    "JaCkFlor": {
+      "no_raise": 9,
+      "facing_open": 8,
+      "facing_3bet": 1
+    },
+    "JuaGon": {
+      "no_raise": 10,
+      "facing_3bet": 2,
+      "facing_open": 5
+    },
+    "Cash7": {
+      "facing_open": 5,
+      "no_raise": 2
+    },
+    "sergio39": {
+      "facing_open": 13,
+      "no_raise": 16,
+      "facing_3bet": 2
+    },
+    "Antonia7": {
+      "no_raise": 10,
+      "facing_open": 1
+    },
+    "Aneurin": {
+      "no_raise": 26,
+      "facing_open": 8,
+      "facing_3bet": 1
+    },
+    "Krono": {
+      "no_raise": 17,
+      "facing_open": 8
+    },
+    "KoKeB0y92": {
+      "no_raise": 4,
+      "facing_open": 2
+    },
+    "jj20": {
+      "no_raise": 1
+    },
+    "Waffles": {
+      "no_raise": 5
+    },
+    "Rio28": {
+      "no_raise": 6,
+      "facing_open": 5
+    },
+    "Cazadordeputas": {
+      "no_raise": 26,
+      "facing_open": 6
+    },
+    "Adrugir": {
+      "no_raise": 21,
+      "facing_open": 4
+    },
+    "MuckeDBoY": {
+      "no_raise": 21,
+      "facing_3bet": 1,
+      "facing_open": 3
+    },
+    "ANJO2017": {
+      "no_raise": 49,
+      "facing_open": 37,
+      "facing_3bet": 2
+    },
+    "Bogotano26": {
+      "no_raise": 23,
+      "facing_open": 6,
+      "facing_3bet": 1
+    },
+    "Edgar28": {
+      "facing_open": 7,
+      "no_raise": 20,
+      "facing_3bet": 1
+    },
+    "O$0RL0": {
+      "facing_3bet": 2,
+      "facing_open": 5,
+      "no_raise": 9
+    },
+    "Carupoker": {
+      "no_raise": 28,
+      "facing_open": 26
+    },
+    "Electr0": {
+      "facing_open": 11,
+      "no_raise": 11
+    },
+    "Prieto9610": {
+      "no_raise": 2
+    },
+    "Oscar.RG": {
+      "no_raise": 8,
+      "facing_open": 3,
+      "facing_3bet": 1
+    },
+    "Capitan spiff": {
+      "no_raise": 11,
+      "facing_open": 12,
+      "facing_3bet": 3
+    },
+    "Sebas420": {
+      "facing_open": 2,
+      "no_raise": 3
+    },
+    "RABBUNI": {
+      "no_raise": 1,
+      "facing_3bet": 1,
+      "facing_open": 1
+    },
+    "La_Gaitana": {
+      "no_raise": 1,
+      "facing_open": 2
+    },
+    "vidents": {
+      "no_raise": 1,
+      "facing_3bet": 1,
+      "facing_open": 1
+    },
+    "BLKsoul": {
+      "facing_open": 6,
+      "no_raise": 11,
+      "facing_3bet": 1
+    },
+    "MP": {
+      "no_raise": 1
+    },
+    "Woons": {
+      "no_raise": 19,
+      "facing_open": 20
+    },
+    "BigPapi.": {
+      "no_raise": 24,
+      "facing_open": 16
+    },
+    "Santiagoea10": {
+      "no_raise": 24,
+      "facing_open": 16
+    },
+    "chupapepita": {
+      "facing_open": 5,
+      "no_raise": 2
+    },
+    "papa01": {
+      "no_raise": 3,
+      "facing_open": 3
+    },
+    "Silvio": {
+      "no_raise": 4,
+      "facing_open": 2
+    },
+    "Sp1609": {
+      "no_raise": 1
+    },
+    "Tio88": {
+      "no_raise": 3,
+      "facing_open": 3
+    },
+    "Dannykill": {
+      "no_raise": 3,
+      "facing_open": 3
+    },
+    "proplayer555": {
+      "no_raise": 1,
+      "facing_open": 1
     }
   },
   "cats": {
     "Jarduan": {
-      "open": 38,
-      "fold": 123,
-      "fold_vs_open": 86,
-      "call_open": 12,
-      "fold_vs_3bet": 9,
-      "bb_check": 21,
-      "3bet": 6,
-      "rol": 20,
-      "limp": 1,
-      "call_limp": 3,
-      "squeeze": 3,
+      "open": 127,
+      "fold": 326,
+      "fold_vs_open": 202,
+      "call_open": 56,
+      "fold_vs_3bet": 18,
+      "bb_check": 44,
+      "3bet": 18,
+      "rol": 50,
+      "limp": 4,
+      "call_limp": 22,
+      "squeeze": 2,
       "4bet": 1
     },
     "NESANVAR": {
       "call_open": 9,
       "call_limp": 3,
       "bb_check": 3,
-      "open": 8,
+      "limp": 10,
       "squeeze": 2,
       "fold_vs_open": 1,
+      "open": 1,
       "call_3bet": 2,
-      "limp": 3,
       "3bet": 1
     },
     "Pipaaf182": {
@@ -236,38 +685,39 @@
       "fold_vs_3bet": 1
     },
     "mur420": {
-      "call_open": 20,
-      "fold_vs_open": 20,
-      "fold": 36,
-      "open": 9,
-      "fold_vs_3bet": 4,
+      "call_open": 23,
+      "fold_vs_open": 24,
+      "fold": 42,
+      "limp": 15,
+      "fold_vs_3bet": 5,
       "squeeze": 1,
       "bb_check": 7,
-      "limp": 10,
-      "3bet": 3
+      "3bet": 3,
+      "open": 4,
+      "call_limp": 1,
+      "rol": 1
     },
     "Hachirama": {
       "call_open": 10,
       "bb_check": 2,
-      "open": 12,
+      "open": 7,
+      "limp": 11,
       "call_3bet": 2,
       "fold_vs_open": 3,
       "3bet": 2,
       "fold": 2,
-      "limp": 6,
       "call_limp": 1,
       "squeeze": 1,
       "rol": 1
     },
     "Juanmabm": {
       "call_open": 6,
-      "limp": 6,
-      "fold_vs_open": 17,
+      "limp": 8,
+      "fold_vs_open": 18,
       "fold_vs_3bet": 2,
       "fold": 12,
       "bb_check": 4,
       "3bet": 1,
-      "open": 2,
       "call_limp": 4
     },
     "JHONCACH": {
@@ -278,10 +728,11 @@
       "call_limp": 1,
       "rol": 5,
       "fold": 43,
-      "open": 9,
+      "limp": 3,
       "call_open": 3,
       "bb_check": 6,
       "3bet": 4,
+      "open": 6,
       "fold_vs_3bet": 2
     },
     "DominoSaurio": {
@@ -316,26 +767,26 @@
       "open": 1
     },
     "Mira90": {
-      "limp": 6,
+      "limp": 11,
       "fold_vs_3bet": 3,
-      "open": 6,
       "call_open": 3,
       "fold_vs_open": 5,
       "fold": 9,
       "bb_check": 3,
       "call_limp": 1,
       "3bet": 1,
-      "squeeze": 1
+      "squeeze": 1,
+      "open": 1
     },
     "Hellfish1": {
-      "open": 4,
+      "open": 3,
       "rol": 2,
       "fold_vs_open": 8,
       "call_open": 4,
       "call_limp": 1,
       "fold": 17,
       "fold_vs_3bet": 2,
-      "limp": 1,
+      "limp": 2,
       "bb_check": 2,
       "3bet": 1
     },
@@ -359,22 +810,30 @@
       "fold_vs_open": 1
     },
     "Andresyjeymi": {
-      "open": 1
+      "open": 2,
+      "call_limp": 2,
+      "limp": 2,
+      "bb_check": 1,
+      "rol": 4,
+      "call_open": 3,
+      "fold_vs_open": 1,
+      "fold": 2
     },
     "Andreayjeymi": {
-      "open": 4,
+      "open": 3,
+      "limp": 2,
       "rol": 2,
       "squeeze": 1,
-      "limp": 1,
       "call_open": 2,
       "fold_vs_open": 1
     },
     "Valentina22": {
       "fold": 1,
-      "open": 2
+      "limp": 1,
+      "open": 1
     },
     "Elyessi27": {
-      "limp": 7,
+      "limp": 9,
       "call_open": 11,
       "fold_vs_open": 14,
       "fold": 19,
@@ -383,29 +842,31 @@
       "call_limp": 15,
       "call_3bet": 1,
       "bb_check": 4,
-      "open": 5,
+      "open": 3,
       "fold_vs_3bet": 1
     },
     "P5": {
       "squeeze": 1,
-      "call_open": 1
+      "call_open": 2
     },
     "Geilyn21": {
       "fold_vs_3bet": 1,
       "call_open": 5,
-      "open": 5,
+      "limp": 3,
       "bb_check": 1,
       "3bet": 2,
       "fold_vs_open": 3,
       "fold": 4,
       "rol": 1,
+      "open": 2,
       "squeeze": 1
     },
     "P3": {
-      "fold": 1
+      "fold": 2
     },
     "P4": {
-      "open": 1
+      "open": 1,
+      "rol": 1
     },
     "HERO": {
       "squeeze": 1
@@ -416,13 +877,13 @@
     "Maicolp": {
       "bb_check": 3,
       "fold": 8,
-      "open": 9,
+      "limp": 22,
       "fold_vs_3bet": 3,
       "call_open": 10,
       "fold_vs_open": 11,
-      "limp": 14,
       "3bet": 3,
-      "call_limp": 8
+      "call_limp": 8,
+      "open": 1
     },
     "Johan Otero": {
       "call_open": 3,
@@ -439,9 +900,8 @@
     },
     "KappaxSlayer": {
       "fold_vs_open": 6,
-      "open": 5,
+      "limp": 13,
       "fold": 2,
-      "limp": 8,
       "call_limp": 2,
       "bb_check": 3,
       "call_3bet": 1,
@@ -454,30 +914,34 @@
       "fold": 5,
       "call_open": 3,
       "fold_vs_3bet": 1,
-      "limp": 4,
-      "open": 2
+      "limp": 5,
+      "open": 1
     },
     "SamPachero30": {
-      "fold_vs_open": 13,
-      "fold": 15,
-      "rol": 1,
-      "open": 8,
+      "fold_vs_open": 15,
+      "fold": 18,
+      "rol": 4,
+      "open": 9,
       "squeeze": 1,
-      "bb_check": 1
+      "bb_check": 1,
+      "call_open": 2,
+      "fold_vs_3bet": 1
     },
     "ComboHunter": {
       "fold_vs_open": 9,
-      "rol": 1,
+      "limp": 1,
       "open": 3,
       "fold": 15,
       "bb_check": 1,
       "call_open": 1
     },
     "LaloMora": {
-      "call_open": 1,
-      "fold_vs_open": 2,
-      "limp": 1,
-      "fold": 1
+      "call_open": 2,
+      "fold_vs_open": 11,
+      "limp": 7,
+      "fold": 14,
+      "call_limp": 4,
+      "open": 1
     },
     "SAE_AAAA": {
       "call_open": 2,
@@ -503,9 +967,9 @@
     },
     "Rolitoyerda": {
       "call_open": 5,
-      "limp": 11,
+      "limp": 12,
       "fold_vs_3bet": 1,
-      "open": 7,
+      "open": 6,
       "fold_vs_open": 10,
       "rol": 1,
       "fold": 12,
@@ -535,14 +999,13 @@
     },
     "Irene_giraldo": {
       "bb_check": 6,
-      "3bet": 1,
+      "3bet": 2,
       "fold": 36,
       "open": 11,
       "call_open": 2,
       "fold_vs_open": 18,
       "fold_vs_3bet": 2,
       "rol": 6,
-      "squeeze": 1,
       "call_limp": 1
     },
     "trombosis2.0": {
@@ -582,19 +1045,783 @@
       "fold_vs_open": 2,
       "limp": 2,
       "call_open": 3
+    },
+    "JohanV.": {
+      "fold": 1,
+      "bb_check": 1,
+      "call_limp": 1,
+      "limp": 4,
+      "fold_vs_open": 2
+    },
+    "LolaMora": {
+      "fold": 2,
+      "limp": 3,
+      "bb_check": 1,
+      "call_limp": 1,
+      "rol": 1,
+      "call_open": 1
+    },
+    "Danjer": {
+      "fold_vs_open": 1,
+      "call_limp": 1,
+      "limp": 1
+    },
+    "Mur420": {
+      "bb_check": 1,
+      "fold_vs_open": 1
+    },
+    "Hero": {
+      "limp": 1,
+      "fold": 3
+    },
+    "Player1": {
+      "rol": 1,
+      "fold": 3,
+      "limp": 2
+    },
+    "Player4": {
+      "fold": 4,
+      "open": 1,
+      "call_limp": 1
+    },
+    "Player5": {
+      "fold": 3,
+      "bb_check": 1,
+      "rol": 1,
+      "limp": 1
+    },
+    "Player2": {
+      "fold": 4,
+      "call_limp": 2
+    },
+    "Player3": {
+      "call_limp": 1,
+      "fold": 1,
+      "bb_check": 1
+    },
+    "kiluaak": {
+      "fold": 8,
+      "rol": 2,
+      "bb_check": 1,
+      "call_open": 2,
+      "open": 4,
+      "fold_vs_open": 8,
+      "3bet": 1
+    },
+    "pardoKing": {
+      "open": 2,
+      "fold": 9,
+      "fold_vs_open": 7
+    },
+    "HarryPoker18": {
+      "fold_vs_open": 60,
+      "fold": 81,
+      "call_open": 14,
+      "open": 23,
+      "bb_check": 4,
+      "call_limp": 3,
+      "fold_vs_3bet": 4,
+      "limp": 1,
+      "rol": 2,
+      "squeeze": 1
+    },
+    "CamiloG208": {
+      "limp": 1,
+      "call_open": 3,
+      "fold": 6,
+      "rol": 2,
+      "fold_vs_open": 2,
+      "open": 1
+    },
+    "anro": {
+      "call_limp": 1,
+      "fold_vs_open": 3,
+      "limp": 3
+    },
+    "ALKILADO": {
+      "fold": 3,
+      "open": 1,
+      "fold_vs_open": 1
+    },
+    "Juanpablogrz": {
+      "fold": 4,
+      "bb_check": 3,
+      "fold_vs_open": 3,
+      "call_limp": 2,
+      "limp": 6,
+      "call_open": 1,
+      "open": 1
+    },
+    "LUIS-DIAZ": {
+      "fold": 33,
+      "fold_vs_open": 13,
+      "open": 9,
+      "bb_check": 2,
+      "rol": 3,
+      "fold_vs_3bet": 1,
+      "squeeze": 1,
+      "3bet": 1
+    },
+    "Bigmac14": {
+      "fold": 6,
+      "limp": 1,
+      "open": 3,
+      "bb_check": 2,
+      "rol": 2,
+      "call_open": 1,
+      "fold_vs_open": 1
+    },
+    "Chang2113": {
+      "call_limp": 5,
+      "call_open": 3,
+      "fold": 1,
+      "limp": 2,
+      "fold_vs_open": 2
+    },
+    "SB": {
+      "fold": 1
+    },
+    "Deyffan": {
+      "limp": 2,
+      "call_open": 1,
+      "call_limp": 1
+    },
+    "Onix22": {
+      "fold": 20,
+      "fold_vs_open": 15,
+      "open": 7,
+      "fold_vs_3bet": 2,
+      "call_open": 3,
+      "limp": 1,
+      "bb_check": 1
+    },
+    "Pechugo": {
+      "bb_check": 2,
+      "call_open": 8,
+      "fold": 17,
+      "limp": 5,
+      "open": 2,
+      "fold_vs_open": 11,
+      "fold_vs_3bet": 1
+    },
+    "man1": {
+      "call_open": 1,
+      "fold": 9,
+      "fold_vs_open": 5,
+      "open": 5,
+      "rol": 1,
+      "squeeze": 2
+    },
+    "Isagomez": {
+      "call_open": 2,
+      "limp": 3,
+      "fold_vs_open": 1,
+      "bb_check": 1,
+      "call_3bet": 1,
+      "fold": 1
+    },
+    "Iker69": {
+      "fold_vs_open": 6,
+      "fold": 9,
+      "fold_vs_3bet": 1,
+      "limp": 1,
+      "call_open": 1
+    },
+    "Davile": {
+      "rol": 1,
+      "fold_vs_open": 2,
+      "limp": 1
+    },
+    "Jorish29": {
+      "fold": 3,
+      "bb_check": 2,
+      "call_limp": 1,
+      "limp": 2
+    },
+    "Jonatantarra": {
+      "open": 1,
+      "limp": 2,
+      "rol": 3,
+      "call_limp": 2,
+      "fold": 3,
+      "call_open": 4,
+      "bb_check": 1
+    },
+    "Jhordanbtc": {
+      "call_open": 2,
+      "call_limp": 1,
+      "limp": 4,
+      "bb_check": 1,
+      "fold": 3,
+      "rol": 2,
+      "fold_vs_open": 3
+    },
+    "Rompechuchas": {
+      "fold_vs_open": 2,
+      "fold": 7,
+      "bb_check": 1,
+      "open": 2,
+      "call_open": 3,
+      "call_limp": 1
+    },
+    "Goldy7": {
+      "limp": 3,
+      "fold": 1,
+      "call_open": 2,
+      "call_limp": 1,
+      "fold_vs_open": 1
+    },
+    "dollarbill": {
+      "fold_vs_open": 11,
+      "fold": 10,
+      "rol": 1,
+      "limp": 2,
+      "open": 4
+    },
+    "P2": {
+      "call_limp": 1
+    },
+    "santibenavides": {
+      "fold": 3,
+      "limp": 1,
+      "fold_vs_open": 1
+    },
+    "Mrcash": {
+      "fold": 41,
+      "fold_vs_open": 24,
+      "bb_check": 2,
+      "3bet": 4,
+      "fold_vs_3bet": 2,
+      "open": 9,
+      "call_open": 1,
+      "call_limp": 1
+    },
+    "Samuel1598": {
+      "limp": 11,
+      "call_open": 3,
+      "call_limp": 3,
+      "fold_vs_open": 5,
+      "fold": 6,
+      "open": 1,
+      "fold_vs_3bet": 3,
+      "3bet": 1
+    },
+    "Deftones": {
+      "fold_vs_open": 20,
+      "fold": 24,
+      "open": 6,
+      "rol": 1,
+      "bb_check": 1,
+      "call_limp": 1,
+      "squeeze": 1,
+      "3bet": 2
+    },
+    "otb_RedBaron": {
+      "fold_vs_open": 9,
+      "3bet": 1,
+      "fold": 9,
+      "limp": 2,
+      "open": 2,
+      "bb_check": 1
+    },
+    "Edup": {
+      "limp": 2,
+      "bb_check": 1,
+      "call_open": 2,
+      "fold_vs_open": 3,
+      "rol": 1,
+      "fold": 1
+    },
+    "Franco1603": {
+      "call_limp": 7,
+      "limp": 28,
+      "3bet": 1,
+      "fold_vs_open": 5,
+      "bb_check": 3,
+      "fold": 1,
+      "call_open": 8
+    },
+    "AZ de A": {
+      "fold": 6,
+      "call_limp": 3,
+      "call_open": 2,
+      "fold_vs_open": 5,
+      "open": 1,
+      "rol": 1,
+      "bb_check": 1
+    },
+    "bsaghv4": {
+      "call_limp": 6,
+      "open": 2,
+      "fold": 5,
+      "call_open": 1,
+      "bb_check": 1,
+      "limp": 1
+    },
+    "Lprieto11": {
+      "fold_vs_open": 4,
+      "limp": 5,
+      "call_open": 2,
+      "open": 1,
+      "rol": 1,
+      "fold": 3,
+      "bb_check": 1,
+      "call_limp": 1
+    },
+    "Juancuellar987": {
+      "fold_vs_open": 1,
+      "limp": 4,
+      "bb_check": 2,
+      "call_limp": 3,
+      "open": 1,
+      "call_open": 1,
+      "fold": 1
+    },
+    "maestrodelbluff": {
+      "bb_check": 1,
+      "fold_vs_open": 1,
+      "fold": 2
+    },
+    "Danielev": {
+      "fold": 7,
+      "fold_vs_3bet": 1,
+      "limp": 1,
+      "open": 1,
+      "call_open": 1,
+      "fold_vs_open": 5
+    },
+    "Tatan29": {
+      "fold_vs_open": 9,
+      "fold": 14,
+      "call_open": 11,
+      "limp": 5,
+      "call_3bet": 2,
+      "bb_check": 1,
+      "fold_vs_3bet": 2,
+      "open": 1
+    },
+    "CorajeRaise": {
+      "fold_vs_open": 17,
+      "open": 6,
+      "fold": 19,
+      "bb_check": 2,
+      "3bet": 2,
+      "call_open": 1
+    },
+    "JS99": {
+      "fold": 17,
+      "open": 8,
+      "call_open": 6,
+      "fold_vs_open": 12,
+      "3bet": 3,
+      "bb_check": 1,
+      "squeeze": 2,
+      "call_limp": 1,
+      "fold_vs_3bet": 5,
+      "rol": 2
+    },
+    "Doffy707": {
+      "limp": 2,
+      "bb_check": 1,
+      "call_open": 6,
+      "fold": 4,
+      "open": 3,
+      "fold_vs_open": 1,
+      "call_3bet": 1,
+      "rol": 1
+    },
+    "David P.": {
+      "limp": 2,
+      "fold": 5,
+      "fold_vs_open": 4,
+      "rol": 1,
+      "call_open": 4,
+      "fold_vs_3bet": 1,
+      "squeeze": 1,
+      "open": 1
+    },
+    "UTG": {
+      "limp": 1,
+      "fold": 2
+    },
+    "mommya": {
+      "fold": 16,
+      "fold_vs_open": 10,
+      "bb_check": 2,
+      "open": 2,
+      "3bet": 2
+    },
+    "Memelo": {
+      "limp": 2,
+      "fold": 3,
+      "bb_check": 1,
+      "call_limp": 1,
+      "call_open": 1
+    },
+    "Matgar": {
+      "rol": 1
+    },
+    "Freddy9212": {
+      "call_open": 2,
+      "fold": 1,
+      "limp": 3,
+      "bb_check": 1,
+      "rol": 1
+    },
+    "CO": {
+      "fold": 1
+    },
+    "SunGodNika": {
+      "fold_vs_open": 2,
+      "open": 1
+    },
+    "Davi-Ari": {
+      "fold": 47,
+      "bb_check": 4,
+      "fold_vs_open": 25,
+      "open": 14,
+      "call_open": 3,
+      "rol": 4,
+      "fold_vs_3bet": 7
+    },
+    "Hector1320": {
+      "limp": 18,
+      "call_limp": 1,
+      "fold_vs_open": 8,
+      "fold": 9,
+      "call_open": 9,
+      "fold_vs_3bet": 3,
+      "3bet": 1
+    },
+    "Ocampo99": {
+      "limp": 1,
+      "call_open": 1
+    },
+    "Juri": {
+      "3bet": 1
+    },
+    "Juris55": {
+      "fold_vs_open": 13,
+      "fold": 24,
+      "fold_vs_3bet": 3,
+      "rol": 3,
+      "call_open": 1,
+      "open": 2,
+      "bb_check": 1
+    },
+    "N.E.O": {
+      "fold": 17,
+      "fold_vs_open": 16,
+      "3bet": 2,
+      "open": 4,
+      "bb_check": 2,
+      "fold_vs_3bet": 1
+    },
+    "PardoKing": {
+      "fold": 3,
+      "open": 1,
+      "bb_check": 1,
+      "fold_vs_open": 1
+    },
+    "DOGO*": {
+      "fold": 8,
+      "fold_vs_open": 7,
+      "call_open": 4,
+      "limp": 10,
+      "bb_check": 2,
+      "open": 1,
+      "fold_vs_3bet": 1
+    },
+    "baam08": {
+      "fold_vs_open": 3,
+      "fold": 9,
+      "call_open": 1,
+      "fold_vs_3bet": 2,
+      "open": 3,
+      "squeeze": 1,
+      "rol": 1,
+      "3bet": 1
+    },
+    "JaCkFlor": {
+      "fold": 8,
+      "fold_vs_open": 5,
+      "fold_vs_3bet": 1,
+      "open": 1,
+      "call_open": 2,
+      "squeeze": 1
+    },
+    "JuaGon": {
+      "open": 6,
+      "fold_vs_3bet": 2,
+      "call_open": 5,
+      "fold": 2,
+      "limp": 2
+    },
+    "Cash7": {
+      "call_open": 5,
+      "limp": 1,
+      "open": 1
+    },
+    "sergio39": {
+      "fold_vs_open": 7,
+      "call_open": 4,
+      "3bet": 2,
+      "fold": 11,
+      "fold_vs_3bet": 2,
+      "open": 5
+    },
+    "Antonia7": {
+      "fold": 2,
+      "bb_check": 2,
+      "call_limp": 3,
+      "call_open": 1,
+      "rol": 1,
+      "limp": 2
+    },
+    "Aneurin": {
+      "bb_check": 2,
+      "call_limp": 7,
+      "fold_vs_open": 4,
+      "limp": 8,
+      "fold": 9,
+      "call_open": 4,
+      "fold_vs_3bet": 1
+    },
+    "Krono": {
+      "bb_check": 2,
+      "fold": 11,
+      "rol": 4,
+      "call_open": 1,
+      "fold_vs_open": 6,
+      "3bet": 1
+    },
+    "KoKeB0y92": {
+      "fold": 1,
+      "fold_vs_open": 2,
+      "call_limp": 1,
+      "open": 1,
+      "bb_check": 1
+    },
+    "jj20": {
+      "call_limp": 1
+    },
+    "Waffles": {
+      "fold": 2,
+      "limp": 3
+    },
+    "Rio28": {
+      "rol": 2,
+      "call_open": 3,
+      "fold": 2,
+      "fold_vs_open": 2,
+      "call_limp": 1,
+      "bb_check": 1
+    },
+    "Cazadordeputas": {
+      "fold": 17,
+      "fold_vs_open": 5,
+      "call_limp": 3,
+      "bb_check": 3,
+      "rol": 3,
+      "squeeze": 1
+    },
+    "Adrugir": {
+      "limp": 2,
+      "open": 1,
+      "rol": 6,
+      "fold_vs_open": 3,
+      "fold": 11,
+      "bb_check": 1,
+      "call_open": 1
+    },
+    "MuckeDBoY": {
+      "rol": 2,
+      "open": 3,
+      "fold": 15,
+      "bb_check": 1,
+      "fold_vs_3bet": 1,
+      "fold_vs_open": 3
+    },
+    "ANJO2017": {
+      "fold": 34,
+      "call_open": 8,
+      "fold_vs_open": 28,
+      "fold_vs_3bet": 2,
+      "open": 11,
+      "bb_check": 1,
+      "limp": 2,
+      "rol": 1,
+      "3bet": 1
+    },
+    "Bogotano26": {
+      "fold": 14,
+      "call_open": 4,
+      "open": 4,
+      "fold_vs_3bet": 1,
+      "call_limp": 1,
+      "rol": 3,
+      "fold_vs_open": 2,
+      "limp": 1
+    },
+    "Edgar28": {
+      "3bet": 1,
+      "fold": 11,
+      "bb_check": 1,
+      "fold_vs_open": 2,
+      "fold_vs_3bet": 1,
+      "call_open": 4,
+      "open": 3,
+      "limp": 5
+    },
+    "O$0RL0": {
+      "fold_vs_3bet": 2,
+      "fold_vs_open": 3,
+      "fold": 6,
+      "call_open": 2,
+      "limp": 3
+    },
+    "Carupoker": {
+      "bb_check": 1,
+      "call_open": 6,
+      "fold": 17,
+      "fold_vs_open": 20,
+      "open": 10
+    },
+    "Electr0": {
+      "fold_vs_open": 10,
+      "open": 3,
+      "fold": 7,
+      "call_open": 1,
+      "call_limp": 1
+    },
+    "Prieto9610": {
+      "fold": 1,
+      "limp": 1
+    },
+    "Oscar.RG": {
+      "open": 2,
+      "limp": 1,
+      "fold_vs_open": 2,
+      "fold": 5,
+      "3bet": 1,
+      "fold_vs_3bet": 1
+    },
+    "Capitan spiff": {
+      "fold": 5,
+      "fold_vs_open": 7,
+      "limp": 4,
+      "fold_vs_3bet": 2,
+      "call_open": 5,
+      "call_3bet": 1,
+      "open": 2
+    },
+    "Sebas420": {
+      "fold_vs_open": 2,
+      "call_limp": 1,
+      "limp": 2
+    },
+    "RABBUNI": {
+      "limp": 1,
+      "fold_vs_3bet": 1,
+      "call_open": 1
+    },
+    "La_Gaitana": {
+      "fold": 1,
+      "fold_vs_open": 2
+    },
+    "vidents": {
+      "bb_check": 1,
+      "fold_vs_3bet": 1,
+      "call_open": 1
+    },
+    "BLKsoul": {
+      "fold_vs_open": 5,
+      "fold": 5,
+      "call_open": 1,
+      "open": 3,
+      "bb_check": 1,
+      "limp": 1,
+      "call_limp": 1,
+      "fold_vs_3bet": 1
+    },
+    "MP": {
+      "fold": 1
+    },
+    "Woons": {
+      "fold": 3,
+      "call_open": 12,
+      "fold_vs_open": 8,
+      "open": 3,
+      "limp": 12,
+      "call_limp": 1
+    },
+    "BigPapi.": {
+      "fold": 18,
+      "open": 2,
+      "fold_vs_open": 14,
+      "call_open": 2,
+      "rol": 4
+    },
+    "Santiagoea10": {
+      "open": 4,
+      "fold_vs_open": 7,
+      "fold": 13,
+      "call_open": 7,
+      "rol": 3,
+      "call_limp": 3,
+      "limp": 1,
+      "3bet": 2
+    },
+    "chupapepita": {
+      "call_open": 2,
+      "fold_vs_open": 3,
+      "open": 1,
+      "fold": 1
+    },
+    "papa01": {
+      "limp": 2,
+      "call_limp": 1,
+      "call_open": 3
+    },
+    "Silvio": {
+      "call_limp": 2,
+      "bb_check": 1,
+      "call_open": 2,
+      "open": 1
+    },
+    "Sp1609": {
+      "call_limp": 1
+    },
+    "Tio88": {
+      "call_limp": 1,
+      "limp": 1,
+      "call_open": 2,
+      "rol": 1,
+      "fold_vs_open": 1
+    },
+    "Dannykill": {
+      "rol": 1,
+      "call_limp": 1,
+      "open": 1,
+      "call_open": 2,
+      "fold_vs_open": 1
+    },
+    "proplayer555": {
+      "call_limp": 1,
+      "fold_vs_open": 1
     }
   },
   "known_denoms": {
     "Jarduan": {
-      "no_raise": 206,
-      "facing_open": 107,
-      "facing_3bet": 10
+      "no_raise": 573,
+      "facing_open": 278,
+      "facing_3bet": 19
     },
     "NESANVAR": {
       "facing_open": 1
     },
     "mur420": {
-      "facing_open": 8,
+      "facing_open": 10,
       "no_raise": 6
     },
     "Juanmabm": {
@@ -663,7 +1890,7 @@
       "facing_open": 2
     },
     "SamPachero30": {
-      "no_raise": 2
+      "no_raise": 3
     },
     "ComboHunter": {
       "no_raise": 2
@@ -704,6 +1931,6299 @@
     },
     "Irene_giraldo": {
       "facing_open": 1
+    },
+    "LolaMora": {
+      "no_raise": 1,
+      "facing_open": 1
+    },
+    "Danjer": {
+      "no_raise": 1
+    },
+    "JohanV.": {
+      "no_raise": 2
+    },
+    "Mur420": {
+      "no_raise": 1
+    },
+    "pardoKing": {
+      "no_raise": 2
+    },
+    "CamiloG208": {
+      "no_raise": 3,
+      "facing_open": 2
+    },
+    "Bigmac14": {
+      "no_raise": 5
+    },
+    "Chang2113": {
+      "no_raise": 1,
+      "facing_open": 1
+    },
+    "Juanpablogrz": {
+      "no_raise": 2,
+      "facing_open": 1
+    },
+    "LaloMora": {
+      "no_raise": 3
+    },
+    "Pechugo": {
+      "no_raise": 1,
+      "facing_open": 2
+    },
+    "Isagomez": {
+      "facing_open": 2,
+      "no_raise": 1,
+      "facing_3bet": 1
+    },
+    "LUIS-DIAZ": {
+      "no_raise": 3,
+      "facing_open": 1
+    },
+    "Onix22": {
+      "no_raise": 1,
+      "facing_open": 1
+    },
+    "man1": {
+      "facing_open": 1
+    },
+    "Jonatantarra": {
+      "no_raise": 2
+    },
+    "Jhordanbtc": {
+      "facing_open": 2,
+      "no_raise": 1
+    },
+    "Jorish29": {
+      "no_raise": 1
+    },
+    "Rompechuchas": {
+      "no_raise": 2
+    },
+    "Goldy7": {
+      "no_raise": 1
+    },
+    "Samuel1598": {
+      "no_raise": 3,
+      "facing_open": 1
+    },
+    "Mrcash": {
+      "no_raise": 1,
+      "facing_open": 2
+    },
+    "otb_RedBaron": {
+      "no_raise": 1
+    },
+    "HarryPoker18": {
+      "no_raise": 4,
+      "facing_open": 3
+    },
+    "AZ de A": {
+      "facing_open": 2
+    },
+    "Lprieto11": {
+      "facing_open": 1,
+      "no_raise": 1
+    },
+    "Juancuellar987": {
+      "no_raise": 2
+    },
+    "Franco1603": {
+      "no_raise": 5,
+      "facing_open": 2
+    },
+    "maestrodelbluff": {
+      "no_raise": 1
+    },
+    "CorajeRaise": {
+      "no_raise": 1
+    },
+    "JS99": {
+      "no_raise": 2,
+      "facing_open": 2
+    },
+    "Danielev": {
+      "facing_open": 1
+    },
+    "Doffy707": {
+      "facing_open": 1
+    },
+    "Tatan29": {
+      "facing_open": 1
+    },
+    "Memelo": {
+      "no_raise": 1,
+      "facing_open": 1
+    },
+    "Matgar": {
+      "no_raise": 1
+    },
+    "Freddy9212": {
+      "no_raise": 2
+    },
+    "dollarbill": {
+      "no_raise": 1
+    },
+    "Hector1320": {
+      "facing_open": 3,
+      "no_raise": 2
+    },
+    "Juri": {
+      "facing_open": 1
+    },
+    "N.E.O": {
+      "no_raise": 4
+    },
+    "Davi-Ari": {
+      "facing_open": 1,
+      "no_raise": 1
+    },
+    "Juris55": {
+      "no_raise": 2
+    },
+    "baam08": {
+      "no_raise": 2,
+      "facing_open": 1
+    },
+    "JuaGon": {
+      "facing_open": 4
+    },
+    "Cash7": {
+      "no_raise": 1
+    },
+    "sergio39": {
+      "no_raise": 2
+    },
+    "JaCkFlor": {
+      "facing_open": 1
+    },
+    "Aneurin": {
+      "no_raise": 3
+    },
+    "Antonia7": {
+      "no_raise": 2
+    },
+    "DOGO*": {
+      "no_raise": 2
+    },
+    "Andresyjeymi": {
+      "no_raise": 1,
+      "facing_open": 1
+    },
+    "Krono": {
+      "no_raise": 1
+    },
+    "jj20": {
+      "no_raise": 1
+    },
+    "Rio28": {
+      "no_raise": 3
+    },
+    "Waffles": {
+      "no_raise": 1
+    },
+    "Adrugir": {
+      "no_raise": 1
+    },
+    "MuckeDBoY": {
+      "no_raise": 2
+    },
+    "Cazadordeputas": {
+      "no_raise": 3
+    },
+    "ANJO2017": {
+      "no_raise": 6
+    },
+    "Edgar28": {
+      "facing_open": 1,
+      "no_raise": 4
+    },
+    "Bogotano26": {
+      "no_raise": 2
+    },
+    "O$0RL0": {
+      "facing_open": 1
+    },
+    "Oscar.RG": {
+      "no_raise": 1
+    },
+    "Capitan spiff": {
+      "facing_open": 3,
+      "facing_3bet": 1,
+      "no_raise": 2
+    },
+    "RABBUNI": {
+      "no_raise": 1
+    },
+    "vidents": {
+      "no_raise": 1
+    },
+    "BLKsoul": {
+      "facing_open": 1,
+      "no_raise": 2
+    },
+    "Santiagoea10": {
+      "no_raise": 1,
+      "facing_open": 1
+    },
+    "Woons": {
+      "no_raise": 2
+    },
+    "papa01": {
+      "no_raise": 1,
+      "facing_open": 1
+    },
+    "Sp1609": {
+      "no_raise": 1
+    },
+    "Silvio": {
+      "facing_open": 1
+    },
+    "Tio88": {
+      "no_raise": 1
+    }
+  },
+  "denoms_pos": {
+    "Jarduan|UTG": {
+      "no_raise": 106,
+      "facing_open": 1
+    },
+    "NESANVAR|MP": {
+      "facing_open": 3,
+      "no_raise": 2
+    },
+    "Pipaaf182|CO": {
+      "facing_open": 4
+    },
+    "mur420|BTN": {
+      "facing_open": 9,
+      "no_raise": 13,
+      "facing_3bet": 1
+    },
+    "Hachirama|SB": {
+      "facing_open": 7,
+      "no_raise": 1
+    },
+    "Juanmabm|BB": {
+      "facing_open": 7,
+      "no_raise": 4,
+      "facing_3bet": 1
+    },
+    "Hachirama|BB": {
+      "no_raise": 1,
+      "facing_open": 5,
+      "facing_3bet": 1
+    },
+    "Juanmabm|UTG": {
+      "no_raise": 9
+    },
+    "Jarduan|MP": {
+      "no_raise": 114,
+      "facing_open": 23
+    },
+    "Pipaaf182|BTN": {
+      "no_raise": 2,
+      "facing_open": 2
+    },
+    "NESANVAR|CO": {
+      "no_raise": 4,
+      "facing_open": 1
+    },
+    "Hachirama|UTG": {
+      "no_raise": 9
+    },
+    "Juanmabm|MP": {
+      "facing_open": 6,
+      "no_raise": 4
+    },
+    "Jarduan|CO": {
+      "facing_open": 31,
+      "no_raise": 103,
+      "facing_3bet": 1
+    },
+    "NESANVAR|BTN": {
+      "facing_open": 4,
+      "facing_3bet": 1,
+      "no_raise": 2
+    },
+    "Pipaaf182|SB": {
+      "facing_open": 4,
+      "facing_3bet": 1
+    },
+    "mur420|BB": {
+      "facing_open": 19,
+      "no_raise": 6,
+      "facing_3bet": 1
+    },
+    "Pipaaf182|BB": {
+      "no_raise": 3
+    },
+    "mur420|UTG": {
+      "no_raise": 18
+    },
+    "Hachirama|MP": {
+      "no_raise": 7,
+      "facing_open": 1
+    },
+    "Juanmabm|CO": {
+      "facing_open": 4,
+      "no_raise": 3
+    },
+    "Jarduan|BTN": {
+      "facing_open": 57,
+      "no_raise": 111,
+      "facing_3bet": 2
+    },
+    "NESANVAR|SB": {
+      "facing_open": 2,
+      "no_raise": 2,
+      "facing_3bet": 1
+    },
+    "Pipaaf182|UTG": {
+      "no_raise": 3
+    },
+    "mur420|MP": {
+      "no_raise": 17,
+      "facing_open": 5
+    },
+    "Hachirama|CO": {
+      "facing_open": 1,
+      "no_raise": 3
+    },
+    "Juanmabm|BTN": {
+      "facing_open": 5,
+      "no_raise": 4
+    },
+    "Jarduan|SB": {
+      "facing_open": 76,
+      "no_raise": 79,
+      "facing_3bet": 8
+    },
+    "NESANVAR|BB": {
+      "no_raise": 3,
+      "facing_open": 3
+    },
+    "NESANVAR|UTG": {
+      "no_raise": 4
+    },
+    "Pipaaf182|MP": {
+      "facing_open": 3
+    },
+    "mur420|CO": {
+      "facing_3bet": 1,
+      "facing_open": 5,
+      "no_raise": 11
+    },
+    "Hachirama|BTN": {
+      "facing_3bet": 1,
+      "facing_open": 2,
+      "no_raise": 3
+    },
+    "Juanmabm|SB": {
+      "facing_3bet": 1,
+      "facing_open": 3,
+      "no_raise": 4
+    },
+    "Jarduan|BB": {
+      "facing_3bet": 8,
+      "no_raise": 60,
+      "facing_open": 90
+    },
+    "JHONCACH|CO": {
+      "no_raise": 1
+    },
+    "JHONCASH|BTN": {
+      "facing_open": 12,
+      "no_raise": 8
+    },
+    "mur420|SB": {
+      "facing_open": 13,
+      "no_raise": 5,
+      "facing_3bet": 2
+    },
+    "JHONCASH|SB": {
+      "no_raise": 7,
+      "facing_open": 14
+    },
+    "JHONCASH|BB": {
+      "no_raise": 8,
+      "facing_open": 9,
+      "facing_3bet": 2
+    },
+    "JHONCASH|UTG": {
+      "no_raise": 21
+    },
+    "JHONCASH|MP": {
+      "no_raise": 16,
+      "facing_open": 4
+    },
+    "DominoSaurio|BTN": {
+      "facing_open": 9,
+      "no_raise": 10
+    },
+    "DominoSaurio|SB": {
+      "no_raise": 5,
+      "facing_open": 13,
+      "facing_3bet": 1
+    },
+    "DominoSaurio|BB": {
+      "no_raise": 7,
+      "facing_open": 13,
+      "facing_3bet": 1
+    },
+    "DominoSaurio|UTG": {
+      "no_raise": 19
+    },
+    "DominoSaurio|MP": {
+      "no_raise": 11,
+      "facing_open": 6
+    },
+    "JHONCASH|CO": {
+      "no_raise": 4,
+      "facing_open": 5
+    },
+    "DominoSaurio|CO": {
+      "no_raise": 9,
+      "facing_open": 3
+    },
+    "Arquejandro|UTG": {
+      "no_raise": 5
+    },
+    "Arquejandro|MP": {
+      "no_raise": 2
+    },
+    "Arquejandro|BTN": {
+      "no_raise": 3,
+      "facing_open": 1
+    },
+    "Arquejandro|SB": {
+      "no_raise": 1,
+      "facing_open": 3
+    },
+    "Arquejandro|BB": {
+      "facing_open": 2,
+      "no_raise": 1,
+      "facing_3bet": 1
+    },
+    "Arquejandro|CO": {
+      "no_raise": 2
+    },
+    "Jeffer30bog|BB": {
+      "facing_open": 1
+    },
+    "Mateo|BB": {
+      "facing_open": 1
+    },
+    "Mateo|UTG": {
+      "no_raise": 2
+    },
+    "Mateo|MP": {
+      "no_raise": 1
+    },
+    "Mira90|SB": {
+      "no_raise": 2,
+      "facing_open": 2,
+      "facing_3bet": 2
+    },
+    "Hellfish1|UTG": {
+      "no_raise": 8
+    },
+    "Mira90|BB": {
+      "facing_3bet": 1,
+      "facing_open": 3,
+      "no_raise": 2
+    },
+    "Mira90|UTG": {
+      "no_raise": 8
+    },
+    "Hellfish1|MP": {
+      "no_raise": 6,
+      "facing_open": 3
+    },
+    "Mira90|CO": {
+      "facing_open": 2,
+      "no_raise": 4
+    },
+    "Hellfish1|BTN": {
+      "facing_open": 3,
+      "no_raise": 2
+    },
+    "Mira90|BTN": {
+      "no_raise": 4,
+      "facing_open": 2
+    },
+    "Hellfish1|SB": {
+      "no_raise": 5,
+      "facing_open": 3
+    },
+    "Hellfish1|BB": {
+      "facing_open": 3,
+      "facing_3bet": 2,
+      "no_raise": 1
+    },
+    "Mira90|MP": {
+      "no_raise": 5,
+      "facing_open": 1
+    },
+    "Hellfish1|CO": {
+      "no_raise": 5,
+      "facing_open": 1
+    },
+    "Juanfelipe1|BTN": {
+      "no_raise": 2,
+      "facing_open": 3
+    },
+    "Juanfelipe1|SB": {
+      "no_raise": 1,
+      "facing_3bet": 1,
+      "facing_open": 1
+    },
+    "Juanfelipe1|BB": {
+      "no_raise": 1,
+      "facing_open": 2
+    },
+    "Juanfelipe1|UTG": {
+      "no_raise": 2
+    },
+    "Juanfelipe1|MP": {
+      "no_raise": 2
+    },
+    "Santiago ja|CO": {
+      "no_raise": 1
+    },
+    "Juanfelipe1|CO": {
+      "no_raise": 1,
+      "facing_open": 1
+    },
+    "Santiago ja|BTN": {
+      "no_raise": 1,
+      "facing_open": 2
+    },
+    "Andresyjeymi|UTG": {
+      "no_raise": 3
+    },
+    "Santiago ja|SB": {
+      "facing_3bet": 2,
+      "no_raise": 1,
+      "facing_open": 1
+    },
+    "Andreayjeymi|UTG": {
+      "no_raise": 3
+    },
+    "Andreayjeymi|MP": {
+      "no_raise": 1,
+      "facing_open": 1
+    },
+    "Santiago ja|BB": {
+      "no_raise": 1,
+      "facing_open": 1
+    },
+    "Santiago ja|UTG": {
+      "no_raise": 4
+    },
+    "Andreayjeymi|CO": {
+      "no_raise": 1
+    },
+    "Andreayjeymi|BTN": {
+      "no_raise": 1,
+      "facing_open": 1
+    },
+    "Santiago ja|MP": {
+      "no_raise": 1
+    },
+    "Andreayjeymi|SB": {
+      "no_raise": 1
+    },
+    "Andreayjeymi|BB": {
+      "facing_open": 2
+    },
+    "Valentina22|BTN": {
+      "no_raise": 1
+    },
+    "Elyessi27|SB": {
+      "no_raise": 9,
+      "facing_open": 6
+    },
+    "Valentina22|CO": {
+      "no_raise": 1
+    },
+    "Elyessi27|BTN": {
+      "facing_open": 8,
+      "no_raise": 7,
+      "facing_3bet": 1
+    },
+    "P5|BB": {
+      "facing_open": 1
+    },
+    "Valentina22|MP": {
+      "no_raise": 1
+    },
+    "Elyessi27|CO": {
+      "facing_open": 1,
+      "no_raise": 7
+    },
+    "Geilyn21|SB": {
+      "facing_3bet": 1,
+      "facing_open": 4
+    },
+    "Elyessi27|UTG": {
+      "no_raise": 14
+    },
+    "Geilyn21|BTN": {
+      "facing_open": 3,
+      "no_raise": 3
+    },
+    "P3|UTG": {
+      "no_raise": 1
+    },
+    "P4|MP": {
+      "no_raise": 1
+    },
+    "P5|BTN": {
+      "facing_open": 1
+    },
+    "HERO|SB": {
+      "facing_open": 1
+    },
+    "P1|BB": {
+      "facing_3bet": 1
+    },
+    "Geilyn21|MP": {
+      "no_raise": 4,
+      "facing_open": 1
+    },
+    "Elyessi27|BB": {
+      "facing_open": 9,
+      "facing_3bet": 1,
+      "no_raise": 5
+    },
+    "Geilyn21|UTG": {
+      "no_raise": 3
+    },
+    "Maicolp|MP": {
+      "no_raise": 11,
+      "facing_open": 2
+    },
+    "Geilyn21|BB": {
+      "no_raise": 1,
+      "facing_open": 2
+    },
+    "Johan Otero|BB": {
+      "facing_open": 9,
+      "no_raise": 1
+    },
+    "Maicolp|UTG": {
+      "no_raise": 15
+    },
+    "Johan Otero|SB": {
+      "facing_3bet": 2,
+      "facing_open": 2,
+      "no_raise": 5
+    },
+    "Geilyn21|CO": {
+      "facing_open": 1
+    },
+    "Johan Otero|BTN": {
+      "facing_open": 6,
+      "no_raise": 3,
+      "facing_3bet": 1
+    },
+    "Maicolp|BB": {
+      "facing_3bet": 2,
+      "no_raise": 2,
+      "facing_open": 6
+    },
+    "Johan Otero|CO": {
+      "facing_open": 3,
+      "no_raise": 3
+    },
+    "Maicolp|SB": {
+      "facing_open": 9,
+      "facing_3bet": 1,
+      "no_raise": 6
+    },
+    "Johan Otero|MP": {
+      "no_raise": 5,
+      "facing_open": 2
+    },
+    "Maicolp|BTN": {
+      "facing_open": 4,
+      "no_raise": 6
+    },
+    "Johan Otero|UTG": {
+      "no_raise": 8
+    },
+    "Maicolp|CO": {
+      "facing_open": 3,
+      "no_raise": 2
+    },
+    "Elyessi27|MP": {
+      "no_raise": 11,
+      "facing_open": 3
+    },
+    "KappaxSlayer|SB": {
+      "facing_open": 2,
+      "no_raise": 2,
+      "facing_3bet": 1
+    },
+    "KappaxSlayer|BTN": {
+      "no_raise": 3,
+      "facing_open": 2
+    },
+    "KappaxSlayer|MP": {
+      "facing_open": 1,
+      "no_raise": 4
+    },
+    "KappaxSlayer|UTG": {
+      "no_raise": 6
+    },
+    "MegustanLas...|BB": {
+      "no_raise": 2,
+      "facing_open": 2
+    },
+    "MegustanLas...|SB": {
+      "facing_open": 4,
+      "no_raise": 2
+    },
+    "MegustanLas...|BTN": {
+      "no_raise": 5
+    },
+    "KappaxSlayer|BB": {
+      "facing_open": 1,
+      "no_raise": 3
+    },
+    "MegustanLas...|CO": {
+      "no_raise": 1,
+      "facing_3bet": 1,
+      "facing_open": 2
+    },
+    "MegustanLas...|MP": {
+      "no_raise": 4,
+      "facing_open": 2
+    },
+    "MegustanLas...|UTG": {
+      "no_raise": 5
+    },
+    "KappaxSlayer|CO": {
+      "no_raise": 2,
+      "facing_open": 1
+    },
+    "SamPachero30|BB": {
+      "facing_open": 8,
+      "no_raise": 2
+    },
+    "SamPachero30|SB": {
+      "facing_open": 7,
+      "no_raise": 2,
+      "facing_3bet": 1
+    },
+    "SamPachero30|BTN": {
+      "facing_open": 3,
+      "no_raise": 6
+    },
+    "SamPachero30|MP": {
+      "no_raise": 7
+    },
+    "SamPachero30|UTG": {
+      "no_raise": 11
+    },
+    "ComboHunter|BB": {
+      "facing_open": 4,
+      "no_raise": 1
+    },
+    "ComboHunter|SB": {
+      "no_raise": 2,
+      "facing_open": 5
+    },
+    "ComboHunter|BTN": {
+      "facing_open": 1,
+      "no_raise": 4
+    },
+    "LaloMora|SB": {
+      "facing_open": 5,
+      "no_raise": 2
+    },
+    "ComboHunter|CO": {
+      "no_raise": 4
+    },
+    "LaloMora|BTN": {
+      "facing_open": 1,
+      "no_raise": 7
+    },
+    "LaloMora|CO": {
+      "facing_open": 3,
+      "no_raise": 7
+    },
+    "ComboHunter|UTG": {
+      "no_raise": 5
+    },
+    "SamPachero30|CO": {
+      "no_raise": 4
+    },
+    "LaloMora|MP": {
+      "no_raise": 4,
+      "facing_open": 1
+    },
+    "LaloMora|UTG": {
+      "no_raise": 6
+    },
+    "ComboHunter|MP": {
+      "no_raise": 4
+    },
+    "SAE_AAAA|BB": {
+      "facing_open": 4,
+      "no_raise": 1
+    },
+    "SAE_AAAA|SB": {
+      "no_raise": 3
+    },
+    "SAE_AAAA|BTN": {
+      "no_raise": 2,
+      "facing_open": 2
+    },
+    "SAE_AAAA|CO": {
+      "no_raise": 2
+    },
+    "SAE_AAAA|MP": {
+      "no_raise": 3
+    },
+    "SAE_AAAA|UTG": {
+      "no_raise": 2
+    },
+    "JuanPApada|BB": {
+      "facing_open": 3
+    },
+    "JuanPApada|SB": {
+      "facing_open": 1,
+      "no_raise": 1
+    },
+    "JuanPApada|BTN": {
+      "no_raise": 1,
+      "facing_open": 1
+    },
+    "JuanPApada|MP": {
+      "no_raise": 3,
+      "facing_open": 1
+    },
+    "JuanPApada|UTG": {
+      "no_raise": 1
+    },
+    "Zenin15|UTG": {
+      "no_raise": 2
+    },
+    "Rolitoyerda|CO": {
+      "facing_open": 2,
+      "no_raise": 2
+    },
+    "triki12|BTN": {
+      "facing_open": 6,
+      "no_raise": 7
+    },
+    "oscar123|SB": {
+      "facing_open": 10,
+      "no_raise": 6
+    },
+    "Rolitoyerda|MP": {
+      "no_raise": 8,
+      "facing_open": 3
+    },
+    "triki12|CO": {
+      "no_raise": 4,
+      "facing_open": 2
+    },
+    "oscar123|BTN": {
+      "no_raise": 7,
+      "facing_open": 9,
+      "facing_3bet": 1
+    },
+    "Zenin15|BB": {
+      "facing_open": 1,
+      "facing_3bet": 1
+    },
+    "triki12|MP": {
+      "no_raise": 6,
+      "facing_open": 7
+    },
+    "oscar123|CO": {
+      "no_raise": 5,
+      "facing_open": 3
+    },
+    "Zenin15|SB": {
+      "no_raise": 1,
+      "facing_open": 1
+    },
+    "Irene_giraldo|BB": {
+      "no_raise": 9,
+      "facing_open": 5,
+      "facing_3bet": 2
+    },
+    "triki12|UTG": {
+      "no_raise": 10
+    },
+    "oscar123|MP": {
+      "no_raise": 11
+    },
+    "Zenin15|BTN": {
+      "facing_open": 1,
+      "no_raise": 1
+    },
+    "Irene_giraldo|SB": {
+      "facing_open": 10,
+      "no_raise": 6
+    },
+    "Rolitoyerda|BB": {
+      "facing_3bet": 1,
+      "no_raise": 2,
+      "facing_open": 4
+    },
+    "oscar123|UTG": {
+      "no_raise": 18
+    },
+    "Zenin15|CO": {
+      "no_raise": 2
+    },
+    "Irene_giraldo|BTN": {
+      "no_raise": 11,
+      "facing_open": 5
+    },
+    "Rolitoyerda|SB": {
+      "no_raise": 5,
+      "facing_open": 3
+    },
+    "triki12|BB": {
+      "no_raise": 7,
+      "facing_open": 6
+    },
+    "Zenin15|MP": {
+      "no_raise": 2
+    },
+    "Irene_giraldo|CO": {
+      "no_raise": 5,
+      "facing_open": 2
+    },
+    "Rolitoyerda|BTN": {
+      "no_raise": 6,
+      "facing_open": 3
+    },
+    "triki12|SB": {
+      "facing_open": 6,
+      "no_raise": 7
+    },
+    "oscar123|BB": {
+      "no_raise": 8,
+      "facing_open": 8
+    },
+    "Irene_giraldo|MP": {
+      "no_raise": 13
+    },
+    "Irene_giraldo|UTG": {
+      "no_raise": 16
+    },
+    "Rolitoyerda|UTG": {
+      "no_raise": 10
+    },
+    "trombosis2.0|MP": {
+      "no_raise": 1,
+      "facing_open": 1
+    },
+    "trombosis2.0|UTG": {
+      "no_raise": 1
+    },
+    "trombosis2.0|BB": {
+      "facing_open": 1
+    },
+    "trombosis2.0|SB": {
+      "no_raise": 1
+    },
+    "trombosis2.0|BTN": {
+      "no_raise": 1
+    },
+    "trombosis2.0|CO": {
+      "facing_open": 1
+    },
+    "Nnn1|UTG": {
+      "no_raise": 1
+    },
+    "Nnn1|BB": {
+      "facing_open": 1
+    },
+    "CCE|CO": {
+      "no_raise": 1,
+      "facing_open": 1
+    },
+    "CCE|MP": {
+      "no_raise": 2
+    },
+    "CCE|UTG": {
+      "no_raise": 2
+    },
+    "CCE|BB": {
+      "facing_open": 2
+    },
+    "CCE|SB": {
+      "no_raise": 1
+    },
+    "CCE|BTN": {
+      "no_raise": 1
+    },
+    "Mauroparley|BB": {
+      "facing_open": 4,
+      "facing_3bet": 2
+    },
+    "Mauroparley|SB": {
+      "facing_open": 4,
+      "no_raise": 1
+    },
+    "Mauroparley|BTN": {
+      "facing_open": 4,
+      "no_raise": 1
+    },
+    "Mauroparley|MP": {
+      "no_raise": 6
+    },
+    "Mauroparley|UTG": {
+      "no_raise": 5
+    },
+    "JhonvyB|CO": {
+      "facing_open": 1,
+      "no_raise": 2
+    },
+    "JhonvyB|MP": {
+      "no_raise": 2
+    },
+    "JhonvyB|UTG": {
+      "no_raise": 2
+    },
+    "JhonvyB|BB": {
+      "facing_open": 2
+    },
+    "Mauroparley|CO": {
+      "no_raise": 2
+    },
+    "JhonvyB|SB": {
+      "no_raise": 2
+    },
+    "JhonvyB|BTN": {
+      "no_raise": 1,
+      "facing_open": 1
+    },
+    "RMF99|BB": {
+      "facing_open": 2
+    },
+    "RMF99|SB": {
+      "no_raise": 1,
+      "facing_open": 1
+    },
+    "RMF99|BTN": {
+      "facing_open": 1
+    },
+    "RMF99|MP": {
+      "facing_open": 1
+    },
+    "RMF99|UTG": {
+      "no_raise": 1
+    },
+    "JohanV.|UTG": {
+      "no_raise": 2
+    },
+    "LolaMora|BTN": {
+      "no_raise": 3
+    },
+    "Danjer|BB": {
+      "facing_open": 1
+    },
+    "LolaMora|UTG": {
+      "no_raise": 2
+    },
+    "Danjer|SB": {
+      "no_raise": 1
+    },
+    "JohanV.|BB": {
+      "no_raise": 1,
+      "facing_open": 2
+    },
+    "Danjer|BTN": {
+      "no_raise": 1
+    },
+    "JohanV.|SB": {
+      "no_raise": 2
+    },
+    "LolaMora|BB": {
+      "no_raise": 1
+    },
+    "JohanV.|BTN": {
+      "no_raise": 2
+    },
+    "LolaMora|SB": {
+      "no_raise": 2
+    },
+    "Mur420|BB": {
+      "no_raise": 1
+    },
+    "Mur420|SB": {
+      "facing_open": 1
+    },
+    "Hero|CO": {
+      "no_raise": 4
+    },
+    "Player1|BTN": {
+      "no_raise": 4
+    },
+    "Player4|UTG": {
+      "no_raise": 2
+    },
+    "Player5|MP": {
+      "no_raise": 3
+    },
+    "Player2|SB": {
+      "no_raise": 3
+    },
+    "Player4|BB": {
+      "no_raise": 1
+    },
+    "Player1|CO": {
+      "no_raise": 1
+    },
+    "Player2|BTN": {
+      "no_raise": 1
+    },
+    "Player4|SB": {
+      "no_raise": 1
+    },
+    "Player5|BB": {
+      "no_raise": 1
+    },
+    "Player1|UTG": {
+      "no_raise": 1
+    },
+    "Player2|MP": {
+      "no_raise": 1
+    },
+    "Player3|CO": {
+      "no_raise": 1
+    },
+    "Player4|BTN": {
+      "no_raise": 1
+    },
+    "Player5|SB": {
+      "no_raise": 1
+    },
+    "Player2|UTG": {
+      "no_raise": 1
+    },
+    "Player3|MP": {
+      "no_raise": 1
+    },
+    "Player4|CO": {
+      "no_raise": 1
+    },
+    "Player5|BTN": {
+      "no_raise": 1
+    },
+    "Player3|BB": {
+      "no_raise": 1
+    },
+    "kiluaak|MP": {
+      "no_raise": 4,
+      "facing_open": 1
+    },
+    "pardoKing|BTN": {
+      "no_raise": 3
+    },
+    "HarryPoker18|BB": {
+      "facing_open": 25,
+      "no_raise": 5,
+      "facing_3bet": 2
+    },
+    "pardoKing|CO": {
+      "no_raise": 2,
+      "facing_open": 2
+    },
+    "HarryPoker18|SB": {
+      "no_raise": 18,
+      "facing_open": 21,
+      "facing_3bet": 1
+    },
+    "pardoKing|MP": {
+      "no_raise": 4
+    },
+    "HarryPoker18|BTN": {
+      "no_raise": 19,
+      "facing_open": 18,
+      "facing_3bet": 1
+    },
+    "kiluaak|SB": {
+      "no_raise": 2,
+      "facing_open": 4
+    },
+    "CamiloG208|CO": {
+      "no_raise": 4
+    },
+    "anro|SB": {
+      "no_raise": 1,
+      "facing_open": 1
+    },
+    "kiluaak|BB": {
+      "no_raise": 1,
+      "facing_open": 3
+    },
+    "pardoKing|UTG": {
+      "no_raise": 1
+    },
+    "CamiloG208|MP": {
+      "facing_open": 1,
+      "no_raise": 1
+    },
+    "HarryPoker18|CO": {
+      "facing_open": 10,
+      "no_raise": 31
+    },
+    "anro|BTN": {
+      "facing_open": 1
+    },
+    "CamiloG208|UTG": {
+      "no_raise": 1
+    },
+    "HarryPoker18|MP": {
+      "no_raise": 23,
+      "facing_open": 1
+    },
+    "anro|CO": {
+      "no_raise": 1
+    },
+    "kiluaak|BTN": {
+      "no_raise": 2,
+      "facing_open": 2
+    },
+    "pardoKing|BB": {
+      "facing_open": 3
+    },
+    "HarryPoker18|UTG": {
+      "no_raise": 18
+    },
+    "anro|MP": {
+      "no_raise": 1
+    },
+    "kiluaak|CO": {
+      "no_raise": 3,
+      "facing_open": 1
+    },
+    "pardoKing|SB": {
+      "no_raise": 1,
+      "facing_open": 2
+    },
+    "CamiloG208|BB": {
+      "no_raise": 1,
+      "facing_open": 2
+    },
+    "anro|UTG": {
+      "no_raise": 1
+    },
+    "CamiloG208|SB": {
+      "no_raise": 2
+    },
+    "kiluaak|UTG": {
+      "no_raise": 3
+    },
+    "CamiloG208|BTN": {
+      "facing_open": 2,
+      "no_raise": 1
+    },
+    "anro|BB": {
+      "facing_open": 1
+    },
+    "ALKILADO|SB": {
+      "no_raise": 1
+    },
+    "ALKILADO|BTN": {
+      "no_raise": 1
+    },
+    "ALKILADO|CO": {
+      "no_raise": 1
+    },
+    "ALKILADO|MP": {
+      "no_raise": 1
+    },
+    "ALKILADO|BB": {
+      "facing_open": 1
+    },
+    "Juanpablogrz|UTG": {
+      "no_raise": 3
+    },
+    "LUIS-DIAZ|MP": {
+      "no_raise": 13
+    },
+    "Bigmac14|CO": {
+      "no_raise": 3
+    },
+    "LUIS-DIAZ|UTG": {
+      "no_raise": 7
+    },
+    "Bigmac14|MP": {
+      "no_raise": 4,
+      "facing_open": 1
+    },
+    "Chang2113|BTN": {
+      "no_raise": 2,
+      "facing_open": 1
+    },
+    "Juanpablogrz|BB": {
+      "no_raise": 4,
+      "facing_open": 1
+    },
+    "Bigmac14|UTG": {
+      "no_raise": 3
+    },
+    "LolaMora|MP": {
+      "facing_open": 1
+    },
+    "Chang2113|CO": {
+      "facing_open": 2,
+      "no_raise": 1
+    },
+    "LUIS-DIAZ|BB": {
+      "facing_open": 8,
+      "no_raise": 2,
+      "facing_3bet": 1
+    },
+    "Juanpablogrz|SB": {
+      "facing_open": 3,
+      "no_raise": 1
+    },
+    "Chang2113|MP": {
+      "no_raise": 2
+    },
+    "Juanpablogrz|BTN": {
+      "no_raise": 2
+    },
+    "LUIS-DIAZ|SB": {
+      "no_raise": 9,
+      "facing_open": 3
+    },
+    "Bigmac14|BB": {
+      "no_raise": 2
+    },
+    "Chang2113|UTG": {
+      "no_raise": 1
+    },
+    "Juanpablogrz|CO": {
+      "no_raise": 3
+    },
+    "LUIS-DIAZ|BTN": {
+      "no_raise": 7,
+      "facing_open": 2
+    },
+    "Bigmac14|SB": {
+      "no_raise": 1
+    },
+    "LaloMora|BB": {
+      "facing_open": 3
+    },
+    "Juanpablogrz|MP": {
+      "no_raise": 3
+    },
+    "LUIS-DIAZ|CO": {
+      "no_raise": 9,
+      "facing_open": 2
+    },
+    "Bigmac14|BTN": {
+      "no_raise": 1,
+      "facing_open": 1
+    },
+    "Chang2113|BB": {
+      "facing_open": 2
+    },
+    "Chang2113|SB": {
+      "no_raise": 2
+    },
+    "SB|SB": {
+      "no_raise": 1
+    },
+    "Deyffan|MP": {
+      "no_raise": 1
+    },
+    "Onix22|SB": {
+      "no_raise": 4,
+      "facing_open": 4,
+      "facing_3bet": 1
+    },
+    "Pechugo|BB": {
+      "no_raise": 2,
+      "facing_open": 4,
+      "facing_3bet": 1
+    },
+    "Onix22|BTN": {
+      "facing_open": 5,
+      "no_raise": 6
+    },
+    "Pechugo|SB": {
+      "facing_open": 7,
+      "no_raise": 3
+    },
+    "Deyffan|BB": {
+      "facing_open": 1
+    },
+    "Onix22|CO": {
+      "no_raise": 7,
+      "facing_open": 4
+    },
+    "Pechugo|BTN": {
+      "no_raise": 4,
+      "facing_open": 7
+    },
+    "Deyffan|SB": {
+      "no_raise": 1
+    },
+    "Onix22|MP": {
+      "no_raise": 8
+    },
+    "Pechugo|CO": {
+      "no_raise": 8,
+      "facing_open": 1
+    },
+    "Deyffan|BTN": {
+      "no_raise": 1
+    },
+    "man1|BB": {
+      "facing_open": 4,
+      "no_raise": 2
+    },
+    "man1|SB": {
+      "facing_open": 3,
+      "no_raise": 2
+    },
+    "Isagomez|BB": {
+      "facing_open": 1,
+      "no_raise": 1
+    },
+    "Onix22|UTG": {
+      "no_raise": 3
+    },
+    "Pechugo|MP": {
+      "no_raise": 7
+    },
+    "man1|CO": {
+      "no_raise": 3
+    },
+    "Isagomez|BTN": {
+      "no_raise": 2
+    },
+    "Pechugo|UTG": {
+      "no_raise": 2
+    },
+    "man1|MP": {
+      "no_raise": 4
+    },
+    "Isagomez|CO": {
+      "facing_open": 2
+    },
+    "Onix22|BB": {
+      "facing_open": 5,
+      "facing_3bet": 1,
+      "no_raise": 1
+    },
+    "man1|UTG": {
+      "no_raise": 2
+    },
+    "Isagomez|MP": {
+      "no_raise": 1
+    },
+    "Isagomez|UTG": {
+      "no_raise": 1
+    },
+    "man1|BTN": {
+      "facing_open": 1,
+      "no_raise": 2
+    },
+    "Isagomez|SB": {
+      "facing_3bet": 1
+    },
+    "Iker69|MP": {
+      "facing_open": 1,
+      "no_raise": 2
+    },
+    "Iker69|UTG": {
+      "no_raise": 1
+    },
+    "Iker69|BB": {
+      "facing_3bet": 1,
+      "facing_open": 2
+    },
+    "Iker69|SB": {
+      "facing_open": 3
+    },
+    "Iker69|BTN": {
+      "facing_open": 1,
+      "no_raise": 3
+    },
+    "Iker69|CO": {
+      "no_raise": 4
+    },
+    "Davile|BB": {
+      "no_raise": 1
+    },
+    "Davile|SB": {
+      "facing_open": 1
+    },
+    "Jorish29|MP": {
+      "no_raise": 2
+    },
+    "Jonatantarra|CO": {
+      "no_raise": 3
+    },
+    "Jhordanbtc|BTN": {
+      "facing_open": 2,
+      "no_raise": 1
+    },
+    "Rompechuchas|SB": {
+      "facing_open": 3
+    },
+    "Jonatantarra|MP": {
+      "no_raise": 3
+    },
+    "Jhordanbtc|CO": {
+      "no_raise": 4
+    },
+    "Rompechuchas|BTN": {
+      "no_raise": 3,
+      "facing_open": 1
+    },
+    "Jorish29|BB": {
+      "no_raise": 2
+    },
+    "Jhordanbtc|MP": {
+      "no_raise": 3
+    },
+    "Rompechuchas|CO": {
+      "no_raise": 4
+    },
+    "Jorish29|SB": {
+      "no_raise": 1
+    },
+    "Jonatantarra|BB": {
+      "no_raise": 2,
+      "facing_open": 2
+    },
+    "Rompechuchas|MP": {
+      "no_raise": 2
+    },
+    "Jorish29|BTN": {
+      "no_raise": 1
+    },
+    "Jonatantarra|SB": {
+      "no_raise": 1,
+      "facing_open": 2
+    },
+    "Jhordanbtc|BB": {
+      "no_raise": 1,
+      "facing_open": 2
+    },
+    "Goldy7|MP": {
+      "no_raise": 2
+    },
+    "Jorish29|CO": {
+      "no_raise": 1
+    },
+    "Jonatantarra|BTN": {
+      "no_raise": 2
+    },
+    "Jhordanbtc|SB": {
+      "no_raise": 1,
+      "facing_open": 1
+    },
+    "Rompechuchas|BB": {
+      "no_raise": 1,
+      "facing_open": 1
+    },
+    "Goldy7|UTG": {
+      "no_raise": 1
+    },
+    "Jorish29|UTG": {
+      "no_raise": 1
+    },
+    "Goldy7|BB": {
+      "facing_open": 1
+    },
+    "Jonatantarra|UTG": {
+      "no_raise": 1
+    },
+    "Goldy7|SB": {
+      "no_raise": 1
+    },
+    "Jhordanbtc|UTG": {
+      "no_raise": 1
+    },
+    "Goldy7|BTN": {
+      "facing_open": 1
+    },
+    "Rompechuchas|UTG": {
+      "no_raise": 1
+    },
+    "Goldy7|CO": {
+      "facing_open": 1,
+      "no_raise": 1
+    },
+    "dollarbill|BB": {
+      "facing_open": 5,
+      "no_raise": 1
+    },
+    "dollarbill|SB": {
+      "facing_open": 5,
+      "no_raise": 2
+    },
+    "P2|MP": {
+      "no_raise": 1
+    },
+    "P3|CO": {
+      "no_raise": 1
+    },
+    "P4|BTN": {
+      "no_raise": 1
+    },
+    "P5|SB": {
+      "facing_open": 1
+    },
+    "santibenavides|UTG": {
+      "no_raise": 3
+    },
+    "Mrcash|MP": {
+      "no_raise": 11
+    },
+    "Samuel1598|CO": {
+      "no_raise": 6,
+      "facing_open": 1
+    },
+    "Deftones|SB": {
+      "facing_open": 5,
+      "no_raise": 8
+    },
+    "Samuel1598|MP": {
+      "no_raise": 6,
+      "facing_open": 1
+    },
+    "Deftones|BTN": {
+      "facing_open": 6,
+      "no_raise": 7
+    },
+    "Mrcash|BB": {
+      "facing_open": 10,
+      "no_raise": 2,
+      "facing_3bet": 1
+    },
+    "Deftones|CO": {
+      "facing_open": 3,
+      "no_raise": 7
+    },
+    "Mrcash|SB": {
+      "facing_open": 11,
+      "no_raise": 6
+    },
+    "Samuel1598|BB": {
+      "facing_open": 4,
+      "facing_3bet": 1
+    },
+    "Deftones|UTG": {
+      "no_raise": 4
+    },
+    "santibenavides|CO": {
+      "no_raise": 1
+    },
+    "Mrcash|BTN": {
+      "no_raise": 12,
+      "facing_open": 5,
+      "facing_3bet": 1
+    },
+    "Samuel1598|SB": {
+      "no_raise": 2,
+      "facing_open": 2,
+      "facing_3bet": 2
+    },
+    "santibenavides|MP": {
+      "facing_open": 1
+    },
+    "Mrcash|CO": {
+      "facing_open": 3,
+      "no_raise": 15
+    },
+    "Samuel1598|BTN": {
+      "facing_open": 1,
+      "no_raise": 5
+    },
+    "Deftones|BB": {
+      "facing_open": 8,
+      "no_raise": 1
+    },
+    "Deftones|MP": {
+      "no_raise": 6,
+      "facing_open": 1
+    },
+    "Mrcash|UTG": {
+      "no_raise": 7
+    },
+    "otb_RedBaron|BB": {
+      "facing_open": 4,
+      "no_raise": 1
+    },
+    "otb_RedBaron|BTN": {
+      "facing_open": 3,
+      "no_raise": 2
+    },
+    "otb_RedBaron|CO": {
+      "facing_open": 2,
+      "no_raise": 2
+    },
+    "otb_RedBaron|MP": {
+      "no_raise": 4
+    },
+    "otb_RedBaron|UTG": {
+      "no_raise": 3
+    },
+    "Samuel1598|UTG": {
+      "no_raise": 2
+    },
+    "otb_RedBaron|SB": {
+      "no_raise": 2,
+      "facing_open": 1
+    },
+    "Edup|UTG": {
+      "no_raise": 1
+    },
+    "Franco1603|MP": {
+      "no_raise": 11
+    },
+    "AZ de A|CO": {
+      "no_raise": 4
+    },
+    "bsaghv4|SB": {
+      "no_raise": 3
+    },
+    "Franco1603|UTG": {
+      "no_raise": 5
+    },
+    "AZ de A|MP": {
+      "no_raise": 1
+    },
+    "bsaghv4|BTN": {
+      "no_raise": 3
+    },
+    "Edup|BB": {
+      "no_raise": 1,
+      "facing_open": 1
+    },
+    "bsaghv4|CO": {
+      "no_raise": 3
+    },
+    "Edup|SB": {
+      "facing_open": 1,
+      "no_raise": 1
+    },
+    "AZ de A|BB": {
+      "facing_open": 2,
+      "no_raise": 2
+    },
+    "bsaghv4|MP": {
+      "no_raise": 3
+    },
+    "Edup|BTN": {
+      "facing_open": 2
+    },
+    "AZ de A|SB": {
+      "facing_open": 3,
+      "no_raise": 1
+    },
+    "Edup|CO": {
+      "no_raise": 1,
+      "facing_open": 1
+    },
+    "AZ de A|BTN": {
+      "no_raise": 3,
+      "facing_open": 2
+    },
+    "Lprieto11|BTN": {
+      "facing_open": 1,
+      "no_raise": 3
+    },
+    "Lprieto11|CO": {
+      "no_raise": 3
+    },
+    "Lprieto11|BB": {
+      "facing_open": 3,
+      "no_raise": 1
+    },
+    "Edup|MP": {
+      "no_raise": 1
+    },
+    "Franco1603|CO": {
+      "no_raise": 8,
+      "facing_open": 3
+    },
+    "Lprieto11|SB": {
+      "facing_open": 2,
+      "no_raise": 1
+    },
+    "Franco1603|BB": {
+      "facing_open": 5,
+      "no_raise": 3
+    },
+    "Franco1603|SB": {
+      "no_raise": 6,
+      "facing_open": 4
+    },
+    "Juancuellar987|CO": {
+      "facing_open": 2,
+      "no_raise": 1
+    },
+    "Franco1603|BTN": {
+      "facing_open": 2,
+      "no_raise": 6
+    },
+    "Juancuellar987|MP": {
+      "no_raise": 3
+    },
+    "Juancuellar987|BB": {
+      "no_raise": 2
+    },
+    "AZ de A|UTG": {
+      "no_raise": 1
+    },
+    "Lprieto11|MP": {
+      "no_raise": 2
+    },
+    "Juancuellar987|SB": {
+      "no_raise": 2
+    },
+    "Lprieto11|UTG": {
+      "no_raise": 2
+    },
+    "Juancuellar987|BTN": {
+      "no_raise": 2
+    },
+    "bsaghv4|UTG": {
+      "no_raise": 2
+    },
+    "bsaghv4|BB": {
+      "facing_open": 1,
+      "no_raise": 1
+    },
+    "maestrodelbluff|BB": {
+      "no_raise": 1
+    },
+    "maestrodelbluff|SB": {
+      "facing_open": 1
+    },
+    "maestrodelbluff|BTN": {
+      "no_raise": 1
+    },
+    "Juancuellar987|UTG": {
+      "no_raise": 1
+    },
+    "maestrodelbluff|CO": {
+      "no_raise": 1
+    },
+    "Danielev|CO": {
+      "no_raise": 2,
+      "facing_open": 1
+    },
+    "Tatan29|BTN": {
+      "facing_open": 5,
+      "no_raise": 3
+    },
+    "CorajeRaise|BB": {
+      "facing_open": 5,
+      "no_raise": 2
+    },
+    "Tatan29|CO": {
+      "no_raise": 4,
+      "facing_open": 5
+    },
+    "CorajeRaise|SB": {
+      "no_raise": 3,
+      "facing_open": 7
+    },
+    "CorajeRaise|BTN": {
+      "no_raise": 6,
+      "facing_open": 3
+    },
+    "Tatan29|BB": {
+      "facing_open": 4,
+      "no_raise": 1,
+      "facing_3bet": 2
+    },
+    "CorajeRaise|CO": {
+      "no_raise": 6,
+      "facing_open": 3
+    },
+    "Tatan29|SB": {
+      "facing_open": 4,
+      "no_raise": 2,
+      "facing_3bet": 2
+    },
+    "JS99|MP": {
+      "no_raise": 7,
+      "facing_open": 4
+    },
+    "Danielev|BB": {
+      "facing_3bet": 1,
+      "facing_open": 2
+    },
+    "JS99|UTG": {
+      "no_raise": 8
+    },
+    "Tatan29|MP": {
+      "no_raise": 5,
+      "facing_open": 2
+    },
+    "Danielev|SB": {
+      "no_raise": 1,
+      "facing_open": 2
+    },
+    "Tatan29|UTG": {
+      "no_raise": 6
+    },
+    "Danielev|BTN": {
+      "no_raise": 2,
+      "facing_open": 1
+    },
+    "CorajeRaise|MP": {
+      "no_raise": 5,
+      "facing_open": 2
+    },
+    "JS99|SB": {
+      "no_raise": 4,
+      "facing_open": 3,
+      "facing_3bet": 3
+    },
+    "CorajeRaise|UTG": {
+      "no_raise": 5
+    },
+    "Danielev|MP": {
+      "no_raise": 3
+    },
+    "JS99|BTN": {
+      "no_raise": 5,
+      "facing_open": 4
+    },
+    "JS99|BB": {
+      "facing_open": 7,
+      "no_raise": 1,
+      "facing_3bet": 2
+    },
+    "Danielev|UTG": {
+      "no_raise": 1
+    },
+    "JS99|CO": {
+      "no_raise": 4,
+      "facing_open": 5
+    },
+    "Doffy707|MP": {
+      "no_raise": 4
+    },
+    "David P.|MP": {
+      "no_raise": 2,
+      "facing_open": 1
+    },
+    "Doffy707|BB": {
+      "no_raise": 1,
+      "facing_3bet": 1,
+      "facing_open": 1
+    },
+    "David P.|UTG": {
+      "no_raise": 3
+    },
+    "Doffy707|SB": {
+      "facing_open": 2,
+      "no_raise": 1
+    },
+    "UTG|UTG": {
+      "no_raise": 3
+    },
+    "David P.|BB": {
+      "facing_open": 4
+    },
+    "Doffy707|CO": {
+      "no_raise": 2,
+      "facing_open": 1
+    },
+    "David P.|SB": {
+      "no_raise": 2,
+      "facing_open": 1
+    },
+    "David P.|BTN": {
+      "facing_open": 1,
+      "facing_3bet": 1,
+      "no_raise": 1
+    },
+    "Doffy707|UTG": {
+      "no_raise": 3
+    },
+    "David P.|CO": {
+      "facing_open": 2,
+      "no_raise": 1
+    },
+    "Doffy707|BTN": {
+      "facing_open": 3
+    },
+    "mommya|UTG": {
+      "no_raise": 6
+    },
+    "Memelo|MP": {
+      "no_raise": 3
+    },
+    "Matgar|BTN": {
+      "no_raise": 1
+    },
+    "Freddy9212|SB": {
+      "facing_open": 1,
+      "no_raise": 1
+    },
+    "Freddy9212|BTN": {
+      "facing_open": 1,
+      "no_raise": 2
+    },
+    "mommya|BB": {
+      "facing_open": 2,
+      "no_raise": 3
+    },
+    "Freddy9212|CO": {
+      "no_raise": 1
+    },
+    "dollarbill|BTN": {
+      "no_raise": 8
+    },
+    "mommya|SB": {
+      "no_raise": 2,
+      "facing_open": 3
+    },
+    "Memelo|BB": {
+      "no_raise": 1,
+      "facing_open": 1
+    },
+    "Freddy9212|MP": {
+      "no_raise": 1
+    },
+    "dollarbill|CO": {
+      "no_raise": 5
+    },
+    "Memelo|SB": {
+      "no_raise": 1
+    },
+    "dollarbill|MP": {
+      "no_raise": 1,
+      "facing_open": 1
+    },
+    "CO|CO": {
+      "no_raise": 1
+    },
+    "Memelo|BTN": {
+      "no_raise": 1
+    },
+    "Freddy9212|BB": {
+      "no_raise": 1
+    },
+    "Memelo|CO": {
+      "no_raise": 1
+    },
+    "SunGodNika|BB": {
+      "facing_open": 2
+    },
+    "SunGodNika|BTN": {
+      "no_raise": 1
+    },
+    "Davi-Ari|CO": {
+      "no_raise": 16,
+      "facing_open": 3
+    },
+    "Hector1320|SB": {
+      "no_raise": 3,
+      "facing_open": 6,
+      "facing_3bet": 1
+    },
+    "Davi-Ari|BB": {
+      "no_raise": 5,
+      "facing_open": 7,
+      "facing_3bet": 2
+    },
+    "Hector1320|BTN": {
+      "no_raise": 4,
+      "facing_open": 5,
+      "facing_3bet": 2
+    },
+    "Davi-Ari|SB": {
+      "no_raise": 6,
+      "facing_open": 12,
+      "facing_3bet": 3
+    },
+    "Ocampo99|MP": {
+      "no_raise": 1
+    },
+    "Hector1320|CO": {
+      "no_raise": 9,
+      "facing_open": 1
+    },
+    "Davi-Ari|BTN": {
+      "no_raise": 13,
+      "facing_open": 4,
+      "facing_3bet": 2
+    },
+    "Hector1320|MP": {
+      "no_raise": 8
+    },
+    "Ocampo99|BB": {
+      "facing_open": 1
+    },
+    "Juri|BB": {
+      "facing_open": 1
+    },
+    "Juris55|BTN": {
+      "facing_open": 3,
+      "no_raise": 5
+    },
+    "Davi-Ari|UTG": {
+      "no_raise": 15
+    },
+    "Juris55|MP": {
+      "no_raise": 5,
+      "facing_open": 3
+    },
+    "N.E.O|SB": {
+      "no_raise": 4,
+      "facing_open": 5
+    },
+    "Juris55|UTG": {
+      "no_raise": 6
+    },
+    "N.E.O|BTN": {
+      "facing_open": 5,
+      "no_raise": 3
+    },
+    "N.E.O|CO": {
+      "facing_open": 4,
+      "no_raise": 3,
+      "facing_3bet": 1
+    },
+    "Juris55|BB": {
+      "facing_open": 4,
+      "facing_3bet": 3,
+      "no_raise": 1
+    },
+    "N.E.O|MP": {
+      "no_raise": 7
+    },
+    "Juris55|SB": {
+      "no_raise": 7,
+      "facing_open": 3
+    },
+    "N.E.O|BB": {
+      "facing_open": 4,
+      "no_raise": 2
+    },
+    "Davi-Ari|MP": {
+      "no_raise": 14,
+      "facing_open": 2
+    },
+    "Juris55|CO": {
+      "no_raise": 6,
+      "facing_open": 1
+    },
+    "N.E.O|UTG": {
+      "no_raise": 4
+    },
+    "Hector1320|UTG": {
+      "no_raise": 4
+    },
+    "mommya|BTN": {
+      "no_raise": 2,
+      "facing_open": 4
+    },
+    "mommya|CO": {
+      "no_raise": 3,
+      "facing_open": 2
+    },
+    "mommya|MP": {
+      "no_raise": 4,
+      "facing_open": 1
+    },
+    "Hector1320|BB": {
+      "facing_open": 6
+    },
+    "PardoKing|BTN": {
+      "no_raise": 2
+    },
+    "PardoKing|CO": {
+      "no_raise": 1
+    },
+    "PardoKing|BB": {
+      "no_raise": 1,
+      "facing_open": 1
+    },
+    "PardoKing|SB": {
+      "no_raise": 1
+    },
+    "DOGO*|CO": {
+      "no_raise": 6,
+      "facing_open": 1
+    },
+    "baam08|SB": {
+      "facing_open": 2,
+      "facing_3bet": 1,
+      "no_raise": 2
+    },
+    "baam08|BTN": {
+      "no_raise": 3,
+      "facing_open": 1
+    },
+    "baam08|BB": {
+      "facing_open": 2,
+      "no_raise": 1,
+      "facing_3bet": 1
+    },
+    "JaCkFlor|UTG": {
+      "no_raise": 2
+    },
+    "baam08|MP": {
+      "no_raise": 4
+    },
+    "JuaGon|CO": {
+      "no_raise": 4
+    },
+    "Cash7|BTN": {
+      "facing_open": 2
+    },
+    "sergio39|BB": {
+      "facing_open": 4,
+      "facing_3bet": 1
+    },
+    "baam08|UTG": {
+      "no_raise": 2
+    },
+    "JuaGon|MP": {
+      "no_raise": 4
+    },
+    "Cash7|CO": {
+      "facing_open": 2
+    },
+    "sergio39|SB": {
+      "facing_open": 4,
+      "no_raise": 2,
+      "facing_3bet": 1
+    },
+    "JaCkFlor|BB": {
+      "facing_open": 4
+    },
+    "Cash7|UTG": {
+      "no_raise": 1
+    },
+    "sergio39|CO": {
+      "facing_open": 2,
+      "no_raise": 5
+    },
+    "JaCkFlor|BTN": {
+      "facing_3bet": 1,
+      "no_raise": 2,
+      "facing_open": 1
+    },
+    "JuaGon|BB": {
+      "facing_3bet": 2,
+      "facing_open": 1
+    },
+    "sergio39|UTG": {
+      "no_raise": 1,
+      "facing_open": 1
+    },
+    "JaCkFlor|MP": {
+      "no_raise": 2
+    },
+    "baam08|CO": {
+      "no_raise": 1,
+      "facing_open": 1
+    },
+    "JuaGon|BTN": {
+      "facing_open": 2
+    },
+    "Cash7|SB": {
+      "facing_open": 1
+    },
+    "JuaGon|UTG": {
+      "no_raise": 1
+    },
+    "Cash7|MP": {
+      "no_raise": 1
+    },
+    "sergio39|BTN": {
+      "facing_open": 2,
+      "no_raise": 3
+    },
+    "JaCkFlor|SB": {
+      "facing_open": 2,
+      "no_raise": 1
+    },
+    "sergio39|MP": {
+      "no_raise": 5
+    },
+    "JaCkFlor|CO": {
+      "no_raise": 2,
+      "facing_open": 1
+    },
+    "JuaGon|SB": {
+      "facing_open": 2,
+      "no_raise": 1
+    },
+    "Antonia7|UTG": {
+      "no_raise": 1
+    },
+    "DOGO*|BTN": {
+      "no_raise": 6,
+      "facing_3bet": 1
+    },
+    "Aneurin|BB": {
+      "no_raise": 2,
+      "facing_open": 3,
+      "facing_3bet": 1
+    },
+    "Aneurin|SB": {
+      "no_raise": 5,
+      "facing_open": 2
+    },
+    "Antonia7|BB": {
+      "no_raise": 2
+    },
+    "Aneurin|BTN": {
+      "no_raise": 5,
+      "facing_open": 1
+    },
+    "Antonia7|SB": {
+      "no_raise": 2
+    },
+    "Aneurin|CO": {
+      "no_raise": 6
+    },
+    "Aneurin|MP": {
+      "facing_open": 2,
+      "no_raise": 4
+    },
+    "Antonia7|CO": {
+      "facing_open": 1,
+      "no_raise": 1
+    },
+    "DOGO*|BB": {
+      "facing_open": 5,
+      "no_raise": 3
+    },
+    "Aneurin|UTG": {
+      "no_raise": 4
+    },
+    "Antonia7|MP": {
+      "no_raise": 3
+    },
+    "DOGO*|SB": {
+      "facing_open": 5
+    },
+    "DOGO*|MP": {
+      "no_raise": 3
+    },
+    "DOGO*|UTG": {
+      "no_raise": 3
+    },
+    "Antonia7|BTN": {
+      "no_raise": 1
+    },
+    "Krono|BB": {
+      "no_raise": 3,
+      "facing_open": 1
+    },
+    "Krono|SB": {
+      "no_raise": 4,
+      "facing_open": 3
+    },
+    "Krono|BTN": {
+      "no_raise": 2,
+      "facing_open": 2
+    },
+    "Krono|CO": {
+      "no_raise": 4,
+      "facing_open": 1
+    },
+    "Krono|MP": {
+      "no_raise": 3,
+      "facing_open": 1
+    },
+    "Andresyjeymi|CO": {
+      "no_raise": 3,
+      "facing_open": 1
+    },
+    "Andresyjeymi|MP": {
+      "no_raise": 3
+    },
+    "Andresyjeymi|BB": {
+      "no_raise": 1,
+      "facing_open": 2
+    },
+    "Andresyjeymi|SB": {
+      "no_raise": 1,
+      "facing_open": 1
+    },
+    "Andresyjeymi|BTN": {
+      "no_raise": 2
+    },
+    "Krono|UTG": {
+      "no_raise": 1
+    },
+    "KoKeB0y92|UTG": {
+      "no_raise": 1
+    },
+    "jj20|CO": {
+      "no_raise": 1
+    },
+    "Waffles|BTN": {
+      "no_raise": 1
+    },
+    "Rio28|BB": {
+      "no_raise": 2,
+      "facing_open": 1
+    },
+    "Waffles|CO": {
+      "no_raise": 1
+    },
+    "Rio28|SB": {
+      "facing_open": 1,
+      "no_raise": 1
+    },
+    "KoKeB0y92|BB": {
+      "facing_open": 1,
+      "no_raise": 1
+    },
+    "Waffles|MP": {
+      "no_raise": 2
+    },
+    "Rio28|BTN": {
+      "no_raise": 2,
+      "facing_open": 1
+    },
+    "KoKeB0y92|SB": {
+      "facing_open": 1,
+      "no_raise": 1
+    },
+    "Cazadordeputas|UTG": {
+      "no_raise": 4
+    },
+    "Waffles|UTG": {
+      "no_raise": 1
+    },
+    "Rio28|CO": {
+      "facing_open": 2,
+      "no_raise": 1
+    },
+    "Cazadordeputas|BB": {
+      "facing_open": 4,
+      "no_raise": 3
+    },
+    "KoKeB0y92|MP": {
+      "no_raise": 1
+    },
+    "Cazadordeputas|BTN": {
+      "facing_open": 2,
+      "no_raise": 4
+    },
+    "Cazadordeputas|CO": {
+      "no_raise": 6
+    },
+    "Adrugir|MP": {
+      "no_raise": 4
+    },
+    "Adrugir|UTG": {
+      "no_raise": 5
+    },
+    "Cazadordeputas|SB": {
+      "no_raise": 5
+    },
+    "MuckeDBoY|BB": {
+      "no_raise": 3,
+      "facing_3bet": 1,
+      "facing_open": 1
+    },
+    "MuckeDBoY|SB": {
+      "no_raise": 3
+    },
+    "MuckeDBoY|BTN": {
+      "no_raise": 3,
+      "facing_open": 2
+    },
+    "MuckeDBoY|CO": {
+      "no_raise": 4
+    },
+    "Adrugir|BB": {
+      "no_raise": 4
+    },
+    "MuckeDBoY|MP": {
+      "no_raise": 4
+    },
+    "Adrugir|SB": {
+      "facing_open": 3,
+      "no_raise": 1
+    },
+    "MuckeDBoY|UTG": {
+      "no_raise": 4
+    },
+    "Adrugir|BTN": {
+      "no_raise": 3,
+      "facing_open": 1
+    },
+    "Cazadordeputas|MP": {
+      "no_raise": 4
+    },
+    "Adrugir|CO": {
+      "no_raise": 4
+    },
+    "ANJO2017|SB": {
+      "no_raise": 7,
+      "facing_3bet": 1,
+      "facing_open": 11
+    },
+    "ANJO2017|CO": {
+      "no_raise": 15,
+      "facing_open": 3
+    },
+    "ANJO2017|MP": {
+      "no_raise": 10,
+      "facing_open": 1
+    },
+    "ANJO2017|UTG": {
+      "no_raise": 10
+    },
+    "ANJO2017|BB": {
+      "facing_open": 16,
+      "no_raise": 1,
+      "facing_3bet": 1
+    },
+    "ANJO2017|BTN": {
+      "no_raise": 6,
+      "facing_open": 6
+    },
+    "Bogotano26|UTG": {
+      "no_raise": 4
+    },
+    "Edgar28|BTN": {
+      "facing_open": 2,
+      "no_raise": 3
+    },
+    "O$0RL0|BB": {
+      "facing_3bet": 1,
+      "facing_open": 2
+    },
+    "O$0RL0|SB": {
+      "facing_open": 2,
+      "facing_3bet": 1
+    },
+    "Bogotano26|BB": {
+      "facing_open": 4,
+      "facing_3bet": 1
+    },
+    "Edgar28|MP": {
+      "no_raise": 4
+    },
+    "O$0RL0|BTN": {
+      "no_raise": 3
+    },
+    "Bogotano26|SB": {
+      "no_raise": 5,
+      "facing_open": 1
+    },
+    "Edgar28|UTG": {
+      "no_raise": 6
+    },
+    "O$0RL0|CO": {
+      "no_raise": 4
+    },
+    "Bogotano26|BTN": {
+      "no_raise": 7
+    },
+    "Edgar28|BB": {
+      "no_raise": 1,
+      "facing_open": 2
+    },
+    "O$0RL0|UTG": {
+      "no_raise": 2
+    },
+    "Bogotano26|MP": {
+      "no_raise": 4
+    },
+    "Edgar28|SB": {
+      "no_raise": 3,
+      "facing_open": 2
+    },
+    "Edgar28|CO": {
+      "facing_3bet": 1,
+      "no_raise": 3,
+      "facing_open": 1
+    },
+    "O$0RL0|MP": {
+      "facing_open": 1
+    },
+    "Bogotano26|CO": {
+      "facing_open": 1,
+      "no_raise": 3
+    },
+    "Carupoker|BB": {
+      "no_raise": 1,
+      "facing_open": 9
+    },
+    "Carupoker|SB": {
+      "facing_open": 12
+    },
+    "Carupoker|BTN": {
+      "no_raise": 9,
+      "facing_open": 4
+    },
+    "Carupoker|CO": {
+      "no_raise": 8,
+      "facing_open": 1
+    },
+    "Carupoker|MP": {
+      "no_raise": 6
+    },
+    "Carupoker|UTG": {
+      "no_raise": 4
+    },
+    "Electr0|SB": {
+      "facing_open": 4,
+      "no_raise": 2
+    },
+    "Electr0|BTN": {
+      "no_raise": 2,
+      "facing_open": 1
+    },
+    "Electr0|CO": {
+      "facing_open": 2,
+      "no_raise": 1
+    },
+    "Electr0|MP": {
+      "no_raise": 3,
+      "facing_open": 1
+    },
+    "Electr0|UTG": {
+      "no_raise": 3
+    },
+    "Electr0|BB": {
+      "facing_open": 3
+    },
+    "Prieto9610|BTN": {
+      "no_raise": 2
+    },
+    "Oscar.RG|CO": {
+      "no_raise": 2,
+      "facing_open": 1
+    },
+    "Capitan spiff|CO": {
+      "no_raise": 2,
+      "facing_open": 3
+    },
+    "Oscar.RG|SB": {
+      "no_raise": 2
+    },
+    "Capitan spiff|SB": {
+      "facing_open": 4
+    },
+    "Sebas420|BB": {
+      "facing_open": 1
+    },
+    "Oscar.RG|UTG": {
+      "no_raise": 1
+    },
+    "Sebas420|BTN": {
+      "facing_open": 1
+    },
+    "Capitan spiff|UTG": {
+      "no_raise": 3
+    },
+    "Sebas420|MP": {
+      "no_raise": 1
+    },
+    "Sebas420|UTG": {
+      "no_raise": 1
+    },
+    "Oscar.RG|BTN": {
+      "facing_open": 1,
+      "no_raise": 1
+    },
+    "Capitan spiff|BB": {
+      "facing_3bet": 2,
+      "facing_open": 3
+    },
+    "Oscar.RG|MP": {
+      "no_raise": 2
+    },
+    "Capitan spiff|BTN": {
+      "facing_open": 2,
+      "no_raise": 3
+    },
+    "Oscar.RG|BB": {
+      "facing_open": 1,
+      "facing_3bet": 1
+    },
+    "Sebas420|CO": {
+      "no_raise": 1
+    },
+    "Capitan spiff|MP": {
+      "facing_3bet": 1,
+      "no_raise": 3
+    },
+    "RABBUNI|MP": {
+      "no_raise": 1
+    },
+    "La_Gaitana|BTN": {
+      "no_raise": 1
+    },
+    "vidents|BB": {
+      "no_raise": 1
+    },
+    "Davile|BTN": {
+      "no_raise": 1,
+      "facing_open": 1
+    },
+    "La_Gaitana|CO": {
+      "facing_open": 2
+    },
+    "vidents|SB": {
+      "facing_3bet": 1,
+      "facing_open": 1
+    },
+    "RABBUNI|BB": {
+      "facing_3bet": 1,
+      "facing_open": 1
+    },
+    "BLKsoul|SB": {
+      "facing_open": 2,
+      "no_raise": 2
+    },
+    "BLKsoul|BTN": {
+      "no_raise": 3,
+      "facing_open": 2
+    },
+    "BLKsoul|MP": {
+      "no_raise": 3,
+      "facing_3bet": 1
+    },
+    "BLKsoul|UTG": {
+      "no_raise": 1
+    },
+    "BLKsoul|BB": {
+      "no_raise": 1,
+      "facing_open": 1
+    },
+    "MP|MP": {
+      "no_raise": 1
+    },
+    "BLKsoul|CO": {
+      "no_raise": 1,
+      "facing_open": 1
+    },
+    "Woons|UTG": {
+      "no_raise": 5
+    },
+    "BigPapi.|MP": {
+      "no_raise": 5
+    },
+    "Santiagoea10|CO": {
+      "no_raise": 5
+    },
+    "chupapepita|BB": {
+      "facing_open": 1
+    },
+    "BigPapi.|UTG": {
+      "no_raise": 8
+    },
+    "Santiagoea10|MP": {
+      "facing_open": 2,
+      "no_raise": 6
+    },
+    "chupapepita|SB": {
+      "facing_open": 2
+    },
+    "Woons|BB": {
+      "facing_open": 7
+    },
+    "Santiagoea10|UTG": {
+      "no_raise": 6
+    },
+    "chupapepita|BTN": {
+      "facing_open": 1
+    },
+    "Woons|SB": {
+      "facing_open": 3,
+      "no_raise": 3
+    },
+    "BigPapi.|BB": {
+      "facing_open": 4,
+      "no_raise": 2
+    },
+    "chupapepita|CO": {
+      "facing_open": 1
+    },
+    "Woons|BTN": {
+      "facing_open": 6,
+      "no_raise": 1
+    },
+    "BigPapi.|SB": {
+      "facing_open": 7
+    },
+    "Santiagoea10|BB": {
+      "facing_open": 7
+    },
+    "chupapepita|MP": {
+      "no_raise": 1
+    },
+    "Woons|CO": {
+      "facing_open": 3,
+      "no_raise": 3
+    },
+    "BigPapi.|BTN": {
+      "facing_open": 4,
+      "no_raise": 2
+    },
+    "Santiagoea10|SB": {
+      "facing_open": 5,
+      "no_raise": 1
+    },
+    "chupapepita|UTG": {
+      "no_raise": 1
+    },
+    "Woons|MP": {
+      "no_raise": 7,
+      "facing_open": 1
+    },
+    "BigPapi.|CO": {
+      "no_raise": 7,
+      "facing_open": 1
+    },
+    "Santiagoea10|BTN": {
+      "no_raise": 6,
+      "facing_open": 2
+    },
+    "papa01|UTG": {
+      "no_raise": 2
+    },
+    "Silvio|MP": {
+      "no_raise": 2
+    },
+    "Sp1609|CO": {
+      "no_raise": 1
+    },
+    "Tio88|BTN": {
+      "no_raise": 2
+    },
+    "Dannykill|SB": {
+      "no_raise": 1,
+      "facing_open": 1
+    },
+    "Tio88|MP": {
+      "no_raise": 1
+    },
+    "Dannykill|CO": {
+      "no_raise": 1
+    },
+    "papa01|SB": {
+      "no_raise": 1
+    },
+    "Silvio|BB": {
+      "no_raise": 1
+    },
+    "Dannykill|MP": {
+      "no_raise": 1
+    },
+    "papa01|BTN": {
+      "facing_open": 1
+    },
+    "Silvio|SB": {
+      "facing_open": 1
+    },
+    "Tio88|BB": {
+      "facing_open": 1
+    },
+    "papa01|CO": {
+      "facing_open": 1
+    },
+    "Silvio|BTN": {
+      "facing_open": 1
+    },
+    "Tio88|SB": {
+      "facing_open": 1
+    },
+    "Dannykill|BB": {
+      "facing_open": 1
+    },
+    "proplayer555|CO": {
+      "no_raise": 1
+    },
+    "Silvio|UTG": {
+      "no_raise": 1
+    },
+    "proplayer555|MP": {
+      "facing_open": 1
+    },
+    "Tio88|CO": {
+      "facing_open": 1
+    },
+    "Dannykill|BTN": {
+      "facing_open": 1
+    },
+    "papa01|BB": {
+      "facing_open": 1
+    }
+  },
+  "cats_pos": {
+    "Jarduan|UTG": {
+      "open": 25,
+      "fold": 79,
+      "bb_check": 1,
+      "limp": 1,
+      "3bet": 1
+    },
+    "NESANVAR|MP": {
+      "call_open": 2,
+      "fold_vs_open": 1,
+      "limp": 2
+    },
+    "Pipaaf182|CO": {
+      "fold_vs_open": 4
+    },
+    "mur420|BTN": {
+      "call_open": 4,
+      "fold_vs_open": 4,
+      "limp": 3,
+      "fold": 7,
+      "bb_check": 1,
+      "open": 1,
+      "fold_vs_3bet": 1,
+      "3bet": 1,
+      "call_limp": 1
+    },
+    "Hachirama|SB": {
+      "call_open": 4,
+      "fold_vs_open": 2,
+      "3bet": 1,
+      "call_limp": 1
+    },
+    "Juanmabm|BB": {
+      "call_open": 2,
+      "fold_vs_open": 5,
+      "bb_check": 4,
+      "fold_vs_3bet": 1
+    },
+    "Hachirama|BB": {
+      "bb_check": 1,
+      "3bet": 1,
+      "call_3bet": 1,
+      "call_open": 3,
+      "squeeze": 1
+    },
+    "Juanmabm|UTG": {
+      "limp": 4,
+      "fold": 5
+    },
+    "Jarduan|MP": {
+      "fold": 77,
+      "fold_vs_open": 21,
+      "call_limp": 1,
+      "open": 30,
+      "rol": 6,
+      "3bet": 2
+    },
+    "Pipaaf182|BTN": {
+      "fold": 1,
+      "fold_vs_open": 1,
+      "3bet": 1,
+      "rol": 1
+    },
+    "NESANVAR|CO": {
+      "call_limp": 2,
+      "limp": 2,
+      "call_open": 1
+    },
+    "Hachirama|UTG": {
+      "open": 6,
+      "limp": 2,
+      "fold": 1
+    },
+    "Juanmabm|MP": {
+      "fold_vs_open": 6,
+      "limp": 1,
+      "fold": 3
+    },
+    "Jarduan|CO": {
+      "fold_vs_open": 25,
+      "3bet": 1,
+      "fold": 67,
+      "open": 25,
+      "bb_check": 1,
+      "rol": 3,
+      "call_limp": 5,
+      "call_open": 5,
+      "limp": 2,
+      "fold_vs_3bet": 1
+    },
+    "NESANVAR|BTN": {
+      "call_open": 4,
+      "call_3bet": 1,
+      "limp": 2
+    },
+    "Pipaaf182|SB": {
+      "fold_vs_open": 4,
+      "fold_vs_3bet": 1
+    },
+    "mur420|BB": {
+      "fold_vs_open": 9,
+      "squeeze": 1,
+      "bb_check": 5,
+      "call_open": 8,
+      "3bet": 1,
+      "fold_vs_3bet": 1,
+      "limp": 1
+    },
+    "Pipaaf182|BB": {
+      "bb_check": 2,
+      "rol": 1
+    },
+    "mur420|UTG": {
+      "fold": 13,
+      "limp": 4,
+      "open": 1
+    },
+    "Hachirama|MP": {
+      "limp": 5,
+      "call_open": 1,
+      "open": 1,
+      "rol": 1
+    },
+    "Juanmabm|CO": {
+      "fold_vs_open": 3,
+      "3bet": 1,
+      "call_limp": 2,
+      "fold": 1
+    },
+    "Jarduan|BTN": {
+      "fold_vs_open": 44,
+      "fold": 66,
+      "fold_vs_3bet": 2,
+      "rol": 14,
+      "open": 27,
+      "3bet": 5,
+      "call_open": 8,
+      "call_limp": 4
+    },
+    "NESANVAR|SB": {
+      "call_open": 2,
+      "call_limp": 1,
+      "call_3bet": 1,
+      "limp": 1
+    },
+    "Pipaaf182|UTG": {
+      "fold": 3
+    },
+    "mur420|MP": {
+      "limp": 6,
+      "fold": 9,
+      "bb_check": 1,
+      "fold_vs_open": 1,
+      "call_open": 4,
+      "open": 1
+    },
+    "Hachirama|CO": {
+      "call_open": 1,
+      "limp": 2,
+      "bb_check": 1
+    },
+    "Juanmabm|BTN": {
+      "call_open": 2,
+      "fold": 3,
+      "fold_vs_open": 3,
+      "limp": 1
+    },
+    "Jarduan|SB": {
+      "call_open": 13,
+      "fold_vs_open": 58,
+      "fold": 37,
+      "open": 18,
+      "limp": 1,
+      "rol": 11,
+      "call_limp": 12,
+      "4bet": 1,
+      "3bet": 4,
+      "fold_vs_3bet": 7,
+      "squeeze": 1
+    },
+    "NESANVAR|BB": {
+      "bb_check": 3,
+      "squeeze": 2,
+      "3bet": 1
+    },
+    "NESANVAR|UTG": {
+      "limp": 3,
+      "open": 1
+    },
+    "Pipaaf182|MP": {
+      "3bet": 1,
+      "fold_vs_open": 2
+    },
+    "mur420|CO": {
+      "fold_vs_3bet": 1,
+      "fold_vs_open": 4,
+      "fold": 9,
+      "open": 1,
+      "call_open": 1,
+      "rol": 1
+    },
+    "Hachirama|BTN": {
+      "call_3bet": 1,
+      "fold_vs_open": 1,
+      "call_open": 1,
+      "fold": 1,
+      "limp": 2
+    },
+    "Juanmabm|SB": {
+      "fold_vs_3bet": 1,
+      "call_open": 2,
+      "fold_vs_open": 1,
+      "limp": 2,
+      "call_limp": 2
+    },
+    "Jarduan|BB": {
+      "fold_vs_3bet": 8,
+      "bb_check": 42,
+      "fold_vs_open": 54,
+      "rol": 16,
+      "3bet": 5,
+      "open": 2,
+      "call_open": 30,
+      "squeeze": 1
+    },
+    "JHONCACH|CO": {
+      "rol": 1
+    },
+    "JHONCASH|BTN": {
+      "fold_vs_open": 10,
+      "rol": 1,
+      "fold": 5,
+      "3bet": 1,
+      "open": 2,
+      "call_open": 1
+    },
+    "mur420|SB": {
+      "fold_vs_open": 6,
+      "call_open": 6,
+      "limp": 1,
+      "fold": 4,
+      "fold_vs_3bet": 2,
+      "3bet": 1
+    },
+    "JHONCASH|SB": {
+      "call_limp": 1,
+      "call_open": 2,
+      "rol": 1,
+      "fold": 3,
+      "limp": 1,
+      "fold_vs_open": 11,
+      "3bet": 1,
+      "bb_check": 1
+    },
+    "JHONCASH|BB": {
+      "rol": 3,
+      "fold_vs_open": 9,
+      "bb_check": 5,
+      "fold_vs_3bet": 2
+    },
+    "JHONCASH|UTG": {
+      "fold": 17,
+      "limp": 1,
+      "open": 3
+    },
+    "JHONCASH|MP": {
+      "limp": 1,
+      "fold": 14,
+      "open": 1,
+      "fold_vs_open": 4
+    },
+    "DominoSaurio|BTN": {
+      "fold_vs_open": 9,
+      "fold": 5,
+      "rol": 2,
+      "open": 3
+    },
+    "DominoSaurio|SB": {
+      "fold": 4,
+      "fold_vs_open": 11,
+      "3bet": 2,
+      "open": 1,
+      "fold_vs_3bet": 1
+    },
+    "DominoSaurio|BB": {
+      "bb_check": 6,
+      "fold_vs_open": 10,
+      "call_open": 2,
+      "rol": 1,
+      "squeeze": 1,
+      "fold_vs_3bet": 1
+    },
+    "DominoSaurio|UTG": {
+      "fold": 18,
+      "open": 1
+    },
+    "DominoSaurio|MP": {
+      "fold": 9,
+      "fold_vs_open": 6,
+      "open": 2
+    },
+    "JHONCASH|CO": {
+      "fold": 4,
+      "fold_vs_open": 3,
+      "3bet": 2
+    },
+    "DominoSaurio|CO": {
+      "open": 3,
+      "rol": 2,
+      "fold": 4,
+      "fold_vs_open": 3
+    },
+    "Arquejandro|UTG": {
+      "fold": 4,
+      "open": 1
+    },
+    "Arquejandro|MP": {
+      "fold": 1,
+      "open": 1
+    },
+    "Arquejandro|BTN": {
+      "rol": 2,
+      "fold": 1,
+      "fold_vs_open": 1
+    },
+    "Arquejandro|SB": {
+      "fold": 1,
+      "fold_vs_open": 1,
+      "call_open": 1,
+      "squeeze": 1
+    },
+    "Arquejandro|BB": {
+      "fold_vs_open": 1,
+      "call_open": 1,
+      "bb_check": 1,
+      "fold_vs_3bet": 1
+    },
+    "Arquejandro|CO": {
+      "limp": 1,
+      "fold": 1
+    },
+    "Jeffer30bog|BB": {
+      "fold_vs_open": 1
+    },
+    "Mateo|BB": {
+      "fold_vs_open": 1
+    },
+    "Mateo|UTG": {
+      "fold": 1,
+      "limp": 1
+    },
+    "Mateo|MP": {
+      "open": 1
+    },
+    "Mira90|SB": {
+      "limp": 2,
+      "fold_vs_open": 1,
+      "fold_vs_3bet": 2,
+      "3bet": 1
+    },
+    "Hellfish1|UTG": {
+      "open": 1,
+      "fold": 6,
+      "limp": 1
+    },
+    "Mira90|BB": {
+      "fold_vs_3bet": 1,
+      "fold_vs_open": 2,
+      "bb_check": 2,
+      "squeeze": 1
+    },
+    "Mira90|UTG": {
+      "limp": 4,
+      "fold": 3,
+      "open": 1
+    },
+    "Hellfish1|MP": {
+      "rol": 1,
+      "fold_vs_open": 3,
+      "fold": 3,
+      "open": 1,
+      "bb_check": 1
+    },
+    "Mira90|CO": {
+      "call_open": 2,
+      "fold": 2,
+      "call_limp": 1,
+      "limp": 1
+    },
+    "Hellfish1|BTN": {
+      "call_open": 2,
+      "fold_vs_open": 1,
+      "open": 1,
+      "fold": 1
+    },
+    "Mira90|BTN": {
+      "limp": 3,
+      "fold_vs_open": 1,
+      "fold": 1,
+      "call_open": 1
+    },
+    "Hellfish1|SB": {
+      "call_limp": 1,
+      "call_open": 2,
+      "limp": 1,
+      "fold": 2,
+      "fold_vs_open": 1,
+      "rol": 1
+    },
+    "Hellfish1|BB": {
+      "fold_vs_open": 2,
+      "fold_vs_3bet": 2,
+      "bb_check": 1,
+      "3bet": 1
+    },
+    "Mira90|MP": {
+      "fold": 3,
+      "limp": 1,
+      "fold_vs_open": 1,
+      "bb_check": 1
+    },
+    "Hellfish1|CO": {
+      "fold": 5,
+      "fold_vs_open": 1
+    },
+    "Juanfelipe1|BTN": {
+      "rol": 1,
+      "fold": 1,
+      "3bet": 2,
+      "call_open": 1
+    },
+    "Juanfelipe1|SB": {
+      "open": 1,
+      "fold_vs_3bet": 1,
+      "fold_vs_open": 1
+    },
+    "Juanfelipe1|BB": {
+      "bb_check": 1,
+      "fold_vs_open": 2
+    },
+    "Juanfelipe1|UTG": {
+      "fold": 2
+    },
+    "Juanfelipe1|MP": {
+      "fold": 2
+    },
+    "Santiago ja|CO": {
+      "limp": 1
+    },
+    "Juanfelipe1|CO": {
+      "fold": 1,
+      "fold_vs_open": 1
+    },
+    "Santiago ja|BTN": {
+      "limp": 1,
+      "call_open": 1,
+      "fold_vs_open": 1
+    },
+    "Andresyjeymi|UTG": {
+      "open": 2,
+      "limp": 1
+    },
+    "Santiago ja|SB": {
+      "call_3bet": 2,
+      "rol": 1,
+      "call_open": 1
+    },
+    "Andreayjeymi|UTG": {
+      "open": 2,
+      "limp": 1
+    },
+    "Andreayjeymi|MP": {
+      "limp": 1,
+      "call_open": 1
+    },
+    "Santiago ja|BB": {
+      "bb_check": 1,
+      "call_open": 1
+    },
+    "Santiago ja|UTG": {
+      "fold": 2,
+      "limp": 2
+    },
+    "Andreayjeymi|CO": {
+      "open": 1
+    },
+    "Andreayjeymi|BTN": {
+      "rol": 1,
+      "fold_vs_open": 1
+    },
+    "Santiago ja|MP": {
+      "fold": 1
+    },
+    "Andreayjeymi|SB": {
+      "rol": 1
+    },
+    "Andreayjeymi|BB": {
+      "squeeze": 1,
+      "call_open": 1
+    },
+    "Valentina22|BTN": {
+      "fold": 1
+    },
+    "Elyessi27|SB": {
+      "limp": 2,
+      "call_open": 2,
+      "fold_vs_open": 4,
+      "call_limp": 6,
+      "open": 1
+    },
+    "Valentina22|CO": {
+      "limp": 1
+    },
+    "Elyessi27|BTN": {
+      "call_open": 4,
+      "fold": 3,
+      "fold_vs_open": 4,
+      "limp": 1,
+      "call_limp": 3,
+      "fold_vs_3bet": 1
+    },
+    "P5|BB": {
+      "squeeze": 1
+    },
+    "Valentina22|MP": {
+      "open": 1
+    },
+    "Elyessi27|CO": {
+      "fold_vs_open": 1,
+      "rol": 2,
+      "call_limp": 3,
+      "limp": 1,
+      "fold": 1
+    },
+    "Geilyn21|SB": {
+      "fold_vs_3bet": 1,
+      "call_open": 2,
+      "fold_vs_open": 1,
+      "3bet": 1
+    },
+    "Elyessi27|UTG": {
+      "fold": 8,
+      "limp": 4,
+      "open": 2
+    },
+    "Geilyn21|BTN": {
+      "call_open": 1,
+      "3bet": 1,
+      "rol": 1,
+      "fold_vs_open": 1,
+      "fold": 2
+    },
+    "P3|UTG": {
+      "fold": 1
+    },
+    "P4|MP": {
+      "open": 1
+    },
+    "P5|BTN": {
+      "call_open": 1
+    },
+    "HERO|SB": {
+      "squeeze": 1
+    },
+    "P1|BB": {
+      "fold_vs_3bet": 1
+    },
+    "Geilyn21|MP": {
+      "limp": 2,
+      "call_open": 1,
+      "open": 1,
+      "fold": 1
+    },
+    "Elyessi27|BB": {
+      "3bet": 1,
+      "call_open": 4,
+      "call_3bet": 1,
+      "bb_check": 4,
+      "rol": 1,
+      "fold_vs_open": 4
+    },
+    "Geilyn21|UTG": {
+      "limp": 1,
+      "fold": 1,
+      "open": 1
+    },
+    "Maicolp|MP": {
+      "bb_check": 1,
+      "fold": 3,
+      "limp": 4,
+      "call_limp": 3,
+      "call_open": 1,
+      "fold_vs_open": 1
+    },
+    "Geilyn21|BB": {
+      "bb_check": 1,
+      "call_open": 1,
+      "squeeze": 1
+    },
+    "Johan Otero|BB": {
+      "call_open": 1,
+      "fold_vs_open": 7,
+      "squeeze": 1,
+      "bb_check": 1
+    },
+    "Maicolp|UTG": {
+      "limp": 13,
+      "fold": 2
+    },
+    "Johan Otero|SB": {
+      "4bet": 1,
+      "call_open": 1,
+      "fold_vs_open": 1,
+      "fold_vs_3bet": 1,
+      "rol": 2,
+      "fold": 3
+    },
+    "Geilyn21|CO": {
+      "fold_vs_open": 1
+    },
+    "Johan Otero|BTN": {
+      "3bet": 2,
+      "fold": 3,
+      "fold_vs_open": 3,
+      "fold_vs_3bet": 1,
+      "call_open": 1
+    },
+    "Maicolp|BB": {
+      "fold_vs_3bet": 2,
+      "bb_check": 2,
+      "call_open": 5,
+      "fold_vs_open": 1
+    },
+    "Johan Otero|CO": {
+      "fold_vs_open": 3,
+      "fold": 2,
+      "rol": 1
+    },
+    "Maicolp|SB": {
+      "call_open": 4,
+      "fold_vs_3bet": 1,
+      "3bet": 2,
+      "limp": 3,
+      "call_limp": 2,
+      "fold_vs_open": 3,
+      "fold": 1
+    },
+    "Johan Otero|MP": {
+      "limp": 1,
+      "fold_vs_open": 2,
+      "fold": 4
+    },
+    "Maicolp|BTN": {
+      "fold_vs_open": 4,
+      "fold": 2,
+      "call_limp": 2,
+      "limp": 1,
+      "open": 1
+    },
+    "Johan Otero|UTG": {
+      "open": 3,
+      "fold": 5
+    },
+    "Maicolp|CO": {
+      "fold_vs_open": 2,
+      "call_limp": 1,
+      "3bet": 1,
+      "limp": 1
+    },
+    "Elyessi27|MP": {
+      "call_limp": 3,
+      "fold": 7,
+      "3bet": 1,
+      "limp": 1,
+      "call_open": 1,
+      "fold_vs_open": 1
+    },
+    "KappaxSlayer|SB": {
+      "fold_vs_open": 2,
+      "limp": 1,
+      "call_limp": 1,
+      "call_3bet": 1
+    },
+    "KappaxSlayer|BTN": {
+      "limp": 2,
+      "fold": 1,
+      "call_open": 1,
+      "fold_vs_open": 1
+    },
+    "KappaxSlayer|MP": {
+      "fold_vs_open": 1,
+      "limp": 4
+    },
+    "KappaxSlayer|UTG": {
+      "limp": 5,
+      "fold": 1
+    },
+    "MegustanLas...|BB": {
+      "bb_check": 2,
+      "fold_vs_open": 2
+    },
+    "MegustanLas...|SB": {
+      "fold_vs_open": 2,
+      "call_open": 2,
+      "call_limp": 1,
+      "fold": 1
+    },
+    "MegustanLas...|BTN": {
+      "call_limp": 4,
+      "fold": 1
+    },
+    "KappaxSlayer|BB": {
+      "fold_vs_open": 1,
+      "bb_check": 3
+    },
+    "MegustanLas...|CO": {
+      "call_limp": 1,
+      "fold_vs_3bet": 1,
+      "call_open": 1,
+      "fold_vs_open": 1
+    },
+    "MegustanLas...|MP": {
+      "fold": 1,
+      "fold_vs_open": 2,
+      "limp": 3
+    },
+    "MegustanLas...|UTG": {
+      "fold": 2,
+      "limp": 2,
+      "open": 1
+    },
+    "KappaxSlayer|CO": {
+      "limp": 1,
+      "call_limp": 1,
+      "fold_vs_open": 1
+    },
+    "SamPachero30|BB": {
+      "fold_vs_open": 6,
+      "rol": 1,
+      "squeeze": 1,
+      "bb_check": 1,
+      "call_open": 1
+    },
+    "SamPachero30|SB": {
+      "fold_vs_open": 7,
+      "open": 1,
+      "rol": 1,
+      "fold_vs_3bet": 1
+    },
+    "SamPachero30|BTN": {
+      "fold_vs_open": 2,
+      "fold": 3,
+      "open": 2,
+      "call_open": 1,
+      "rol": 1
+    },
+    "SamPachero30|MP": {
+      "fold": 7
+    },
+    "SamPachero30|UTG": {
+      "fold": 6,
+      "open": 5
+    },
+    "ComboHunter|BB": {
+      "fold_vs_open": 3,
+      "bb_check": 1,
+      "call_open": 1
+    },
+    "ComboHunter|SB": {
+      "limp": 1,
+      "fold_vs_open": 5,
+      "fold": 1
+    },
+    "ComboHunter|BTN": {
+      "fold_vs_open": 1,
+      "fold": 4
+    },
+    "LaloMora|SB": {
+      "call_open": 1,
+      "fold_vs_open": 4,
+      "limp": 1,
+      "call_limp": 1
+    },
+    "ComboHunter|CO": {
+      "open": 3,
+      "fold": 1
+    },
+    "LaloMora|BTN": {
+      "fold_vs_open": 1,
+      "fold": 6,
+      "call_limp": 1
+    },
+    "LaloMora|CO": {
+      "fold_vs_open": 2,
+      "limp": 1,
+      "fold": 4,
+      "call_open": 1,
+      "call_limp": 2
+    },
+    "ComboHunter|UTG": {
+      "fold": 5
+    },
+    "SamPachero30|CO": {
+      "fold": 2,
+      "open": 1,
+      "rol": 1
+    },
+    "LaloMora|MP": {
+      "limp": 2,
+      "fold_vs_open": 1,
+      "fold": 2
+    },
+    "LaloMora|UTG": {
+      "fold": 2,
+      "limp": 3,
+      "open": 1
+    },
+    "ComboHunter|MP": {
+      "fold": 4
+    },
+    "SAE_AAAA|BB": {
+      "call_open": 1,
+      "3bet": 1,
+      "open": 1,
+      "fold_vs_open": 2
+    },
+    "SAE_AAAA|SB": {
+      "rol": 1,
+      "open": 1,
+      "limp": 1
+    },
+    "SAE_AAAA|BTN": {
+      "open": 2,
+      "fold_vs_open": 1,
+      "call_open": 1
+    },
+    "SAE_AAAA|CO": {
+      "fold": 2
+    },
+    "SAE_AAAA|MP": {
+      "limp": 1,
+      "fold": 2
+    },
+    "SAE_AAAA|UTG": {
+      "fold": 2
+    },
+    "JuanPApada|BB": {
+      "fold_vs_open": 1,
+      "call_open": 2
+    },
+    "JuanPApada|SB": {
+      "fold_vs_open": 1,
+      "open": 1
+    },
+    "JuanPApada|BTN": {
+      "open": 1,
+      "fold_vs_open": 1
+    },
+    "JuanPApada|MP": {
+      "fold": 2,
+      "fold_vs_open": 1,
+      "open": 1
+    },
+    "JuanPApada|UTG": {
+      "fold": 1
+    },
+    "Zenin15|UTG": {
+      "fold": 2
+    },
+    "Rolitoyerda|CO": {
+      "call_open": 1,
+      "open": 1,
+      "fold_vs_open": 1,
+      "fold": 1
+    },
+    "triki12|BTN": {
+      "fold_vs_open": 6,
+      "open": 2,
+      "rol": 1,
+      "fold": 4
+    },
+    "oscar123|SB": {
+      "fold_vs_open": 8,
+      "fold": 3,
+      "rol": 1,
+      "open": 1,
+      "call_limp": 1,
+      "call_open": 2
+    },
+    "Rolitoyerda|MP": {
+      "limp": 3,
+      "fold_vs_open": 2,
+      "fold": 4,
+      "open": 1,
+      "call_open": 1
+    },
+    "triki12|CO": {
+      "fold": 3,
+      "fold_vs_open": 2,
+      "rol": 1
+    },
+    "oscar123|BTN": {
+      "fold": 5,
+      "fold_vs_open": 7,
+      "fold_vs_3bet": 1,
+      "3bet": 2,
+      "rol": 2
+    },
+    "Zenin15|BB": {
+      "fold_vs_open": 1,
+      "fold_vs_3bet": 1
+    },
+    "triki12|MP": {
+      "fold": 5,
+      "fold_vs_open": 6,
+      "3bet": 1,
+      "rol": 1
+    },
+    "oscar123|CO": {
+      "fold": 4,
+      "call_open": 2,
+      "rol": 1,
+      "fold_vs_open": 1
+    },
+    "Zenin15|SB": {
+      "fold": 1,
+      "fold_vs_open": 1
+    },
+    "Irene_giraldo|BB": {
+      "bb_check": 6,
+      "call_open": 1,
+      "fold_vs_3bet": 2,
+      "rol": 2,
+      "fold": 1,
+      "fold_vs_open": 3,
+      "3bet": 1
+    },
+    "triki12|UTG": {
+      "fold": 10
+    },
+    "oscar123|MP": {
+      "open": 3,
+      "fold": 6,
+      "limp": 1,
+      "rol": 1
+    },
+    "Zenin15|BTN": {
+      "fold_vs_open": 1,
+      "limp": 1
+    },
+    "Irene_giraldo|SB": {
+      "3bet": 1,
+      "fold": 3,
+      "fold_vs_open": 8,
+      "open": 2,
+      "call_limp": 1,
+      "call_open": 1
+    },
+    "Rolitoyerda|BB": {
+      "fold_vs_3bet": 1,
+      "rol": 1,
+      "fold_vs_open": 2,
+      "call_open": 2,
+      "bb_check": 1
+    },
+    "oscar123|UTG": {
+      "fold": 13,
+      "open": 5
+    },
+    "Zenin15|CO": {
+      "fold": 1,
+      "limp": 1
+    },
+    "Irene_giraldo|BTN": {
+      "fold": 10,
+      "fold_vs_open": 5,
+      "rol": 1
+    },
+    "Rolitoyerda|SB": {
+      "limp": 3,
+      "fold": 2,
+      "fold_vs_open": 2,
+      "call_open": 1
+    },
+    "triki12|BB": {
+      "rol": 2,
+      "bb_check": 5,
+      "fold_vs_open": 5,
+      "call_open": 1
+    },
+    "Zenin15|MP": {
+      "fold": 1,
+      "open": 1
+    },
+    "Irene_giraldo|CO": {
+      "fold": 3,
+      "fold_vs_open": 2,
+      "rol": 1,
+      "open": 1
+    },
+    "Rolitoyerda|BTN": {
+      "limp": 2,
+      "fold_vs_open": 3,
+      "fold": 4
+    },
+    "triki12|SB": {
+      "fold_vs_open": 5,
+      "call_open": 1,
+      "fold": 4,
+      "open": 1,
+      "rol": 1,
+      "call_limp": 1
+    },
+    "oscar123|BB": {
+      "bb_check": 7,
+      "fold_vs_open": 6,
+      "call_open": 2,
+      "rol": 1
+    },
+    "Irene_giraldo|MP": {
+      "fold": 10,
+      "rol": 2,
+      "open": 1
+    },
+    "Irene_giraldo|UTG": {
+      "open": 7,
+      "fold": 9
+    },
+    "Rolitoyerda|UTG": {
+      "open": 4,
+      "fold": 1,
+      "limp": 4,
+      "bb_check": 1
+    },
+    "trombosis2.0|MP": {
+      "open": 1,
+      "call_open": 1
+    },
+    "trombosis2.0|UTG": {
+      "limp": 1
+    },
+    "trombosis2.0|BB": {
+      "fold_vs_open": 1
+    },
+    "trombosis2.0|SB": {
+      "limp": 1
+    },
+    "trombosis2.0|BTN": {
+      "limp": 1
+    },
+    "trombosis2.0|CO": {
+      "call_open": 1
+    },
+    "Nnn1|UTG": {
+      "limp": 1
+    },
+    "Nnn1|BB": {
+      "fold_vs_open": 1
+    },
+    "CCE|CO": {
+      "bb_check": 1,
+      "fold_vs_open": 1
+    },
+    "CCE|MP": {
+      "limp": 2
+    },
+    "CCE|UTG": {
+      "limp": 2
+    },
+    "CCE|BB": {
+      "fold_vs_open": 1,
+      "call_open": 1
+    },
+    "CCE|SB": {
+      "call_limp": 1
+    },
+    "CCE|BTN": {
+      "limp": 1
+    },
+    "Mauroparley|BB": {
+      "call_open": 2,
+      "fold_vs_open": 2,
+      "fold_vs_3bet": 1,
+      "call_3bet": 1
+    },
+    "Mauroparley|SB": {
+      "fold_vs_open": 3,
+      "call_open": 1,
+      "limp": 1
+    },
+    "Mauroparley|BTN": {
+      "call_open": 2,
+      "fold_vs_open": 2,
+      "limp": 1
+    },
+    "Mauroparley|MP": {
+      "limp": 3,
+      "fold": 3
+    },
+    "Mauroparley|UTG": {
+      "limp": 1,
+      "fold": 4
+    },
+    "JhonvyB|CO": {
+      "fold_vs_open": 1,
+      "limp": 1,
+      "open": 1
+    },
+    "JhonvyB|MP": {
+      "limp": 2
+    },
+    "JhonvyB|UTG": {
+      "limp": 2
+    },
+    "JhonvyB|BB": {
+      "call_open": 2
+    },
+    "Mauroparley|CO": {
+      "limp": 2
+    },
+    "JhonvyB|SB": {
+      "call_limp": 1,
+      "rol": 1
+    },
+    "JhonvyB|BTN": {
+      "call_limp": 1,
+      "fold_vs_open": 1
+    },
+    "RMF99|BB": {
+      "fold_vs_open": 1,
+      "call_open": 1
+    },
+    "RMF99|SB": {
+      "limp": 1,
+      "call_open": 1
+    },
+    "RMF99|BTN": {
+      "call_open": 1
+    },
+    "RMF99|MP": {
+      "fold_vs_open": 1
+    },
+    "RMF99|UTG": {
+      "limp": 1
+    },
+    "JohanV.|UTG": {
+      "fold": 1,
+      "limp": 1
+    },
+    "LolaMora|BTN": {
+      "fold": 2,
+      "limp": 1
+    },
+    "Danjer|BB": {
+      "fold_vs_open": 1
+    },
+    "LolaMora|UTG": {
+      "limp": 2
+    },
+    "Danjer|SB": {
+      "call_limp": 1
+    },
+    "JohanV.|BB": {
+      "bb_check": 1,
+      "fold_vs_open": 2
+    },
+    "Danjer|BTN": {
+      "limp": 1
+    },
+    "JohanV.|SB": {
+      "call_limp": 1,
+      "limp": 1
+    },
+    "LolaMora|BB": {
+      "bb_check": 1
+    },
+    "JohanV.|BTN": {
+      "limp": 2
+    },
+    "LolaMora|SB": {
+      "call_limp": 1,
+      "rol": 1
+    },
+    "Mur420|BB": {
+      "bb_check": 1
+    },
+    "Mur420|SB": {
+      "fold_vs_open": 1
+    },
+    "Hero|CO": {
+      "limp": 1,
+      "fold": 3
+    },
+    "Player1|BTN": {
+      "rol": 1,
+      "fold": 3
+    },
+    "Player4|UTG": {
+      "fold": 2
+    },
+    "Player5|MP": {
+      "fold": 2,
+      "limp": 1
+    },
+    "Player2|SB": {
+      "fold": 3
+    },
+    "Player4|BB": {
+      "open": 1
+    },
+    "Player1|CO": {
+      "limp": 1
+    },
+    "Player2|BTN": {
+      "call_limp": 1
+    },
+    "Player4|SB": {
+      "call_limp": 1
+    },
+    "Player5|BB": {
+      "bb_check": 1
+    },
+    "Player1|UTG": {
+      "limp": 1
+    },
+    "Player2|MP": {
+      "call_limp": 1
+    },
+    "Player3|CO": {
+      "call_limp": 1
+    },
+    "Player4|BTN": {
+      "fold": 1
+    },
+    "Player5|SB": {
+      "rol": 1
+    },
+    "Player2|UTG": {
+      "fold": 1
+    },
+    "Player3|MP": {
+      "fold": 1
+    },
+    "Player4|CO": {
+      "fold": 1
+    },
+    "Player5|BTN": {
+      "fold": 1
+    },
+    "Player3|BB": {
+      "bb_check": 1
+    },
+    "kiluaak|MP": {
+      "fold": 4,
+      "fold_vs_open": 1
+    },
+    "pardoKing|BTN": {
+      "open": 1,
+      "fold": 2
+    },
+    "HarryPoker18|BB": {
+      "fold_vs_open": 22,
+      "bb_check": 4,
+      "fold_vs_3bet": 2,
+      "fold": 1,
+      "call_open": 2,
+      "squeeze": 1
+    },
+    "pardoKing|CO": {
+      "fold": 2,
+      "fold_vs_open": 2
+    },
+    "HarryPoker18|SB": {
+      "fold": 8,
+      "fold_vs_open": 17,
+      "call_open": 4,
+      "open": 7,
+      "call_limp": 2,
+      "fold_vs_3bet": 1,
+      "rol": 1
+    },
+    "pardoKing|MP": {
+      "fold": 4
+    },
+    "HarryPoker18|BTN": {
+      "fold": 12,
+      "fold_vs_open": 12,
+      "call_open": 6,
+      "open": 5,
+      "fold_vs_3bet": 1,
+      "rol": 1,
+      "call_limp": 1
+    },
+    "kiluaak|SB": {
+      "rol": 1,
+      "call_open": 2,
+      "3bet": 1,
+      "open": 1,
+      "fold_vs_open": 1
+    },
+    "CamiloG208|CO": {
+      "limp": 1,
+      "open": 1,
+      "fold": 2
+    },
+    "anro|SB": {
+      "call_limp": 1,
+      "fold_vs_open": 1
+    },
+    "kiluaak|BB": {
+      "bb_check": 1,
+      "fold_vs_open": 3
+    },
+    "pardoKing|UTG": {
+      "open": 1
+    },
+    "CamiloG208|MP": {
+      "call_open": 1,
+      "fold": 1
+    },
+    "HarryPoker18|CO": {
+      "call_open": 2,
+      "fold": 26,
+      "fold_vs_open": 8,
+      "open": 5
+    },
+    "anro|BTN": {
+      "fold_vs_open": 1
+    },
+    "CamiloG208|UTG": {
+      "fold": 1
+    },
+    "HarryPoker18|MP": {
+      "fold": 19,
+      "open": 3,
+      "limp": 1,
+      "fold_vs_open": 1
+    },
+    "anro|CO": {
+      "limp": 1
+    },
+    "kiluaak|BTN": {
+      "rol": 1,
+      "fold_vs_open": 2,
+      "open": 1
+    },
+    "pardoKing|BB": {
+      "fold_vs_open": 3
+    },
+    "HarryPoker18|UTG": {
+      "fold": 15,
+      "open": 3
+    },
+    "anro|MP": {
+      "limp": 1
+    },
+    "kiluaak|CO": {
+      "fold": 2,
+      "fold_vs_open": 1,
+      "open": 1
+    },
+    "pardoKing|SB": {
+      "fold": 1,
+      "fold_vs_open": 2
+    },
+    "CamiloG208|BB": {
+      "rol": 1,
+      "call_open": 2
+    },
+    "anro|UTG": {
+      "limp": 1
+    },
+    "CamiloG208|SB": {
+      "rol": 1,
+      "fold": 1
+    },
+    "kiluaak|UTG": {
+      "open": 1,
+      "fold": 2
+    },
+    "CamiloG208|BTN": {
+      "fold_vs_open": 2,
+      "fold": 1
+    },
+    "anro|BB": {
+      "fold_vs_open": 1
+    },
+    "ALKILADO|SB": {
+      "fold": 1
+    },
+    "ALKILADO|BTN": {
+      "open": 1
+    },
+    "ALKILADO|CO": {
+      "fold": 1
+    },
+    "ALKILADO|MP": {
+      "fold": 1
+    },
+    "ALKILADO|BB": {
+      "fold_vs_open": 1
+    },
+    "Juanpablogrz|UTG": {
+      "fold": 1,
+      "limp": 2
+    },
+    "LUIS-DIAZ|MP": {
+      "fold": 12,
+      "open": 1
+    },
+    "Bigmac14|CO": {
+      "fold": 3
+    },
+    "LUIS-DIAZ|UTG": {
+      "fold": 5,
+      "open": 2
+    },
+    "Bigmac14|MP": {
+      "limp": 1,
+      "open": 1,
+      "fold": 2,
+      "fold_vs_open": 1
+    },
+    "Chang2113|BTN": {
+      "call_limp": 1,
+      "limp": 1,
+      "fold_vs_open": 1
+    },
+    "Juanpablogrz|BB": {
+      "bb_check": 3,
+      "fold_vs_open": 1,
+      "fold": 1
+    },
+    "Bigmac14|UTG": {
+      "open": 2,
+      "fold": 1
+    },
+    "LolaMora|MP": {
+      "call_open": 1
+    },
+    "Chang2113|CO": {
+      "call_open": 1,
+      "fold_vs_open": 1,
+      "limp": 1
+    },
+    "LUIS-DIAZ|BB": {
+      "fold_vs_open": 7,
+      "bb_check": 2,
+      "fold_vs_3bet": 1,
+      "3bet": 1
+    },
+    "Juanpablogrz|SB": {
+      "fold_vs_open": 2,
+      "call_open": 1,
+      "call_limp": 1
+    },
+    "Chang2113|MP": {
+      "call_limp": 2
+    },
+    "Juanpablogrz|BTN": {
+      "call_limp": 1,
+      "fold": 1
+    },
+    "LUIS-DIAZ|SB": {
+      "fold": 4,
+      "rol": 2,
+      "fold_vs_open": 3,
+      "open": 3
+    },
+    "Bigmac14|BB": {
+      "bb_check": 2
+    },
+    "Chang2113|UTG": {
+      "fold": 1
+    },
+    "Juanpablogrz|CO": {
+      "limp": 2,
+      "fold": 1
+    },
+    "LUIS-DIAZ|BTN": {
+      "fold": 6,
+      "fold_vs_open": 1,
+      "squeeze": 1,
+      "open": 1
+    },
+    "Bigmac14|SB": {
+      "rol": 1
+    },
+    "LaloMora|BB": {
+      "fold_vs_open": 3
+    },
+    "Juanpablogrz|MP": {
+      "limp": 2,
+      "open": 1
+    },
+    "LUIS-DIAZ|CO": {
+      "fold": 6,
+      "fold_vs_open": 2,
+      "rol": 1,
+      "open": 2
+    },
+    "Bigmac14|BTN": {
+      "rol": 1,
+      "call_open": 1
+    },
+    "Chang2113|BB": {
+      "call_open": 2
+    },
+    "Chang2113|SB": {
+      "call_limp": 2
+    },
+    "SB|SB": {
+      "fold": 1
+    },
+    "Deyffan|MP": {
+      "limp": 1
+    },
+    "Onix22|SB": {
+      "fold": 3,
+      "open": 1,
+      "fold_vs_open": 3,
+      "fold_vs_3bet": 1,
+      "call_open": 1
+    },
+    "Pechugo|BB": {
+      "bb_check": 2,
+      "call_open": 1,
+      "fold_vs_open": 3,
+      "fold_vs_3bet": 1
+    },
+    "Onix22|BTN": {
+      "fold_vs_open": 5,
+      "fold": 4,
+      "open": 2
+    },
+    "Pechugo|SB": {
+      "call_open": 4,
+      "open": 1,
+      "fold": 1,
+      "fold_vs_open": 3,
+      "limp": 1
+    },
+    "Deyffan|BB": {
+      "call_open": 1
+    },
+    "Onix22|CO": {
+      "fold": 4,
+      "fold_vs_open": 3,
+      "open": 3,
+      "call_open": 1
+    },
+    "Pechugo|BTN": {
+      "fold": 3,
+      "fold_vs_open": 5,
+      "limp": 1,
+      "call_open": 2
+    },
+    "Deyffan|SB": {
+      "limp": 1
+    },
+    "Onix22|MP": {
+      "fold": 6,
+      "open": 1,
+      "limp": 1
+    },
+    "Pechugo|CO": {
+      "limp": 2,
+      "call_open": 1,
+      "fold": 5,
+      "open": 1
+    },
+    "Deyffan|BTN": {
+      "call_limp": 1
+    },
+    "man1|BB": {
+      "call_open": 1,
+      "fold": 1,
+      "rol": 1,
+      "fold_vs_open": 3
+    },
+    "man1|SB": {
+      "fold_vs_open": 2,
+      "fold": 2,
+      "squeeze": 1
+    },
+    "Isagomez|BB": {
+      "call_open": 1,
+      "bb_check": 1
+    },
+    "Onix22|UTG": {
+      "fold": 3
+    },
+    "Pechugo|MP": {
+      "fold": 6,
+      "limp": 1
+    },
+    "man1|CO": {
+      "fold": 3
+    },
+    "Isagomez|BTN": {
+      "limp": 1,
+      "fold": 1
+    },
+    "Pechugo|UTG": {
+      "fold": 2
+    },
+    "man1|MP": {
+      "open": 2,
+      "fold": 2
+    },
+    "Isagomez|CO": {
+      "fold_vs_open": 1,
+      "call_open": 1
+    },
+    "Onix22|BB": {
+      "fold_vs_open": 4,
+      "fold_vs_3bet": 1,
+      "call_open": 1,
+      "bb_check": 1
+    },
+    "man1|UTG": {
+      "fold": 1,
+      "open": 1
+    },
+    "Isagomez|MP": {
+      "limp": 1
+    },
+    "Isagomez|UTG": {
+      "limp": 1
+    },
+    "man1|BTN": {
+      "squeeze": 1,
+      "open": 2
+    },
+    "Isagomez|SB": {
+      "call_3bet": 1
+    },
+    "Iker69|MP": {
+      "fold_vs_open": 1,
+      "limp": 1,
+      "fold": 1
+    },
+    "Iker69|UTG": {
+      "fold": 1
+    },
+    "Iker69|BB": {
+      "fold_vs_3bet": 1,
+      "fold_vs_open": 1,
+      "call_open": 1
+    },
+    "Iker69|SB": {
+      "fold_vs_open": 3
+    },
+    "Iker69|BTN": {
+      "fold_vs_open": 1,
+      "fold": 3
+    },
+    "Iker69|CO": {
+      "fold": 4
+    },
+    "Davile|BB": {
+      "rol": 1
+    },
+    "Davile|SB": {
+      "fold_vs_open": 1
+    },
+    "Jorish29|MP": {
+      "fold": 1,
+      "limp": 1
+    },
+    "Jonatantarra|CO": {
+      "open": 1,
+      "fold": 1,
+      "rol": 1
+    },
+    "Jhordanbtc|BTN": {
+      "call_open": 1,
+      "rol": 1,
+      "fold_vs_open": 1
+    },
+    "Rompechuchas|SB": {
+      "fold_vs_open": 2,
+      "call_open": 1
+    },
+    "Jonatantarra|MP": {
+      "limp": 2,
+      "fold": 1
+    },
+    "Jhordanbtc|CO": {
+      "call_limp": 1,
+      "fold": 1,
+      "limp": 1,
+      "rol": 1
+    },
+    "Rompechuchas|BTN": {
+      "fold": 2,
+      "call_limp": 1,
+      "call_open": 1
+    },
+    "Jorish29|BB": {
+      "bb_check": 2
+    },
+    "Jhordanbtc|MP": {
+      "limp": 3
+    },
+    "Rompechuchas|CO": {
+      "fold": 4
+    },
+    "Jorish29|SB": {
+      "call_limp": 1
+    },
+    "Jonatantarra|BB": {
+      "rol": 1,
+      "call_open": 2,
+      "bb_check": 1
+    },
+    "Rompechuchas|MP": {
+      "fold": 1,
+      "open": 1
+    },
+    "Jorish29|BTN": {
+      "limp": 1
+    },
+    "Jonatantarra|SB": {
+      "call_limp": 1,
+      "call_open": 2
+    },
+    "Jhordanbtc|BB": {
+      "bb_check": 1,
+      "fold_vs_open": 1,
+      "call_open": 1
+    },
+    "Goldy7|MP": {
+      "limp": 2
+    },
+    "Jorish29|CO": {
+      "fold": 1
+    },
+    "Jonatantarra|BTN": {
+      "call_limp": 1,
+      "rol": 1
+    },
+    "Jhordanbtc|SB": {
+      "fold": 1,
+      "fold_vs_open": 1
+    },
+    "Rompechuchas|BB": {
+      "bb_check": 1,
+      "call_open": 1
+    },
+    "Goldy7|UTG": {
+      "fold": 1
+    },
+    "Jorish29|UTG": {
+      "fold": 1
+    },
+    "Goldy7|BB": {
+      "call_open": 1
+    },
+    "Jonatantarra|UTG": {
+      "fold": 1
+    },
+    "Goldy7|SB": {
+      "call_limp": 1
+    },
+    "Jhordanbtc|UTG": {
+      "fold": 1
+    },
+    "Goldy7|BTN": {
+      "call_open": 1
+    },
+    "Rompechuchas|UTG": {
+      "open": 1
+    },
+    "Goldy7|CO": {
+      "fold_vs_open": 1,
+      "limp": 1
+    },
+    "dollarbill|BB": {
+      "fold_vs_open": 5,
+      "rol": 1
+    },
+    "dollarbill|SB": {
+      "fold_vs_open": 5,
+      "fold": 2
+    },
+    "P2|MP": {
+      "call_limp": 1
+    },
+    "P3|CO": {
+      "fold": 1
+    },
+    "P4|BTN": {
+      "rol": 1
+    },
+    "P5|SB": {
+      "call_open": 1
+    },
+    "santibenavides|UTG": {
+      "fold": 3
+    },
+    "Mrcash|MP": {
+      "fold": 9,
+      "open": 2
+    },
+    "Samuel1598|CO": {
+      "limp": 3,
+      "fold": 1,
+      "call_limp": 2,
+      "call_open": 1
+    },
+    "Deftones|SB": {
+      "fold_vs_open": 4,
+      "open": 1,
+      "rol": 1,
+      "fold": 5,
+      "call_limp": 1,
+      "3bet": 1
+    },
+    "Samuel1598|MP": {
+      "limp": 4,
+      "open": 1,
+      "fold_vs_open": 1,
+      "fold": 1
+    },
+    "Deftones|BTN": {
+      "fold_vs_open": 6,
+      "fold": 6,
+      "open": 1
+    },
+    "Mrcash|BB": {
+      "fold_vs_open": 7,
+      "bb_check": 2,
+      "3bet": 2,
+      "call_open": 1,
+      "fold_vs_3bet": 1
+    },
+    "Deftones|CO": {
+      "fold_vs_open": 3,
+      "fold": 5,
+      "open": 2
+    },
+    "Mrcash|SB": {
+      "fold_vs_open": 10,
+      "3bet": 1,
+      "fold": 3,
+      "open": 2,
+      "call_limp": 1
+    },
+    "Samuel1598|BB": {
+      "call_open": 1,
+      "fold_vs_open": 2,
+      "fold_vs_3bet": 1,
+      "3bet": 1
+    },
+    "Deftones|UTG": {
+      "fold": 4
+    },
+    "santibenavides|CO": {
+      "limp": 1
+    },
+    "Mrcash|BTN": {
+      "fold": 9,
+      "fold_vs_open": 4,
+      "fold_vs_3bet": 1,
+      "3bet": 1,
+      "open": 3
+    },
+    "Samuel1598|SB": {
+      "call_limp": 1,
+      "call_open": 1,
+      "fold_vs_3bet": 2,
+      "limp": 1,
+      "fold_vs_open": 1
+    },
+    "santibenavides|MP": {
+      "fold_vs_open": 1
+    },
+    "Mrcash|CO": {
+      "fold_vs_open": 3,
+      "fold": 15
+    },
+    "Samuel1598|BTN": {
+      "fold_vs_open": 1,
+      "fold": 2,
+      "limp": 3
+    },
+    "Deftones|BB": {
+      "fold_vs_open": 6,
+      "bb_check": 1,
+      "squeeze": 1,
+      "3bet": 1
+    },
+    "Deftones|MP": {
+      "open": 2,
+      "fold_vs_open": 1,
+      "fold": 4
+    },
+    "Mrcash|UTG": {
+      "fold": 5,
+      "open": 2
+    },
+    "otb_RedBaron|BB": {
+      "fold_vs_open": 4,
+      "bb_check": 1
+    },
+    "otb_RedBaron|BTN": {
+      "fold_vs_open": 3,
+      "open": 1,
+      "fold": 1
+    },
+    "otb_RedBaron|CO": {
+      "3bet": 1,
+      "fold_vs_open": 1,
+      "fold": 2
+    },
+    "otb_RedBaron|MP": {
+      "fold": 4
+    },
+    "otb_RedBaron|UTG": {
+      "limp": 2,
+      "fold": 1
+    },
+    "Samuel1598|UTG": {
+      "fold": 2
+    },
+    "otb_RedBaron|SB": {
+      "open": 1,
+      "fold_vs_open": 1,
+      "fold": 1
+    },
+    "Edup|UTG": {
+      "limp": 1
+    },
+    "Franco1603|MP": {
+      "call_limp": 2,
+      "limp": 9
+    },
+    "AZ de A|CO": {
+      "fold": 2,
+      "open": 1,
+      "call_limp": 1
+    },
+    "bsaghv4|SB": {
+      "call_limp": 3
+    },
+    "Franco1603|UTG": {
+      "limp": 5
+    },
+    "AZ de A|MP": {
+      "call_limp": 1
+    },
+    "bsaghv4|BTN": {
+      "call_limp": 1,
+      "fold": 1,
+      "limp": 1
+    },
+    "Edup|BB": {
+      "bb_check": 1,
+      "fold_vs_open": 1
+    },
+    "bsaghv4|CO": {
+      "open": 1,
+      "call_limp": 1,
+      "fold": 1
+    },
+    "Edup|SB": {
+      "call_open": 1,
+      "rol": 1
+    },
+    "AZ de A|BB": {
+      "call_open": 1,
+      "fold_vs_open": 1,
+      "rol": 1,
+      "bb_check": 1
+    },
+    "bsaghv4|MP": {
+      "fold": 2,
+      "call_limp": 1
+    },
+    "Edup|BTN": {
+      "call_open": 1,
+      "fold_vs_open": 1
+    },
+    "AZ de A|SB": {
+      "fold_vs_open": 2,
+      "call_open": 1,
+      "call_limp": 1
+    },
+    "Edup|CO": {
+      "limp": 1,
+      "fold_vs_open": 1
+    },
+    "AZ de A|BTN": {
+      "fold": 3,
+      "fold_vs_open": 2
+    },
+    "Lprieto11|BTN": {
+      "fold_vs_open": 1,
+      "open": 1,
+      "fold": 2
+    },
+    "Lprieto11|CO": {
+      "limp": 2,
+      "call_limp": 1
+    },
+    "Lprieto11|BB": {
+      "call_open": 2,
+      "bb_check": 1,
+      "fold_vs_open": 1
+    },
+    "Edup|MP": {
+      "fold": 1
+    },
+    "Franco1603|CO": {
+      "limp": 7,
+      "call_limp": 1,
+      "fold_vs_open": 1,
+      "call_open": 2
+    },
+    "Lprieto11|SB": {
+      "fold_vs_open": 2,
+      "rol": 1
+    },
+    "Franco1603|BB": {
+      "3bet": 1,
+      "bb_check": 3,
+      "fold_vs_open": 1,
+      "call_open": 3
+    },
+    "Franco1603|SB": {
+      "call_limp": 3,
+      "fold": 1,
+      "fold_vs_open": 1,
+      "call_open": 3,
+      "limp": 2
+    },
+    "Juancuellar987|CO": {
+      "fold_vs_open": 1,
+      "limp": 1,
+      "call_open": 1
+    },
+    "Franco1603|BTN": {
+      "fold_vs_open": 2,
+      "call_limp": 1,
+      "limp": 5
+    },
+    "Juancuellar987|MP": {
+      "limp": 1,
+      "open": 1,
+      "fold": 1
+    },
+    "Juancuellar987|BB": {
+      "bb_check": 2
+    },
+    "AZ de A|UTG": {
+      "fold": 1
+    },
+    "Lprieto11|MP": {
+      "limp": 1,
+      "fold": 1
+    },
+    "Juancuellar987|SB": {
+      "call_limp": 1,
+      "limp": 1
+    },
+    "Lprieto11|UTG": {
+      "limp": 2
+    },
+    "Juancuellar987|BTN": {
+      "call_limp": 2
+    },
+    "bsaghv4|UTG": {
+      "fold": 1,
+      "open": 1
+    },
+    "bsaghv4|BB": {
+      "call_open": 1,
+      "bb_check": 1
+    },
+    "maestrodelbluff|BB": {
+      "bb_check": 1
+    },
+    "maestrodelbluff|SB": {
+      "fold_vs_open": 1
+    },
+    "maestrodelbluff|BTN": {
+      "fold": 1
+    },
+    "Juancuellar987|UTG": {
+      "limp": 1
+    },
+    "maestrodelbluff|CO": {
+      "fold": 1
+    },
+    "Danielev|CO": {
+      "fold": 2,
+      "fold_vs_open": 1
+    },
+    "Tatan29|BTN": {
+      "fold_vs_open": 1,
+      "limp": 2,
+      "call_open": 4,
+      "fold": 1
+    },
+    "CorajeRaise|BB": {
+      "fold_vs_open": 5,
+      "bb_check": 2
+    },
+    "Tatan29|CO": {
+      "fold": 4,
+      "fold_vs_open": 2,
+      "call_open": 3
+    },
+    "CorajeRaise|SB": {
+      "open": 1,
+      "fold": 2,
+      "3bet": 1,
+      "call_open": 1,
+      "fold_vs_open": 5
+    },
+    "CorajeRaise|BTN": {
+      "fold": 5,
+      "fold_vs_open": 3,
+      "open": 1
+    },
+    "Tatan29|BB": {
+      "fold_vs_open": 4,
+      "bb_check": 1,
+      "fold_vs_3bet": 1,
+      "call_3bet": 1
+    },
+    "CorajeRaise|CO": {
+      "open": 1,
+      "fold": 5,
+      "fold_vs_open": 2,
+      "3bet": 1
+    },
+    "Tatan29|SB": {
+      "call_open": 2,
+      "fold": 2,
+      "fold_vs_open": 2,
+      "call_3bet": 1,
+      "fold_vs_3bet": 1
+    },
+    "JS99|MP": {
+      "fold": 5,
+      "call_open": 2,
+      "fold_vs_open": 2,
+      "open": 2
+    },
+    "Danielev|BB": {
+      "fold_vs_3bet": 1,
+      "call_open": 1,
+      "fold_vs_open": 1
+    },
+    "JS99|UTG": {
+      "fold": 5,
+      "open": 3
+    },
+    "Tatan29|MP": {
+      "fold": 2,
+      "call_open": 2,
+      "limp": 2,
+      "open": 1
+    },
+    "Danielev|SB": {
+      "limp": 1,
+      "fold_vs_open": 2
+    },
+    "Tatan29|UTG": {
+      "fold": 5,
+      "limp": 1
+    },
+    "Danielev|BTN": {
+      "open": 1,
+      "fold_vs_open": 1,
+      "fold": 1
+    },
+    "CorajeRaise|MP": {
+      "fold": 3,
+      "open": 2,
+      "fold_vs_open": 2
+    },
+    "JS99|SB": {
+      "fold": 2,
+      "fold_vs_open": 2,
+      "call_open": 1,
+      "call_limp": 1,
+      "fold_vs_3bet": 3,
+      "rol": 1
+    },
+    "CorajeRaise|UTG": {
+      "fold": 4,
+      "open": 1
+    },
+    "Danielev|MP": {
+      "fold": 3
+    },
+    "JS99|BTN": {
+      "open": 2,
+      "3bet": 2,
+      "fold": 2,
+      "fold_vs_open": 2,
+      "rol": 1
+    },
+    "JS99|BB": {
+      "fold_vs_open": 3,
+      "bb_check": 1,
+      "squeeze": 2,
+      "fold_vs_3bet": 2,
+      "call_open": 2
+    },
+    "Danielev|UTG": {
+      "fold": 1
+    },
+    "JS99|CO": {
+      "open": 1,
+      "call_open": 1,
+      "fold_vs_open": 3,
+      "fold": 3,
+      "3bet": 1
+    },
+    "Doffy707|MP": {
+      "limp": 1,
+      "open": 2,
+      "fold": 1
+    },
+    "David P.|MP": {
+      "limp": 1,
+      "fold": 1,
+      "call_open": 1
+    },
+    "Doffy707|BB": {
+      "bb_check": 1,
+      "call_3bet": 1,
+      "call_open": 1
+    },
+    "David P.|UTG": {
+      "fold": 2,
+      "limp": 1
+    },
+    "Doffy707|SB": {
+      "call_open": 2,
+      "rol": 1
+    },
+    "UTG|UTG": {
+      "limp": 1,
+      "fold": 2
+    },
+    "David P.|BB": {
+      "fold_vs_open": 2,
+      "call_open": 2
+    },
+    "Doffy707|CO": {
+      "fold": 2,
+      "call_open": 1
+    },
+    "David P.|SB": {
+      "rol": 1,
+      "fold": 1,
+      "squeeze": 1
+    },
+    "David P.|BTN": {
+      "call_open": 1,
+      "fold_vs_3bet": 1,
+      "open": 1
+    },
+    "Doffy707|UTG": {
+      "open": 1,
+      "limp": 1,
+      "fold": 1
+    },
+    "David P.|CO": {
+      "fold_vs_open": 2,
+      "fold": 1
+    },
+    "Doffy707|BTN": {
+      "fold_vs_open": 1,
+      "call_open": 2
+    },
+    "mommya|UTG": {
+      "fold": 6
+    },
+    "Memelo|MP": {
+      "limp": 1,
+      "fold": 2
+    },
+    "Matgar|BTN": {
+      "rol": 1
+    },
+    "Freddy9212|SB": {
+      "call_open": 1,
+      "limp": 1
+    },
+    "Freddy9212|BTN": {
+      "call_open": 1,
+      "fold": 1,
+      "rol": 1
+    },
+    "mommya|BB": {
+      "fold_vs_open": 1,
+      "fold": 1,
+      "bb_check": 2,
+      "3bet": 1
+    },
+    "Freddy9212|CO": {
+      "limp": 1
+    },
+    "dollarbill|BTN": {
+      "fold": 4,
+      "limp": 2,
+      "open": 2
+    },
+    "mommya|SB": {
+      "fold": 2,
+      "fold_vs_open": 3
+    },
+    "Memelo|BB": {
+      "bb_check": 1,
+      "call_open": 1
+    },
+    "Freddy9212|MP": {
+      "limp": 1
+    },
+    "dollarbill|CO": {
+      "fold": 3,
+      "open": 2
+    },
+    "Memelo|SB": {
+      "call_limp": 1
+    },
+    "dollarbill|MP": {
+      "fold": 1,
+      "fold_vs_open": 1
+    },
+    "CO|CO": {
+      "fold": 1
+    },
+    "Memelo|BTN": {
+      "limp": 1
+    },
+    "Freddy9212|BB": {
+      "bb_check": 1
+    },
+    "Memelo|CO": {
+      "fold": 1
+    },
+    "SunGodNika|BB": {
+      "fold_vs_open": 2
+    },
+    "SunGodNika|BTN": {
+      "open": 1
+    },
+    "Davi-Ari|CO": {
+      "fold": 11,
+      "open": 4,
+      "rol": 1,
+      "fold_vs_open": 3
+    },
+    "Hector1320|SB": {
+      "limp": 3,
+      "call_open": 3,
+      "fold_vs_3bet": 1,
+      "fold_vs_open": 3
+    },
+    "Davi-Ari|BB": {
+      "bb_check": 4,
+      "fold_vs_open": 5,
+      "fold_vs_3bet": 2,
+      "call_open": 2,
+      "rol": 1
+    },
+    "Hector1320|BTN": {
+      "limp": 3,
+      "fold_vs_open": 2,
+      "call_open": 2,
+      "fold_vs_3bet": 2,
+      "fold": 1,
+      "3bet": 1
+    },
+    "Davi-Ari|SB": {
+      "fold": 4,
+      "fold_vs_open": 11,
+      "call_open": 1,
+      "fold_vs_3bet": 3,
+      "open": 2
+    },
+    "Ocampo99|MP": {
+      "limp": 1
+    },
+    "Hector1320|CO": {
+      "call_limp": 1,
+      "limp": 5,
+      "fold": 3,
+      "fold_vs_open": 1
+    },
+    "Davi-Ari|BTN": {
+      "fold": 9,
+      "rol": 2,
+      "fold_vs_open": 4,
+      "fold_vs_3bet": 2,
+      "open": 2
+    },
+    "Hector1320|MP": {
+      "limp": 5,
+      "fold": 3
+    },
+    "Ocampo99|BB": {
+      "call_open": 1
+    },
+    "Juri|BB": {
+      "3bet": 1
+    },
+    "Juris55|BTN": {
+      "fold_vs_open": 3,
+      "fold": 4,
+      "open": 1
+    },
+    "Davi-Ari|UTG": {
+      "fold": 10,
+      "open": 5
+    },
+    "Juris55|MP": {
+      "fold": 5,
+      "fold_vs_open": 3
+    },
+    "N.E.O|SB": {
+      "fold": 4,
+      "fold_vs_open": 5
+    },
+    "Juris55|UTG": {
+      "fold": 5,
+      "open": 1
+    },
+    "N.E.O|BTN": {
+      "fold_vs_open": 4,
+      "3bet": 1,
+      "open": 2,
+      "fold": 1
+    },
+    "N.E.O|CO": {
+      "fold_vs_open": 3,
+      "3bet": 1,
+      "fold": 2,
+      "fold_vs_3bet": 1,
+      "open": 1
+    },
+    "Juris55|BB": {
+      "fold_vs_open": 3,
+      "fold_vs_3bet": 3,
+      "call_open": 1,
+      "bb_check": 1
+    },
+    "N.E.O|MP": {
+      "fold": 6,
+      "open": 1
+    },
+    "Juris55|SB": {
+      "fold": 5,
+      "fold_vs_open": 3,
+      "rol": 2
+    },
+    "N.E.O|BB": {
+      "fold_vs_open": 4,
+      "bb_check": 2
+    },
+    "Davi-Ari|MP": {
+      "fold": 13,
+      "open": 1,
+      "fold_vs_open": 2
+    },
+    "Juris55|CO": {
+      "fold": 5,
+      "fold_vs_open": 1,
+      "rol": 1
+    },
+    "N.E.O|UTG": {
+      "fold": 4
+    },
+    "Hector1320|UTG": {
+      "fold": 2,
+      "limp": 2
+    },
+    "mommya|BTN": {
+      "fold": 2,
+      "fold_vs_open": 4
+    },
+    "mommya|CO": {
+      "fold": 3,
+      "fold_vs_open": 2
+    },
+    "mommya|MP": {
+      "open": 2,
+      "fold": 2,
+      "3bet": 1
+    },
+    "Hector1320|BB": {
+      "call_open": 4,
+      "fold_vs_open": 2
+    },
+    "PardoKing|BTN": {
+      "fold": 2
+    },
+    "PardoKing|CO": {
+      "open": 1
+    },
+    "PardoKing|BB": {
+      "bb_check": 1,
+      "fold_vs_open": 1
+    },
+    "PardoKing|SB": {
+      "fold": 1
+    },
+    "DOGO*|CO": {
+      "fold": 3,
+      "limp": 3,
+      "fold_vs_open": 1
+    },
+    "baam08|SB": {
+      "fold_vs_open": 1,
+      "fold_vs_3bet": 1,
+      "fold": 1,
+      "3bet": 1,
+      "open": 1
+    },
+    "baam08|BTN": {
+      "fold": 2,
+      "open": 1,
+      "fold_vs_open": 1
+    },
+    "baam08|BB": {
+      "call_open": 1,
+      "squeeze": 1,
+      "rol": 1,
+      "fold_vs_3bet": 1
+    },
+    "JaCkFlor|UTG": {
+      "fold": 2
+    },
+    "baam08|MP": {
+      "fold": 4
+    },
+    "JuaGon|CO": {
+      "open": 3,
+      "fold": 1
+    },
+    "Cash7|BTN": {
+      "call_open": 2
+    },
+    "sergio39|BB": {
+      "fold_vs_open": 4,
+      "fold_vs_3bet": 1
+    },
+    "baam08|UTG": {
+      "fold": 2
+    },
+    "JuaGon|MP": {
+      "open": 3,
+      "limp": 1
+    },
+    "Cash7|CO": {
+      "call_open": 2
+    },
+    "sergio39|SB": {
+      "call_open": 3,
+      "fold_vs_open": 1,
+      "open": 1,
+      "fold": 1,
+      "fold_vs_3bet": 1
+    },
+    "JaCkFlor|BB": {
+      "fold_vs_open": 3,
+      "call_open": 1
+    },
+    "Cash7|UTG": {
+      "limp": 1
+    },
+    "sergio39|CO": {
+      "3bet": 1,
+      "fold": 3,
+      "open": 2,
+      "fold_vs_open": 1
+    },
+    "JaCkFlor|BTN": {
+      "fold_vs_3bet": 1,
+      "fold": 2,
+      "fold_vs_open": 1
+    },
+    "JuaGon|BB": {
+      "fold_vs_3bet": 2,
+      "call_open": 1
+    },
+    "sergio39|UTG": {
+      "fold": 1,
+      "3bet": 1
+    },
+    "JaCkFlor|MP": {
+      "fold": 1,
+      "open": 1
+    },
+    "baam08|CO": {
+      "open": 1,
+      "fold_vs_open": 1
+    },
+    "JuaGon|BTN": {
+      "call_open": 2
+    },
+    "Cash7|SB": {
+      "call_open": 1
+    },
+    "JuaGon|UTG": {
+      "fold": 1
+    },
+    "Cash7|MP": {
+      "open": 1
+    },
+    "sergio39|BTN": {
+      "call_open": 1,
+      "fold": 3,
+      "fold_vs_open": 1
+    },
+    "JaCkFlor|SB": {
+      "fold_vs_open": 1,
+      "fold": 1,
+      "squeeze": 1
+    },
+    "sergio39|MP": {
+      "fold": 3,
+      "open": 2
+    },
+    "JaCkFlor|CO": {
+      "fold": 2,
+      "call_open": 1
+    },
+    "JuaGon|SB": {
+      "call_open": 2,
+      "limp": 1
+    },
+    "Antonia7|UTG": {
+      "fold": 1
+    },
+    "DOGO*|BTN": {
+      "fold": 4,
+      "open": 1,
+      "limp": 1,
+      "fold_vs_3bet": 1
+    },
+    "Aneurin|BB": {
+      "bb_check": 2,
+      "call_open": 2,
+      "fold_vs_open": 1,
+      "fold_vs_3bet": 1
+    },
+    "Aneurin|SB": {
+      "call_limp": 1,
+      "fold": 2,
+      "limp": 2,
+      "call_open": 2
+    },
+    "Antonia7|BB": {
+      "bb_check": 2
+    },
+    "Aneurin|BTN": {
+      "call_limp": 4,
+      "fold": 1,
+      "fold_vs_open": 1
+    },
+    "Antonia7|SB": {
+      "call_limp": 2
+    },
+    "Aneurin|CO": {
+      "call_limp": 1,
+      "fold": 4,
+      "limp": 1
+    },
+    "Aneurin|MP": {
+      "fold_vs_open": 2,
+      "fold": 2,
+      "call_limp": 1,
+      "limp": 1
+    },
+    "Antonia7|CO": {
+      "call_open": 1,
+      "limp": 1
+    },
+    "DOGO*|BB": {
+      "fold_vs_open": 4,
+      "bb_check": 2,
+      "call_open": 1,
+      "fold": 1
+    },
+    "Aneurin|UTG": {
+      "limp": 4
+    },
+    "Antonia7|MP": {
+      "rol": 1,
+      "limp": 1,
+      "fold": 1
+    },
+    "DOGO*|SB": {
+      "call_open": 3,
+      "fold_vs_open": 2
+    },
+    "DOGO*|MP": {
+      "limp": 3
+    },
+    "DOGO*|UTG": {
+      "limp": 3
+    },
+    "Antonia7|BTN": {
+      "call_limp": 1
+    },
+    "Krono|BB": {
+      "bb_check": 2,
+      "fold_vs_open": 1,
+      "rol": 1
+    },
+    "Krono|SB": {
+      "fold": 3,
+      "rol": 1,
+      "call_open": 1,
+      "fold_vs_open": 2
+    },
+    "Krono|BTN": {
+      "rol": 2,
+      "fold_vs_open": 2
+    },
+    "Krono|CO": {
+      "fold": 4,
+      "3bet": 1
+    },
+    "Krono|MP": {
+      "fold": 3,
+      "fold_vs_open": 1
+    },
+    "Andresyjeymi|CO": {
+      "call_limp": 1,
+      "rol": 1,
+      "call_open": 1,
+      "fold": 1
+    },
+    "Andresyjeymi|MP": {
+      "limp": 1,
+      "rol": 2
+    },
+    "Andresyjeymi|BB": {
+      "bb_check": 1,
+      "call_open": 2
+    },
+    "Andresyjeymi|SB": {
+      "call_limp": 1,
+      "fold_vs_open": 1
+    },
+    "Andresyjeymi|BTN": {
+      "rol": 1,
+      "fold": 1
+    },
+    "Krono|UTG": {
+      "fold": 1
+    },
+    "KoKeB0y92|UTG": {
+      "fold": 1
+    },
+    "jj20|CO": {
+      "call_limp": 1
+    },
+    "Waffles|BTN": {
+      "fold": 1
+    },
+    "Rio28|BB": {
+      "rol": 1,
+      "fold_vs_open": 1,
+      "bb_check": 1
+    },
+    "Waffles|CO": {
+      "fold": 1
+    },
+    "Rio28|SB": {
+      "call_open": 1,
+      "call_limp": 1
+    },
+    "KoKeB0y92|BB": {
+      "fold_vs_open": 1,
+      "bb_check": 1
+    },
+    "Waffles|MP": {
+      "limp": 2
+    },
+    "Rio28|BTN": {
+      "rol": 1,
+      "fold": 1,
+      "call_open": 1
+    },
+    "KoKeB0y92|SB": {
+      "fold_vs_open": 1,
+      "call_limp": 1
+    },
+    "Cazadordeputas|UTG": {
+      "fold": 4
+    },
+    "Waffles|UTG": {
+      "limp": 1
+    },
+    "Rio28|CO": {
+      "fold_vs_open": 1,
+      "call_open": 1,
+      "fold": 1
+    },
+    "Cazadordeputas|BB": {
+      "fold_vs_open": 3,
+      "bb_check": 3,
+      "squeeze": 1
+    },
+    "KoKeB0y92|MP": {
+      "open": 1
+    },
+    "Cazadordeputas|BTN": {
+      "fold_vs_open": 2,
+      "fold": 2,
+      "rol": 2
+    },
+    "Cazadordeputas|CO": {
+      "call_limp": 1,
+      "fold": 4,
+      "rol": 1
+    },
+    "Adrugir|MP": {
+      "limp": 2,
+      "fold": 2
+    },
+    "Adrugir|UTG": {
+      "open": 1,
+      "fold": 4
+    },
+    "Cazadordeputas|SB": {
+      "call_limp": 2,
+      "fold": 3
+    },
+    "MuckeDBoY|BB": {
+      "rol": 2,
+      "bb_check": 1,
+      "fold_vs_3bet": 1,
+      "fold_vs_open": 1
+    },
+    "MuckeDBoY|SB": {
+      "open": 2,
+      "fold": 1
+    },
+    "MuckeDBoY|BTN": {
+      "fold": 3,
+      "fold_vs_open": 2
+    },
+    "MuckeDBoY|CO": {
+      "fold": 4
+    },
+    "Adrugir|BB": {
+      "rol": 2,
+      "bb_check": 1,
+      "fold": 1
+    },
+    "MuckeDBoY|MP": {
+      "fold": 3,
+      "open": 1
+    },
+    "Adrugir|SB": {
+      "fold_vs_open": 3,
+      "rol": 1
+    },
+    "MuckeDBoY|UTG": {
+      "fold": 4
+    },
+    "Adrugir|BTN": {
+      "fold": 1,
+      "rol": 2,
+      "call_open": 1
+    },
+    "Cazadordeputas|MP": {
+      "fold": 4
+    },
+    "Adrugir|CO": {
+      "fold": 3,
+      "rol": 1
+    },
+    "ANJO2017|SB": {
+      "fold": 3,
+      "fold_vs_3bet": 1,
+      "fold_vs_open": 10,
+      "limp": 1,
+      "rol": 1,
+      "open": 2,
+      "call_open": 1
+    },
+    "ANJO2017|CO": {
+      "fold": 10,
+      "fold_vs_open": 2,
+      "open": 5,
+      "call_open": 1
+    },
+    "ANJO2017|MP": {
+      "fold": 9,
+      "open": 1,
+      "fold_vs_open": 1
+    },
+    "ANJO2017|UTG": {
+      "fold": 7,
+      "open": 2,
+      "limp": 1
+    },
+    "ANJO2017|BB": {
+      "call_open": 5,
+      "fold_vs_open": 11,
+      "bb_check": 1,
+      "fold_vs_3bet": 1
+    },
+    "ANJO2017|BTN": {
+      "fold": 5,
+      "call_open": 1,
+      "fold_vs_open": 4,
+      "3bet": 1,
+      "open": 1
+    },
+    "Bogotano26|UTG": {
+      "fold": 3,
+      "open": 1
+    },
+    "Edgar28|BTN": {
+      "3bet": 1,
+      "fold_vs_open": 1,
+      "fold": 2,
+      "limp": 1
+    },
+    "O$0RL0|BB": {
+      "fold_vs_3bet": 1,
+      "call_open": 2
+    },
+    "O$0RL0|SB": {
+      "fold_vs_open": 2,
+      "fold_vs_3bet": 1
+    },
+    "Bogotano26|BB": {
+      "call_open": 4,
+      "fold_vs_3bet": 1
+    },
+    "Edgar28|MP": {
+      "fold": 4
+    },
+    "O$0RL0|BTN": {
+      "fold": 1,
+      "limp": 2
+    },
+    "Bogotano26|SB": {
+      "open": 1,
+      "call_limp": 1,
+      "rol": 1,
+      "fold": 2,
+      "fold_vs_open": 1
+    },
+    "Edgar28|UTG": {
+      "fold": 4,
+      "limp": 2
+    },
+    "O$0RL0|CO": {
+      "fold": 3,
+      "limp": 1
+    },
+    "Bogotano26|BTN": {
+      "open": 1,
+      "fold": 4,
+      "rol": 2
+    },
+    "Edgar28|BB": {
+      "bb_check": 1,
+      "call_open": 2
+    },
+    "O$0RL0|UTG": {
+      "fold": 2
+    },
+    "Bogotano26|MP": {
+      "fold": 3,
+      "open": 1
+    },
+    "Edgar28|SB": {
+      "fold": 1,
+      "call_open": 2,
+      "limp": 1,
+      "open": 1
+    },
+    "Edgar28|CO": {
+      "fold_vs_3bet": 1,
+      "open": 2,
+      "limp": 1,
+      "fold_vs_open": 1
+    },
+    "O$0RL0|MP": {
+      "fold_vs_open": 1
+    },
+    "Bogotano26|CO": {
+      "fold_vs_open": 1,
+      "fold": 2,
+      "limp": 1
+    },
+    "Carupoker|BB": {
+      "bb_check": 1,
+      "fold_vs_open": 8,
+      "call_open": 1
+    },
+    "Carupoker|SB": {
+      "call_open": 4,
+      "fold_vs_open": 8
+    },
+    "Carupoker|BTN": {
+      "fold": 5,
+      "open": 4,
+      "fold_vs_open": 3,
+      "call_open": 1
+    },
+    "Carupoker|CO": {
+      "fold": 4,
+      "open": 4,
+      "fold_vs_open": 1
+    },
+    "Carupoker|MP": {
+      "fold": 5,
+      "open": 1
+    },
+    "Carupoker|UTG": {
+      "fold": 3,
+      "open": 1
+    },
+    "Electr0|SB": {
+      "fold_vs_open": 4,
+      "fold": 1,
+      "call_limp": 1
+    },
+    "Electr0|BTN": {
+      "open": 1,
+      "fold": 1,
+      "fold_vs_open": 1
+    },
+    "Electr0|CO": {
+      "fold_vs_open": 1,
+      "call_open": 1,
+      "open": 1
+    },
+    "Electr0|MP": {
+      "fold": 3,
+      "fold_vs_open": 1
+    },
+    "Electr0|UTG": {
+      "open": 1,
+      "fold": 2
+    },
+    "Electr0|BB": {
+      "fold_vs_open": 3
+    },
+    "Prieto9610|BTN": {
+      "fold": 1,
+      "limp": 1
+    },
+    "Oscar.RG|CO": {
+      "open": 1,
+      "fold_vs_open": 1,
+      "fold": 1
+    },
+    "Capitan spiff|CO": {
+      "fold": 2,
+      "fold_vs_open": 3
+    },
+    "Oscar.RG|SB": {
+      "limp": 1,
+      "fold": 1
+    },
+    "Capitan spiff|SB": {
+      "fold_vs_open": 1,
+      "call_open": 3
+    },
+    "Sebas420|BB": {
+      "fold_vs_open": 1
+    },
+    "Oscar.RG|UTG": {
+      "fold": 1
+    },
+    "Sebas420|BTN": {
+      "fold_vs_open": 1
+    },
+    "Capitan spiff|UTG": {
+      "limp": 2,
+      "open": 1
+    },
+    "Sebas420|MP": {
+      "call_limp": 1
+    },
+    "Sebas420|UTG": {
+      "limp": 1
+    },
+    "Oscar.RG|BTN": {
+      "3bet": 1,
+      "open": 1
+    },
+    "Capitan spiff|BB": {
+      "fold_vs_3bet": 2,
+      "call_open": 2,
+      "fold_vs_open": 1
+    },
+    "Oscar.RG|MP": {
+      "fold": 2
+    },
+    "Capitan spiff|BTN": {
+      "fold_vs_open": 2,
+      "fold": 2,
+      "limp": 1
+    },
+    "Oscar.RG|BB": {
+      "fold_vs_open": 1,
+      "fold_vs_3bet": 1
+    },
+    "Sebas420|CO": {
+      "limp": 1
+    },
+    "Capitan spiff|MP": {
+      "call_3bet": 1,
+      "fold": 1,
+      "limp": 1,
+      "open": 1
+    },
+    "RABBUNI|MP": {
+      "limp": 1
+    },
+    "La_Gaitana|BTN": {
+      "fold": 1
+    },
+    "vidents|BB": {
+      "bb_check": 1
+    },
+    "Davile|BTN": {
+      "limp": 1,
+      "fold_vs_open": 1
+    },
+    "La_Gaitana|CO": {
+      "fold_vs_open": 2
+    },
+    "vidents|SB": {
+      "fold_vs_3bet": 1,
+      "call_open": 1
+    },
+    "RABBUNI|BB": {
+      "fold_vs_3bet": 1,
+      "call_open": 1
+    },
+    "BLKsoul|SB": {
+      "fold_vs_open": 1,
+      "call_open": 1,
+      "call_limp": 1,
+      "open": 1
+    },
+    "BLKsoul|BTN": {
+      "fold": 3,
+      "fold_vs_open": 2
+    },
+    "BLKsoul|MP": {
+      "fold": 1,
+      "open": 1,
+      "limp": 1,
+      "fold_vs_3bet": 1
+    },
+    "BLKsoul|UTG": {
+      "open": 1
+    },
+    "BLKsoul|BB": {
+      "bb_check": 1,
+      "fold_vs_open": 1
+    },
+    "MP|MP": {
+      "fold": 1
+    },
+    "BLKsoul|CO": {
+      "fold": 1,
+      "fold_vs_open": 1
+    },
+    "Woons|UTG": {
+      "fold": 2,
+      "limp": 3
+    },
+    "BigPapi.|MP": {
+      "fold": 5
+    },
+    "Santiagoea10|CO": {
+      "open": 1,
+      "call_limp": 2,
+      "fold": 2
+    },
+    "chupapepita|BB": {
+      "call_open": 1
+    },
+    "BigPapi.|UTG": {
+      "open": 2,
+      "fold": 6
+    },
+    "Santiagoea10|MP": {
+      "fold_vs_open": 2,
+      "open": 3,
+      "fold": 3
+    },
+    "chupapepita|SB": {
+      "call_open": 1,
+      "fold_vs_open": 1
+    },
+    "Woons|BB": {
+      "call_open": 4,
+      "fold_vs_open": 3
+    },
+    "Santiagoea10|UTG": {
+      "fold": 5,
+      "limp": 1
+    },
+    "chupapepita|BTN": {
+      "fold_vs_open": 1
+    },
+    "Woons|SB": {
+      "fold_vs_open": 1,
+      "call_open": 2,
+      "limp": 1,
+      "call_limp": 1,
+      "open": 1
+    },
+    "BigPapi.|BB": {
+      "fold_vs_open": 3,
+      "call_open": 1,
+      "rol": 2
+    },
+    "chupapepita|CO": {
+      "fold_vs_open": 1
+    },
+    "Woons|BTN": {
+      "call_open": 3,
+      "open": 1,
+      "fold_vs_open": 3
+    },
+    "BigPapi.|SB": {
+      "fold_vs_open": 7
+    },
+    "Santiagoea10|BB": {
+      "call_open": 5,
+      "3bet": 2
+    },
+    "chupapepita|MP": {
+      "open": 1
+    },
+    "Woons|CO": {
+      "call_open": 2,
+      "fold_vs_open": 1,
+      "limp": 2,
+      "open": 1
+    },
+    "BigPapi.|BTN": {
+      "fold_vs_open": 3,
+      "fold": 1,
+      "rol": 1,
+      "call_open": 1
+    },
+    "Santiagoea10|SB": {
+      "call_open": 2,
+      "fold_vs_open": 3,
+      "call_limp": 1
+    },
+    "chupapepita|UTG": {
+      "fold": 1
+    },
+    "Woons|MP": {
+      "fold": 1,
+      "limp": 6,
+      "call_open": 1
+    },
+    "BigPapi.|CO": {
+      "fold": 6,
+      "fold_vs_open": 1,
+      "rol": 1
+    },
+    "Santiagoea10|BTN": {
+      "fold": 3,
+      "rol": 3,
+      "fold_vs_open": 2
+    },
+    "papa01|UTG": {
+      "limp": 2
+    },
+    "Silvio|MP": {
+      "call_limp": 2
+    },
+    "Sp1609|CO": {
+      "call_limp": 1
+    },
+    "Tio88|BTN": {
+      "call_limp": 1,
+      "rol": 1
+    },
+    "Dannykill|SB": {
+      "rol": 1,
+      "call_open": 1
+    },
+    "Tio88|MP": {
+      "limp": 1
+    },
+    "Dannykill|CO": {
+      "call_limp": 1
+    },
+    "papa01|SB": {
+      "call_limp": 1
+    },
+    "Silvio|BB": {
+      "bb_check": 1
+    },
+    "Dannykill|MP": {
+      "open": 1
+    },
+    "papa01|BTN": {
+      "call_open": 1
+    },
+    "Silvio|SB": {
+      "call_open": 1
+    },
+    "Tio88|BB": {
+      "call_open": 1
+    },
+    "papa01|CO": {
+      "call_open": 1
+    },
+    "Silvio|BTN": {
+      "call_open": 1
+    },
+    "Tio88|SB": {
+      "call_open": 1
+    },
+    "Dannykill|BB": {
+      "call_open": 1
+    },
+    "proplayer555|CO": {
+      "call_limp": 1
+    },
+    "Silvio|UTG": {
+      "open": 1
+    },
+    "proplayer555|MP": {
+      "fold_vs_open": 1
+    },
+    "Tio88|CO": {
+      "fold_vs_open": 1
+    },
+    "Dannykill|BTN": {
+      "fold_vs_open": 1
+    },
+    "papa01|BB": {
+      "call_open": 1
     }
   }
 }
