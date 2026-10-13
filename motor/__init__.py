@@ -21,5 +21,6 @@ Módulos:
 from . import (  # noqa: F401
     cards, ranges, preflop, hand_evaluator, situation, decision, panel,
     recommend_loop, learn, stats, profile, observations, behavior,
-    player_ranges, postflop_ranges,
+    player_ranges, postflop_ranges, rules, hand_state, hierarchy,
+    db_health, implied_odds,
 )
