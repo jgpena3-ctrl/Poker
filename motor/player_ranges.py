@@ -47,6 +47,7 @@ por diseño — se usa la etiqueta del HERO si aparece, igual que behavior.
 """
 import json
 import os
+import warnings
 from typing import Dict, Optional, Tuple
 
 import numpy as np
@@ -156,38 +157,50 @@ class ProfileRangeModel:
 
     # ------------------------------------------------------------------
 
-    def _prior_grid(self, action: str, pos: str = '') -> np.ndarray:
+    def _prior_grid(self, action: str, pos: str = '',
+                    villain_pos: str = '') -> np.ndarray:
+        """Prior base de `action` como grid 13×13.
+
+        Orden de selección **explícito y observable** (revision_1/2):
+          1) tabla exacta por posición simple  (`OR_UTG`, `OR_MP`, …)
+          2) tabla exacta por par de posiciones (`3B_BB_vs_CO`, …)
+          3) prior plano FLAT_PRIOR + `warnings.warn` (nunca otra tabla)
+
+        Ya no se elige "la primera tabla de esa acción": eso usaba el prior de
+        un spot distinto sin avisar.
+        """
         prefix = CAT_TABLE.get(action)
         if not prefix:
             return np.full((13, 13), FLAT_PRIOR, dtype=np.float32)
         tables = _load_tables()
-        chosen = None
+        chosen, source = None, None
         if pos:
-            # 1) tabla exacta por posición simple (p.ej. OR_BB no existe)
-            # 2) primera tabla de par donde `pos` es el jugador que actúa
-            #    (p.ej. 3B_BB_vs_*) — evita caer siempre en la primera global
             exact = tables.get(f'{prefix}_{pos}')
             if exact is not None:
-                chosen = exact
-            else:
-                pair_keys = (name for name in tables
-                             if name.startswith(f'{prefix}_{pos}_vs_'))
-                first_pair = next(pair_keys, None)
-                if first_pair is not None:
-                    chosen = tables[first_pair]
+                chosen, source = exact, f'{prefix}_{pos}'
+        if chosen is None and pos and villain_pos:
+            pair = tables.get(f'{prefix}_{pos}_vs_{villain_pos}')
+            if pair is not None:
+                chosen, source = pair, f'{prefix}_{pos}_vs_{villain_pos}'
         if chosen is None:
-            for name, t in tables.items():
-                if t.get('action') == prefix:
-                    chosen = t
-                    break
-        if chosen is None or 'matrix' not in chosen:
+            warnings.warn(
+                f'_prior_grid: sin tabla para action={action!r} '
+                f'pos={pos!r} villain_pos={villain_pos!r}; '
+                f'usando FLAT_PRIOR={FLAT_PRIOR}',
+                RuntimeWarning, stacklevel=2)
+            return np.full((13, 13), FLAT_PRIOR, dtype=np.float32)
+        if 'matrix' not in chosen:
+            warnings.warn(
+                f'_prior_grid: tabla {source!r} sin clave "matrix"; '
+                f'usando FLAT_PRIOR={FLAT_PRIOR}',
+                RuntimeWarning, stacklevel=2)
             return np.full((13, 13), FLAT_PRIOR, dtype=np.float32)
         return np.asarray(chosen['matrix'], dtype=np.float32)
 
     def p_matrix(self, perfil: str, spot: str, action: str,
-                 pos: str = '') -> np.ndarray:
+                 pos: str = '', villain_pos: str = '') -> np.ndarray:
         """Grid 13×13 de P(A|r, spot, perfil) con shrinkage."""
-        prior = self._prior_grid(action, pos)
+        prior = self._prior_grid(action, pos, villain_pos)
         opp = self.opp.get((perfil, spot))
         if opp is None:
             return prior.copy()
@@ -197,22 +210,23 @@ class ProfileRangeModel:
         return (cnt + self.alpha * prior) / (opp + self.alpha)
 
     def range_matrix(self, perfil: str, spot: str, action: str,
-                     pos: str = '') -> np.ndarray:
+                     pos: str = '', villain_pos: str = '') -> np.ndarray:
         """Alias de p_matrix (nombre conforme a la doc del módulo)."""
-        return self.p_matrix(perfil, spot, action, pos)
+        return self.p_matrix(perfil, spot, action, pos, villain_pos)
 
     def prob_vec(self, perfil: str, spot: str, action: str,
-                 pos: str = '') -> np.ndarray:
+                 pos: str = '', villain_pos: str = '') -> np.ndarray:
         """Vector (1326,) operativo para `RangeState.update`."""
-        m = self.p_matrix(perfil, spot, action, pos)
+        m = self.p_matrix(perfil, spot, action, pos, villain_pos)
         return np.asarray(m, dtype=np.float32)[CELL_ROW, CELL_COL]
 
     def p_hand(self, perfil: str, spot: str, action: str,
-               hand: str, pos: str = '') -> float:
+               hand: str, pos: str = '', villain_pos: str = '') -> float:
         cell = _cell_(hand)
         if cell is None:
             return 0.0
-        return float(self.p_matrix(perfil, spot, action, pos)[cell])
+        return float(
+            self.p_matrix(perfil, spot, action, pos, villain_pos)[cell])
 
     # ------------------------------------------------------------------
     # Ajuste individual (pegar6, paso 2): ω por spot + desviación
@@ -258,21 +272,26 @@ class ProfileRangeModel:
         return 1.0 + alpha * (w - 1.0)
 
     def p_player(self, player: str, spot: str, action: str,
-                 pos: str = '') -> np.ndarray:
-        """Grid 13×13 del jugador: perfil escalado por su ω del spot."""
+                 pos: str = '', villain_pos: str = '') -> np.ndarray:
+        """Grid 13×13 del jugador: perfil escalado por su ω del spot.
+
+        ω multiplica celda a celda (no una masa global): al renormalizar el
+        grid completo una sola vez, un ω<0.6 dejaba celdas truncadas en 0 sin
+        renormalizar. Aquí cada celda se escala y se recorta a [0,1].
+        """
         perfil = self.perfil.get(player)
         if perfil is None:
-            return self._prior_grid(action, pos)
-        m = self.p_matrix(perfil, spot, action, pos).copy()
+            return self._prior_grid(action, pos, villain_pos)
+        m = self.p_matrix(perfil, spot, action, pos, villain_pos).copy()
         w = self.player_omega(player, spot)
-        if w != 1.0 and perfil is not None:
+        if w != 1.0:
             m *= w
         return np.clip(m, 0.0, 1.0)
 
     def prob_vec_player(self, player: str, spot: str, action: str,
-                        pos: str = '') -> np.ndarray:
+                        pos: str = '', villain_pos: str = '') -> np.ndarray:
         """Vector (1326,) del rango individual (perfil·ω) para RangeState."""
-        m = self.p_player(player, spot, action, pos)
+        m = self.p_player(player, spot, action, pos, villain_pos)
         return np.asarray(m, dtype=np.float32)[CELL_ROW, CELL_COL]
 
     # ----------------------------------------------------------------

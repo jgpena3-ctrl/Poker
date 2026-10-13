@@ -210,6 +210,38 @@ def test_load_hands_skips_garbage(tmp_path):
     assert hands[0]['hand_id'] == 'OK'
 
 
+def _db_lines(n):
+    return ''.join(
+        '{"hand_id":"H_%04d","players":[],"streets":{}}\n' % (i + 1)
+        for i in range(n))
+
+
+def test_load_hands_max_hands_limita_lineas(tmp_path):
+    p = tmp_path / 'db.jsonl'
+    p.write_text(_db_lines(5), encoding='utf-8')
+    assert len(load_hands(str(p))) == 5
+    assert len(load_hands(str(p), max_hands=3)) == 3
+    assert len(load_hands(str(p), max_hands=1)) == 1
+    assert len(load_hands(str(p), max_hands=99)) == 5
+    assert load_hands(str(p), max_hands=None) != []
+
+
+def test_load_hands_max_hands_cero_o_negativo(tmp_path):
+    p = tmp_path / 'db.jsonl'
+    p.write_text(_db_lines(3), encoding='utf-8')
+    assert load_hands(str(p), max_hands=0) == []
+    assert load_hands(str(p), max_hands=-5) == []
+
+
+def test_load_hands_reliable_only_usa_constante(tmp_path, monkeypatch):
+    p = tmp_path / 'db.jsonl'
+    p.write_text(_db_lines(1200), encoding='utf-8')
+    import motor.learn as learn_mod
+    monkeypatch.setattr(learn_mod, 'RELIABLE_HANDS', 900)
+    assert len(load_hands(str(p), reliable_only=True)) == 900
+    assert len(load_hands(str(p), reliable_only=True, max_hands=50)) == 50
+
+
 def test_hero_names_default():
     assert 'Jarduan' in HERO_NAMES
     assert hand_known('Jarduan', '') is False

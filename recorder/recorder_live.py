@@ -485,14 +485,29 @@ class LiveRecorder:
         self.street_has_bet = True
         self._preflop_current_bet = max_bet
 
-    def _add_action(self, street, pos, action, amount,
-                    amount_type='delta'):
+    def _add_action(self, street, pos, action, amount, amount_type=None):
+        """Añade una acción a la calle con su semántica de importe explícita.
+
+        amount_type (obligatorio, no hay default):
+            'observed' : nivel absoluto / contribución total observada.
+            'delta'    : incremento producido por esta acción.
+
+        Contrato (F3, revision_1): si se suma una ciega pendiente, el resultado
+        pasa a ser un nivel, así que la etiqueta se corrige a 'observed' en vez
+        de dejar 'amount_type' mintiendo sobre un número convertido.
+        """
         if self.hand is None:
             return
-        # Si hay ciega pendiente para esta posici&oacute;n, sumarla al monto
+        if amount_type not in ('observed', 'delta'):
+            raise ValueError(
+                f'_add_action: amount_type obligatorio '
+                f"(observed|delta), recibido {amount_type!r}")
+        # Si hay ciega pendiente para esta posición, sumarla al monto
         # (un fold NO arrastra su ciega: el monto del fold es 0.0)
         if pos in self._blinds_by_pos and action != 'f':
             amount += self._blinds_by_pos.pop(pos)
+            # delta + ciega = nivel, no delta: la etiqueta debe decirlo.
+            amount_type = 'observed'
         self.hand['streets'][street]['actions'].append({
             'pos': pos, 'action': action, 'amount': round(amount, 2),
             'amount_type': amount_type,

@@ -56,6 +56,34 @@ def test_from_hands_conteos_y_labels():
     assert ('Regular', 'no_raise', 'limp') not in m.cnt
 
 
+def test_prior_grid_flat_y_warning_sin_tabla_exacta():
+    """Sin tabla exacta: prior plano + warning (nunca la tabla de otro spot)."""
+    m = pr.ProfileRangeModel()
+    flat = np.full((13, 13), pr.FLAT_PRIOR, dtype=np.float32)
+    # OR_BB no existe en preflop_matrices.json -> flat + aviso
+    with pytest.warns(RuntimeWarning, match='sin tabla'):
+        got = m._prior_grid('open', 'BB')
+    assert np.allclose(got, flat)
+    # 3bet con par exacto disponible -> usa ESA tabla, no la primera global
+    par = np.asarray(pr._load_tables()['3B_BB_vs_CO']['matrix'],
+                     dtype=np.float32)
+    got3b = m._prior_grid('3bet', 'BB', 'CO')
+    assert np.allclose(got3b, par)
+    assert not np.allclose(got3b, flat)
+
+
+def test_save_load_conserva_omega(tmp_path):
+    """`omega` se escribe en to_json y load() debe restaurarlo."""
+    m = pr.ProfileRangeModel.from_hands([HAND_OPEN], labels={'Alfa': 'R'})
+    p = tmp_path / 'ranges.json'
+    m.save(str(p))
+    m2 = pr.ProfileRangeModel.load(str(p))
+    assert m2.profiles is None                      # no se rehidrata DB
+    assert m2.player_omega('Alfa', 'no_raise') != 1.0
+    assert m2.player_omega('Alfa', 'no_raise') == pytest.approx(
+        m.player_omega('Alfa', 'no_raise'), abs=1e-3)
+
+
 def test_shrinkage_a_la_base():
     # perfil sin datos -> grid = base (OR_BTN) pura
     m0 = pr.ProfileRangeModel()

@@ -7,8 +7,6 @@ calle, numero de rivales, pasado vs pendiente y textura.
 Salida: n por celda y win% del hero, que acota P(hero > pasivos).
 """
 import collections
-import io
-import json
 import os
 import sys
 
@@ -49,10 +47,8 @@ def _hero_pos(h):
 
 
 n_manos = 0
-for line in io.open(os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        'data', 'hands_db.jsonl'), encoding='utf-8'):
-    h = json.loads(line)
+from motor.learn import load_hands as _load_hands
+for h in _load_hands(reliable_only=True):
     hp = _hero_pos(h)
     if not hp:
         continue
