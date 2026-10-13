@@ -323,7 +323,7 @@ def main(argv=None):
     import sys
 
     want_json = '--json' in (argv if argv is not None else sys.argv[1:])
-    hands = load_hands()
+    hands = load_hands(reliable_only=True)
     model = ProfileRangeModel.from_hands(hands)
     print(f'Manos válidas: {len(hands)}\n')
     print(model.report())

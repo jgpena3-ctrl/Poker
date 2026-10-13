@@ -313,7 +313,7 @@ def main(argv=None):
     if '--out' in argv:
         idx = argv.index('--out')
         out_path = argv[idx + 1] if len(argv) > idx + 1 else ''
-    hands = load_hands()
+    hands = load_hands(reliable_only=True)
     profs = Profiles.from_hands(hands)
     print(f'Manos: {len(hands)}\n')
     print(profs.report())

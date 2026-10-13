@@ -235,7 +235,7 @@ def main(argv=None):
         except (ValueError, IndexError):
             pass
 
-    hands = load_hands()
+    hands = load_hands(reliable_only=True)
     valid = validate_hands(hands)
     cov = coverage(hands, min_n=min_n)
     delta = snapshot_delta(hands)

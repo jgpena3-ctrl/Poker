@@ -286,7 +286,7 @@ def main(argv=None):
     from .learn import load_hands
 
     want_json = '--json' in (argv if argv is not None else sys.argv[1:])
-    hands = load_hands()
+    hands = load_hands(reliable_only=True)
     model = PostflopRangeModel.from_hands(hands)
     print(f'Manos: {len(hands)} · buckets: {model.n_buckets}\n')
     print(model.report())

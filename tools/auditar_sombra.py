@@ -18,7 +18,7 @@ if os.path.exists(TEMP):
     os.remove(TEMP)
 lg = ShadowLog(path=TEMP)
 
-hands = load_hands()[:400]
+hands = load_hands(reliable_only=True)[:400]
 stats = collections.Counter()
 motivos = collections.Counter()
 src = collections.Counter()

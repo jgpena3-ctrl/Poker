@@ -275,7 +275,7 @@ def main(argv=None):
     if '--out' in args:
         i = args.index('--out')
         out_path = args[i + 1] if len(args) > i + 1 else ''
-    hands = load_hands()
+    hands = load_hands(reliable_only=True)
     data = build(hands, min_n=min_n)
     print(report(data, min_n))
     if write_json:

@@ -16,7 +16,7 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 src = collections.Counter()
 muestras = collections.Counter()
 
-for h in load_hands():
+for h in load_hands(reliable_only=True):
     hp = None
     for p in h.get('players') or []:
         if str(p.get('name', '')).strip().lower() == 'jarduan':

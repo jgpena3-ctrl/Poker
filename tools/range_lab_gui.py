@@ -53,7 +53,7 @@ def load_models():
         t['preflop_load'] = (time.perf_counter() - t0) * 1000
     except (FileNotFoundError, ValueError, KeyError):
         from motor.learn import load_hands
-        hands = load_hands()
+        hands = load_hands(reliable_only=True)
         t0 = time.perf_counter()
         pre = pr_mod.ProfileRangeModel.from_hands(hands)
         t['preflop_load'] = (time.perf_counter() - t0) * 1000
@@ -63,7 +63,7 @@ def load_models():
         t['postflop_load'] = (time.perf_counter() - t0) * 1000
     except (FileNotFoundError, ValueError, KeyError):
         from motor.learn import load_hands
-        hands = load_hands()
+        hands = load_hands(reliable_only=True)
         t0 = time.perf_counter()
         post = pf_mod.PostflopRangeModel.from_hands(hands)
         t['postflop_load'] = (time.perf_counter() - t0) * 1000
@@ -72,7 +72,7 @@ def load_models():
         try:
             from motor.behavior import Oracle, build
             from motor.learn import load_hands
-            hands = load_hands()
+            hands = load_hands(reliable_only=True)
             post._oracle = Oracle(build(hands, labels=dict(post.labels)))
             t['oracle_rebuild'] = True
         except Exception:

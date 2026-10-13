@@ -240,7 +240,7 @@ def main(argv=None):
     if '--out' in args:
         i = args.index('--out')
         out_path = args[i + 1] if len(args) > i + 1 else ''
-    hands = load_hands()
+    hands = load_hands(reliable_only=True)
     obs = extract_hands(hands)
     print(f'Manos: {len(hands)}  Observaciones: {len(obs)}')
     if write_json:

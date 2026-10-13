@@ -328,7 +328,7 @@ def build_models(verbose=True):
     oracle          Oracle             (P(A|C) postflop por perfil)
     postflop_model  PostflopRangeModel (P(A|H) postflop por perfil)
     """
-    hands = load_hands()
+    hands = load_hands(reliable_only=True)
     profs = Profiles.from_hands(hands)
     labels = {name: p.label for name, p in profs.profiles.items()}
     t0 = time.perf_counter()
