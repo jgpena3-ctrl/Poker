@@ -148,11 +148,12 @@ def _es_limpe_corto(action, bb=None, tol=1e-9):
     preflop NO cuentan como subida (mismo criterio que
     `learn.classify_first_action`).
 
-    NOTA (revision_1): esta funcion mira SOLO el importe. No comprueba que no
-    haya una subida previa, asi que un 'b' de <=BB posterior a una subida se
-    trataria tambien como limpe. El llamador `_pf_rival_pos` lo compensa
-    parando el filtro de limpes en cuanto ve un 'r'. Para no perpetuar esa
-    limitacion, `hay_subida_previa` permite el chequeo explicito.
+    NO comprueba que no haya una subida previa: un 'b' de <=BB posterior a una
+    subida se trataria tambien como limpe. Quien debe compensarlo es el
+    llamador, y lo hace con su flag `vio_raise` (ver `_pf_rival_pos`), que
+    deja de aplicar este filtro en cuanto ve un 'r'. Aqui no se anade un
+    parametro `hay_subida_previa`: la funcion se mantiene simple y el orden
+    temporal lo decide el consumidor.
     """
     if bb is None:
         bb = BB_NOMINAL
@@ -191,11 +192,13 @@ def _pf_rival_pos(hand, pos_name, spot=''):
         if act == 'r':
             agresores.append(pos)
             vio_raise = True
-        elif act == 'b' and not vio_raise and not _es_limpe_corto(a):
+        elif act == 'b':
             # Un 'b' de <=BB solo es limpe si aun no hubo ninguna subida
-            # previa (revision_1: si la hubo, es min-raise o error del
-            # recorder, y no debe descartarse como limpe).
-            agresores.append(pos)
+            # previa. Si ya hubo un 'r', un 'b' de cualquier importe es una
+            # accion agresiva (min-raise o re-raise registrado como bet) y se
+            # cuenta; descartarlo lo perdia como agresor (revision_2, punto 2).
+            if not (not vio_raise and _es_limpe_corto(a)):
+                agresores.append(pos)
     if spot == 'facing_open':
         return agresores[0] if agresores else ''
     if spot == 'facing_3bet':

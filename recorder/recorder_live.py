@@ -520,6 +520,19 @@ class LiveRecorder:
                         existing['amount_type'] = 'observed'
                         existing['blind'] = True
                     max_bet = max(max_bet, bb_open)
+                # NO se hace `continue`: el BB actua el ultimo y su decision
+                # voluntaria (call / raise / check) tambien sale del snapshot.
+                # Sin esto se perdia (revision_2, punto 3).
+                bet = bids.get(pos_name)
+                if bet is not None and bet > bb_open + 0.05:
+                    amt = round(bet, 2)
+                    if amt > max_bet + 0.15:
+                        self._add_action('preflop', pos_name, 'r', amt,
+                                         'observed')
+                        max_bet = max(max_bet, amt)
+                    else:
+                        self._add_action('preflop', pos_name, 'c', amt,
+                                         'observed')
                 continue
 
             bet = bids.get(pos_name)

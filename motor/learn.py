@@ -5,7 +5,9 @@ Especificación: DOCS/APRENDIZAJE.md (pegar4 · perfiles pegar5 §5).
 Principios:
 - Dos tipos de evidencia que NO se mezclan: mano conocida (P(A|H, contexto))
   y mano desconocida (P(A|contexto)). `hand_known` se guarda por evento.
-- `Jarduan` (hero) siempre con mano conocida (HERO_NAMES).
+- `hand_known` es True SI Y SOLO SI hay cartas registradas. Un hero sin
+  cartas NO cuenta como mano conocida (F2.6): asumirlo seria inventar
+  informacion que el recorder no registro.
 - Cada jugador entra UNA vez por mano con su primera decisión preflop; el
   estado del bote en ese momento (raises/limps previos) define la categoría
   (limp / open / RIL / 3bet / squeeze / 4bet / fold...) y el denominador
