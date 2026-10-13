@@ -135,6 +135,22 @@ def _preflop_spot(hand, villain_pos):
     return 'no_raise', 'open'
 
 
+def _es_limpe_corto(action, bb=1.0, tol=1e-9):
+    """True si la acción es un limpe corto grabado como bet (`'b'` de ≤1BB).
+
+    El recorder etiqueta así los limpes de 1BB; para el propósito de identificar
+    al agresor preflop NO cuentan como subida (mismo criterio que
+    `learn.classify_first_action`).
+    """
+    if action.get('action') != 'b':
+        return False
+    try:
+        amt = float(action.get('amount') or 0.0)
+    except (TypeError, ValueError):
+        return False
+    return amt <= bb + tol
+
+
 def _pf_rival_pos(hand, pos_name, spot=''):
     """Posición del rival relevante para el prior preflop de `spot`.
 
@@ -142,16 +158,25 @@ def _pf_rival_pos(hand, pos_name, spot=''):
     el prior necesita saber contra QUIÉN actúa, no sólo la posición propia.
 
     - spot == 'no_raise'    → no hay agresor previo; '' (no aplica).
-    - spot == 'facing_open' → el rival es QUIEN ABRIÓ (el primer agresor), no
-      el último: si el open fue 3beteado, el call del hero es contra el open.
-    - spot == 'facing_3bet' → el rival es QUIEN SUBIÓ (el segundo agresor).
+    - spot == 'facing_open' → el rival es QUIEN ABRIÓ (el primer agresor real),
+      no el último: si el open fue 3beteado, el call del hero es contra el open.
+    - spot == 'facing_3bet' → el rival es QUIEN SUBIÓ (el segundo agresor real).
+
+    Se excluyen los limpes cortos (`'b'` de ≤1BB), que el recorder graba como
+    bet pero no son una subida: contarlos desplazaría el índice del open real.
     """
     if hand is None:
         return ''
     acts = (hand.get('streets', {}).get('preflop', {}) or {}).get('actions', [])
-    agresores = [a.get('pos') for a in acts
-                 if a.get('action') in ('b', 'r')
-                 and a.get('pos') and a.get('pos') != pos_name]
+    agresores = []
+    for a in acts:
+        pos, act = a.get('pos'), a.get('action')
+        if act not in ('b', 'r') or not pos or pos == pos_name:
+            continue
+        if act == 'b' and not _es_limpe_corto(a):
+            agresores.append(pos)
+        elif act == 'r':
+            agresores.append(pos)
     if spot == 'facing_open':
         return agresores[0] if agresores else ''
     if spot == 'facing_3bet':

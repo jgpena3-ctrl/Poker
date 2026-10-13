@@ -77,7 +77,12 @@ def test_events_single_hand():
         ('Villian', 'fold_vs_open', 'facing_open', False)
 
 
-def test_hero_always_known_even_without_cards():
+def test_hero_sin_cards_no_es_mano_conocida():
+    """Un hero sin cartas NO cuenta como mano conocida (F2.6).
+
+    Antes `hand_known` devolvía True para Jarduan siempre, lo que inventaba
+    información que el recorder no registró. Ver PROYECTO.md §6.1.
+    """
     hand = _hand(
         players=[
             {'name': 'Jarduan', 'pos': 'UTG', 'cards': ''},
@@ -86,8 +91,10 @@ def test_hero_always_known_even_without_cards():
         preflop=[('UTG', 'b', 2.5), ('BB', 'x', 0)],
     )
     events = preflop_events(hand)
-    assert events[0].hand_known is True  # hero sin cards: igual conocida
+    assert events[0].hand_known is False   # hero sin cartas
     assert events[1].hand_known is False
+    assert hand_known('Jarduan', '') is False
+    assert hand_known('Jarduan', 'AsKd') is True
 
 
 def test_first_decision_only():
@@ -274,13 +281,17 @@ def test_ciega_bb_detectada_aunque_haya_folds_antes():
 
 
 def test_call_contra_raise_no_es_limp():
-    """Un 'c' que enfrenta una subida no cuenta como limpe posterior."""
+    """Un 'c' que enfrenta una subida no cuenta como limpe posterior.
+
+    UTG abre, MP paga (call_open), CO sube: como ya hay una apuesta y alguien
+    dentro, la subida de CO es un SQUEEZE, no un 3bet pelado.
+    """
     h = _hand(preflop=[('UTG', 'r', 3.0), ('MP', 'c', 3.0), ('CO', 'b', 9.0)])
     evs = preflop_events(h)
     assert evs[0].category == 'open'
     assert evs[1].category == 'call_open'
-    # CO sube con raises_before=1 y limps_before=0 -> 3bet, no squeeze
-    assert evs[2].category == '3bet'
+    # CO sube con raises_before=1 y hay una llamada detras -> squeeze
+    assert evs[2].category == 'squeeze'
 
 
 def test_limp_corto_es_limp_no_open():
@@ -351,12 +362,22 @@ def test_aceptacion_4_folds_antes_no_alteran_la_ciega():
     assert cb == ['fold', 'fold']
 
 
-def test_aceptacion_5_squeeze_necesita_limp_previo():
-    """squeeze = 3bet con limpe; sin limpe debe ser 3bet."""
-    con_limp = _hand('A', preflop=[('MP', 'c', 1.0), ('CO', 'r', 3.0)])
-    sin_limp = _hand('B', preflop=[('UTG', 'b', 2.5), ('CO', 'r', 8.0)])
-    assert preflop_events(con_limp)[1].category == 'squeeze'
-    assert preflop_events(sin_limp)[1].category == '3bet'
+def test_aceptacion_5_squeeze_necesita_apuesta_previa():
+    """squeeze = subida con llamadas detrás de una apuesta.
+
+    Sin apuesta previa (sólo limpes) es raise-over-limp, no squeeze.
+    Con una llamada detrás de un open, es squeeze; sin ella, 3bet.
+    """
+    # open -> call -> raise  = squeeze
+    squeeze = _hand('A', preflop=[('UTG', 'b', 2.5), ('CO', 'c', 2.5),
+                                  ('BTN', 'r', 8.0)])
+    assert preflop_events(squeeze)[2].category == 'squeeze'
+    # open -> raise = 3bet pelado
+    tresbet = _hand('B', preflop=[('UTG', 'b', 2.5), ('CO', 'r', 8.0)])
+    assert preflop_events(tresbet)[1].category == '3bet'
+    # limp -> raise (sin ninguna apuesta previa) = raise over limp
+    rol = _hand('C', preflop=[('MP', 'c', 1.0), ('CO', 'r', 3.0)])
+    assert preflop_events(rol)[1].category == 'rol'
 
 
 def test_aceptacion_6_bb_no_detectado_si_hay_limp_antes():

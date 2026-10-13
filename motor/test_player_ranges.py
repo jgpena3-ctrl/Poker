@@ -73,15 +73,21 @@ def test_prior_grid_flat_y_warning_sin_tabla_exacta():
 
 
 def test_save_load_conserva_omega(tmp_path):
-    """`omega` se escribe en to_json y load() debe restaurarlo."""
+    """`omega` se escribe en to_json y load() debe restaurarlo.
+
+    No se exige un valor != 1.0: con una sola mano el fade-in colapsa ω a 1.0.
+    Lo que se verifica es el round-trip y que la caché se lee de disco.
+    """
     m = pr.ProfileRangeModel.from_hands([HAND_OPEN], labels={'Alfa': 'R'})
     p = tmp_path / 'ranges.json'
     m.save(str(p))
     m2 = pr.ProfileRangeModel.load(str(p))
     assert m2.profiles is None                      # no se rehidrata DB
-    assert m2.player_omega('Alfa', 'no_raise') != 1.0
-    assert m2.player_omega('Alfa', 'no_raise') == pytest.approx(
-        m.player_omega('Alfa', 'no_raise'), abs=1e-3)
+    assert m2._omega is not None                    # caché leída del JSON
+    assert 'Alfa' in m2._omega
+    for spot in pr.SPOT_STAT:
+        assert m2.player_omega('Alfa', spot) == pytest.approx(
+            m.player_omega('Alfa', spot), abs=1e-3)
 
 
 def test_shrinkage_a_la_base():
@@ -96,9 +102,11 @@ def test_shrinkage_a_la_base():
 
 def test_shrinkage_mezcla():
     # con 1 hora epoch: P = (1 + a·p0)/(1+a); p0(AA)>=p0(72) y p0(AA)>0
+    # OJO: hay que pasar `pos`, porque sin posición _prior_grid cae al flat
+    # prior (y avisa) en vez de elegir una tabla arbitraria (F4).
     m = pr.ProfileRangeModel.from_hands([HAND_OPEN], labels={'Alfa': 'Regular'})
-    pAA = m.p_hand('Regular', 'no_raise', 'open', 'AsAs')
-    p72 = m.p_hand('Regular', 'no_raise', 'open', '7c2d')
+    pAA = m.p_hand('Regular', 'no_raise', 'open', 'AsAs', pos='BTN')
+    p72 = m.p_hand('Regular', 'no_raise', 'open', '7c2d', pos='BTN')
     assert 0.5 < pAA <= 1.0
     assert p72 < pAA
 
@@ -113,7 +121,7 @@ def test_prob_vec_consistente_con_p_hand():
     assert aa
     cell_val = float(v[aa[0]])
     assert cell_val == pytest.approx(
-        m.p_hand('R', 'no_raise', 'open', 'AsAs'), abs=1e-6)
+        m.p_hand('R', 'no_raise', 'open', 'AsAs', pos='BTN'), abs=1e-6)
 
 
 def test_prob_vec_rango_estado_update():
@@ -216,6 +224,54 @@ def test_p_player_omega_bajo_no_deja_masa_a_la_mitad():
     w = m.player_omega('Baja', 'no_raise')
     assert w < 1.0                       # jugador mucho menos agresivo
     got = m.p_player('Baja', 'no_raise', 'open')
+    assert got.sum() == pytest.approx(1.0, abs=1e-6)
+
+
+# --- casos extremos que faltaban (revision_2 §2) --------------------------
+
+def _modelo_con_omega(w, m=None):
+    """Modelo de un jugador cuyo p_matrix es `m` y al que se le fuerza ω=w."""
+    from motor.profile import PlayerProfile, Profiles
+    profs = Profiles()
+    profs.profiles = {
+        'X': PlayerProfile('X', n=100, stats={'pfr': 0.2}),
+        'A': PlayerProfile('A', n=100, stats={'pfr': 0.2}),
+    }
+    mod = pr.ProfileRangeModel.from_hands([], labels={'X': 'R'})
+    mod.profiles = profs
+    mod.player_omega = lambda player, spot, fade=20.0: w
+    if m is not None:
+        mod.p_matrix = lambda *a, **k: m
+    return mod
+
+
+def test_p_player_omega_alto_no_satura_ni_deja_nan():
+    """ω alto (4.0) no debe saturar celdas ni producir NaN."""
+    m = np.full((13, 13), 0.9, dtype=np.float32)
+    mod = _modelo_con_omega(4.0, m)
+    got = mod.p_player('X', 'no_raise', 'open')
+    assert np.all(np.isfinite(got))
+    assert got.max() <= 1.0
+    assert got.sum() == pytest.approx(1.0, abs=1e-6)
+    assert got.max() < 1.0                # renormalizado, no saturado
+
+
+def test_p_player_matriz_de_suma_cero_no_revienta():
+    """Una matriz toda a cero no debe dividir por cero ni devolver NaN."""
+    m = np.zeros((13, 13), dtype=np.float32)
+    mod = _modelo_con_omega(0.5, m)
+    got = mod.p_player('X', 'no_raise', 'open')
+    assert np.all(np.isfinite(got))
+    assert got.shape == (13, 13)
+
+
+def test_p_player_valores_extremos_no_producen_nan():
+    m = np.zeros((13, 13), dtype=np.float32)
+    m[0, 0] = 1.0
+    m[5, 5] = 1e-8
+    mod = _modelo_con_omega(0.25, m)
+    got = mod.p_player('X', 'no_raise', 'open')
+    assert np.all(np.isfinite(got))
     assert got.sum() == pytest.approx(1.0, abs=1e-6)
 
 def test_to_json_incluye_omega():

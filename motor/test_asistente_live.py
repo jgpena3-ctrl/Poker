@@ -10,6 +10,58 @@ from motor.asistente_live import (Asistente, _cards_to_codes, _hero_bet_facing,
 
 
 # ---------------------------------------------------------------------------
+# _pf_rival_pos: el rival del prior según el spot (revision_1 §2)
+# ---------------------------------------------------------------------------
+
+def _pf_hand(acts):
+    return {'streets': {'preflop': {'actions': acts}}}
+
+
+def test_es_limpe_corto():
+    from motor.asistente_live import _es_limpe_corto
+    assert _es_limpe_corto({'action': 'b', 'amount': 1.0}) is True
+    assert _es_limpe_corto({'action': 'b', 'amount': 0.5}) is True
+    assert _es_limpe_corto({'action': 'b', 'amount': 2.5}) is False
+    assert _es_limpe_corto({'action': 'r', 'amount': 1.0}) is False
+    assert _es_limpe_corto({'action': 'b', 'amount': '-'}) is False
+
+
+def test_pf_rival_pos_ignora_limpes_cortos():
+    """Un 'b' de 1BB es limpe, no agresor: no debe ser el open del rival."""
+    from motor.asistente_live import _pf_rival_pos
+    h = _pf_hand([{'pos': 'UTG', 'action': 'b', 'amount': 1.0},    # limpe
+                  {'pos': 'MP', 'action': 'r', 'amount': 4.0},     # open real
+                  {'pos': 'CO', 'action': 'c', 'amount': 4.0}])
+    assert _pf_rival_pos(h, 'CO', 'facing_open') == 'MP'
+
+
+def test_pf_rival_pos_facing_open_usa_el_primer_agresor():
+    """Con open + 3bet, el call del hero es contra QUIEN ABRIÓ."""
+    from motor.asistente_live import _pf_rival_pos
+    h = _pf_hand([{'pos': 'UTG', 'action': 'b', 'amount': 2.5},   # open
+                  {'pos': 'MP', 'action': 'r', 'amount': 9.0},    # 3bet
+                  {'pos': 'BTN', 'action': 'c', 'amount': 9.0}])  # hero call
+    assert _pf_rival_pos(h, 'BTN', 'facing_open') == 'UTG'
+    assert _pf_rival_pos(h, 'MP', 'facing_3bet') == 'UTG'
+
+
+def test_pf_rival_pos_facing_3bet_usa_el_segundo_agresor():
+    from motor.asistente_live import _pf_rival_pos
+    h = _pf_hand([{'pos': 'UTG', 'action': 'b', 'amount': 2.5},
+                  {'pos': 'MP', 'action': 'r', 'amount': 9.0},
+                  {'pos': 'BTN', 'action': 'r', 'amount': 22.0}])  # hero 4bet
+    assert _pf_rival_pos(h, 'BTN', 'facing_3bet') == 'MP'
+
+
+def test_pf_rival_pos_no_raise_sin_agresor():
+    from motor.asistente_live import _pf_rival_pos
+    h = _pf_hand([{'pos': 'BB', 'action': 'b', 'amount': 1.0},    # ciega
+                  {'pos': 'BTN', 'action': 'c', 'amount': 1.0}])
+    assert _pf_rival_pos(h, 'BTN', 'no_raise') == ''
+    assert _pf_rival_pos(h, 'BTN', 'facing_open') == ''           # ciega no es open
+
+
+# ---------------------------------------------------------------------------
 # utilidades de estado / cartas
 # ---------------------------------------------------------------------------
 

@@ -57,11 +57,25 @@ def current_events(hand, bb=learn.BB):
 
 
 def doc_events(hand, bb=learn.BB):
-    """Simulación EXACTA de PROYECTO.md §6.1 tabla "Corregida".
+    """La regla R3 del doc §6.1 — la que produce 1599/825/64.
 
-    Regla del doc: "Contando una subida sólo cuando el importe supera la ciega"
-    → `a in ('b','r') and m > bb`. NO salta la ciega del BB como evento (la
-    cuenta como `open`), por eso la tabla del doc da 1599/825/64.
+    PROYECTO.md §6.1 dice textualmente: contando una subida solo
+    cuando el importe supera la ciega, es decir `a in ('b','r') and m > bb`.
+    Eso es exactamente esta funcion.
+
+    Verificado con `tools/que_regla_da_1599.py` sobre las 900 fiables:
+
+        regla                       fold/nr  vs_open  vs_3bet  eventos
+        R1 actual (con ciega)           527     1437       524     4695
+        R2 ignorando ciega BB           1537      873        78     4695
+        R3 importes > 1.0              1599      825        64     4695  <- doc
+
+    La fila Corregida del doc ES R3, no R2: su simulacion descarta del
+    conteo de subidas cualquier b/r de <=1BB, lo que incluye los limpes
+    cortos. Por eso difiere de la implementacion actual en 50 manos de
+    la ventana fiable (todas con un b de <=1BB).
+
+    NO salta la ciega del BB como evento: la emite (como limp/no_raise).
     """
     seq = [(p, a, m) for p, a, m, _b in learn._preflop_sequence(hand)]
     out, decided = [], set()

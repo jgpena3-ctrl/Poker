@@ -280,15 +280,24 @@ class ProfileRangeModel:
         """Grid 13×13 del jugador: perfil escalado por su ω del spot.
 
         Contrato de ω (decidido en revision_1 §3, Opción B): ω es un factor de
-        **forma**, no de masa. Es decir, describe CÓMO se distribuye el rango
-        del jugador, no cuánto rango tiene. Por eso, tras escalar y recortar a
-        [0,1], el grid se renormaliza a suma 1: con ω<1 ya no queda con la
-        mitad de masa, y con ω>1 no se satura en celdas sueltas.
+        FORMA aplicado DESPUÉS del shrinkage, no antes.
 
-        Justificación: `RangeState` normaliza los pesos al construir `.weights`,
-        así que sólo importa la forma relativa. Renormalizar a masa constante
-        (Opción A) habría limitado artificialmente el rango de los jugadores
-        más agresivos.
+        `p_matrix` ya devuelve `(cnt + α·prior) / (opp + α)`, es decir el
+        shrinkage está resuelto cuando ω entra. Renormalizar a suma 1 DESPUÉS
+        no cambia la mezcla cnt/prior dentro de una celda: sólo reescala el
+        resultado final. Por eso ω NO altera α ni el peso del prior; sólo
+        deforma la forma relativa del rango, que es justo lo que
+        `RangeState.weights` normaliza después.
+
+        ⚠️ Consecuencia documentada (deuda a vigilar al calibrar α): al ser
+        una renormalización posterior, ω<1 NO reduce la masa total del rango
+        del jugador. Si algún día se quiere que ω module también la masa
+        (no sólo la forma), hay que aplicarlo ANTES del shrinkage, dentro de
+        `p_matrix`, no aquí.
+
+        Consecuencias prácticas que sí se corrigen:
+        - ω<1 ya no deja el grid con una fracción de su masa.
+        - ω>1 ya no satura celdas sueltas en 1.0.
         """
         perfil = self.perfil.get(player)
         if perfil is None:

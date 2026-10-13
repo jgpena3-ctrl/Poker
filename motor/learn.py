@@ -125,7 +125,7 @@ class PreflopEvent:
     prereq: Tuple[str, ...]       # acciones previas ('POS:a')
 
 
-def classify_first_action(action, amount, raises_before, limps_before, bb=BB):
+def classify_first_action(action, amount, raises_before, limps_before, bb=BB, callers=0):
     """Categoría + denominador de la primera decisión preflop de un jugador.
 
     action: 'f' | 'x' | 'c' | 'b' | 'r'   (formato del recorder)
@@ -152,7 +152,11 @@ def classify_first_action(action, amount, raises_before, limps_before, bb=BB):
         if raises_before == 0:
             return 'open' if limps_before == 0 else 'rol', 'no_raise'
         if raises_before == 1:
-            return 'squeeze' if limps_before >= 1 else '3bet', 'facing_open'
+            # squeeze = subida cuando ya hay llamadas detras de una
+            # apuesta previa. `callers` son esas llamadas; `limps`
+            # son calls SIN subida previa y no cuentan para el squeeze.
+            hay_callers = (callers >= 1) or (limps_before >= 1)
+            return ('squeeze' if hay_callers else '3bet'), 'facing_open'
         return '4bet', 'facing_3bet'
     raise ValueError(f'acción preflop desconocida: {action!r}')
 
@@ -216,6 +220,7 @@ def preflop_events(hand, bb=BB):
     decided = set()
     raises = 0
     limps = 0
+    callers = 0        # calls que ya enfrentaban una subida (squeeze)
     voluntary_before = False   # ¿hubo ya una acción voluntaria (subida o limp)?
     for i, (pos, act, amount, is_blind) in enumerate(seq):
         es_ciega_bb = _es_ciega_bb(i, pos, act, amount, is_blind,
@@ -226,12 +231,17 @@ def preflop_events(hand, bb=BB):
             if act in ('b', 'r'):
                 raises += 1
                 voluntary_before = True
-            elif act == 'c' and raises == 0:
-                limps += 1
+            elif act == 'c':
+                # Un call con subida previa NO es limp, pero si cuenta
+                # como 'ya hay gente dentro' para detectar un squeeze.
+                if raises == 0:
+                    limps += 1
+                else:
+                    callers += 1
                 voluntary_before = True
             continue
         decided.add(pos)
-        category, denom = classify_first_action(act, amount, raises, limps, bb)
+        category, denom = classify_first_action(act, amount, raises, limps, bb, callers)
         cards = cards_of_pos(hand, pos)
         events.append(PreflopEvent(
             hand_id=hand.get('hand_id', '?'),
@@ -247,8 +257,11 @@ def preflop_events(hand, bb=BB):
         if act in ('b', 'r'):
             raises += 1
             voluntary_before = True
-        elif act == 'c' and raises == 0:
-            limps += 1
+        elif act == 'c':
+            if raises == 0:
+                limps += 1
+            else:
+                callers += 1
             voluntary_before = True
     return events
 
