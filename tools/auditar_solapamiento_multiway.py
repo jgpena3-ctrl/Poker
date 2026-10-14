@@ -22,11 +22,11 @@ sys.path.insert(0, ROOT)
 
 from motor import learn                                       # noqa: E402
 from motor.multiway import (                                  # noqa: E402
-    ORDEN, PLAYER_IDS, POSTFLOP, acciones, clasificar_decision,
-    contrato_orden_ok, en_bote, en_bote_en_instante, folds_hasta,
-    hero_pos, heroes, instante_decision, instantes_decision,
-    no_puede_actuar, no_puede_actuar_en_instante, puede_responder,
-    puntos_decision_mano, posiciones_allin, secuencia,
+    CLASES, CLASES_POLITICA, ORDEN, PLAYER_IDS, POSTFLOP, acciones,
+    clasificar_decision, contrato_orden_ok, en_bote, en_bote_en_instante,
+    folds_hasta, hero_pos, heroes, instante_decision, instantes_decision,
+    metrica_politica, no_puede_actuar, no_puede_actuar_en_instante,
+    puede_responder, puntos_decision_mano, posiciones_allin, secuencia,
     ultima_accion,
 )
 
@@ -256,80 +256,113 @@ def main():
     print()
     print('6) CIFRAS CON EL CONTRATO DE DECISION  (base para F7.2)')
     print('-' * 78)
-    res = collections.Counter()
-    pliegues = collections.Counter()
+    # --- correccion temporal, sobre la MISMA poblacion que la politica ---
+    # Sin folds, sin desconocidos y con rival: comparar un "por instante"
+    # de 258 contra un denominador de 507 sin folds seria meterlos otra
+    # vez por la puerta de atras.
     mw_calle = mw_inst = 0
     for h in manos:
         hp = hero_pos(h)
-        for r in puntos_decision_mano(h):
-            st, i = r['calle'], r['instante']
-            fold = acciones(h, st)[i]['action'] == 'f'
-            res[r['clase']] += 1
-            pliegues[('fold' if fold else 'no fold', r['clase'])] += 1
-            if r['sin_evidencia'] or r['clase'] == 'SIN_DECISION':
-                continue
-            ps = no_puede_actuar(h, st)
-            pi = no_puede_actuar_en_instante(h, st, i)
-            if ps is not None:
-                mw_calle += len((en_bote(h, st) - ps) - {hp}) > 1
-            if pi is not None:
-                mw_inst += len(puede_responder(h, st, i)) > 1
+        for st in POSTFLOP:
+            for i in instantes_decision(h, st):
+                if acciones(h, st)[i]['action'] == 'f':
+                    continue
+                if posiciones_allin(h) is None:
+                    continue
+                ps = no_puede_actuar(h, st)
+                pi = no_puede_actuar_en_instante(h, st, i)
+                if ps is not None:
+                    mw_calle += len((en_bote(h, st) - ps) - {hp}) > 1
+                if pi is not None:
+                    mw_inst += len(puede_responder(h, st, i)) > 1
 
-    total = sum(res.values())
-    print('   puntos de DECISION (acciones del hero): %d' % total)
-    print('   %-28s %7s %7s' % ('clase', 'total', 'no fold'))
-    for k in ('HU', 'MULTIWAY', 'DESCONOCIDO', 'SIN_DECISION'):
-        print('   %-28s %7d %7d'
-              % (k, res[k], pliegues[('no fold', k)]))
-    print('   %-28s %7d' % ('  de ellos, el hero FOLDEA',
-                            sum(v for (f, _), v in pliegues.items() if f == 'fold')))
+    m = metrica_politica(manos)
+    t = m['tabla']
+    folds = lambda c: t[('fold', c)]                  # noqa: E731
+    nofold = lambda c: t[('no fold', c)]              # noqa: E731
+    res = collections.Counter({c: folds(c) + nofold(c) for c in CLASES})
+
+    print('   puntos de DECISION (acciones del hero): %d' % m['total'])
     print()
-    clasificables = res['HU'] + res['MULTIWAY']
-    print('   CUADRA: %d + %d + %d = %d puntos'
-          % (clasificables, res['DESCONOCIDO'], res['SIN_DECISION'], total))
-    assert (clasificables + res['DESCONOCIDO'] + res['SIN_DECISION']
-            == total), 'no cuadra el total'
+    print('   Un punto FOLD es una decision REAL del hero, pero NO consulta')
+    print('   equity: no hay nada que repartir entre HU y MULTIWAY para una')
+    print('   politica multiway. Se declara aparte, no se esconde.')
     print()
-    print('   Un punto FOLD es una decision real pero NO consulta equity:')
-    print('   cuenta como decision y no como punto de politica multiway. Se')
-    print('   declara aqui para que nadie lo compare con los que si la usan.')
+    print('   TABLA CRUZADA')
+    print('   %-16s %8s %8s %8s %10s'
+          % ('clase', 'fold', 'no fold', 'total', 'POLITICA'))
+    for c in CLASES:
+        pol = nofold(c) if c in CLASES_POLITICA else 0
+        print('   %-16s %8d %8d %8d %10d'
+              % (c, folds(c), nofold(c), folds(c) + nofold(c), pol))
+    print('   %-16s %8d %8d %8d %10d'
+          % ('TOTAL', m['total'] - sum(nofold(c) for c in CLASES),
+             sum(nofold(c) for c in CLASES), m['total'], m['denominador']))
     print()
-    print('   efecto de la correccion temporal, sobre los %d puntos con'
-          % clasificables)
-    print('   evidencia:')
+
+    print('   CUADRE 1 — todo lo clasificado, con folds dentro:')
+    assert (sum(res[c] for c in CLASES) == m['total']), 'no cuadra el total'
+    print('      %d + %d + %d = %d puntos'
+          % (res['HU'] + res['MULTIWAY'], res['DESCONOCIDO'],
+             res['SIN_DECISION'], m['total']))
+    print('   CUADRE 2 — filas por columnas:')
+    assert (sum(folds(c) for c in CLASES)
+            + sum(nofold(c) for c in CLASES) == m['total']), \
+        'no cuadra la tabla cruzada'
+    print('      %d fold + %d no fold = %d puntos'
+          % (m['total'] - sum(nofold(c) for c in CLASES),
+             sum(nofold(c) for c in CLASES), m['total']))
+    print('   CUADRE 3 — la politica no contiene folds:')
+    assert m['denominador'] == nofold('HU') + nofold('MULTIWAY')
+    assert m['numerador'] == nofold('MULTIWAY')
+    print('      %d = HU %d + MULTIWAY %d'
+          % (m['denominador'], nofold('HU'), nofold('MULTIWAY')))
+    print()
+
+    print('   METRICA DE POLITICA — aqui es donde NO entran los folds:')
+    print('      HU no fold       : %d' % nofold('HU'))
+    print('      MULTIWAY no fold : %d' % m['numerador'])
+    print('      denominador     : %d' % m['denominador'])
+    print('      MULTIWAY         : %.1f%%' % m['porcentaje'])
+    print()
+    print('   Con folds dentro daba %d/%d = %.1f%%. El PORCENTAGE aguanta;'
+          % (res['MULTIWAY'], res['HU'] + res['MULTIWAY'],
+             res['MULTIWAY'] / (res['HU'] + res['MULTIWAY']) * 100))
+    print('   las CUENTAS no: de los %d multiway, %d eran folds.'
+          % (res['MULTIWAY'], folds('MULTIWAY')))
+    print('   Concluir lo mismo por dos caminos da una conclusion robusta;')
+    print('   publicar el numero sin esta tabla hacia falta.')
+    print()
+
+    print('   efecto de la correccion temporal, sobre los %d puntos de'
+          % m['denominador'])
+    print('   politica:')
     print('      MW por calle    : %d' % mw_calle)
     print('      MW por instante : %d   <- el que se firma' % mw_inst)
     print('      la regla por calle se queda %d spots corto'
           % (mw_inst - mw_calle))
     print()
-    print('   DENOMINADOR DE F7.2: %d puntos clasificables' % clasificables)
-    print('      HU %d · MULTIWAY %d · DESCONOCIDO %d (fuera) ·'
-          ' sin rival %d (fuera)'
-          % (res['HU'], res['MULTIWAY'], res['DESCONOCIDO'],
-             res['SIN_DECISION']))
+    print('   DENOMINADOR DE POLITICA F7.2: %d' % m['denominador'])
+    print('      HU %d · MULTIWAY %d' % (nofold('HU'), m['numerador']))
+    print('      folds excluidos: %d (HU %d + MULTIWAY %d)'
+          % (folds('HU') + folds('MULTIWAY'), folds('HU'), folds('MULTIWAY')))
+    print('      fuera del numerador: DESCONOCIDO %d (no fold %d) · sin rival %d'
+          % (res['DESCONOCIDO'], nofold('DESCONOCIDO'), res['SIN_DECISION']))
     print()
-    techo = res['MULTIWAY']
-    unknown_mw = 0
-    for h in manos:
-        hp = hero_pos(h)
-        for st in POSTFLOP:
-            for i in instantes_decision(h, st):
-                if posiciones_allin(h) is not None:
-                    continue
-                if acciones(h, st)[i]['action'] == 'f':
-                    continue
-                if len(en_bote_en_instante(h, st, i) | ({hp} if hp else set())) - 1 > 1:
-                    unknown_mw += 1
-    techo += unknown_mw
-    print('   COTA (techo, si en los desconocidos nadie estuviera all-in):')
-    print('      %d + %d = %d' % (res['MULTIWAY'], unknown_mw, techo))
+    print('   COTA (techo, si en los desconocidos nadie estuviera all-in),')
+    print('   con el MISMO criterio que la metrica principal (no folds):')
+    print('      %d + %d = %d'
+          % (m['numerador'], m['techo_desconocidos'], m['techo']))
     print()
-    print('   CONTRASTE con las cifras anteriores (NO son la misma metrica):')
+    print('   CONTRASTE (NO son la misma metrica, no comparar directamente):')
     print('      F7.1 calle + regla del raise   : HU 702  MW 304')
     print('      F7.1 calle + regla de evidencia: MW 225 (cota 276)')
-    print('      decision por CALLE             : MW 174')
-    print('      decision por INSTANTE (vigente): HU %d  MW %d (cota %d)'
-          % (res['HU'], res['MULTIWAY'], techo))
+    print('      accion del hero + por CALLE    : MW %d' % mw_calle)
+    print('      accion del hero + por INSTANTE  : HU %d  MW %d (cota %d)'
+          % (nofold('HU'), m['numerador'], m['techo']))
+    print()
+    print('   Instrumento: motor/multiway.py::metrica_politica(). El auditor')
+    print('   y los tests la IMPORTAN; no hay una segunda cuenta.')
     print()
 
     return 0

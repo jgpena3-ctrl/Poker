@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import collections
 """`motor/multiway.py` — quien esta en el bote y quien PUEDE RESPONDER.
 
 Vive en `motor/` y no en `tools/` porque lo usa el motor (revision_1
@@ -337,6 +338,61 @@ def clasificar_instante(hand, street, indice):
     if n == 0:
         return _dict(SIN_DECISION, indice, len(bote), 0, False)
     return _dict(HU if n == 1 else MULTIWAY, indice, len(bote), n, False)
+
+
+# ---------------------------------------------------------------------------
+# LA METRICA DE F7.2
+# ---------------------------------------------------------------------------
+CLASES = ('HU', 'MULTIWAY', 'DESCONOCIDO', 'SIN_DECISION')
+
+# Las dos clases que gobiernan la politica multiway. Las otras dos quedan
+# fuera del numerador por contrato: no se sabe (DESCONOCIDO) o no hay con
+# quien jugar (SIN_DECISION).
+CLASES_POLITICA = ('HU', 'MULTIWAY')
+
+
+def metrica_politica(hands):
+    """La metrica de F7.2, medida sobre una lista de manos.
+
+    Devuelve la TABLA CRUZADA (fold x clase) y, sobre ella, el
+    denominador de politica y el numerador de MULTIWAY.
+
+    El denominador EXCLUYE los folds del hero. Un fold es una decision
+    real, pero no consulta equity: no hay nada que repartir entre HU y
+    MULTIWAY para una politica multiway. Meterlo en el denominador
+    inflaria el numerador con puntos que nunca producen una recomendacion.
+
+    Vive aqui y no en el script de auditoria para que el script y los tests
+    midan LO MISMO. Una copia en cada sitio es como vuelve el bug de la
+    regla del raise.
+    """
+    tabla = collections.Counter()
+    techo = 0
+    for hand in hands:
+        hp = hero_pos(hand)
+        for r in puntos_decision_mano(hand):
+            st, i = r['calle'], r['instante']
+            fold = acciones(hand, st)[i]['action'] == 'f'
+            tabla[('fold' if fold else 'no fold', r['clase'])] += 1
+            if fold or r['clase'] != 'DESCONOCIDO':
+                continue
+            if posiciones_allin(hand) is not None:
+                continue
+            bote = en_bote_en_instante(hand, st, i) | ({hp} if hp else set())
+            if len(bote) - 1 > 1:
+                techo += 1
+
+    numerador = tabla[('no fold', 'MULTIWAY')]
+    denominador = sum(tabla[('no fold', c)] for c in CLASES_POLITICA)
+    return {
+        'tabla': tabla,
+        'total': sum(tabla.values()),
+        'denominador': denominador,
+        'numerador': numerador,
+        'porcentaje': (numerador / denominador * 100) if denominador else 0.0,
+        'techo_desconocidos': techo,
+        'techo': numerador + techo,
+    }
 
 
 def _dict(clase, instante, en_bote, pueden, sin_evidencia):
