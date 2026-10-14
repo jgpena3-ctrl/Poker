@@ -2,7 +2,13 @@
   "meta": {
     "alpha": 2.0,
     "n_buckets": 5,
-    "origen": "hands_db.jsonl"
+    "origen": "hands_db.jsonl",
+    "hands_window": "reliable_only",
+    "hands_input": 900,
+    "hands_used": 887,
+    "code_commit": "c03fc02",
+    "arbol_sucio": true,
+    "built_at": "2026-10-14T00:57:09+00:00"
   },
   "labels": {
     "Jarduan": "TIBURON",
@@ -57,10 +63,10 @@
     "Mur420": "PEZ",
     "Hero": "TIBURON",
     "Player1": "PEZ",
+    "Player3": "TIBURON",
     "Player4": "TIBURON",
     "Player5": "TIBURON",
     "Player2": "PEZ",
-    "Player3": "PEZ",
     "kiluaak": "TIBURON",
     "pardoKing": "TIBURON",
     "HarryPoker18": "TIBURON",

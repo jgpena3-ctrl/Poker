@@ -2,7 +2,7 @@
   "hands": 900,
   "denoms": {
     "Jarduan": {
-      "no_raise": 573,
+      "no_raise": 572,
       "facing_open": 278,
       "facing_3bet": 19
     },
@@ -13,12 +13,12 @@
     },
     "Pipaaf182": {
       "facing_open": 13,
-      "no_raise": 8,
+      "no_raise": 9,
       "facing_3bet": 1
     },
     "mur420": {
       "facing_open": 51,
-      "no_raise": 70,
+      "no_raise": 74,
       "facing_3bet": 5
     },
     "Hachirama": {
@@ -41,7 +41,7 @@
     },
     "DominoSaurio": {
       "facing_open": 44,
-      "no_raise": 61,
+      "no_raise": 62,
       "facing_3bet": 2
     },
     "Arquejandro": {
@@ -57,7 +57,7 @@
       "no_raise": 3
     },
     "Mira90": {
-      "no_raise": 25,
+      "no_raise": 26,
       "facing_3bet": 3,
       "facing_open": 10
     },
@@ -88,7 +88,7 @@
       "no_raise": 3
     },
     "Elyessi27": {
-      "no_raise": 53,
+      "no_raise": 57,
       "facing_open": 27,
       "facing_3bet": 2
     },
@@ -113,22 +113,22 @@
       "facing_3bet": 1
     },
     "Maicolp": {
-      "no_raise": 42,
+      "no_raise": 43,
       "facing_3bet": 3,
       "facing_open": 24
     },
     "Johan Otero": {
       "facing_open": 22,
       "facing_3bet": 3,
-      "no_raise": 25
+      "no_raise": 26
     },
     "KappaxSlayer": {
+      "no_raise": 21,
       "facing_open": 7,
-      "no_raise": 20,
       "facing_3bet": 1
     },
     "MegustanLas...": {
-      "no_raise": 19,
+      "no_raise": 21,
       "facing_open": 10,
       "facing_3bet": 1
     },
@@ -142,12 +142,12 @@
       "no_raise": 20
     },
     "LaloMora": {
-      "facing_open": 13,
-      "no_raise": 26
+      "no_raise": 27,
+      "facing_open": 13
     },
     "SAE_AAAA": {
       "facing_open": 6,
-      "no_raise": 13
+      "no_raise": 12
     },
     "JuanPApada": {
       "facing_open": 6,
@@ -165,7 +165,7 @@
     },
     "triki12": {
       "facing_open": 27,
-      "no_raise": 41
+      "no_raise": 42
     },
     "oscar123": {
       "facing_open": 30,
@@ -207,7 +207,7 @@
       "facing_open": 2
     },
     "LolaMora": {
-      "no_raise": 8,
+      "no_raise": 9,
       "facing_open": 1
     },
     "Danjer": {
@@ -224,6 +224,9 @@
     "Player1": {
       "no_raise": 6
     },
+    "Player3": {
+      "no_raise": 4
+    },
     "Player4": {
       "no_raise": 6
     },
@@ -232,9 +235,6 @@
     },
     "Player2": {
       "no_raise": 6
-    },
-    "Player3": {
-      "no_raise": 3
     },
     "kiluaak": {
       "no_raise": 15,
@@ -266,7 +266,7 @@
       "facing_open": 4
     },
     "LUIS-DIAZ": {
-      "no_raise": 47,
+      "no_raise": 48,
       "facing_open": 15,
       "facing_3bet": 1
     },
@@ -291,7 +291,7 @@
       "facing_3bet": 2
     },
     "Pechugo": {
-      "no_raise": 26,
+      "no_raise": 27,
       "facing_open": 19,
       "facing_3bet": 1
     },
@@ -362,24 +362,24 @@
       "no_raise": 14
     },
     "Edup": {
-      "no_raise": 5,
-      "facing_open": 5
+      "no_raise": 6,
+      "facing_open": 4
     },
     "Franco1603": {
       "no_raise": 39,
       "facing_open": 14
     },
     "AZ de A": {
-      "no_raise": 12,
-      "facing_open": 7
+      "no_raise": 13,
+      "facing_open": 6
     },
     "bsaghv4": {
       "no_raise": 15,
       "facing_open": 1
     },
     "Lprieto11": {
-      "facing_open": 6,
-      "no_raise": 12
+      "facing_open": 5,
+      "no_raise": 13
     },
     "Juancuellar987": {
       "facing_open": 2,
@@ -404,7 +404,7 @@
       "no_raise": 27
     },
     "JS99": {
-      "no_raise": 29,
+      "no_raise": 30,
       "facing_open": 23,
       "facing_3bet": 5
     },
@@ -434,7 +434,7 @@
     },
     "Freddy9212": {
       "facing_open": 2,
-      "no_raise": 6
+      "no_raise": 7
     },
     "CO": {
       "no_raise": 1
@@ -652,12 +652,12 @@
   },
   "cats": {
     "Jarduan": {
-      "open": 127,
+      "open": 125,
       "fold": 326,
       "fold_vs_open": 202,
       "call_open": 56,
       "fold_vs_3bet": 18,
-      "bb_check": 44,
+      "bb_check": 45,
       "3bet": 18,
       "rol": 50,
       "limp": 4,
@@ -679,7 +679,7 @@
     "Pipaaf182": {
       "fold_vs_open": 11,
       "fold": 4,
-      "bb_check": 2,
+      "bb_check": 3,
       "3bet": 2,
       "rol": 2,
       "fold_vs_3bet": 1
@@ -691,7 +691,7 @@
       "limp": 15,
       "fold_vs_3bet": 5,
       "squeeze": 1,
-      "bb_check": 7,
+      "bb_check": 11,
       "3bet": 3,
       "open": 4,
       "call_limp": 1,
@@ -738,7 +738,7 @@
     "DominoSaurio": {
       "fold_vs_open": 39,
       "fold": 40,
-      "bb_check": 6,
+      "bb_check": 7,
       "open": 10,
       "rol": 5,
       "call_open": 2,
@@ -771,8 +771,8 @@
       "fold_vs_3bet": 3,
       "call_open": 3,
       "fold_vs_open": 5,
+      "bb_check": 4,
       "fold": 9,
-      "bb_check": 3,
       "call_limp": 1,
       "3bet": 1,
       "squeeze": 1,
@@ -841,7 +841,7 @@
       "rol": 3,
       "call_limp": 15,
       "call_3bet": 1,
-      "bb_check": 4,
+      "bb_check": 8,
       "open": 3,
       "fold_vs_3bet": 1
     },
@@ -875,7 +875,7 @@
       "fold_vs_3bet": 1
     },
     "Maicolp": {
-      "bb_check": 3,
+      "bb_check": 4,
       "fold": 8,
       "limp": 22,
       "fold_vs_3bet": 3,
@@ -895,20 +895,20 @@
       "fold": 17,
       "squeeze": 1,
       "fold_vs_3bet": 2,
-      "rol": 3,
-      "bb_check": 1
+      "bb_check": 2,
+      "rol": 3
     },
     "KappaxSlayer": {
+      "bb_check": 4,
       "fold_vs_open": 6,
       "limp": 13,
       "fold": 2,
       "call_limp": 2,
-      "bb_check": 3,
       "call_3bet": 1,
       "call_open": 1
     },
     "MegustanLas...": {
-      "bb_check": 2,
+      "bb_check": 4,
       "fold_vs_open": 7,
       "call_limp": 6,
       "fold": 5,
@@ -936,6 +936,7 @@
       "call_open": 1
     },
     "LaloMora": {
+      "bb_check": 1,
       "call_open": 2,
       "fold_vs_open": 11,
       "limp": 7,
@@ -946,7 +947,7 @@
     "SAE_AAAA": {
       "call_open": 2,
       "rol": 1,
-      "open": 4,
+      "open": 3,
       "fold": 6,
       "limp": 2,
       "3bet": 1,
@@ -979,7 +980,7 @@
       "fold_vs_open": 24,
       "fold": 26,
       "rol": 6,
-      "bb_check": 5,
+      "bb_check": 6,
       "call_open": 2,
       "open": 3,
       "3bet": 1,
@@ -1056,7 +1057,7 @@
     "LolaMora": {
       "fold": 2,
       "limp": 3,
-      "bb_check": 1,
+      "bb_check": 2,
       "call_limp": 1,
       "rol": 1,
       "call_open": 1
@@ -1079,9 +1080,14 @@
       "fold": 3,
       "limp": 2
     },
+    "Player3": {
+      "bb_check": 2,
+      "call_limp": 1,
+      "fold": 1
+    },
     "Player4": {
       "fold": 4,
-      "open": 1,
+      "bb_check": 1,
       "call_limp": 1
     },
     "Player5": {
@@ -1093,11 +1099,6 @@
     "Player2": {
       "fold": 4,
       "call_limp": 2
-    },
-    "Player3": {
-      "call_limp": 1,
-      "fold": 1,
-      "bb_check": 1
     },
     "kiluaak": {
       "fold": 8,
@@ -1156,7 +1157,7 @@
       "fold": 33,
       "fold_vs_open": 13,
       "open": 9,
-      "bb_check": 2,
+      "bb_check": 3,
       "rol": 3,
       "fold_vs_3bet": 1,
       "squeeze": 1,
@@ -1196,7 +1197,7 @@
       "bb_check": 1
     },
     "Pechugo": {
-      "bb_check": 2,
+      "bb_check": 3,
       "call_open": 8,
       "fold": 17,
       "limp": 5,
@@ -1328,9 +1329,9 @@
       "limp": 2,
       "bb_check": 1,
       "call_open": 2,
-      "fold_vs_open": 3,
+      "fold_vs_open": 2,
       "rol": 1,
-      "fold": 1
+      "fold": 2
     },
     "Franco1603": {
       "call_limp": 7,
@@ -1342,10 +1343,10 @@
       "call_open": 8
     },
     "AZ de A": {
-      "fold": 6,
+      "fold": 7,
       "call_limp": 3,
       "call_open": 2,
-      "fold_vs_open": 5,
+      "fold_vs_open": 4,
       "open": 1,
       "rol": 1,
       "bb_check": 1
@@ -1359,12 +1360,12 @@
       "limp": 1
     },
     "Lprieto11": {
-      "fold_vs_open": 4,
+      "fold_vs_open": 3,
       "limp": 5,
       "call_open": 2,
+      "fold": 4,
       "open": 1,
       "rol": 1,
-      "fold": 3,
       "bb_check": 1,
       "call_limp": 1
     },
@@ -1410,11 +1411,11 @@
     },
     "JS99": {
       "fold": 17,
+      "bb_check": 2,
       "open": 8,
       "call_open": 6,
       "fold_vs_open": 12,
       "3bet": 3,
-      "bb_check": 1,
       "squeeze": 2,
       "call_limp": 1,
       "fold_vs_3bet": 5,
@@ -1465,7 +1466,7 @@
       "call_open": 2,
       "fold": 1,
       "limp": 3,
-      "bb_check": 1,
+      "bb_check": 2,
       "rol": 1
     },
     "CO": {
@@ -1813,7 +1814,7 @@
   },
   "known_denoms": {
     "Jarduan": {
-      "no_raise": 573,
+      "no_raise": 572,
       "facing_open": 278,
       "facing_3bet": 19
     },
@@ -1873,7 +1874,7 @@
       "no_raise": 2
     },
     "Maicolp": {
-      "no_raise": 5,
+      "no_raise": 6,
       "facing_open": 2
     },
     "Elyessi27": {
@@ -1886,7 +1887,7 @@
       "facing_3bet": 1
     },
     "MegustanLas...": {
-      "no_raise": 5,
+      "no_raise": 6,
       "facing_open": 2
     },
     "SamPachero30": {
@@ -2251,11 +2252,11 @@
     },
     "mur420|BB": {
       "facing_open": 19,
-      "no_raise": 6,
+      "no_raise": 10,
       "facing_3bet": 1
     },
     "Pipaaf182|BB": {
-      "no_raise": 3
+      "no_raise": 4
     },
     "mur420|UTG": {
       "no_raise": 18
@@ -2325,7 +2326,7 @@
     },
     "Jarduan|BB": {
       "facing_3bet": 8,
-      "no_raise": 60,
+      "no_raise": 59,
       "facing_open": 90
     },
     "JHONCACH|CO": {
@@ -2366,7 +2367,7 @@
       "facing_3bet": 1
     },
     "DominoSaurio|BB": {
-      "no_raise": 7,
+      "no_raise": 8,
       "facing_open": 13,
       "facing_3bet": 1
     },
@@ -2429,8 +2430,8 @@
     },
     "Mira90|BB": {
       "facing_3bet": 1,
-      "facing_open": 3,
-      "no_raise": 2
+      "no_raise": 3,
+      "facing_open": 3
     },
     "Mira90|UTG": {
       "no_raise": 8
@@ -2594,7 +2595,7 @@
     "Elyessi27|BB": {
       "facing_open": 9,
       "facing_3bet": 1,
-      "no_raise": 5
+      "no_raise": 9
     },
     "Geilyn21|UTG": {
       "no_raise": 3
@@ -2609,7 +2610,7 @@
     },
     "Johan Otero|BB": {
       "facing_open": 9,
-      "no_raise": 1
+      "no_raise": 2
     },
     "Maicolp|UTG": {
       "no_raise": 15
@@ -2629,7 +2630,7 @@
     },
     "Maicolp|BB": {
       "facing_3bet": 2,
-      "no_raise": 2,
+      "no_raise": 3,
       "facing_open": 6
     },
     "Johan Otero|CO": {
@@ -2660,6 +2661,10 @@
       "no_raise": 11,
       "facing_open": 3
     },
+    "KappaxSlayer|BB": {
+      "no_raise": 4,
+      "facing_open": 1
+    },
     "KappaxSlayer|SB": {
       "facing_open": 2,
       "no_raise": 2,
@@ -2677,7 +2682,7 @@
       "no_raise": 6
     },
     "MegustanLas...|BB": {
-      "no_raise": 2,
+      "no_raise": 4,
       "facing_open": 2
     },
     "MegustanLas...|SB": {
@@ -2686,10 +2691,6 @@
     },
     "MegustanLas...|BTN": {
       "no_raise": 5
-    },
-    "KappaxSlayer|BB": {
-      "facing_open": 1,
-      "no_raise": 3
     },
     "MegustanLas...|CO": {
       "no_raise": 1,
@@ -2734,6 +2735,10 @@
       "no_raise": 2,
       "facing_open": 5
     },
+    "LaloMora|BB": {
+      "no_raise": 1,
+      "facing_open": 3
+    },
     "ComboHunter|BTN": {
       "facing_open": 1,
       "no_raise": 4
@@ -2770,8 +2775,7 @@
       "no_raise": 4
     },
     "SAE_AAAA|BB": {
-      "facing_open": 4,
-      "no_raise": 1
+      "facing_open": 4
     },
     "SAE_AAAA|SB": {
       "no_raise": 3
@@ -2890,7 +2894,7 @@
       "facing_open": 3
     },
     "triki12|BB": {
-      "no_raise": 7,
+      "no_raise": 8,
       "facing_open": 6
     },
     "Zenin15|MP": {
@@ -3048,7 +3052,7 @@
       "no_raise": 2
     },
     "LolaMora|BB": {
-      "no_raise": 1
+      "no_raise": 2
     },
     "JohanV.|BTN": {
       "no_raise": 2
@@ -3067,6 +3071,9 @@
     },
     "Player1|BTN": {
       "no_raise": 4
+    },
+    "Player3|BB": {
+      "no_raise": 2
     },
     "Player4|UTG": {
       "no_raise": 2
@@ -3117,9 +3124,6 @@
       "no_raise": 1
     },
     "Player5|BTN": {
-      "no_raise": 1
-    },
-    "Player3|BB": {
       "no_raise": 1
     },
     "kiluaak|MP": {
@@ -3282,7 +3286,7 @@
     },
     "LUIS-DIAZ|BB": {
       "facing_open": 8,
-      "no_raise": 2,
+      "no_raise": 3,
       "facing_3bet": 1
     },
     "Juanpablogrz|SB": {
@@ -3315,9 +3319,6 @@
     "Bigmac14|SB": {
       "no_raise": 1
     },
-    "LaloMora|BB": {
-      "facing_open": 3
-    },
     "Juanpablogrz|MP": {
       "no_raise": 3
     },
@@ -3347,7 +3348,7 @@
       "facing_3bet": 1
     },
     "Pechugo|BB": {
-      "no_raise": 2,
+      "no_raise": 3,
       "facing_open": 4,
       "facing_3bet": 1
     },
@@ -3731,12 +3732,11 @@
       "no_raise": 1
     },
     "Edup|CO": {
-      "no_raise": 1,
-      "facing_open": 1
+      "no_raise": 2
     },
     "AZ de A|BTN": {
-      "no_raise": 3,
-      "facing_open": 2
+      "no_raise": 4,
+      "facing_open": 1
     },
     "Lprieto11|BTN": {
       "facing_open": 1,
@@ -3757,8 +3757,8 @@
       "facing_open": 3
     },
     "Lprieto11|SB": {
-      "facing_open": 2,
-      "no_raise": 1
+      "no_raise": 2,
+      "facing_open": 1
     },
     "Franco1603|BB": {
       "facing_open": 5,
@@ -3883,6 +3883,11 @@
       "no_raise": 2,
       "facing_open": 1
     },
+    "JS99|BB": {
+      "no_raise": 2,
+      "facing_open": 7,
+      "facing_3bet": 2
+    },
     "CorajeRaise|MP": {
       "no_raise": 5,
       "facing_open": 2
@@ -3901,11 +3906,6 @@
     "JS99|BTN": {
       "no_raise": 5,
       "facing_open": 4
-    },
-    "JS99|BB": {
-      "facing_open": 7,
-      "no_raise": 1,
-      "facing_3bet": 2
     },
     "Danielev|UTG": {
       "no_raise": 1
@@ -4013,10 +4013,10 @@
     "CO|CO": {
       "no_raise": 1
     },
-    "Memelo|BTN": {
-      "no_raise": 1
-    },
     "Freddy9212|BB": {
+      "no_raise": 2
+    },
+    "Memelo|BTN": {
       "no_raise": 1
     },
     "Memelo|CO": {
@@ -4972,14 +4972,14 @@
     "mur420|BB": {
       "fold_vs_open": 9,
       "squeeze": 1,
-      "bb_check": 5,
+      "bb_check": 9,
       "call_open": 8,
       "3bet": 1,
       "fold_vs_3bet": 1,
       "limp": 1
     },
     "Pipaaf182|BB": {
-      "bb_check": 2,
+      "bb_check": 3,
       "rol": 1
     },
     "mur420|UTG": {
@@ -5087,11 +5087,10 @@
     },
     "Jarduan|BB": {
       "fold_vs_3bet": 8,
-      "bb_check": 42,
+      "bb_check": 43,
       "fold_vs_open": 54,
       "rol": 16,
       "3bet": 5,
-      "open": 2,
       "call_open": 30,
       "squeeze": 1
     },
@@ -5155,7 +5154,7 @@
       "fold_vs_3bet": 1
     },
     "DominoSaurio|BB": {
-      "bb_check": 6,
+      "bb_check": 7,
       "fold_vs_open": 10,
       "call_open": 2,
       "rol": 1,
@@ -5237,8 +5236,8 @@
     },
     "Mira90|BB": {
       "fold_vs_3bet": 1,
+      "bb_check": 3,
       "fold_vs_open": 2,
-      "bb_check": 2,
       "squeeze": 1
     },
     "Mira90|UTG": {
@@ -5447,7 +5446,7 @@
       "3bet": 1,
       "call_open": 4,
       "call_3bet": 1,
-      "bb_check": 4,
+      "bb_check": 8,
       "rol": 1,
       "fold_vs_open": 4
     },
@@ -5473,7 +5472,7 @@
       "call_open": 1,
       "fold_vs_open": 7,
       "squeeze": 1,
-      "bb_check": 1
+      "bb_check": 2
     },
     "Maicolp|UTG": {
       "limp": 13,
@@ -5499,7 +5498,7 @@
     },
     "Maicolp|BB": {
       "fold_vs_3bet": 2,
-      "bb_check": 2,
+      "bb_check": 3,
       "call_open": 5,
       "fold_vs_open": 1
     },
@@ -5547,6 +5546,10 @@
       "call_open": 1,
       "fold_vs_open": 1
     },
+    "KappaxSlayer|BB": {
+      "bb_check": 4,
+      "fold_vs_open": 1
+    },
     "KappaxSlayer|SB": {
       "fold_vs_open": 2,
       "limp": 1,
@@ -5568,7 +5571,7 @@
       "fold": 1
     },
     "MegustanLas...|BB": {
-      "bb_check": 2,
+      "bb_check": 4,
       "fold_vs_open": 2
     },
     "MegustanLas...|SB": {
@@ -5580,10 +5583,6 @@
     "MegustanLas...|BTN": {
       "call_limp": 4,
       "fold": 1
-    },
-    "KappaxSlayer|BB": {
-      "fold_vs_open": 1,
-      "bb_check": 3
     },
     "MegustanLas...|CO": {
       "call_limp": 1,
@@ -5643,6 +5642,10 @@
       "fold_vs_open": 5,
       "fold": 1
     },
+    "LaloMora|BB": {
+      "bb_check": 1,
+      "fold_vs_open": 3
+    },
     "ComboHunter|BTN": {
       "fold_vs_open": 1,
       "fold": 4
@@ -5693,7 +5696,6 @@
     "SAE_AAAA|BB": {
       "call_open": 1,
       "3bet": 1,
-      "open": 1,
       "fold_vs_open": 2
     },
     "SAE_AAAA|SB": {
@@ -5856,7 +5858,7 @@
     },
     "triki12|BB": {
       "rol": 2,
-      "bb_check": 5,
+      "bb_check": 6,
       "fold_vs_open": 5,
       "call_open": 1
     },
@@ -6044,7 +6046,7 @@
       "limp": 1
     },
     "LolaMora|BB": {
-      "bb_check": 1
+      "bb_check": 2
     },
     "JohanV.|BTN": {
       "limp": 2
@@ -6067,6 +6069,9 @@
       "rol": 1,
       "fold": 3
     },
+    "Player3|BB": {
+      "bb_check": 2
+    },
     "Player4|UTG": {
       "fold": 2
     },
@@ -6078,7 +6083,7 @@
       "fold": 3
     },
     "Player4|BB": {
-      "open": 1
+      "bb_check": 1
     },
     "Player1|CO": {
       "limp": 1
@@ -6118,9 +6123,6 @@
     },
     "Player5|BTN": {
       "fold": 1
-    },
-    "Player3|BB": {
-      "bb_check": 1
     },
     "kiluaak|MP": {
       "fold": 4,
@@ -6317,7 +6319,7 @@
     },
     "LUIS-DIAZ|BB": {
       "fold_vs_open": 7,
-      "bb_check": 2,
+      "bb_check": 3,
       "fold_vs_3bet": 1,
       "3bet": 1
     },
@@ -6358,9 +6360,6 @@
     "Bigmac14|SB": {
       "rol": 1
     },
-    "LaloMora|BB": {
-      "fold_vs_open": 3
-    },
     "Juanpablogrz|MP": {
       "limp": 2,
       "open": 1
@@ -6395,7 +6394,7 @@
       "call_open": 1
     },
     "Pechugo|BB": {
-      "bb_check": 2,
+      "bb_check": 3,
       "call_open": 1,
       "fold_vs_open": 3,
       "fold_vs_3bet": 1
@@ -6861,11 +6860,11 @@
     },
     "Edup|CO": {
       "limp": 1,
-      "fold_vs_open": 1
+      "fold": 1
     },
     "AZ de A|BTN": {
-      "fold": 3,
-      "fold_vs_open": 2
+      "fold": 4,
+      "fold_vs_open": 1
     },
     "Lprieto11|BTN": {
       "fold_vs_open": 1,
@@ -6891,8 +6890,9 @@
       "call_open": 2
     },
     "Lprieto11|SB": {
-      "fold_vs_open": 2,
-      "rol": 1
+      "fold": 1,
+      "rol": 1,
+      "fold_vs_open": 1
     },
     "Franco1603|BB": {
       "3bet": 1,
@@ -7049,6 +7049,13 @@
       "fold_vs_open": 1,
       "fold": 1
     },
+    "JS99|BB": {
+      "bb_check": 2,
+      "fold_vs_open": 3,
+      "squeeze": 2,
+      "fold_vs_3bet": 2,
+      "call_open": 2
+    },
     "CorajeRaise|MP": {
       "fold": 3,
       "open": 2,
@@ -7075,13 +7082,6 @@
       "fold": 2,
       "fold_vs_open": 2,
       "rol": 1
-    },
-    "JS99|BB": {
-      "fold_vs_open": 3,
-      "bb_check": 1,
-      "squeeze": 2,
-      "fold_vs_3bet": 2,
-      "call_open": 2
     },
     "Danielev|UTG": {
       "fold": 1
@@ -7209,11 +7209,11 @@
     "CO|CO": {
       "fold": 1
     },
+    "Freddy9212|BB": {
+      "bb_check": 2
+    },
     "Memelo|BTN": {
       "limp": 1
-    },
-    "Freddy9212|BB": {
-      "bb_check": 1
     },
     "Memelo|CO": {
       "fold": 1

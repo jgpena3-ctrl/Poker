@@ -62,7 +62,7 @@
       "vpip": 0.3684,
       "pfr": 0.1053,
       "b3": 0.0,
-      "wtsd": 0.3333,
+      "wtsd": 0.4,
       "wsd": 0.5,
       "bar": 1.0,
       "cbet": 1.0
@@ -77,7 +77,7 @@
     "label": "TIBURON",
     "subtype": "Regular",
     "stack_mean": 51.03,
-    "confidence": 0.505,
+    "confidence": 0.543,
     "reliability": "probable"
   },
   "Adrugir": {
@@ -906,12 +906,12 @@
   "DominoSaurio": {
     "player": "DominoSaurio",
     "hero": false,
-    "n": 107,
+    "n": 108,
     "stats": {
-      "vpip": 0.1869,
-      "pfr": 0.1682,
+      "vpip": 0.1852,
+      "pfr": 0.1667,
       "b3": 0.0682,
-      "wtsd": 0.0308,
+      "wtsd": 0.0303,
       "wsd": 0.5,
       "cbet": 0.9,
       "bar": 0.5,
@@ -985,7 +985,7 @@
     "label": "PEZ",
     "subtype": "Loose-passive",
     "stack_mean": 48.01,
-    "confidence": 0.626,
+    "confidence": 0.63,
     "reliability": "probable"
   },
   "Electr0": {
@@ -1017,11 +1017,11 @@
   "Elyessi27": {
     "player": "Elyessi27",
     "hero": false,
-    "n": 82,
+    "n": 86,
     "stats": {
-      "vpip": 0.5366,
-      "pfr": 0.0976,
-      "wtsd": 0.1129,
+      "vpip": 0.5116,
+      "pfr": 0.093,
+      "wtsd": 0.1077,
       "b3": 0.0741,
       "f2cb": 1.0,
       "cbet": 1.0,
@@ -1043,7 +1043,7 @@
     "label": "PEZ",
     "subtype": "Loose-passive",
     "stack_mean": 97.48,
-    "confidence": 0.744,
+    "confidence": 0.74,
     "reliability": "confiable"
   },
   "Franco1603": {
@@ -1080,10 +1080,10 @@
   "Freddy9212": {
     "player": "Freddy9212",
     "hero": false,
-    "n": 8,
+    "n": 9,
     "stats": {
-      "vpip": 0.75,
-      "pfr": 0.125,
+      "vpip": 0.6667,
+      "pfr": 0.1111,
       "b3": 0.0,
       "wtsd": 0.5,
       "f2bar": 0.75,
@@ -1100,7 +1100,7 @@
     "label": "PEZ",
     "subtype": "Loose-passive",
     "stack_mean": 18.04,
-    "confidence": 0.696,
+    "confidence": 0.672,
     "reliability": "probable"
   },
   "Geilyn21": {
@@ -1468,10 +1468,10 @@
   "JS99": {
     "player": "JS99",
     "hero": false,
-    "n": 57,
+    "n": 58,
     "stats": {
-      "vpip": 0.386,
-      "pfr": 0.2632,
+      "vpip": 0.3793,
+      "pfr": 0.2586,
       "f2cb": 1.0,
       "wtsd": 0.3077,
       "wsd": 0.5,
@@ -1493,7 +1493,7 @@
     "label": "TIBURON",
     "subtype": "Regular",
     "stack_mean": 61.75,
-    "confidence": 0.779,
+    "confidence": 0.774,
     "reliability": "confiable"
   },
   "JaCkFlor": {
@@ -1526,10 +1526,10 @@
   "Jarduan": {
     "player": "Jarduan",
     "hero": true,
-    "n": 870,
+    "n": 869,
     "stats": {
-      "vpip": 0.3218,
-      "pfr": 0.2276,
+      "vpip": 0.3199,
+      "pfr": 0.2255,
       "cbet": 0.3889,
       "b3": 0.0719,
       "b4": 0.0526,
@@ -1550,7 +1550,7 @@
     "label": "TIBURON",
     "subtype": "Regular",
     "stack_mean": 124.28,
-    "confidence": 0.729,
+    "confidence": 0.713,
     "reliability": "individual"
   },
   "Jeffer30bog": {
@@ -1636,12 +1636,12 @@
   "Johan Otero": {
     "player": "Johan Otero",
     "hero": false,
-    "n": 50,
+    "n": 51,
     "stats": {
-      "vpip": 0.28,
-      "pfr": 0.2,
+      "vpip": 0.2745,
+      "pfr": 0.1961,
       "b3": 0.1364,
-      "wtsd": 0.0938,
+      "wtsd": 0.0909,
       "b4": 0.3333,
       "wsd": 0.6667,
       "cbet": 0.75,
@@ -1660,7 +1660,7 @@
     "label": "TIBURON",
     "subtype": "Regular",
     "stack_mean": 92.12,
-    "confidence": 0.777,
+    "confidence": 0.778,
     "reliability": "confiable"
   },
   "JohanV.": {
@@ -1961,13 +1961,13 @@
   "KappaxSlayer": {
     "player": "KappaxSlayer",
     "hero": false,
-    "n": 28,
+    "n": 29,
     "stats": {
-      "f2cb": 1.0,
-      "vpip": 0.6071,
+      "vpip": 0.5862,
       "pfr": 0.0,
+      "wtsd": 0.16,
+      "f2cb": 1.0,
       "b3": 0.0,
-      "wtsd": 0.1667,
       "f2bar": 0.4,
       "c2cb": 1.0,
       "wsd": 0.5,
@@ -1985,7 +1985,7 @@
     "label": "PEZ",
     "subtype": "Loose-passive",
     "stack_mean": 22.97,
-    "confidence": 0.753,
+    "confidence": 0.761,
     "reliability": "probable"
   },
   "KoKeB0y92": {
@@ -2044,12 +2044,12 @@
   "LUIS-DIAZ": {
     "player": "LUIS-DIAZ",
     "hero": false,
-    "n": 63,
+    "n": 64,
     "stats": {
-      "vpip": 0.2222,
-      "pfr": 0.2222,
+      "vpip": 0.2188,
+      "pfr": 0.2188,
       "b3": 0.1333,
-      "wtsd": 0.3636,
+      "wtsd": 0.3333,
       "cbet": 0.4286,
       "wsd": 1.0,
       "b4": 0.0,
@@ -2067,7 +2067,7 @@
     "label": "TIBURON",
     "subtype": "Regular",
     "stack_mean": 167.17,
-    "confidence": 0.625,
+    "confidence": 0.622,
     "reliability": "confiable"
   },
   "La_Gaitana": {
@@ -2095,13 +2095,13 @@
   "LaloMora": {
     "player": "LaloMora",
     "hero": false,
-    "n": 39,
+    "n": 40,
     "stats": {
+      "vpip": 0.35,
+      "pfr": 0.025,
+      "wtsd": 0.1667,
       "rb": 0.0,
-      "vpip": 0.359,
-      "pfr": 0.0256,
       "b3": 0.0,
-      "wtsd": 0.1818,
       "r2cb": 1.0,
       "bar": 0.75,
       "f2bar": 0.5,
@@ -2114,22 +2114,22 @@
       "pfr": "low",
       "b3": "mid",
       "cbet": "low",
-      "wtsd": "mid"
+      "wtsd": "low"
     },
     "label": "PEZ",
     "subtype": "Passive-reg",
     "stack_mean": 56.48,
-    "confidence": 0.668,
-    "reliability": "probable"
+    "confidence": 0.673,
+    "reliability": "confiable"
   },
   "LolaMora": {
     "player": "LolaMora",
     "hero": false,
-    "n": 9,
+    "n": 10,
     "stats": {
-      "vpip": 0.6667,
-      "pfr": 0.1111,
-      "wtsd": 0.1667,
+      "vpip": 0.6,
+      "pfr": 0.1,
+      "wtsd": 0.1429,
       "wsd": 1.0,
       "cbet": 0.0,
       "bar": 1.0,
@@ -2142,12 +2142,12 @@
       "pfr": "mid",
       "b3": "high",
       "cbet": "low",
-      "wtsd": "mid"
+      "wtsd": "low"
     },
     "label": "TIBURON",
     "subtype": "Loose-passive",
     "stack_mean": 58.96,
-    "confidence": 0.659,
+    "confidence": 0.657,
     "reliability": "probable"
   },
   "Lprieto11": {
@@ -2158,7 +2158,7 @@
       "vpip": 0.5556,
       "pfr": 0.1111,
       "b3": 0.0,
-      "wtsd": 0.25,
+      "wtsd": 0.2857,
       "c2cb": 1.0,
       "f2bar": 0.5,
       "wsd": 0.5,
@@ -2177,7 +2177,7 @@
     "label": "PEZ",
     "subtype": "Loose-passive",
     "stack_mean": 24.14,
-    "confidence": 0.544,
+    "confidence": 0.545,
     "reliability": "probable"
   },
   "MP": {
@@ -2204,16 +2204,16 @@
   "Maicolp": {
     "player": "Maicolp",
     "hero": false,
-    "n": 69,
+    "n": 70,
     "stats": {
-      "vpip": 0.6377,
-      "pfr": 0.058,
-      "wtsd": 0.1017,
+      "vpip": 0.6286,
+      "pfr": 0.0571,
+      "wtsd": 0.1167,
       "c2cb": 1.0,
       "b4": 0.0,
       "b3": 0.125,
       "rb": 0.75,
-      "wsd": 0.8333,
+      "wsd": 0.8571,
       "bar": 1.0,
       "f2bar": 0.6316,
       "cbet": 0.0,
@@ -2230,7 +2230,7 @@
     "label": "PEZ",
     "subtype": "Loose-passive",
     "stack_mean": 34.1,
-    "confidence": 0.871,
+    "confidence": 0.872,
     "reliability": "confiable"
   },
   "Mateo": {
@@ -2309,13 +2309,13 @@
   "MegustanLas...": {
     "player": "MegustanLas...",
     "hero": false,
-    "n": 30,
+    "n": 32,
     "stats": {
-      "vpip": 0.5,
-      "pfr": 0.0333,
-      "wtsd": 0.2917,
+      "vpip": 0.4688,
+      "pfr": 0.0312,
+      "wtsd": 0.3077,
       "b3": 0.0,
-      "wsd": 0.5714,
+      "wsd": 0.5,
       "c2cb": 1.0,
       "bar": 1.0,
       "rb": 0.3333,
@@ -2333,7 +2333,7 @@
     "label": "PEZ",
     "subtype": "Loose-passive",
     "stack_mean": 29.82,
-    "confidence": 0.67,
+    "confidence": 0.68,
     "reliability": "probable"
   },
   "Memelo": {
@@ -2363,11 +2363,11 @@
   "Mira90": {
     "player": "Mira90",
     "hero": false,
-    "n": 38,
+    "n": 39,
     "stats": {
-      "vpip": 0.4737,
-      "pfr": 0.0789,
-      "wtsd": 0.0741,
+      "vpip": 0.4615,
+      "pfr": 0.0769,
+      "wtsd": 0.0714,
       "f2bar": 0.8333,
       "b4": 0.0,
       "b3": 0.2,
@@ -2387,7 +2387,7 @@
     "label": "PEZ",
     "subtype": "Loose-passive",
     "stack_mean": 19.66,
-    "confidence": 0.703,
+    "confidence": 0.707,
     "reliability": "probable"
   },
   "Mrcash": {
@@ -2805,10 +2805,10 @@
   "Pechugo": {
     "player": "Pechugo",
     "hero": false,
-    "n": 46,
+    "n": 47,
     "stats": {
-      "vpip": 0.3261,
-      "pfr": 0.0435,
+      "vpip": 0.3191,
+      "pfr": 0.0426,
       "bar": 0.6,
       "f2bar": 0.5,
       "b3": 0.0,
@@ -2830,16 +2830,16 @@
     "label": "PEZ",
     "subtype": "Passive-reg",
     "stack_mean": 27.34,
-    "confidence": 0.628,
+    "confidence": 0.62,
     "reliability": "confiable"
   },
   "Pipaaf182": {
     "player": "Pipaaf182",
     "hero": false,
-    "n": 22,
+    "n": 23,
     "stats": {
-      "vpip": 0.1818,
-      "pfr": 0.1818,
+      "vpip": 0.1739,
+      "pfr": 0.1739,
       "b3": 0.1538,
       "wtsd": 0.0,
       "rb": 0.0,
@@ -2856,7 +2856,7 @@
     "label": "TIBURON",
     "subtype": "Regular",
     "stack_mean": 110.47,
-    "confidence": 0.695,
+    "confidence": 0.68,
     "reliability": "probable"
   },
   "Player1": {
@@ -2908,9 +2908,9 @@
   "Player3": {
     "player": "Player3",
     "hero": false,
-    "n": 3,
+    "n": 4,
     "stats": {
-      "vpip": 0.3333,
+      "vpip": 0.25,
       "pfr": 0.0
     },
     "bins": {
@@ -2920,10 +2920,10 @@
       "cbet": "n/a",
       "wtsd": "n/a"
     },
-    "label": "PEZ",
+    "label": "TIBURON",
     "subtype": "Regular",
     "stack_mean": 84.79,
-    "confidence": 0.528,
+    "confidence": 0.447,
     "reliability": "probable"
   },
   "Player4": {
@@ -2931,8 +2931,8 @@
     "hero": false,
     "n": 6,
     "stats": {
-      "vpip": 0.3333,
-      "pfr": 0.1667,
+      "vpip": 0.1667,
+      "pfr": 0.0,
       "wtsd": 0.0,
       "bar": 1.0
     },
@@ -2946,7 +2946,7 @@
     "label": "TIBURON",
     "subtype": "Regular",
     "stack_mean": 94.7,
-    "confidence": 0.55,
+    "confidence": 0.438,
     "reliability": "probable"
   },
   "Player5": {
@@ -3138,12 +3138,12 @@
   "SAE_AAAA": {
     "player": "SAE_AAAA",
     "hero": false,
-    "n": 19,
+    "n": 18,
     "stats": {
-      "vpip": 0.5263,
-      "pfr": 0.3158,
+      "vpip": 0.5,
+      "pfr": 0.2778,
       "b3": 0.1667,
-      "wtsd": 0.0769,
+      "wtsd": 0.0833,
       "f2bar": 0.3333,
       "cbet": 0.75,
       "rb": 1.0,
@@ -3161,7 +3161,7 @@
     "label": "TIBURON",
     "subtype": "Loose-passive",
     "stack_mean": 108.78,
-    "confidence": 0.858,
+    "confidence": 0.839,
     "reliability": "probable"
   },
   "SB": {
@@ -3846,12 +3846,12 @@
   "mur420": {
     "player": "mur420",
     "hero": false,
-    "n": 126,
+    "n": 130,
     "stats": {
-      "vpip": 0.381,
-      "pfr": 0.0714,
+      "vpip": 0.3692,
+      "pfr": 0.0692,
       "b3": 0.0784,
-      "wtsd": 0.1733,
+      "wtsd": 0.1646,
       "wsd": 0.7692,
       "rb": 0.0,
       "b4": 0.0,
@@ -3872,7 +3872,7 @@
     "label": "PEZ",
     "subtype": "Passive-reg",
     "stack_mean": 56.87,
-    "confidence": 0.712,
+    "confidence": 0.715,
     "reliability": "confiable"
   },
   "oscar123": {
@@ -4067,12 +4067,12 @@
   "triki12": {
     "player": "triki12",
     "hero": false,
-    "n": 68,
+    "n": 69,
     "stats": {
-      "vpip": 0.1912,
-      "pfr": 0.1471,
+      "vpip": 0.1884,
+      "pfr": 0.1449,
       "b3": 0.037,
-      "wtsd": 0.0732,
+      "wtsd": 0.0714,
       "wsd": 1.0,
       "r2cb": 1.0,
       "bar": 0.3333,
@@ -4090,7 +4090,7 @@
     "label": "TIBURON",
     "subtype": "Regular",
     "stack_mean": 142.73,
-    "confidence": 0.587,
+    "confidence": 0.585,
     "reliability": "confiable"
   },
   "trombosis2.0": {
