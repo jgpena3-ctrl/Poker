@@ -75,16 +75,23 @@ def procedencia(hands_input=None, hands_used=None, reliable_hands=None,
     paths       : rutas cuyo estado sin commitear invalida la reproduccion.
 
     LIMITACION CONOCIDA: `hands_window` se deduce comparando `hands_used`
-    con `RELIABLE_HANDS`. Si alguien construye con 900 manos de otra fuente,
-    el sello dira `reliable_only` sin serlo. Se acepta: para distinguirlo
-    haria falta que `from_hands` recibiera la ventana como parametro.
+    con la ventana fiable. Si alguien construye con ese numero de manos de
+    otra fuente, el sello dira `reliable_only` sin serlo. Se acepta: para
+    distinguirlo haria falta que `from_hands` recibiera la ventana como
+    parametro.
+
+    La ventana fiable NO es `RELIABLE_HANDS`: son esas lineas de corte MENOS
+    las manos de `EXCLUSIONES_VENTANA_FABLE` (CM-004). Comparar contra el
+    numero bruto daria `custom` a la propia ventana fiable, que es
+    exactamente el fallo que este modulo existe para evitar.
     """
     if reliable_hands is None:
-        from .learn import RELIABLE_HANDS as reliable_hands
+        from .learn import RELIABLE_HANDS, manos_excluidas
+        reliable_hands = RELIABLE_HANDS - len(manos_excluidas())
     if hands_used is None:
         hands_used = hands_input
     # La ventana se clasifica por las manos RECIBIDAS, no por las que
-    # aportaron observacion: con 900 de entrada pero 874 con cartas, la
+    # aportaron observacion: con 877 de entrada pero 851 con cartas, la
     # ventana sigue siendo la fiable. `hands_used` mide la muestra
     # efectiva, que es otra cosa.
     if hands_input is None:

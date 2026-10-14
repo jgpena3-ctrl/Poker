@@ -1031,8 +1031,15 @@ class LiveRecorder:
 
         out = {k: v for k, v in self.hand.items()
                if k not in ('current_street', 'max_pot')}
+        # INC-002: `p['active']` significa "estaba sentado al empezar la
+        # mano", NO "no ha foldeado". Sin este filtro extra, un jugador que
+        # se compromete y despues foldea se queda en `allin` (caso H_0851,
+        # 1 de 138 entradas en la ventana fiable). El clasificador lo creeria
+        # y declararia bloqueado a alguien que ya se fue. Arreglo hacia
+        # adelante: las manos ya grabadas no se tocan.
         out['allin'] = [p['_id'] for p in self.hand['players']
-                        if p['_id'] in self._allin_players and p['active']]
+                        if p['_id'] in self._allin_players and p['active']
+                        and p['pos'] not in self._folded_positions]
         for p in out['players']:
             del p['_id']
 

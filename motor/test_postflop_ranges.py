@@ -227,7 +227,12 @@ def test_postflop_meta_ventana_fiable():
     hands = load_hands(reliable_only=True)
     m = pf.PostflopRangeModel.from_hands(hands)
     meta = m.to_json()['meta']
-    assert meta['hands_input'] == 900
+    # 900 lineas de corte menos las 23 de CM-004 (EXCLUSIONES_VENTANA_FABLE).
+    # Se escribe como expresion para que no vuelva a quedar un 900 magico
+    # si la ventana cambia otra vez.
+    import motor.learn as _learn
+    esperado = _learn.RELIABLE_HANDS - len(_learn.manos_excluidas())
+    assert meta['hands_input'] == esperado
     assert meta['hands_window'] == 'reliable_only'
     # la muestra efectiva es menor o igual que la de entrada, nunca mayor
     assert 0 < meta['hands_used'] <= meta['hands_input']

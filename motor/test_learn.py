@@ -251,8 +251,22 @@ def test_load_hands_reliable_only_usa_constante(tmp_path, monkeypatch):
     p.write_text(_db_lines(1200), encoding='utf-8')
     import motor.learn as learn_mod
     monkeypatch.setattr(learn_mod, 'RELIABLE_HANDS', 900)
-    assert len(load_hands(str(p), reliable_only=True)) == 900
-    assert len(load_hands(str(p), reliable_only=True, max_hands=50)) == 50
+    # La ventana son RELIABLE_HANDS LINEAS menos las manos excluidas por
+    # defecto de dato (CM-004). El corte por lineas no cambia: lo que
+    # se resta son las que hay dentro del corte.
+    excl = len(learn_mod.manos_excluidas())
+    esperado = 900 - excl
+    assert len(load_hands(str(p), reliable_only=True)) == esperado
+    assert esperado == 877, 'el corte es 900 lineas y 23 exclusiones'
+    # Con max_hands=50 el corte son 50 lineas, y dentro caben 3 de las
+    # 23 exclusiones de CM-004. No es un bug: la exclusion se aplica
+    # DESPUES del corte por lineas, que es lo que significa 'estas 50
+    # lineas, menos las que no son fiables'.
+    dentro = sum(1 for _ in range(50)
+                 if 'H_%04d' % (_ + 1) in learn_mod.manos_excluidas())
+    assert len(load_hands(str(p), reliable_only=True,
+                          max_hands=50)) == 50 - dentro
+    assert dentro == 3, 'H_0031, H_0037 y H_0039 caen dentro de las 50'
 
 
 # ---------------------------------------------------------------------------
@@ -399,11 +413,13 @@ def test_squeeze_regresion_sobre_las_900():
            limpes), lo que inflaba squeeze.
     - 7  : se conto `limps` solo con raises==0 y se rompio squeeze del todo.
     - 32 : se separo `callers`, pero `limps_before` seguia contando.
-    - 26 : squeeze = `callers >= 1` unicamente (estado actual).
+    - 26 : squeeze = `callers >= 1` unicamente.
+    - 20 : misma regla, pero la ventana paso de 900 a 877 al excluir
+           las 23 de CM-004. 6 de los squeeze estaban dentro.
     """
     st = PreflopStats.from_hands(load_hands(reliable_only=True))
     total = sum(st.cats[p]['squeeze'] for p in st.cats)
-    assert total == 26, 'squeeze=%d, se esperaba 26' % total
+    assert total == 20, 'squeeze=%d, se esperaba 20' % total
 
 
 def test_aceptacion_6_bb_no_detectado_si_hay_limp_antes():

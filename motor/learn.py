@@ -52,6 +52,53 @@ CATEGORY_ORDER = ('open', 'limp', 'rol', 'call_limp', 'call_open', '3bet',
 
 RELIABLE_HANDS = 900
 
+# Manos que la ventana fiable EXCLUYE, y por que.
+#
+# No es una poda de rango: la exclusion es por defecto de DATO, y la mano
+# sigue intacta en `hands_db.jsonl` y en `load_hands(reliable_only=False)`.
+# Se excluyen de la CALIBRACION porque su defecto esta identificado y su
+# efecto no esta cuantificado; mantenerlas dentro seria usar unas cifras
+# que el propio proyecto ya sabe que no son fiables.
+#
+# CM-004 (23 manos): la entrada `BB: 'b'` —la ciega— aparece DESPUES de
+# acciones voluntarias. `learn._es_ciega_bb` exige `not voluntary_before`, asi
+# que no la reconoce como ciega y el motor la lee como una subida que puede
+# no haber ocurrido. Es un defecto de ORDEN: corregirlo exigiria inventar el
+# orden que ocurrio, y eso no se hace. Documentacion y estado:
+# `DOCS/EXCLUSION_CM004.md` y `DOCS/DECISION_CM004.md`.
+#
+# El detalle importante: las 23 se excluyen de la calibracion SIN ESPERAR a
+# decidir si se regraba la base. Son dos problemas distintos y la exclusion
+# es reversible en cuanto haya original.
+EXCLUSIONES_VENTANA_FABLE = (
+    ('CM-004',
+     'ciega del BB despues de acciones voluntarias: el motor la lee como '
+     'una subida que pudo no ocurrir',
+     frozenset((
+         'H_0031', 'H_0037', 'H_0039', 'H_0051', 'H_0067', 'H_0078',
+         'H_0104', 'H_0107', 'H_0109', 'H_0127', 'H_0143', 'H_0147',
+         'H_0161', 'H_0170', 'H_0183', 'H_0210', 'H_0215', 'H_0248',
+         'H_0262', 'H_0263', 'H_0279', 'H_0294', 'H_0722',
+     ))),
+)
+
+
+def manos_excluidas():
+    """Set de `hand_id` que la ventana fiable deja fuera."""
+    out = set()
+    for _clave, _motivo, ids in EXCLUSIONES_VENTANA_FABLE:
+        out |= set(ids)
+    return out
+
+
+def motivos_exclusion(hand_id):
+    """Motivo por el que una mano queda fuera de la ventana fiable, o None."""
+    motivos = []
+    for clave, motivo, ids in EXCLUSIONES_VENTANA_FABLE:
+        if hand_id in ids:
+            motivos.append('%s: %s' % (clave, motivo))
+    return '; '.join(motivos) or None
+
 
 def load_hands(path=None, *, max_hands=None, reliable_only=False):
     """Carga las manos válidas (dicts) de data/hands_db.jsonl.
@@ -59,11 +106,16 @@ def load_hands(path=None, *, max_hands=None, reliable_only=False):
     Descartadas: líneas rotas o faltan `players`/`streets`.
 
     max_hands: límite duro de manos válidas (None = todas).
-    reliable_only: si True, corta en las primeras RELIABLE_HANDS manos.
+    reliable_only: si True, corta en las primeras RELIABLE_HANDS lineas Y
+        excluye las manos de `EXCLUSIONES_VENTANA_FABLE` (hoy las 23 de
+        CM-004). Las manos NO se borran: siguen en el fichero y en
+        `load_hands(reliable_only=False)`. Se excluyen de la calibracion
+        porque su defecto esta identificado y su efecto sin cuantificar.
     """
     if max_hands is not None and max_hands <= 0:
         return []
     path = path or DB_PATH
+    excluir = manos_excluidas() if reliable_only else frozenset()
     if reliable_only:
         limit = RELIABLE_HANDS if max_hands is None \
             else min(max_hands, RELIABLE_HANDS)
@@ -83,6 +135,8 @@ def load_hands(path=None, *, max_hands=None, reliable_only=False):
                 continue
             if isinstance(hand, dict) and hand.get('streets') is not None \
                     and hand.get('players') is not None:
+                if hand.get('hand_id') in excluir:
+                    continue
                 hands.append(hand)
     return hands
 

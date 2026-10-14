@@ -321,7 +321,12 @@ def test_player_ranges_meta_ventana_fiable():
     from motor.learn import load_hands
     hands = load_hands(reliable_only=True)
     meta = pr.ProfileRangeModel.from_hands(hands).to_json()['meta']
-    assert meta['hands_input'] == 900
+    # 900 lineas de corte menos las 23 de CM-004 (EXCLUSIONES_VENTANA_FABLE).
+    # Se escribe como expresion para que no vuelva a quedar un 900 magico
+    # si la ventana cambia otra vez.
+    import motor.learn as _learn
+    esperado = _learn.RELIABLE_HANDS - len(_learn.manos_excluidas())
+    assert meta['hands_input'] == esperado
     assert meta['hands_window'] == 'reliable_only'
     # con la ventana completa, algunas manos no aportan ninguna decision
     # con cartas: `hands_used` es menor, y eso es informacion real

@@ -1,9 +1,11 @@
 # INC-002 — el filtro `p['active']` ensucia el campo `allin`
 
-**Estado:** abierto. **Arreglo pendiente de la decisión CM-004.**
-**Magnitud medida:** 1 caso en 900 manos (0,7 %).
-**No se arregla aquí.** Es un defecto del recorder, y el recorder se toca
-al decidir si la base de datos se regraba o se migra.
+**Estado:** **ARREGLADO EN CÓDIGO**. Pendiente solo el registro histórico.
+**Arreglo:** `recorder/recorder_live.py:1042`, una línea.
+**Tests:** `recorder/test_inc002.py` (4 casos).
+**Magnitud histórica:** 1 caso en 900 manos (0,7 %), y **efecto cero** sobre
+las cifras de F7.2 (ver §5).
+**Decisión de regrabar/migrar:** `DECISION_CM004.md` (sigue abierta).
 
 ---
 
@@ -68,36 +70,69 @@ Es poco. No es cero, y mientras no se arregle, el cruce
 `folds_hasta` × `no_puede_actuar` **no es 0 por construcción**: es 0 más
 este. Está declarado como tal en `CONTRATO_F72A.md` §4.3.
 
-## 5. Por qué no se arregla ahora
+## 5. Efecto real sobre las cifras: CERO
 
-Porque no es un bug de lógica, es un bug de **procedencia**: la información
-correcta (`_folded_positions`) existe en el recorder y no se usa al volcar.
-Arreglarlo tiene dos costes distintos:
+Medido sobre la ventana fiable completa, el único registro defectuoso es
+`H_0851`, y **no aporta ningún punto de decisión**:
 
-- **Arreglar el código** de aquí en adelante es de una línea.
-- **Reparar las manos ya grabadas** exige volver a escribirlas, y eso es
-  exactamente la decisión de CM-004.
+- su hero es `CO`, que **foldeó en el preflop**;
+- el resto de sus calles no tienen acciones;
+- por tanto `puntos_decision_mano(H_0851) == []`.
 
-Hacer la primera sin la segunda dejaría la base con dos reglas distintas
-según la antigüedad de cada mano. Peor que hoy.
+Un registro corrupto que no llega al conteo no puede sesgarlo. El 0,7 %
+sigue siendo real como tasa de defecto del recorder, pero **su impacto en
+F7.2 es nulo**.
 
-## 6. Qué haría falta para cerrarlo
+Esto no es un argumento para dejar el defecto: el recorder sigue
+produciendo basura y, en otra mano, ese error sí habría caído en el
+numerador. Lo que dice es que la decisión de regrabar **no se sostiene en
+esta incidencia**.
 
-1. Que la línea 1034 filtre también por no-foldeado:
+## 6. El arreglo aplicado
 
-   ```python
-   and p['pos'] not in self._folded_positions
-   ```
+`recorder/recorder_live.py:1042`
 
-2. Reparar o descartar los registros ya afectados. Con 1 caso en 900, la
-   opción barato es **declararlos** en vez de regrabar: el coste de
-   regrabar una mano por 0,7 % de ruido no está justificado.
-3. Lo decide CM-004, no este documento.
+```python
+out['allin'] = [p['_id'] for p in self.hand['players']
+                if p['_id'] in self._allin_players and p['active']
+                and p['pos'] not in self._folded_positions]
+```
 
-## 7. Lo que este defecto NO invalida
+La condición `and p['pos'] not in self._folded_positions` es **la misma que
+ya usaba el bloque de al lado** (línea 1022, `all_still_in`) para decidir
+quién sigue en la mano. No es una regla nueva: es aplicar la que el
+recorder ya tenía y no usaba en este sitio.
+
+**Solo hacia adelante.** Las manos ya grabadas no se tocan: `H_0851` sigue
+en el fichero con su `allin` erróneo, y por eso
+`multiway.contradiccion_allin_fold()` tiene que seguir detectándolo y
+marcando el punto como `DESCONOCIDO`.
+
+### Cómo se verifica
+
+`recorder/test_inc002.py` comprueba el filtro leyendo el AST del recorder,
+no simulando un recorder entero: el resto de `_allin_players`,
+`_folded_positions` y `players[]` ya tienen sus propios tests. Tres
+garantías:
+
+1. el predicado menciona `_folded_positions`;
+2. **no** se ha perdido ninguna de las otras tres condiciones (`active`,
+   `_allin_players`, proyección a `_id`);
+3. un compromiso sin fold sigue saliendo, y con fold deja de salir — que es
+   el requisito de no arreglar una cosa rompiendo la otra.
+
+## 7. Lo que queda abierto
+
+Solo una cosa, y **no depende de CM-004**: decidir qué hacer con el
+registro histórico. Con el impacto medido en cero y siendo 1 de 138, la
+opción barato es **declararlo** — el mecanismo reversible ya está en
+`EXCLUSION_CM004.md` §6 — en lugar de regrabar una mano por 0,7 % de ruido
+que no sesga ninguna cifra.
+
+## 8. Lo que este defecto NO invalida
 
 - El contrato F7.2.a, que ya declara el cruce como "0 más datos malos".
-- La cota de 38 puntos desconocidos: es otra causa (el campo ausente en
-  las 73 manos antiguas), no esta.
-- El resto de las 899 manos: un registro defectuoso no describe el
-  recorder entero.
+- La cota de puntos desconocidos: es otra causa (el campo ausente en las 73
+  manos antiguas), no esta.
+- El resto de la ventana: un registro defectuoso no describe el recorder
+  entero.
