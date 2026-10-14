@@ -6,7 +6,7 @@ Orden por dependencias reales; ninguna medición sobre datos contaminados ni sob
 ## Fase 0 — Congelar base
 - Tag `pre-audit-82b4fab`.
 - Snapshot de `data/*.json` en `data/_snapshot_pre_audit/`.
-- Decisión regrabar vs migrar DB en `DOCS/DECISIONES.md`.
+- Decisión regrabar vs migrar DB en `DECISION_CM004.md`.
 
 ## Fase 1 — Ventana de datos fiable (implementada parcialmente)
 - `learn.load_hands(path=None, *, max_hands=None, reliable_only=False)` con `RELIABLE_HANDS=900`.

@@ -131,7 +131,11 @@ buscar:
 | `test_c4_ninguna_accion_legal_tambien_lanza` | plan sin nada evaluable |
 | `test_c4_las_candidatas_ausentes_no_se_inventan` | una clave que no está en `ev` no se elige |
 
-> Los dos tests que **cambian de contrato** respecto al anterior
-> (`test_c4_tabla_vacia_devuelve_fold_con_cero` y su hermano) se han
-> **eliminado**, no relajado. Un contrato que se cumple con las dos reglas a
-> la vez no es un contrato: es una indefinición con test.
+> Un solo test ha cambiado de contrato, y se ha **eliminado**, no relajado:
+> `test_c4_tabla_vacia_devuelve_fold_con_cero` (eliminado) afirmaba que una
+> tabla vacía devolvía `('fold', 0.0)`. Era la mitad del `TODO(F5)` que este
+> contrato sustituye, y el `0.0` era precisamente el número inventado que el
+> contrato prohíbe.
+>
+> Un contrato que se cumple con las dos reglas a la vez no es un contrato: es
+> una indefinición con test. Por eso no se relajó: se borró.

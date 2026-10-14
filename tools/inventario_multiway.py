@@ -158,7 +158,7 @@ def n_activos(hand):
 #   {active, cards, name, pos, stack}
 # NO hay ninguna marca de hero. El proyecto lo reconoce por tener CARTAS
 # CONOCIDAS (`learn.hand_known`), no por el nombre: `asistente_live` usa el
-# nombre solo para etiquetar, y `PROYECTO.md` insiste en no depender de el.
+# nombre solo para etiquetar, y `DOCS/PROYECTO.md` insiste en no depender de el.
 #
 # LIMITACION DECLARADA: si dos jugadores tienen cartas conocidas (el segundo
 # hero que rastrea `asistente_live`), se toma el primero. Se cuenta cuántos

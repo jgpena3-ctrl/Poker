@@ -1,41 +1,37 @@
 # -*- coding: utf-8 -*-
-"""Manifiesto y verificacion de las correcciones A MANO de hands_db.jsonl.
+"""Manifiesto y verificacion de `hands_db.jsonl`. NO ESCRIBE NADA.
 
     python tools/verificar_cm004.py
 
 Que problema resuelve
 --------------------
-`data/hands_db.jsonl` se ha corregido a mano. Eso tiene un coste: una base
-editada a mano no tiene quien la vuelva a hacer ni quien detecte que alguien
-la vuelve a estropear. Este script es esa pieza. NO ESCRIBE NADA.
-
-La regla vive en el motor, no aqui
-----------------------------------
-El defecto ES la discrepancia con el motor: `_es_ciega_bb` exige que no haya
-accion voluntaria previa, y si una `BB b` no lo cumple, el motor la lee como
-una subida. Una cuenta hecha aqui podria discrepar de `_es_ciega_bb` y
-publicar un numero que el motor no sostiene. Por eso las funciones viven en
-`motor/learn.py` y este script las importa.
+La base se ha editado a mano, y una base editada a mano no tiene quien la
+vuelva a hacer ni quien detecte que alguien la vuelve a estropear. Este
+script es la lista de lo que se toco y el porque.
 
 Las tres secciones
 ------------------
   1. INVARIANTE. ¿Queda alguna mano en las 1280 en la que una `BB b` no pueda
      ser la ciega? Se espera 0.
   2. CLASIFICACION. Para cada mano editada respecto a la version PREVIA de la
-     base (anclada por SHA a `e314f74`, no a HEAD), que clase de cambio es:
-     reetiquetado (una sola etiqueta `b` pasa a `r`) o
-     reconstruccion (ademas se anade, borra o reordena alguna accion, o se
-     cambia lo que hizo otro jugador). El script no juzga si una
-     reconstruccion es correcta: la DECLARA y exige que este declarada.
-  3. DECLARADAS. Las reconstrucciones y los cambios ajenos a CM-004, cada uno
-     con su motivo y, si sigue pendiente, el valor recomendado.
+     base (anclada al commit `e314f74`), que clase de cambio es. Se espera
+     EXACTAMENTE: 23 reetiquetados y 1 centinela de carta.
+  3. REVERTIDAS. Las ocho correcciones que se deshicieron, con el motivo. Se
+     verifica que NO esten en el fichero: una revertida que reaparece es un
+     fallo, y una corregida que nadie declaro tambien.
 
-Por que declarar es obligatoria
--------------------------------
-Porque un instrumento que dice "todo correcto" delante de un cambio sin
-explicar es PEOR que uno que dice "no lo se". Si alguien edita a mano una
-septima reconstruccion y no la anade a este fichero, el script falla en vez de
-dar luz verde.
+Por que anclar a un commit y no a HEAD
+--------------------------------------
+Porque en cuanto la reinterpretacion esta commiteada, HEAD contiene la base
+ya corregida: la regla derivaria 0 manos y el script pasaria sin comprobar
+nada. Ver `SHA_ANTES`.
+
+La regla vive en el motor, no aqui
+----------------------------------
+El defecto ES la discrepancia con el motor: `_es_ciega_bb` exige que no haya
+accion voluntaria previa. Una cuenta hecha aqui podria discrepar de
+`_es_ciega_bb` y publicar un numero que el motor no sostiene. Las funciones
+viven en `motor/learn.py` y este script las importa.
 """
 import hashlib
 import io
@@ -52,134 +48,67 @@ from motor import learn  # noqa: E402
 DB_REL = 'data/hands_db.jsonl'
 DB_PATH = os.path.join(ROOT, *DB_REL.split('/'))
 
-# La version de la base ANTES de la reinterpretacion.
-#
-# Se direcciona por COMMIT (`e314f74`, ancestro, no se va a mover) y se
-# VERIFICA por el sha256 del contenido. Las dos cosas hacen falta: el commit
-# es lo unico que git puede resolver, y el hash es lo que detecta que ese
-# commit dejase de ser el que creamos.
-#
-# Anclarlo a HEAD~1 pareceria mas natural y estaria mal: en cuanto la
-# reinterpretacion se comiteara, HEAD~1 seria la version corregida, la regla
-# derivaria 0 manos y el script pasaria sin comprobar nada. Un guard que
-# depende de que el trabajo este SIN COMITEAR solo vigila mientras hay
-# trabajo sin commitear.
+# Se direcciona por COMMIT, que es lo unico que git resuelve, y se VERIFICA
+# por el sha256 del contenido, que es lo que detecta que ese commit dejase de
+# ser el que creimos.
 COMMIT_ANTES = 'e314f74'
 SHA_ANTES = 'bb46fec0f2e37dc7c4280cb2302d3180c0502cf9d289ab8430b1e6d957d912ee'
 
-# --------------------------------------------------------------------------
-# Correcciones que NO son un simple reetiquetado.
+# Las ocho correcciones a mano que se han DESHECHO.
 #
-# Las RECONSTRUCCIONES cambian el preflop mas alla de la etiqueta del BB: anaden
-# o borran acciones, las reordenan, o cambian lo que hizo OTRO jugador. Eso es
-# reconstruir el orden, que es justamente lo que CM-004 declaraba no
-# inventable. Se declaran una por una porque cada una es una decision
-# distinta y no hay una regla comun que las cubra.
+# Todas compartian el mismo defecto de procedimiento, y no de poker: el
+# defecto que las justificaba NO es raro, se repite cientos de veces en la
+# base. Corregir una vez un defecto que aparece 652 veces deja la base unas
+# veces bien y otras mal, sin que nadie diga por que. Un defecto uniforme y
+# conocido es recuperable; uno parcheado sin script, no.
 #
-# El guion corto es el sintoma: las seis tienen la misma firma, una `BB b` mal
-# ordenada mas ALGO MAS. De ahi que no valga la regla de reetiquetado.
-# --------------------------------------------------------------------------
-RECONSTRUCCIONES = {
-    'H_0039': {
-        'que': "BB 'b' 6.0 -> 'r' 6.0, y se ANADE 'BB f' 0.0 al final",
-        'motivo': "El fold anadido es la MISMA inferencia que aplico CM-003 "
-                  "(preflop cerrado y el BB sin accion propia, luego folteo), "
-                  "pero en una mano que CM-003 no cubria porque el BB si "
-                  "tenia entrada. Es ADITIVA y sigue una regla que ya existe, "
-                  "que es lo que la hace mas defendible que H_0067, pero sigue "
-                  "sin original: nadie vio ocurrir ese fold.",
-        'estado': 'APLICADO - requiere revisar la grabacion',
-        'recomendado': None,
-    },
-    'H_0051': {
-        'que': "SB 'r' 0.5 -> 'c' 1.0, BB 'b' 5.0 -> 'r' 5.0, y se ANADE "
-               "'SB f' 0.0",
-        'motivo': "El 'SB r 0.5' era una SUBIDA POR DEBAJO DE LA CIEGA, "
-                  "imposible, y del mismo genero que CM-001 (un importe leido "
-                  "mal): 0.5 no puede ser una subida cuando la ciega es 1.0. "
-                  "Leerlo como llamada a 1.0 es la unica lectura coherente. "
-                  "Pero eso cambia lo que hizo el SB, no solo la etiqueta del "
-                  "BB, y anade un fold.",
-        'estado': 'APLICADO - requiere revisar la grabacion',
-        'recomendado': None,
-    },
-    'H_0067': {
-        'que': "una unica llamada 'SB c 1.5' se parte en DOS: 'SB c 1.0' "
-               "antes del BB y 'SB c 1.5' despues; ademas 'BB b' 2.5 -> 'r'",
-        'motivo': "La mano tiene una sola llamada registrada del SB, a 1.5, y "
-                  "la reconstruccion la convierte en dos, una a 1.0 que NO "
-                  "estaba grabada. Inventa una accion y duplica un importe. Es "
-                  "el mas fragil de los seis: el unico defecto real era el 'b' "
-                  "del BB, y el resto es relleno.",
-        'estado': 'APLICADO - requiere revisar la grabacion',
-        'recomendado': None,
-    },
-    'H_0109': {
-        'que': "SB 'r' 0.5 -> 'c' 0.5, BB 'b' 3.0 -> 'r' 3.0",
-        'motivo': "Misma familia que H_0051: el 'SB r 0.5' era una subida "
-                  "imposible por debajo de la ciega y se relee como llamada. "
-                  "Aqui no se anade ninguna accion, que es lo que lo hace mas "
-                  "defendible que H_0051.",
-        'estado': 'APLICADO - requiere revisar la grabacion',
-        'recomendado': None,
-    },
-    'H_0143': {
-        'que': "CO 'r' 1.0 -> 'c' 1.0, BB 'b' 3.0 -> 'r' 3.0",
-        'motivo': "La misma regla, con el limite mas fino: una subida a "
-                  "EXACTAMENTE 1.0, la ciega nominal, sin que nadie haya "
-                  "subido antes. No es imposible por regla, pero tampoco es una "
-                  "apertura: se relee como limp.",
-        'estado': 'APLICADO - requiere revisar la grabacion',
-        'recomendado': None,
-    },
-    'H_0263': {
-        'que': "se BORRA 'MP x' 0.0, se reordena el preflop, y 'BB b' 2.5 -> "
-               "'r' 2.5",
-        'motivo': "El 'MP x' estaba grabado despues de que el MP ya habia "
-                  "foldeado en el indice 1: un check de un jugador que ya no "
-                  "esta en la mano es una contradiccion real, y borrarlo esta "
-                  "justificado. Reordenar el resto del preflop NO lo esta: eso "
-                  "es reconstruir la secuencia.",
-        'estado': 'APLICADO - requiere revisar la grabacion',
-        'recomendado': None,
-    },
+# La evidencia del recuento esta en `DOCS/RECONSTRUCCIONES_CM004.md`.
+#
+# Las seis primeras conservan el reetiquetado `b` -> `r` del BB, que es la
+# parte con una regla exacta y derivada del motor. Se revierte TODO lo demas.
+REVERTIDAS_PARCIALES = {
+    'H_0039': 'anade un `BB f` que nadie grabo. El patron "el BB no vuelve a '
+              'actuar tras la ultima subida" aparece en 652 de las 1280 manos.',
+    'H_0051': '`SB r 0.5` -> `c 1.0` y anade un `SB f`. El patron "subida a '
+              'un importe <= la ciega nominal" aparece en 45 manos.',
+    'H_0067': 'parte una llamada grabada en DOS, una de ellas a un importe '
+              'que no constaba. Inventa una accion, y no tiene patron propio '
+              'que la respalde: es el peor de los ocho.',
+    'H_0109': '`SB r 0.5` -> `c 0.5`. El patron, 45 manos.',
+    'H_0143': '`CO r 1.0` -> `c 1.0`. El patron, 45 manos.',
+    'H_0263': 'borra un `MP x` y reordena el preflop. El patron "accion de '
+              'alguien que ya habia foldeado" aparece en 8 manos.',
 }
 
-# Manos cambiadas que NO son de CM-004.
+# Estas dos no tienen ninguna parte que conservar: no son de CM-004 y se
+# vuelven al valor grabado entero.
+REVERTIDAS_TOTALES = {
+    'H_0969': 'borra un `BB f` imposible y recorta `winner`. El campo '
+              '`winner` es incoherente en 214 de las 1280 manos, y ademas '
+              'este recorte no es el unico caso de su patron.',
+    'H_0970': 'recorta `winner` y ADEMAS quita al BB de un bote que gano: '
+              'cambia un error por otro. Mismo campo, misma causa que '
+              'H_0969.',
+}
+
+REVERTIDAS = dict(REVERTIDAS_PARCIALES)
+REVERTIDAS.update(REVERTIDAS_TOTALES)
+
+# El unico cambio que se mantiene y no es de CM-004.
 CAMBIOS_QUE_NO_SON_CM004 = {
     'H_0350': {
         'que': "dos players con cards='-' en vez de ''",
         'motivo': "CM-002. El guion no es un codigo de carta: son las 2 unicas "
                   "apariciones de ese centinela en las 1280 manos, frente a "
-                  "6085 usos de la cadena vacia. Normalizar el centinela NO es "
-                  "reconstruir las cartas, que es lo que CM-002 prohibe.",
+                  "6085 usos de la cadena vacia. Normalizar el centinela NO "
+                  "es reconstruir las cartas, que es lo que CM-002 prohibe. "
+                  "Aqui el patron se aplica a TODAS sus apariciones, que es "
+                  "justo lo que se echa en falta a los otros ocho.",
         'estado': 'APLICADO',
-        'recomendado': None,
-    },
-    'H_0969': {
-        'que': "se borra el 'BB f' final del turn; winner ['hero','p4'] pasa a "
-               "['hero']",
-        'motivo': "El 'BB f' va detras de su propia apuesta sin respuesta: es "
-                  "imposible. Con la apuesta del turn sin llamada el BB se "
-                  "lleva el bote, y el SB (p4) no puede figurar como ganador.",
-        'estado': 'APLICADO',
-        'recomendado': None,
-    },
-    'H_0970': {
-        'que': "winner ['hero','p1','p4'] pasa a ['hero']",
-        'motivo': "Preflop: el BB postea, el BTN foldea, el SB foldea. Todos "
-                  "foldean hasta las ciegas. El defecto real es que p4 (BTN) "
-                  "FOLDEA y figura como ganador. Pero el recorte aplicado quita "
-                  "ADEMAS p1 (BB), que comparte el bote: cambia un error por "
-                  "otro. De las 77 manos del mismo patron, H_0345 graba SB+BB y "
-                  "H_1050 graba BB+SB.",
-        'estado': 'PENDIENTE - no aplicar sin revisar la grabacion',
-        'recomendado': ['hero', 'p1'],
     },
 }
 
-DECLARADAS = dict(RECONSTRUCCIONES)
-DECLARADAS.update(CAMBIOS_QUE_NO_SON_CM004)
+DECLARADAS = set(CAMBIOS_QUE_NO_SON_CM004)
 
 
 def sha256(path):
@@ -199,26 +128,19 @@ def leer_texto(texto):
 
 
 def de_referencia():
-    """La version de la base de la que se deriva la regla.
-
-    Va anclada a un SHA, no a HEAD. Ver la nota de `SHA_ANTES`: derivar
-    contra la version corregida daria 0 manos y el script pasaria sin
-    comprobar nada.
-    """
+    """La version de la base de la que se deriva la regla. Verificada."""
     crudo = subprocess.run(['git', 'show', '%s:%s' % (COMMIT_ANTES, DB_REL)],
                            cwd=ROOT, capture_output=True)
     if crudo.returncode != 0:
         return None, 'no se pudo leer %s:%s' % (COMMIT_ANTES, DB_REL)
-    crudo_b = crudo.stdout
-    real = hashlib.sha256(crudo_b).hexdigest()
+    real = hashlib.sha256(crudo.stdout).hexdigest()
     if real != SHA_ANTES:
-        return None, ('%s:%s tiene sha256 %s, no el %s que se esperaba'
+        return None, ('%s:%s tiene sha256 %s, no el %s esperado'
                       % (COMMIT_ANTES, DB_REL, real[:16], SHA_ANTES[:16]))
-    return leer_texto(crudo_b.decode('utf-8')), None
+    return crudo.stdout.decode('utf-8'), None
 
 
 def indices_cm004(manos):
-    """hand_id -> [(indice, importe)] de las `BB b` mal ordenadas."""
     sel = {}
     for h in manos:
         for i, importe, causa in learn.entradas_bb_rechazadas(h):
@@ -271,11 +193,11 @@ def main():
     referencia, error = de_referencia()
     if referencia is None:
         print('  FALLO: %s' % error)
-        print('         Sin la version previa no se puede derivar la regla, y '
-              'sin la regla este script no comprueba nada.')
+        print('         Sin la version previa no se deriva la regla, y sin la '
+              'regla este script no comprueba nada.')
         return 2
-    C = {h['hand_id']: h for h in referencia}
     T = {h['hand_id']: h for h in trabajo}
+    C = {h['hand_id']: h for h in leer_texto(referencia)}
 
     # ------------------------------------------------------------------ 1
     seccion('1. INVARIANTE -- ninguna `BB b` que no pueda ser la ciega')
@@ -288,9 +210,9 @@ def main():
 
     # ------------------------------------------------------------------ 2
     seccion('2. CLASIFICACION -- que clase de cambio tiene cada mano editada')
-    derivadas = indices_cm004(referencia)
+    derivadas = indices_cm004(C and leer_texto(referencia))
     descuadres = []
-    for h in referencia:
+    for h in leer_texto(referencia):
         acc = ((h.get('streets') or {}).get('preflop') or {}).get('actions') or []
         for i, importe, causa in learn.entradas_bb_rechazadas(h):
             if causa != learn.CAUSA_ORDEN:
@@ -306,11 +228,11 @@ def main():
     else:
         print('  la regla del motor selecciona %d mano(s) sobre las %d de la '
               'version previa (%s).'
-              % (len(derivadas), len(referencia), COMMIT_ANTES))
+              % (len(derivadas), len(C), COMMIT_ANTES))
         print('  OK  sus %d indices apuntan a su accion cruda.'
               % sum(len(v) for v in derivadas.values()))
 
-    reetiquetadas, reconstruidas, ajenas = [], [], []
+    reetiquetadas, reconstruidas, ajenas, otras = [], [], [], []
     for hid in sorted(set(T) | set(C)):
         if canon(C.get(hid)) == canon(T.get(hid)):
             continue
@@ -319,70 +241,87 @@ def main():
             reetiquetadas.append(hid)
         elif hid in derivadas:
             reconstruidas.append(hid)
-        else:
+        elif hid in DECLARADAS:
             ajenas.append(hid)
+        else:
+            otras.append(hid)
 
     print()
     print('  REETIQUETADO  (una sola etiqueta b -> r)      : %d  %s'
           % (len(reetiquetadas), ' '.join(reetiquetadas)))
     print('  RECONSTRUIDO (anade, borra o reordena)       : %d  %s'
-          % (len(reconstruidas), ' '.join(reconstruidas) or '-'))
-    print('  AJENO A CM-004                               : %d  %s'
+          % (len(reconstruidas), ' '.join(reconstruidas) or '- (esperado)'))
+    print('  OTRO, y declarado                             : %d  %s'
           % (len(ajenas), ' '.join(ajenas) or '-'))
-    print('  total de manos editadas a mano               : %d'
-          % (len(reetiquetadas) + len(reconstruidas) + len(ajenas)))
+    print('  OTRO, y SIN declarar                           : %d  %s'
+          % (len(otras), ' '.join(otras) or '-'))
+    print('  total de manos editadas                       : %d'
+          % (len(reetiquetadas) + len(reconstruidas) + len(ajenas)
+             + len(otras)))
 
-    esperadas = set(derivadas)
-    corregidas = set(reetiquetadas) | set(reconstruidas)
-    faltan = sorted(esperadas - corregidas)
-    sobran = sorted(corregidas - esperadas)
-    if faltan:
+    if reconstruidas:
+        print('  FALLO: hay %d manos con cambios que NO son un reetiquetado. '
+              'Solo se permite anadir, borrar o reordenar con una decision '
+              'escrita.' % len(reconstruidas))
+        fallo.append('%d reconstrucciones sin decision' % len(reconstruidas))
+    if otras:
+        print('  FALLO: manos editadas y no declaradas. O falta declararlas, '
+              'o son un cambio sin explicar.')
+        fallo.append('%d cambios sin declarar' % len(otras))
+
+    faltando = sorted(set(derivadas) - set(reetiquetadas) - set(reconstruidas))
+    if faltando:
         print('  FALLO: la regla senala %d mano(s) sin corregir: %s'
-              % (len(faltan), ', '.join(faltan)))
-        fallo.append('%d manos del conjunto CM-004 sin corregir' % len(faltan))
-    if sobran:
-        print('  FALLO: se han corregido %d mano(s) que la regla no senala: %s'
-              % (len(sobran), ', '.join(sobran)))
-        fallo.append('%d correcciones fuera del conjunto CM-004' % len(sobran))
-    if not faltan and not sobran:
-        print('  OK  las %d manos de la regla son exactamente las %d '
-              'corregidas: ni una de mas ni una de menos.'
-              % (len(esperadas), len(corregidas)))
+              % (len(faltando), ', '.join(faltando)))
+        fallo.append('%d manos del conjunto CM-004 sin corregir' % len(faltando))
 
     # ------------------------------------------------------------------ 3
-    seccion('3. DECLARADAS -- todo lo que no es un reetiquetado trivial')
-    sin_declarar = [h for h in reconstruidas + ajenas if h not in DECLARADAS]
-    if sin_declarar:
-        print('  FALLO: editadas y NO declaradas en este fichero: %s'
-              % ', '.join(sin_declarar))
-        print('         O falta declararlas, o son un cambio sin explicar. '
-              'Sin esa distincion no hay manifiesto.')
-        fallo.append('%d cambios sin declarar' % len(sin_declarar))
+    seccion('3. REVERTIDAS -- las ocho que se deshicieron')
+    reaparecidas = [h for h in REVERTIDAS_TOTALES
+                    if canon(C.get(h)) != canon(T.get(h))]
+    if reaparecidas:
+        print('  FALLO: estas revertedidas enteras han vuelto a cambiar: %s'
+              % ', '.join(sorted(reaparecidas)))
+        fallo.append('%d revertedidas enteras reaparecidas' % len(reaparecidas))
     else:
-        print('  OK  las %d reconstrucciones y los %d cambios ajenos a CM-004 '
-              'estan declaradas, con motivo.'
-              % (len(reconstruidas), len(ajenas)))
+        print('  OK  las %d revertidas ENTERAS son identicas a la version '
+              'previa.' % len(REVERTIDAS_TOTALES))
+
+    con_exceso = [h for h in REVERTIDAS_PARCIALES
+                  if h in reconstruidas]
+    if con_exceso:
+        print('  FALLO: estas revertidas PARCIALES vuelven a anadir, borrar o '
+              'reordenar: %s' % ', '.join(sorted(con_exceso)))
+        fallo.append('%d revertidas parciales con cambios de mas'
+                     % len(con_exceso))
+    else:
+        print('  OK  las %d revertidas PARCIALES solo conservan el '
+              'reetiquetado `b` -> `r` del BB, que es la parte con regla '
+              'exacta.' % len(REVERTIDAS_PARCIALES))
 
     print()
-    for hid in reconstruidas + ajenas:
-        d = DECLARADAS.get(hid)
-        if not d:
+    print('  Han vuelto al valor grabado porque no hay original que permita '
+          'sostener')
+    print('  ninguna lectura. El defecto sigue documentado, no escondido:')
+    print('  ver DOCS/RECONSTRUCCIONES_CM004.md.')
+    print()
+    for hid in sorted(REVERTIDAS):
+        etiqueta = 'PARCIAL' if hid in REVERTIDAS_PARCIALES else 'ENTERA'
+        print('  %-8s [%s]' % (hid, etiqueta))
+        for l in envolver(REVERTIDAS[hid]):
+            print('      %s' % l)
+
+    for hid in DECLARADAS:
+        d = CAMBIOS_QUE_NO_SON_CM004[hid]
+        if hid not in ajenas:
+            print()
+            print('  AVISO: %s esta declarada pero no ha cambiado' % hid)
             continue
+        print()
         print('  %s  [%s]' % (hid, d['estado']))
         print('      que : %s' % d['que'])
         for l in envolver(d['motivo']):
             print('      %s' % l)
-        if d['recomendado'] is not None:
-            print('      recomendado : %s' % (d['recomendado'],))
-            print('      ahora       : %s' % (T.get(hid, {}).get('winner'),))
-            print('      ^ NO coincide. Es una de las tareas pendientes.')
-
-    declaradas_sin_cambio = sorted(set(DECLARADAS) - set(reconstruidas)
-                                   - set(ajenas))
-    if declaradas_sin_cambio:
-        print()
-        print('  AVISO: declaradas aqui pero sin cambio en la copia de '
-              'trabajo: %s' % ', '.join(declaradas_sin_cambio))
 
     # ------------------------------------------------------------------ 4
     seccion('4. LA BASE NO SE HA TOCADO')
@@ -398,14 +337,9 @@ def main():
             print('  - %s' % f)
         return 1
     print('  Sin fallos, y sin escrituras.')
-    pend = [h for h, d in DECLARADAS.items()
-            if d['estado'].startswith('PENDIENTE')]
-    rev = [h for h, d in DECLARADAS.items()
-           if d['estado'].startswith('APLICADO') and 'revisar' in d['estado']]
-    if pend:
-        print('  PENDIENTE de aplicar    : %s' % ', '.join(pend))
-    if rev:
-        print('  APLICADO, sin revisar   : %s' % ', '.join(rev))
+    print('  %d manos editadas: %d reetiquetados de CM-004 + %d centinela. '
+          'Nada mas.' % (len(reetiquetadas) + len(ajenas),
+                         len(reetiquetadas), len(ajenas)))
     return 0
 
 

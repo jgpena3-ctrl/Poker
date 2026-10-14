@@ -10,6 +10,62 @@ documentar. La decisión ya no describe el estado de la base.
 
 ---
 
+## 0-bis. Quién autorizó las 26 correcciones a mano
+
+> **El contrato firmado decía «no se tocan». El disco dice que se tocaron.
+> Esta sección explica la discrepancia.**
+
+### El relato, con horas
+
+| | |
+|---|---|
+| **14/10 12:23** | se firma la Opción A. Su condición 1 dice: *«las 23 manos **permanecen intactas** en `hands_db.jsonl`»* |
+| **14/10 12:56** | 26 manos se reescriben en `hands_db.jsonl`. Ninguna de las dos acciones tiene registro, mensaje ni commit intermedio |
+| **14/10 12:23+** | se confirma más tarde que el cambio lo hizo el **mantenedor de la base durante una sesión anterior**, fuera del canal de revisiones, yaknowing que la decisión firmado exigía lo contrario |
+
+### Autorización
+
+> **Autorizado por quien mantiene la base, el 14/10/2026, a las 12:56,
+> después de firmar lo contrario.**
+
+No hubo una autorización nueva: hubo una **desviación** respecto de la
+decisión firmado. La diferencia importa y conviene no suavizarla:
+
+- No es un error de ejecución. La interpretación de poker puede ser buena mano
+  a mano —una de las 23 lo era, y las otras seis no, pero eso se vio después.
+- Es un fallo de **canal**: se cambió el dato que una decisión firmada
+  declaraba inmutable, sin que la decisión se abriera, sin un commit, y sin
+  que nadie lo anunciara.
+
+**No hay canal de decisiones para la base de datos.** Este proyecto lleva
+cinco bloques defendiendo que cada cambio esté trazado y justificado, y esa
+propiedad no incluía los ficheros de datos: `hands_db.jsonl` era el único
+sitio donde se podía escribir sin dejar rastro. Eso es lo que hay que
+arreglar, y no se arregla con un documento: se arregla con el manifiesto
+(`tools/verificar_cm004.py`) y el script que lo hace reproducible
+(`tools/aplicar_reinterpretacion.py`), que ahora sí existían.
+
+### Qué se hizo con lo encontrado
+
+| | |
+|---|---|
+| las 8 correcciones inventadas | **revertidas**, todas. Ver `RECONSTRUCCIONES_CM004.md` |
+| las 23 reinterpretaciones | se conservan solo en su parte de CM-004, que tiene regla exacta |
+| `H_0350` | se conserva: es el único patrón aplicado a **todas** sus apariciones |
+| el estado final | **24 manos** de 1280, reproducible con un script |
+
+### La regla que sale de aquí
+
+> **Una corrección de la base sin original no se aplica sin venir declarada
+> antes en el manifiesto, y un patrón que se repite N veces no se corrige
+> a mano en una.** Se mide, se declara y se corrige con script sobre todos sus
+> casos, o no se corrige.
+
+Es la diferencia entre CM-003 —26 checks, `inferred: true`, script, todos los
+casos, derivados regenerados— y esto.
+
+---
+
 ## 0. Decisión
 
 > ### Opción A — aceptar la pérdida. **Firmada, y luego retirada.**
@@ -32,14 +88,17 @@ Lo que cambia con esto, y lo que no:
 |---|---|
 | **El defecto de CM-004 sí está resuelto** | el invariante da 0 de 1280: no queda ninguna `BB b` que el motor lea como una subida. `motor/test_cm004.py` lo fija |
 | **pero no con un original** | `CORRELACION_CAPTURAS_CM004.md` sigue diciendo 0 de 23 localizables. Son reinterpretaciones, no dato observado |
-| **y 6 de las 23 no son un cambio de etiqueta** | reconstruyen el preflop: `H_0039`, `H_0051`, `H_0067`, `H_0109`, `H_0143`, `H_0263`. Ver `CM004_REINTERPRETACION.md` §3.2 |
+| **y 6 de las 23 no eran solo un cambio de etiqueta** | reconstruían el preflop. Se han revertido: ver `CM004_REINTERPRETACION.md` §3.2 y `RECONSTRUCCIONES_CM004.md` |
 
 ### La condición 1, revisada
 
 > ~~las 23 manos **permanecen intactas** en `hands_db.jsonl`~~
 
-No se cumple. Se sustituye por: **las 23 han sido reescritas a mano, están
-declaradas una a una, y ninguna tiene original verificable.**
+No se cumplió, y **§0-bis dice quién y cuándo**. Se sustituye por:
+
+> las 23 han sido reescritas a mano, sin original verificable, y declaradas
+> una a una. Ocho de esas correcciones se han revertido. El estado final son
+> **24 manos** de 1280, reproducible con `tools/aplicar_reinterpretacion.py`.
 
 ### La condición 2, revisada
 
