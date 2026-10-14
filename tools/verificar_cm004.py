@@ -21,8 +21,9 @@ Las tres secciones
 ------------------
   1. INVARIANTE. ¿Queda alguna mano en las 1280 en la que una `BB b` no pueda
      ser la ciega? Se espera 0.
-  2. CLASIFICACION. Para cada mano editada respecto a la version COMPROMETIDA,
-     que clase de cambio es: reetiquetado (una sola etiqueta `b` pasa a `r`) o
+  2. CLASIFICACION. Para cada mano editada respecto a la version PREVIA de la
+     base (anclada por SHA a `e314f74`, no a HEAD), que clase de cambio es:
+     reetiquetado (una sola etiqueta `b` pasa a `r`) o
      reconstruccion (ademas se anade, borra o reordena alguna accion, o se
      cambia lo que hizo otro jugador). El script no juzga si una
      reconstruccion es correcta: la DECLARA y exige que este declarada.
@@ -50,6 +51,21 @@ from motor import learn  # noqa: E402
 
 DB_REL = 'data/hands_db.jsonl'
 DB_PATH = os.path.join(ROOT, *DB_REL.split('/'))
+
+# La version de la base ANTES de la reinterpretacion.
+#
+# Se direcciona por COMMIT (`e314f74`, ancestro, no se va a mover) y se
+# VERIFICA por el sha256 del contenido. Las dos cosas hacen falta: el commit
+# es lo unico que git puede resolver, y el hash es lo que detecta que ese
+# commit dejase de ser el que creamos.
+#
+# Anclarlo a HEAD~1 pareceria mas natural y estaria mal: en cuanto la
+# reinterpretacion se comiteara, HEAD~1 seria la version corregida, la regla
+# derivaria 0 manos y el script pasaria sin comprobar nada. Un guard que
+# depende de que el trabajo este SIN COMITEAR solo vigila mientras hay
+# trabajo sin commitear.
+COMMIT_ANTES = 'e314f74'
+SHA_ANTES = 'bb46fec0f2e37dc7c4280cb2302d3180c0502cf9d289ab8430b1e6d957d912ee'
 
 # --------------------------------------------------------------------------
 # Correcciones que NO son un simple reetiquetado.
@@ -182,14 +198,23 @@ def leer_texto(texto):
     return [json.loads(l) for l in texto.splitlines() if l.strip()]
 
 
-def de_committed():
-    """La version COMPROMETIDA. La regla se deriva contra ella: derivarla
-    contra la copia de trabajo daria 0 y no comprobaria nada."""
-    crudo = subprocess.run(['git', 'show', 'HEAD:%s' % DB_REL],
+def de_referencia():
+    """La version de la base de la que se deriva la regla.
+
+    Va anclada a un SHA, no a HEAD. Ver la nota de `SHA_ANTES`: derivar
+    contra la version corregida daria 0 manos y el script pasaria sin
+    comprobar nada.
+    """
+    crudo = subprocess.run(['git', 'show', '%s:%s' % (COMMIT_ANTES, DB_REL)],
                            cwd=ROOT, capture_output=True)
     if crudo.returncode != 0:
-        return None
-    return leer_texto(crudo.stdout.decode('utf-8'))
+        return None, 'no se pudo leer %s:%s' % (COMMIT_ANTES, DB_REL)
+    crudo_b = crudo.stdout
+    real = hashlib.sha256(crudo_b).hexdigest()
+    if real != SHA_ANTES:
+        return None, ('%s:%s tiene sha256 %s, no el %s que se esperaba'
+                      % (COMMIT_ANTES, DB_REL, real[:16], SHA_ANTES[:16]))
+    return leer_texto(crudo_b.decode('utf-8')), None
 
 
 def indices_cm004(manos):
@@ -243,12 +268,14 @@ def main():
     fallo = []
 
     trabajo = leer_texto(io.open(DB_PATH, encoding='utf-8').read())
-    comprometida = de_committed()
-    if comprometida is None:
-        print('no se pudo leer la version comprometida de %s' % DB_REL)
+    referencia, error = de_referencia()
+    if referencia is None:
+        print('  FALLO: %s' % error)
+        print('         Sin la version previa no se puede derivar la regla, y '
+              'sin la regla este script no comprueba nada.')
         return 2
+    C = {h['hand_id']: h for h in referencia}
     T = {h['hand_id']: h for h in trabajo}
-    C = {h['hand_id']: h for h in comprometida}
 
     # ------------------------------------------------------------------ 1
     seccion('1. INVARIANTE -- ninguna `BB b` que no pueda ser la ciega')
@@ -261,9 +288,9 @@ def main():
 
     # ------------------------------------------------------------------ 2
     seccion('2. CLASIFICACION -- que clase de cambio tiene cada mano editada')
-    derivadas = indices_cm004(comprometida)
+    derivadas = indices_cm004(referencia)
     descuadres = []
-    for h in comprometida:
+    for h in referencia:
         acc = ((h.get('streets') or {}).get('preflop') or {}).get('actions') or []
         for i, importe, causa in learn.entradas_bb_rechazadas(h):
             if causa != learn.CAUSA_ORDEN:
@@ -278,7 +305,8 @@ def main():
         fallo.append('indices del motor descuadrados')
     else:
         print('  la regla del motor selecciona %d mano(s) sobre las %d de la '
-              'version comprometida.' % (len(derivadas), len(comprometida)))
+              'version previa (%s).'
+              % (len(derivadas), len(referencia), COMMIT_ANTES))
         print('  OK  sus %d indices apuntan a su accion cruda.'
               % sum(len(v) for v in derivadas.values()))
 
