@@ -40,6 +40,11 @@ def _entradas_bb_rechazadas(h):
     de mirar el campo `blind` del dato: los datos antiguos no lo traen y la
     ciega se reconoce estructuralmente. Mirar el campo daria ~523 falsos
     positivos.
+
+    Devuelve [(indice, importe, causa)] con la causa en:
+      'tras_accion_voluntaria'  -> la ciega esta mal ORDENADA (defecto de dato)
+      'importe_sobre_nominal'   -> la regla antigua `amount <= bb` la rechazo
+                                    (defecto del motor, ya corregido)
     """
     seq = learn._preflop_sequence(h)
     rechazadas = []
@@ -47,9 +52,13 @@ def _entradas_bb_rechazadas(h):
     for i, (pos, act, amount, is_blind) in enumerate(seq):
         if learn._es_ciega_bb(i, pos, act, amount, is_blind,
                               voluntary_before, learn.BB):
+            if act in ('b', 'r', 'c'):
+                voluntary_before = True
             continue
         if pos == 'BB' and act == 'b':
-            rechazadas.append((i, amount))
+            causa = ('tras_accion_voluntaria' if voluntary_before
+                     else 'importe_sobre_nominal')
+            rechazadas.append((i, amount, causa))
         if act in ('b', 'r', 'c'):
             voluntary_before = True
     return rechazadas
@@ -83,6 +92,8 @@ def main():
     conteo = collections.Counter()
     ids_por_clase = collections.defaultdict(list)
     cat_por_clase = collections.defaultdict(collections.Counter)
+    causas = collections.Counter()
+    manos_por_causa = collections.defaultdict(set)
 
     for h in hands:
         clase, cat = clasificar(h)
@@ -90,6 +101,9 @@ def main():
         ids_por_clase[clase].append(h.get('hand_id'))
         if cat:
             cat_por_clase[clase][cat] += 1
+        for _i, _amt, causa in _entradas_bb_rechazadas(h):
+            causas[causa] += 1
+            manos_por_causa[causa].add(h.get('hand_id'))
 
     total = sum(v for k, v in conteo.items() if k != 'sin_preflop')
     print('ventana: %d manos con preflop' % total)
@@ -135,6 +149,23 @@ def main():
         print('     %-12s %3d' % (cat, n))
     print('     TOTAL      %3d  (ataques al BB que pueden no haber ocurrido)'
           % sum(cat_por_clase['ciega_mal_puesta'].values()))
+    print()
+
+    print('  POR QUE se rechaza cada entrada `BB b` (desglose reproducible):')
+    if not causas:
+        print('     ninguna entrada rechazada.')
+    for causa, n in causas.most_common():
+        etiqueta = ('tras_accion_voluntaria'
+                    if causa == 'tras_accion_voluntaria'
+                    else 'importe_sobre_nominal')
+        mano = 'defecto de DATO (ciega mal ordenada)'
+        if causa != 'tras_accion_voluntaria':
+            mano = 'defecto del MOTOR (regla antigua amount<=bb)'
+        print('     %-26s %3d entradas en %2d manos  <- %s'
+              % (etiqueta, n, len(manos_por_causa[causa]), mano))
+    if 'importe_sobre_nominal' in causas:
+        print('     (el defecto del motor se corrigio en el commit 9f4869f; si')
+        print('      reaparece, es una regresion)')
     print()
 
     print('  Manos migrables (check perdido), %d:' % perdidos)

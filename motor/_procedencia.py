@@ -20,8 +20,16 @@ import subprocess
 
 REPO_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# Ficheros cuyo estado sin commitear cambia como se construye un derivado.
-RUTAS_RELEVANTES = ('motor/', 'recorder/', 'tools/', 'data/hands_db.jsonl')
+# Ficheros cuyo estado sin commitear invalida la reproduccion de un derivado.
+#
+# Se enumeran SOLO las fuentes, no todo `data/`: los `*_ranges.json` y
+# `*_stats.json` son derivados que se regeneran, y si se regeneran sin commit
+# darian falsos positivos. En cambio `data/preflop_matrices.json` SI es fuente
+# (la leen `preflop.py`, `profile.py` y `player_ranges._prior_grid`), y sin
+# ella en la lista un árbol sucio ahí no invalidaría nada.
+RUTAS_RELEVANTES = ('motor/', 'recorder/', 'tools/',
+                    'data/hands_db.jsonl',
+                    'data/preflop_matrices.json')
 
 
 def _git(*args):

@@ -201,8 +201,12 @@ def _preflop_sequence(hand):
 def _es_ciega_bb(i, pos, act, amount, is_blind, voluntary_before, bb=BB):
     """True si esta acción es la ciega obligatoria del BB (no una decisión).
 
-    `i` se conserva en la firma por compatibilidad, pero **no** se usa: la
-    detección no depende de la posición en la secuencia (revision_2, Hallazgo 3).
+    Parámetros conservados por compatibilidad con las llamadas existentes, que
+    NO participan en la decisión:
+      - `i`: la detección no depende de la posición en la secuencia
+             (revision_2, Hallazgo 3).
+      - `amount`: ver "Por qué el importe ya NO decide".
+      - `bb`: constante nominal, sin uso desde que el importe dejó de decidir.
 
     Orden de confianza:
       1. Marca explícita del recorder (`blind`) — identidad, no heurística.
@@ -221,11 +225,16 @@ def _es_ciega_bb(i, pos, act, amount, is_blind, voluntary_before, bb=BB):
     dinero todavía, así que no hay nada que subir. `voluntary_before` ya captura
     esa información, y los folds no la activan (un fold no pone dinero).
 
-    LIMITACIÓN CONOCIDA: si el recorder perdiera las acciones anteriores y
-    entregara `UTG f, MP f, ..., BB r 6.0`, esa subida sí se leería como ciega.
-    Medido: 0 casos en las 900 manos fiables, donde `BB r` nunca es la primera
-    entrada BB tras solo folds. Es una medición, no una prueba; por eso hay un
-    test que la fija.
+    LIMITACIÓN CONOCIDA
+    -------------------
+    La regla exige `act == 'b'`, así que una subida registrada correctamente
+    como `'r'` NUNCA se lee como ciega, aunque venga después de solo folds. El
+    riesgo real es más estrecho: que el recorder escribiera una subida
+    voluntaria del BB como `'b'` y sin ninguna acción voluntaria antes. Entonces
+    sí se leería como ciega.
+
+    Medido sobre las 900 manos fiables: **0 casos**. Es una medición, no una
+    prueba, y por eso hay un test que la fija.
     """
     if is_blind:
         return True

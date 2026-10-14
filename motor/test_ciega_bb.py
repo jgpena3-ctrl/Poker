@@ -67,6 +67,80 @@ def test_no_es_ciega_si_no_es_bb():
     assert learn._es_ciega_bb(0, 'UTG', 'b', 1.0, False, False) is False
 
 
+# --- los casos agudos que blindan el fix ----------------------------------
+#
+# ATENCIÓN sobre qué test discrimina el cambio y cuál no.
+#
+# La regla VIEJA era:
+#     is_blind or (pos=='BB' and act=='b' and not voluntary_before
+#                  and amount <= bb)
+#
+# El importe era un AND ADEMÁS de `voluntary_before`: nunca lo sustituía. Por
+# eso los casos con acción voluntaria previa se rechazaban igual antes y
+# después. Esos tests fijan el CONTRATO pero NO detectarían una reversión del
+# fix. Los que sí discriminan son los que combinan ciega alta (importe por
+# encima de la nominal) con ausencia de acción voluntaria previa.
+
+@pytest.mark.parametrize('importe', [1.0, 2.5, 92.0])
+def test_ciega_bb_tras_folds_previos_sigue_siendo_ciega(importe):
+    """Los folds NO ponen dinero, luego no activan `voluntary_before`.
+
+    Parametrizado con ciega alta porque con 1.0 la regla vieja también lo
+    aceptaba: ese caso no distinguiría una reversión del fix.
+    """
+    h = _hand([('UTG', 'f', 0.0), ('MP', 'f', 0.0), ('CO', 'f', 0.0),
+              ('BTN', 'f', 0.0), ('SB', 'f', 0.0), ('BB', 'b', importe)])
+    evs = [e for e in learn.preflop_events(h) if e.pos == 'BB']
+    assert evs == [], 'el BB solo posto la ciega: %s' % evs
+
+
+def test_bb_b_mismo_importe_tras_limp_no_es_ciega():
+    """CONTRATO, no discrimina el fix: tras un limp el BB ha actuado.
+
+    El importe es la ciega nominal exacta, 1.0, y la regla vieja también lo
+    rechazaba porque `voluntary_before` ya era True. Lo que este test fija es
+    que manda el limp, no que el importe deje de mandar.
+    """
+    assert learn.BB == 1.0, 'el caso depende de la ciega nominal 1.0'
+    h = _hand([('UTG', 'c', 1.0), ('BB', 'b', 1.0)])
+    evs = [e for e in learn.preflop_events(h) if e.pos == 'BB']
+    assert len(evs) == 1, 'el BB ha actuado: %s' % evs
+    assert evs[0].category in ('rol', 'limp'), evs[0].category
+
+
+def test_bb_b_mismo_importe_sin_limp_si_es_ciega():
+    """CONTRATO, no discrimina el fix: mismo importe, sin limp antes."""
+    h = _hand([('UTG', 'f', 0.0), ('BB', 'b', 1.0)])
+    evs = [e for e in learn.preflop_events(h) if e.pos == 'BB']
+    assert evs == [], 'sin limp previo el BB solo posted la ciega: %s' % evs
+
+
+def test_ciega_alta_se_detecta_y_no_depende_del_importe():
+    """DISCRIMINA el fix: con ciega alta, el importe ya no puede decidir.
+
+    Con la regla vieja, las tres primeras aserciones fallaban.
+    """
+    for importe in (1.0, 2.5, 92.0):
+        assert learn._es_ciega_bb(0, 'BB', 'b', importe, False, False) is True
+    # una subida registrada como 'r' nunca es ciega, importe que sea
+    assert learn._es_ciega_bb(0, 'BB', 'r', 92.0, False, False) is False
+    assert learn._es_ciega_bb(0, 'BB', 'r', 1.0, False, False) is False
+    # y con acción voluntaria previa tampoco, aunque el importe sea la ciega
+    assert learn._es_ciega_bb(1, 'BB', 'b', 92.0, False, True) is False
+
+
+def test_guardia_el_fix_sigue_cubierto():
+    """Falla si el fix `amount <= bb` se revierte.
+
+    Si alguien simplifica la suite y deja solo casos con `voluntary_before`
+    True, la condición eliminada podría volver sin que nada lo notara.
+    """
+    h = _hand([('UTG', 'f', 0.0), ('BB', 'b', 92.0)])
+    evs = [e for e in learn.preflop_events(h) if e.pos == 'BB']
+    assert evs == [], ('ciega de 92.0 leida como subida: el fix se ha '
+                       'revertido. eventos: %s' % evs)
+
+
 # --- la limitacion medida, fijada como test -------------------------------
 
 def test_el_respaldo_estructural_no_tapa_una_decision_del_bb():

@@ -55,6 +55,36 @@ Ficheros que tocan `hands_db.jsonl`:
 
 `_savejson()` (línea 573) escribe un `.json` suelto, no el JSONL.
 
+## Limitación del análisis
+
+El patrón que se busca es un bucle o comprehension que **recorre `actions`** y
+produce un `dict` literal:
+
+```python
+for a in hand['streets'][st]['actions']:
+    x = {'pos': a['pos'], 'action': a['action'], 'amount': a['amount']}
+```
+
+**No** se detectan dos formas:
+
+1. **Comprehension que llama a una función auxiliar**, que a su vez devuelve un
+   dict cerrado:
+   ```python
+   nuevas = [limpiar(a) for a in actions]
+   def limpiar(a):
+       return {'pos': a['pos'], 'action': a['action'], 'amount': a['amount']}
+   ```
+   El AST ve una comprehension que no produce un dict literal: llama a
+   `limpiar`.
+
+2. **Serialización indirecta**: construir el dict en otro módulo y asignarlo.
+
+Verificado: no existe tal función en el repo hoy. Pero el análisis **no es
+exhaustivo**. Si se añade cualquier helper de "limpieza" o "normalización" de
+acciones, hay que repetir esta comprobación a mano (y conviene añadir el caso
+como test).
+
+
 ## Veredicto
 
 `inferred: true` es seguro en el pipeline Python. No hay ningún esquema que
