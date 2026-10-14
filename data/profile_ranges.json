@@ -1,7 +1,11 @@
 {
   "meta": {
     "alpha": 2.0,
-    "origen": "hands_db.jsonl"
+    "origen": "hands_db.jsonl",
+    "hands_window": "reliable_only",
+    "hands_used": 900,
+    "code_commit": "cc18d21",
+    "built_at": "2026-10-13T19:14:35"
   },
   "perfil": {
     "Jarduan": "TIBURON",

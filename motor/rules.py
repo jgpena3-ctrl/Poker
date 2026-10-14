@@ -227,6 +227,10 @@ class Ctx:
     facing_raise: bool
     hero_bet_flop: bool
     flop_checked: bool
+    # TODO(F5): `villain_bet_flop` y `nut_advantage` se reciben y se
+    # pasan, pero NINGUNA regla los consulta (0 condiciones en el
+    # modulo). Decidir: usarlos en alguna regla, o eliminarlos de Ctx.
+    # Ver DOCS/CONTRATOS_RULES.md seccion 4, punto 1 y 2.
     villain_bet_flop: bool
     hand_role: Optional[str]
     range_advantage: Optional[str]
@@ -303,6 +307,10 @@ def _en_donk(c):
     return c.street == 'flop' and not c.hero_initiator and c.hero_oop
 
 
+# TODO(F5): este predicado significa "no fui el agresor preflop", NO
+# "soy in-position". Contraejemplo: UTG abre, BB paga -> el BB es OOP
+# pero no fue agresor, asi que se clasifica como IP.
+# Ver DOCS/CONTRATOS_RULES.md seccion 4, punto 3.
 def _en_flop_ip(c):
     return c.street == 'flop' and not c.hero_initiator
 
@@ -356,6 +364,11 @@ def _flop_ip_multi_weak(c):
 
 # -- Tabla (§19: fila = IF → filtros → acciones → sizing) -----------------
 
+# TODO(F5): CBET_SIZES, BARREL_SIZES, DONK_SIZES, PROBE_SIZES y
+# VALUE_SIZES no tienen consumidor fuera del modulo, y las clases
+# `Ctx` y `Row` tampoco se instancian desde fuera. Decidir: hacerlas
+# privadas o documentarlas como API de extension.
+# Ver DOCS/CONTRATOS_RULES.md seccion 1 y 4.
 RULES = (
     Row('facing_raise', 'facing', _en_facing(True), doc='§15 reraise vs raise',
         mults=_RERAISE_MULTS),
@@ -479,6 +492,11 @@ def plan(street, hero_initiator, to_call, board_codes, pot, stack,
     nut_advantage    : 'HERO' | 'NEUTRAL' | 'VILLAIN' (aproximado).
     """
     if street not in ('flop', 'turn', 'river'):
+        # TODO(F5): street invalida. `street='preflop'` cae aqui y
+        # recommend_loop captura el ValueError y degrada a rp=None,
+        # con lo que se pierde TODO el filtrado de reglas.
+        # Decidir: lanzar siempre, o devolver un RulePlan con nota.
+        # Ver DOCS/CONTRATOS_RULES.md seccion 2, contrato C2.
         raise ValueError(f'street inválida: {street!r}')
     if to_call < 0:
         raise ValueError(f'to_call negativo: {to_call}')
@@ -499,6 +517,10 @@ def plan(street, hero_initiator, to_call, board_codes, pot, stack,
 # Selección de la mejor acción candidata (§21)
 # ---------------------------------------------------------------------------
 
+# TODO(F5): con `evs.ev` vacio devuelve ('fold', 0.0). Ese 0.0 es un
+# EV que no existe: es exactamente el "numero inventado" que el
+# proyecto quiere evitar. Decidir: lanzar ValueError, o devolver None.
+# Ver DOCS/CONTRATOS_RULES.md seccion 2, contrato C4.
 def select_best(evs, rp=None):
     """Mejor acción por EV entre las candidatas del plan (fold si nada la
     supera). Se usa en vez de `evs.best()` cuando hay un plan de reglas.

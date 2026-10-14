@@ -58,11 +58,19 @@ habría indicado una regresión.
   masa: el antiguo se construyo con el **39%** de las decisiones con cartas que
   hay ahora (450 de 1157).
 
-> ⚠️ **Limitacion honesta:** `meta` es identico en ambos ficheros
-> (`{alpha: 2.0, origen: hands_db.jsonl}`) y **no registra que manos se
-> usaron**, asi que no es posible distinguir a posteriori si la diferencia
-> viene de menos manos o de otra version del codigo. Para que no se repita, la
-> reconstruccion deberia sellar la procedencia en `meta`.
+> ⚠️ **Alcance de lo que NO se puede determinar.** `meta` es identico en
+> ambos ficheros (`{alpha: 2.0, origen: hands_db.jsonl}`) y no registra que
+> manos se usaron. Por eso **no se puede cuantificar** la diferencia.
+>
+> Lo que **si** es derivable: la **direccion**. El fichero antiguo tiene 450
+> decisiones con cartas y el nuevo 1157. Si el antiguo se hubiera construido
+> con *mas* manos pero menos jugadores, la masa seria mayor, no menor. Como
+> es menor, el antiguo se construyo con **menos manos**.
+>
+> Queda abierto *cuantas* menos y *cuales*, no *en que sentido*.
+>
+> Deuda: la reconstruccion debe sellar la procedencia en `meta`
+> (`hands_used`, `code_commit`). Ver PROYECTO.md §6.6.
 
 **Consecuencia practica con el fichero antiguo:** `p_player()` devuelve el
 prior **plano** cuando el jugador no esta en `self.perfil`. Con el fichero
@@ -87,7 +95,7 @@ de un perfil al otro y su celda antigua deja de tener contradiccion.
 El fix de `_pf_rival_pos` (577/900 manos con rival equivocado) **no aparece en
 esta comparación, y no es un fallo del procedimiento**: esa función se ejecuta
 en `asistente_live` al **recomendar**, no al construir los derivados. El modelo
-guardado (`profile_ranges.json`) no depende de qué rival se leApplicable a
+guardado (`profile_ranges.json`) no depende de qué rival se le aplique a
 cada consulta; solo cambia lo que el motor devuelve en vivo.
 
 Para verificar ese fix hay que mirar el panel del asistente, no los ficheros.

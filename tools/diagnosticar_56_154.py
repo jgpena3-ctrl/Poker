@@ -73,7 +73,7 @@ def main():
     print('  DIAGNOSTICO')
     print('  ' + '-' * 64)
     if abs(tn - to) / max(to, 1) > 0.05:
-        print('  La masaDecisionada CRECE (%.0f -> %.0f, x%.2f).' % (to, tn, tn / to))
+        print('  La masa de decisiones CRECE (%.0f -> %.0f, x%.2f).' % (to, tn, tn / to))
         print('  El `meta` del fichero es identico en ambos ({alpha, origen})')
         print('  y NO registra que manos se usaron, asi que no se puede')
         print('  distinguir "menos manos" de "otra version del codigo".')
@@ -84,10 +84,10 @@ def main():
               % (to / tn * 100 if tn else 0))
         print('  que hay ahora, y ademas sin listar a %d jugadores.' % len(pn - po))
     else:
-        print('  La masaDecisionada NO cambia: el modelo agregado ya estaba')
+        print('  La masa de decisiones NO cambia: el modelo agregado ya estaba')
         print('  completo y faltaba solo el mapa por jugador.')
     print()
-    print('  CONSECUENCIA (lo que la revision_1anhade):')
+    print('  CONSECUENCIA (lo que la revision_1 añade):')
     print('    p_player() devuelve el prior PLANO si el jugador no esta en')
     print('    self.perfil. Con el fichero anterior, %d de %d jugadores'
           % (len(pn - po), len(pn)))
