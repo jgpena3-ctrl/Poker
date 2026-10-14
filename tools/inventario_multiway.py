@@ -25,10 +25,12 @@ interpretación:
 Uso:  python tools/inventario_multiway.py
 """
 import collections
+import datetime
 import io
 import json
 import os
 import re
+import subprocess
 import sys
 
 import numpy as np
@@ -40,6 +42,48 @@ from motor import learn                                    # noqa: E402
 from motor.ranges import N_COMBOS, RangeState             # noqa: E402
 
 STREETS = ('flop', 'turn', 'river')
+
+
+# ---------------------------------------------------------------------------
+# Trazabilidad. revision_1 Tarea 1: el numero no vale si no se puede
+# reproducir, y no se puede reproducir si nadie sabe con que commit y con
+# que bugs corregidos se midio. La cabecera la emite el propio script: si
+# alguien edita la salida a mano, la cabecera ya no describe el estado real.
+# ---------------------------------------------------------------------------
+def _git(*args):
+    try:
+        return subprocess.check_output(
+            ['git'] + list(args), cwd=ROOT, stderr=subprocess.STDOUT
+        ).decode('utf-8', 'replace').strip()
+    except Exception:
+        return None
+
+
+def cabecera():
+    commit = _git('rev-parse', 'HEAD')
+    sucio = _git('status', '--porcelain')
+    print('=' * 78)
+    print('TRAZABILIDAD   (revision_1, Tarea 1)')
+    print('=' * 78)
+    print('   commit          : %s' % (commit or 'NO ES UN REPO GIT'))
+    print('   fecha           : %s'
+          % datetime.datetime.now().isoformat(timespec='seconds'))
+    print('   arbol           : %s'
+          % ('LIMPIO' if sucio == '' else
+             ('CON %d FICHERO(S) SIN VERSIONAR' % len(sucio.split('\n'))
+              if sucio else 'indeterminado')))
+    print('   script          : tools/inventario_multiway.py')
+    print('   python          : %s' % sys.version.split()[0])
+    print()
+    print('   Los dos bugs conocidos del instrumento, en ESTE commit:')
+    print('     1. `HU = 0` por rama inalcanzable (`rivales == 0` con')
+    print('        minimo 1 rival). CORREGIDO: ver `rivales <= 0` mas abajo.')
+    print('     2. `>= 1` donde debia ser `>= 2` en el desglose de no')
+    print('        clasificables (daba 1390, faltaban 304). CORREGIDO.')
+    print()
+    print('   Si al leer esto las cifras no cuadran con el fichero de salida,')
+    print('   el problema no es el numero: es que se ha editado la salida.')
+    print()
 
 
 # ---------------------------------------------------------------------------
@@ -164,6 +208,7 @@ def main():
     print('=' * 78)
     print('F7.1  INVENTARIO DEL ALCANCE MULTIWAY   (solo lectura)')
     print('=' * 78)
+    cabecera()
 
     manos = learn.load_hands(reliable_only=True)
 

@@ -87,7 +87,12 @@ data/shadow_hierarchy.jsonl
 # que NO los escribe ningun modulo del motor, 3 de ellos no los referencia
 # nadie, y el cuarto (`test_output_mano3.jsonl`) es el `output_path` que
 # asigna `tools/test_mano3.py`: es salida, no entrada. Versionarlas era ruido.
+# (Hay una quinta con el mismo origen, listada mas abajo.)
 data/test_mano4_output.jsonl
 data/test_output2.jsonl
 data/test_output_mano3.jsonl
 data/test_trace.jsonl
+# Mismo caso que las cuatro de arriba, y se paso por alto al escribir el
+# comentario: lo escriben `tools/test_recorder_juego.py` y `tools/test_mano2.py`
+# como `output_path`. Aparece al correr la suite y no lo lee nadie.
+data/test_output.jsonl
