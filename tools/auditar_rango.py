@@ -98,7 +98,15 @@ SUITS = set('shdc')
 # cosa. No es que el detector este mal: es que la cifra no tiene a quien
 # preguntarle. Se deja a proposito, para que la discrepancia se vea.
 REFERENCIA = {
-    'SIN_RESPUESTA_BB': (652, True),
+    # Las dos metricas del BB, con nombres que no se pueden confundir. review
+    # revision_2 §2: el patron historico (652) NO es el recuento de ausencias
+    # (23), y publicarlos bajo un solo nombre es lo que produjo el error de
+    # lectura de los tres bloques anteriores.
+    'PATRON_BB_SIN_RESPUESTA': (652, True),
+    'AUSENCIA_RESPUESTA_BB': (23, True),
+    # Estas dos NO reproducen, y la razon es que se publicaron desde scripts
+    # de un solo uso que no se han versionado. No es que el detector este mal:
+    # es que la cifra no tiene a quien preguntarle.
     'IMPORTE_SUBIDA': (45, False),
     'ACCION_DESPUES_FOLD': (8, False),
     'WINNER_FOLDEO': (214, True),
@@ -216,46 +224,39 @@ def board_ilegal(hand):
 
 
 def importe_subida(hand):
-    """Una subida que no supera la apuesta viva.
+    """Una subida que no supera la apuesta viva anterior.
 
-    PREFLOP: usa la secuencia del MOTOR (`_preflop_sequence`), que es quien
-    sabe cual entrada es la ciega y cual es una subida. Reescribir ese criterio
-    aqui es exactamente el error que produjo 962 falsos positivos antes.
+    review revision_2 §3: la version anterior comparaba cada `r` contra
+    `learn.BB`, que es la CIEGA NOMINAL, no contra lo que estaba vivo en ese
+    momento. Con eso, una subida que supera la ciega pero no la apuesta
+    anterior pasaba desapercibida, y el recuento no era exhaustivo.
 
-    POSTFLOP: `amount` es el total puesto en esa calle, asi que la comparacion
-    se reinicia en cada calle.
+    Ahora se lleva el maximo de lo apostado. PREFLOP usa la secuencia del
+    MOTOR (`_preflop_sequence`), que es quien sabe cual entrada es la ciega;
+    reimplementar ese criterio aqui es el error que produjo 962 falsos
+    positivos. POSTFLOP se mide por calle, porque `amount` es el total puesto
+    en esa calle y el bote no arrastra.
     """
     fallos = []
-    seq = learn._preflop_sequence(hand)
-    acc = acciones_de(hand, 'preflop')
-    voluntaria = False
-    maximo = learn.BB
-    for i, (pos, accion, amount, is_blind) in enumerate(seq):
-        if is_blind or (pos == 'BB' and accion == 'b' and not voluntaria):
-            if not is_blind:
-                maximo = max(maximo, amount or 0.0)
-            continue
-        if accion == 'r' and (amount or 0.0) <= learn.BB:
-            fallos.append('preflop %s r %.1f no supera la ciega %.1f'
-                          % (pos, amount or 0.0, learn.BB))
-        if accion in ('b', 'r', 'c'):
-            voluntaria = True
-        if i >= len(acc):
-            break
-    for s in POSTFLOP:
-        maximo = 0.0
+    for s in calles(hand):
+        # El suelo de una calle es lo que hay que superar para subir. En
+        # PREFLOP es la ciega grande SIEMPRE, este o no este grabada: y esa
+        # distincion importa, porque una mano sin la ciega del BB registrada
+        # —que es justo la firma de CM-004— si no tendria suelo y cualquier
+        # subida pasaria el filtro.
+        maximo = learn.BB if s == 'preflop' else 0.0
         for a in acciones_de(hand, s):
             accion = a.get('action')
             try:
                 imp = float(a.get('amount') or 0.0)
             except (TypeError, ValueError):
                 continue
-            if accion in ('b', 'r'):
+            if accion == 'r':
                 if imp <= maximo:
-                    fallos.append('%s %s %s no supera %.1f'
+                    fallos.append('%s %s %s no supera la apuesta viva (%.1f)'
                                   % (s, a.get('pos'), a.get('amount'), maximo))
                 maximo = max(maximo, imp)
-            elif accion == 'c':
+            elif accion in ('b', 'c'):
                 maximo = max(maximo, imp)
     return fallos
 
@@ -367,27 +368,16 @@ def sin_allin(hand):
     return None
 
 
-def sin_respuesta_bb(hand):
-    """El preflop se cierra con una SUBIDA de un jugador que no es el BB.
+def patron_bb_sin_respuesta(hand):
+    """La REGLA ESTRUCTURAL historica: el preflop se cierra con una subida de
+    alguien que no es el BB. Devuelve 652 sobre la base completa.
 
-    Esta es la definicion con la que se publico el "defecto de 652", y da 652.
-    Lo que esa cifra NO significa es lo importante, y por eso la funcion
-    devuelve el sub-caso en el texto:
+    Se llama asi, y no `sin_respuesta_bb`, porque NO mide ausencias: mide una
+    forma. Que el BB respondiera o no es otra pregunta, y la contesta
+    `ausencia_respuesta_bb`.
 
-      - **el BB tiene una entrada DESPUES de la subida**: respondio. No falta
-        nada. Es el caso mayoritario, yva sea con `c`, con `f` o con `x`.
-      - **el BB no tiene ninguna entrada despues de la subida**: ahi si puede
-        faltar algo.
-
-    La primera version de esta comprobacion decia "el BB no vuelve a actuar"
-    y contaba como respuesta ausente manos donde el BB habia llamado. H_0014
-    es el ejemplo: `CO:b1.0, BTN:r4.0, BB:c3.0` — el BB respondio, con un
-    importe que no puede ser (una llamada a 3.0 contra una subida a 4.0), pero
-    respondio. Eso es otro defecto, y lo recoge `IMPORTE_SUBIDA`.
-
-    O sea: leer 652 como "652 manos sin respuesta del BB" es una lectura
-    equivocada. Lo que falta de verdad es un numero mucho menor, y esta
-    funcion lo dice caso por caso.
+    Mantenida aparte porque es la cifra que el proyecto publico, y porque
+    revisar el historico exige poder reproducir el numero que se publico.
     """
     acc = acciones_de(hand, 'preflop')
     if not acc:
@@ -405,15 +395,59 @@ def sin_respuesta_bb(hand):
         return None
     despues = [a for a in acc[ultimo + 1:] if a.get('pos') == 'BB']
     if despues:
-        sub = 'el BB responde con %s, no falta nada' % despues[0].get('action')
+        sub = 'el BB responde con %s' % despues[0].get('action')
     elif any(a.get('action') == 'f' and a.get('pos') == 'BB' for a in acc):
-        sub = 'el BB ya habia FOLDEADO antes de esa subida: esta fuera'
+        sub = 'el BB ya habia FOLDEADO antes de esa subida'
     elif not bb:
         sub = 'el BB no tiene NINGUNA entrada preflop'
     else:
         sub = 'el BB NO ACTUA tras la subida'
     return 'preflop cierra con subida de %s (%s) -> %s' % (
         acc[ultimo].get('pos'), acc[ultimo].get('amount'), sub)
+
+
+def ausencia_respuesta_bb(hand):
+    """AUSENCIA REAL: el BB estaba en la mesa y no hizo nada tras la subida.
+
+    Devuelve `None` cuando NO hay ausencia. Es la distincion que review
+    revision_2 §2 pide y que la primera version no hacia: la funcion
+    devolvia un texto no vacio tambien cuando el BB habia respondido, y
+    `auditar()` registra cualquier retorno verdadero. O sea: registraba como
+    hallazgo casos en los que su propio mensaje decia "no falta nada". Que
+    `--validar` reprodujera 652 confirmaba que reproducia un contador, no que
+    identificara ausencias.
+
+    Sobre la base completa: 23 ausencias de 1280. Las 652 son el patron.
+    """
+    acc = acciones_de(hand, 'preflop')
+    if not acc:
+        return None
+    bb = [i for i, a in enumerate(acc) if a.get('pos') == 'BB']
+    vivas = [i for i, a in enumerate(acc) if a.get('action') in ('b', 'r')]
+    if not vivas:
+        return None
+    ultimo = vivas[-1]
+    if acc[ultimo].get('action') != 'r':
+        return None
+    # el BB no es el que subio
+    if acc[ultimo].get('pos') == 'BB':
+        return None
+    # respondio despues
+    if any(a.get('pos') == 'BB' for a in acc[ultimo + 1:]):
+        return None
+    # ya estaba fuera de la mano
+    if any(a.get('action') == 'f' and a.get('pos') == 'BB' for a in acc):
+        return None
+    if not bb:
+        return 'el BB no tiene NINGUNA entrada preflop'
+    return 'el BB NO ACTUA tras la subida de %s (%s)' % (
+        acc[ultimo].get('pos'), acc[ultimo].get('amount'))
+
+
+# Compatibilidad: el nombre que se usaba antes. Se mantiene para que las
+# referencias viejas no se rompan, y avisa de que la metrica que promises es
+# la otra.
+sin_respuesta_bb = patron_bb_sin_respuesta
 
 
 CLASES = (
@@ -443,13 +477,33 @@ CLASES = (
      winner_vacio, 'contradiccion'),
     ('SIN_ALLIN', 'el campo allin falta o no es una lista',
      sin_allin, 'ausencia'),
-    ('SIN_RESPUESTA_BB', 'el BB tiene entrada y no vuelve a actuar',
-     sin_respuesta_bb, 'ausencia'),
+    ('AUSENCIA_RESPUESTA_BB', 'el BB esta en la mesa y no responde',
+     ausencia_respuesta_bb, 'ausencia'),
 )
+
+# Las metricas que NO son clases, porque miden una forma y no un defecto. Se
+# calculan aparte y se publican con su propio nombre, para que el numero
+# historico que se publico 652 veces no se confunda con el de ausencias.
+METRICAS_NO_FALLA = (
+    ('PATRON_BB_SIN_RESPUESTA',
+     'el preflop cierra con una subida de un no-BB (forma, no defecto)',
+     patron_bb_sin_respuesta),
+)
+
+SOLO_PATRON = 'PATRON_BB_SIN_RESPUESTA'
 
 
 def auditar(manos):
+    """Clases (defectos) y metricas de forma, en dos diccionarios separados.
+
+    No se mezclan, y no por limpieza: review revision_2 §2. La version
+    anterior tenia el patron del BB como una clase mas, de modo que el
+    informe decia "486 casos" cuando 481 de esos no eran defectos. Un
+    instrumento que reporta como hallazgo algo que su propio texto describe
+    como "no falta nada" no se puede usar para decidir nada.
+    """
     hallazgo = {c: [] for c, _e, _f, _n in CLASES}
+    metricas = {c: [] for c, _e, _f in METRICAS_NO_FALLA}
     for h in manos:
         for clave, _e, fn, _n in CLASES:
             try:
@@ -458,7 +512,10 @@ def auditar(manos):
                 r = 'la comprobacion fallo: %r' % (exc,)
             if r:
                 hallazgo[clave].append((h.get('hand_id'), r))
-    return hallazgo
+        for clave, _e, fn in METRICAS_NO_FALLA:
+            if fn(h):
+                metricas[clave].append(h.get('hand_id'))
+    return hallazgo, metricas
 
 
 def validar():
@@ -474,14 +531,16 @@ def validar():
           % (COMMIT_ANTES, 1280))
     print('=' * 78)
     manos = cargar_commit(COMMIT_ANTES)
-    hall = auditar(manos)
+    hall, mets = auditar(manos)
     print()
-    print('%-24s %7s %9s  %s' % ('CLASE', 'DETECTA', 'PUBLICADO', 'VEREDICTO'))
+    print('%-26s %7s %9s  %s' % ('METRICA', 'DETECTA', 'PUBLICADO', 'VEREDICTO'))
     print('-' * 78)
     irrecuperables = []
+    todo = dict((c, len(hall[c])) for c in hall)
+    todo.update((c, len(mets[c])) for c in mets)
     for clave in sorted(REFERENCIA):
         publicada, reproducible = REFERENCIA[clave]
-        n = len(hall[clave])
+        n = todo.get(clave, 0)
         if reproducible:
             veredicto = 'reproduce' if n == publicada else 'DESVIO'
             if n != publicada:
@@ -490,12 +549,19 @@ def validar():
             veredicto = ('NO SE REPRODUCE (cifra sin codigo que la produzca)'
                          if n != publicada
                          else 'coincide por casualidad, sin codigo de origen')
-        print('%-24s %7d %9d  %s' % (clave, n, publicada, veredicto))
+        print('%-26s %7d %9d  %s' % (clave, n, publicada, veredicto))
+    print()
+    print('  el patron y la AUSENCIA son dos metricas distintas:')
+    print('    %-22s %d  (forma: el preflop cierra con una subida de un no-BB)'
+          % ('PATRON_BB_SIN_RESPUESTA', len(mets['PATRON_BB_SIN_RESPUESTA'])))
+    print('    %-22s %d  (defecto: el BB esta y no hace nada)'
+          % ('AUSENCIA_RESPUESTA_BB',
+             len(hall['AUSENCIA_RESPUESTA_BB'])))
     print()
     print('  sin cifra publicada (solo informativo):')
     for clave, _e, _f, naturaleza in CLASES:
         if clave not in REFERENCIA:
-            print('    %-22s %5d  %s' % (clave, len(hall[clave]), naturaleza))
+            print('    %-24s %5d  %s' % (clave, len(hall[clave]), naturaleza))
     print()
     if irrecuperables:
         print('  RESULTADO: %s no reproduce su cifra publicada.'
@@ -535,13 +601,28 @@ def main(argv=None):
           % (len(fuera), fuera[0] if fuera else '-', fuera[-1] if fuera else '-'))
     print('total en la base  : %d' % len(todas))
 
-    hall = auditar(rango)
+    hall, mets = auditar(rango)
+    print()
+    print('CLASES (defectos).  Cada caso necesita una decision.')
     print()
     print('%-24s %7s  %s' % ('CLASE', 'CASOS', 'NATURALEZA'))
     print('-' * 78)
     for clave, etiqueta, _fn, naturaleza in CLASES:
         n = len(hall[clave])
         print('%-24s %7d  %s' % (clave, n, naturaleza))
+
+    print()
+    print('METRICAS (formas).  No son defectos: no requieren decision.')
+    print()
+    print('%-24s %7s  %s' % ('METRICA', 'CASOS', 'QUE MIDE'))
+    print('-' * 78)
+    for clave, etiqueta, _fn in METRICAS_NO_FALLA:
+        print('%-24s %7d  %s' % (clave, len(mets[clave]), etiqueta))
+    print()
+    print('  Ojo: PATRON_BB_SIN_RESPUESTA y AUSENCIA_RESPUESTA_BB no son la')
+    print('  misma cifra. La primera es una forma del preflop; la segunda, un')
+    print('  defecto. Confundirlas fue lo que hizo leer 652 como si fueran 652')
+    print('  manos sin respuesta del BB. Ver DOCS/DEFECTO_652.md.')
 
     print()
     print('=' * 78)
@@ -557,6 +638,14 @@ def main(argv=None):
         print('    ids: %s' % ', '.join(ids))
         for hid, det in casos[:3]:
             print('      ej. %-9s %s' % (hid, det))
+    for clave, etiqueta, _fn in METRICAS_NO_FALLA:
+        if not mets[clave]:
+            continue
+        print()
+        print('--- %s  (%d) ---  %s' % (clave, len(mets[clave]), etiqueta))
+        print('    ids: %s' % ', '.join(mets[clave][:60]))
+        if len(mets[clave]) > 60:
+            print('    ... y %d mas' % (len(mets[clave]) - 60))
 
     if args.json_out:
         with open(args.json_out, 'w', encoding='utf-8') as f:
@@ -564,7 +653,9 @@ def main(argv=None):
                                  'manos': len(rango)},
                        'clases': {k: [{'hand_id': h, 'detalle': d}
                                       for h, d in v]
-                                  for k, v in hall.items() if v}},
+                                  for k, v in hall.items() if v},
+                       'metricas_no_falla': {k: v for k, v in mets.items()
+                                             if v}},
                       f, indent=2, ensure_ascii=False)
         print()
         print('volcado -> %s' % args.json_out)

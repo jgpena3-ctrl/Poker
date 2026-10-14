@@ -52,6 +52,48 @@ CATEGORY_ORDER = ('open', 'limp', 'rol', 'call_limp', 'call_open', '3bet',
 
 RELIABLE_HANDS = 900
 
+# ---------------------------------------------------------------------------
+# ESTADO CANONICO DE hands_db.jsonl
+# ---------------------------------------------------------------------------
+# `hands_db.jsonl` solo se modifica con un SCRIPT VERSIONADO, nunca a mano.
+# Este es el estado declarado, y `motor/test_canal_manual.py` lo vigila.
+#
+# Un cambio manual no rompe este archivo: rompe el HASH. Y el hash esta aqui,
+# al lado de la ventana que usa el motor, para que no pueda haber dos verdades.
+#
+# Cuando el cambio sea legitimo, hay que actualizar ESTA constante Y el
+# documento que explica por que. Subir el hash sin el motivo es tan malo como
+# editar a mano: es dejar constancia de algo que no se sabe por que paso.
+#
+#   version   estado
+#   --------  ------------------------------------------------------------
+#   e314f74   referencia. cm-001, cm-003 y la ventana de 877.
+#   75bbdb7   estado vigente: 1280 -> 1258 (22 manos borradas) + 74
+#             modificadas a mano sobre 02fc641. SIN DECLARAR TODAVIA:
+#             `DOCS/CAMBIOS_MANUALES_68.md`. Ver `CANAL_MANUAL_CERRADO.md`.
+#   e314f74   salida de `tools/aplicar_reinterpretacion.py`
+#             (sha256 173a7274...). Estado ALTERNATIVO, al que se puede volver
+#             con `--apply --descartar-cambios`.
+#
+# Este sha256 es el del FICHERO EN DISCO, y coincide con el blob del repositorio
+# porque `.gitattributes` marca `data/hands_db.jsonl -text`. Sin eso, git
+# normalizaba a LF y el blob nunca podia coincidir con el disco: medido,
+# blob `7d972b2b` (0 CRLF) contra disco `202a1f54` (1258 CRLF). Un hash que
+# no se puede reproducir no es un hash.
+#
+# Documentacion: `DOCS/CANAL_MANUAL_CERRADO.md`, `DOCS/RANGO_VIGENTE.md`.
+HANDS_DB_COMMIT = '75bbdb7'
+HANDS_DB_SHA256 = (
+    '202a1f548fc60bac3d0d4b7a225429083e22298d97a5f6f38cb28d24435b0634')
+HANDS_DB_LINEAS = 1258
+
+# El rango AUDITADO no es el de calibracion. Son dos cosas distintas y
+# confundirlas es lo que produjo tres cifras conviviendo:
+# `RELIABLE_HANDS` = 900, ventana real = 877 (900 - 23 de CM-004), y rango
+# auditado = 991. Ver `DOCS/RANGO_VIGENTE.md`.
+RANGO_AUDITADO_HASTA = 'H_1014'
+RANGO_AUDITADO_LINEAS = 991
+
 # Manos que la ventana fiable EXCLUYE, y por que.
 #
 # No es una poda de rango: la exclusion es por defecto de DATO, y la mano

@@ -76,6 +76,20 @@ CIEGA_MAL_PUESTA = 23     # defecto medido, fuera de esta migracion
 CHECK_INFERIDO = {'pos': 'BB', 'action': 'x', 'amount': 0.0,
                   'inferred': True}
 
+# El sha256 de lo que este script PRODUCE, para que su salida sea
+# distinguible de una edicion a mano. Sin esta constante, un fichero escrito
+# por aqui es indistinguible de uno que alguien toco en un editor, que es
+# exactamente lo que `DOCS/CANAL_MANUAL_CERRADO.md` dice que no va a pasar.
+#
+# Corresponde al estado CM-001 + CM-003 sobre la base de partida, y esta
+# tambien en `DOCS/MIGRACION_CM001_CM003.md`.
+#
+# Nota: el fichero tiene que versionarse SIN conversion de saltos de linea
+# (`.gitattributes`: `data/hands_db.jsonl -text`). Con la conversion activa,
+# el blob del repositorio y el disco tienen distinto hash siempre, y esto no
+# se puede comprobar.
+SHA_SALIDA = 'bb46fec0f2e37dc7c4280cb2302d3180c0502cf9d289ab8430b1e6d957d912ee'
+
 
 # ---------------------------------------------------------------- utilidades
 def sha256(path):
@@ -532,6 +546,20 @@ def aplicar(plan):
 
     print()
     print('aplicado. nuevo sha256: %s' % sha256(DB_PATH))
+    nuevo = sha256(DB_PATH)
+    if nuevo != SHA_SALIDA:
+        print()
+        print('  AVISO: el resultado NO es el que este script declara.')
+        print('  esperado : %s' % SHA_SALIDA)
+        print('  obtenido : %s' % nuevo)
+        print('  Si el cambio es legitimo, actualiza SHA_SALIDA y explica el')
+        print('  motivo en DOCS/CANAL_MANUAL_CERRADO.md. Si no lo es,')
+        print('  revierte: git checkout %s -- %s'
+              % (subprocess.check_output(
+                  ['git', 'rev-parse', '--short', 'HEAD'], cwd=ROOT)
+                  .decode().strip(), DB_REL))
+    else:
+        print('  OK  coincide con SHA_SALIDA, declarado en este script.')
     return True
 
 

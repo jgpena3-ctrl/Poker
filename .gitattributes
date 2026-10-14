@@ -1,0 +1,31 @@
+# El ORDEN importa: en gitattributes gana el ULTIMO patron que coincide. Por
+# eso las reglas especificas van debajo de la general, no encima.
+#
+# El resto de ficheros de texto del repo: LF en el repositorio. Es lo
+# habitual y evita diffs enteros en Windows.
+* text=auto eol=lf
+
+# `data/hands_db.jsonl` se versiona como lo que es: BYTES.
+#
+# Sin `-text`, git normaliza los saltos de linea a LF al guardar y los
+# devuelve como CRLF al sacar, en Windows. Con 1258 lineas eso significa que
+# el blob del repositorio y el fichero del disco tienen SIEMPRE distinto
+# sha256, y por tanto:
+#
+#   - no se puede fijar el hash canonico de la base,
+#   - y cualquier guard que compare el disco con el commit esta comparando
+#     dos cosas que no son el mismo fichero.
+#
+# Medido antes de escribir esto: blob 7d972b2b (1775247 bytes, 0 CRLF),
+# disco 202a1f54 (1776505 bytes, 1258 CRLF). Mismo contenido, distinto hash.
+#
+# `-text` significa: no hacer ninguna conversion, ni al guardar ni al sacar.
+# El fichero entra y sale igual, con cualquier configuracion de git. Es lo
+# que corresponde a un fichero del que depende la reproducibilidad.
+#
+# Nota: esto anula `core.autocrlf` para estos ficheros. Con el repo ya
+# clonado hay que reindexarlos una vez: `git rm --cached <f> && git add <f>`.
+data/hands_db.jsonl -text
+
+# Los derivados se comparan por hash igual que la base. Mismo motivo.
+data/*.json -text
