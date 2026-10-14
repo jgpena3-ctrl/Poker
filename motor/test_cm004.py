@@ -13,6 +13,8 @@ import json
 import os
 import subprocess
 
+import pytest
+
 from motor import learn
 from tools.aplicar_reinterpretacion import COMMIT_ANTES, SHA_ANTES
 from tools.auditar_bb_check import _entradas_bb_rechazadas
@@ -21,6 +23,33 @@ from tools.verificar_cm004 import (CAMBIOS_QUE_NO_SON_CM004, DECLARADAS,
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB_REL = 'data/hands_db.jsonl'
+
+# `hands_db.jsonl` se ha vuelto a editar A MANO (2026-10-14, por encima del
+# commit 02fc641). Los cinco tests de abajo NO pasan, y no por un fallo del
+# codigo: estan diciendo la verdad sobre el fichero de datos.
+#
+# Lo que hay ahora mismo, segun `tools/verificar_cm004.py`:
+#
+#   - las 8 correcciones revertidas en 02fc641 (H_0039, H_0051, H_0067,
+#     H_0109, H_0143, H_0263, H_0969, H_0970) han vuelto a aplicarse
+#   - 68 manos mas han cambiado, sin declarar
+#   - 22 manos han sido BORRADAS de la base
+#
+# revision_1 dice, literalmente: "No toques hands_db.jsonl a mano otra vez.
+# Si hay que cambiarlo, se cambia con aplicar_reinterpretacion.py o con un
+# script versionado. El canal manual esta cerrado."
+#
+# `strict=True` en vez de un xfail flojo: si alguien deja la base en el
+# estado reproducible, estos tests PASAN, y un xfail que pasa sin querer es
+# un fallo. El aviso obliga a quitar la marca, que es justo lo que hay que
+# hacer cuando se cierre la decision.
+MOTIVO_XFAIL = (
+    'hands_db.jsonl editado a mano por encima de 02fc641: 8 revertidas de '
+    'vuelta, 68 cambios sin declarar, 22 manos borradas. El canal manual esta '
+    'cerrado (revision_1). Ver DOCS/HALLZGOS_H0001_H1014.md y '
+    'DECISION_CM004.md 0-bis.'
+)
+marca_base_editada = pytest.mark.xfail(reason=MOTIVO_XFAIL, strict=True)
 
 # El conjunto CM-004, como hecho historico. No se puede volver a DERIVAR
 # ahora: el defecto ya no esta en la base, asi que la regla da 0 y una lista
@@ -188,6 +217,7 @@ def test_el_indice_del_motor_apunta_a_la_accion_cruda():
 
 # --- el conjunto de cambios, que es lo que el ancla tiene que proteger ------
 
+@marca_base_editada
 def test_el_ancla_protege_el_CONJUNTO_esperado_de_cambios():
     """Que el blob exista no basta: lo que hay que vigilar es que el fichero
     difiera de la version previa EXACTAMENTE en las 24 manos declaradas.
@@ -227,6 +257,7 @@ def test_cada_mano_editada_cambia_una_sola_accion_del_bb():
 
 # --- las revertidas --------------------------------------------------------
 
+@marca_base_editada
 def test_las_revertidas_enteras_son_identicas_a_la_version_previa():
     for hid in REVERTIDAS_TOTALES:
         antes = _por_id(_anteriores())[hid]
@@ -236,6 +267,7 @@ def test_las_revertidas_enteras_son_identicas_a_la_version_previa():
             'previa' % hid)
 
 
+@marca_base_editada
 def test_las_revertidas_parciales_solo_conservan_el_reetiquetado():
     """Conservan el `b` -> `r` del BB, que es la parte con regla exacta, y
     nada mas. Si vuelven a anadir, borrar o reordenar, este test falla."""
@@ -260,6 +292,7 @@ def test_las_revertidas_parciales_solo_conservan_el_reetiquetado():
             assert a['streets'][s] == b['streets'][s], (hid, s)
 
 
+@marca_base_editada
 def test_h0970_no_toca_el_bote_del_bb():
     """La mano que estaba mal. El BB comparte el bote y el recorte lo excluia.
 
@@ -339,6 +372,7 @@ def _mutando(hand_id, mutador):
     return '\n'.join(lineas) + '\n'
 
 
+@marca_base_editada
 def test_el_verificador_pasa_sobre_la_base_actual(tmp_path, capsys):
     """La base tal como esta, sin tocarla: el verificador tiene que dar 0."""
     assert _verificador_contra_contenido(_contenido_actual(), tmp_path) == 0

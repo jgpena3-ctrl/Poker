@@ -145,6 +145,29 @@ def diff_contra_actual(lineas):
     return False, cambios
 
 
+# SHA-256 de la salida de ESTE script sobre `e314f74`, y de la referencia.
+# Un fichero actual que no sea ninguno de los dos significa que alguien lo
+# ha editado: y entonces este script no debe escribir encima.
+SHA_SALIDA = '173a72743c7a54255452fb3fc4d8a9095adaddff29a54d84dda1d459bcc7fe8d'
+
+
+def estado_del_fichero_actual():
+    """(estado, sha). Estado ∈ {referencia, salida_de_este_script, ajeno}.
+
+    Es la garantia que faltaba, y se lleno por un accidente concreto:
+    `--apply` con un fichero que NO era suyo lo sobrescribio igualmente,
+    porque solo comparaba con su PROPIA salida y no con la de nadie mas. Un
+    fichero ajeno no es un fichero que este script pueda reemplazar, por muy
+    bien que cuadre su alcance.
+    """
+    sha = sha256_bytes(open(DB_PATH, 'rb').read())
+    if sha == SHA_ANTES:
+        return 'referencia', sha
+    if sha == SHA_SALIDA:
+        return 'salida_de_este_script', sha
+    return 'ajeno', sha
+
+
 def set_tocado(texto_a, texto_b):
     """Los `hand_id` cuyo contenido difiere entre dos versiones de la base."""
     a = {json.loads(l)['hand_id']: l for l in texto_a.splitlines() if l.strip()}
@@ -156,6 +179,9 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument('--apply', action='store_true',
                     help='escribir de verdad (sin esto, dry-run)')
+    ap.add_argument('--descartar-cambios', action='store_true',
+                    help='escribir aunque el fichero actual NO sea ni la '
+                         'referencia ni la salida de este script')
     args = ap.parse_args(argv)
 
     print('=' * 74)
@@ -194,17 +220,65 @@ def main(argv=None):
         print('  alcance: las %d manos tocadas son exactamente las declaradas '
               '(23 de CM-004 + H_0350).' % len(tocadas))
     else:
-        print('  FALLO de alcance. Tocadas pero no declaradas: %s'
-              % sorted(tocadas - declaradas))
-        print('              declaradas pero no tocadas: %s'
-              % sorted(declaradas - tocadas))
+        print('  FALLO DE ALCANCE.')
+        print('    tocadas pero no declaradas   : %s'
+              % (sorted(tocadas - declaradas) or 'ninguna'))
+        print('    declaradas pero no tocadas   : %s'
+              % (sorted(declaradas - tocadas) or 'ninguna'))
 
-    # --- garantia 3: comparar con el fichero actual antes de escribir ------
+    # --- garantia 3 y 4: el alcance ANTES de cualquier retorno de exito ----
+    #
+    # revision_2 §1: el alcance se informaba pero no bloqueaba el exito, y
+    # habia DOS caminos que devolvian 0 sin comprobarlo:
+    #
+    #   a) el fichero ya coincidia (idempotencia) y el alcance no cuadraba
+    #   b) dry-run con el alcance sin cuadrar
+    #
+    # Los dos estan cerrados aqui. La idempotencia significa "el resultado
+    # reproducido coincide Y todas las invariantes se cumplen", no solo "el
+    # contenido coincide": si el conjunto de manos tocadas no es el declarado,
+    # el script esta produciendo otra cosa, y da igual que esa otra cosa ya
+    # este escrita.
+    if not alcance_ok:
+        print()
+        print('ABORTANDO: el alcance no cuadra. No se escribe nada.')
+        if args.apply:
+            print('  (--apply no cambia nada: un alcance incorrecto no se '
+                  'puede aplicar en ningun modo.)')
+        else:
+            print('  (dry-run tambien falla: es el mismo defecto.)')
+        return 2
+
     iguales, lineas_distintas = diff_contra_actual(lineas)
     print()
+
+    # --- garantia 3b: el fichero actual tiene que ser ALGO conocido -------
+    estado, sha_actual = estado_del_fichero_actual()
+    print('fichero actual: sha256 %s  ->  %s' % (sha_actual[:16], estado))
+    if estado == 'ajeno':
+        print()
+        print('  AVISO: el fichero actual NO es la referencia (%s) ni la salida'
+              % SHA_ANTES[:16])
+        print('  de este script (%s). Alguien lo ha editado a mano.'
+              % SHA_SALIDA[:16])
+        print('  Aplicar aqui lo SOBRESCRIBE: %d linea(s) ajenas se perderian.'
+              % len(lineas_distintas))
+        if not args.apply:
+            print()
+            print('  (dry-run: no se escribe nada y esto no es un error aqui.)')
+            print('  En --apply si lo es, porque entonces se perderian.')
+        elif not args.descartar_cambios:
+            print()
+            print('  ABORTANDO. Para hacerlo de verdad, a sabiendas:')
+            print('      --apply --descartar-cambios')
+            print('  El backup se hace antes de escribir, pero un cambio ajeno no')
+            print('  es un cambio que este script pueda deshacer.')
+            return 3
+
     if iguales:
-        print('el fichero ACTUAL ya es identico al que produce este script.')
-        print('nada que hacer (idempotencia).')
+        print('el fichero ACTUAL ya es identico al que produce este script,')
+        print('y el alcance cuadra. IDEMPOTENCIA CORRECTA.')
+        print('nada que hacer.')
         return 0
 
     print('el fichero actual difiere del que produce este script en %d linea(s):'
@@ -218,10 +292,6 @@ def main(argv=None):
         print()
         print('DRY-RUN. Para escribir de verdad: --apply')
         return 0
-    if not alcance_ok:
-        print()
-        print('ABORTANDO: el alcance no cuadra.')
-        return 2
 
     # --- garantia 4: backup verificado -----------------------------------
     backup_dir = os.path.join(ROOT, 'data', '_backup_aplicar_correcciones')
@@ -249,13 +319,36 @@ def main(argv=None):
 
     os.replace(tmp, DB_PATH)
 
-    # --- garantia 7: verificacion post -----------------------------------
-    releidas = learn.load_hands(DB_PATH, reliable_only=False)
+    # --- garantia 7: verificacion post, CONTRA EL RESULTADO ESPERADO ------
+    #
+    # revision_2 §1: la garantia declarada era mas fuerte que la
+    # implementada. Antes solo se comprobaban el numero de manos y el
+    # invariante CM-004, y las dos pueden cumplirse con un fichero
+    # equivocado. Ahora se compara el fichero releido, linea a linea, con lo
+    # que este script dice que produce.
+    releido = io.open(DB_PATH, encoding='utf-8').read().splitlines()
+    releidas = [json.loads(l) for l in releido if l.strip()]
     malas = learn.manos_con_orden_ciega_malo(releidas)
-    ok = not malas and len(releidas) == len(manos)
+    ok = True
+
     print()
     print('VERIFICACION POST-ESCRITURA')
     print('   %d manos' % len(releidas))
+    if len(releidas) != len(manos):
+        print('   FALLO: numero de manos %d -> %d' % (len(manos),
+                                                      len(releidas)))
+        ok = False
+    else:
+        print('   OK  numero de manos sin cambio')
+    if releido == lineas:
+        print('   OK  el fichero releido es IDENTICO al resultado esperado')
+    else:
+        print('   FALLO: el fichero releido NO es el resultado esperado')
+        for i, (a, b) in enumerate(zip(releido, lineas)):
+            if a != b:
+                print('     primera diferencia en la linea %d' % (i + 1))
+                break
+        ok = False
     if malas:
         ok = False
         print('   FALLO: invariante CM-004 violado por %s' % malas)
