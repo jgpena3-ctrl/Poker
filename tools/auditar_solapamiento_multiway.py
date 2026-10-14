@@ -24,9 +24,10 @@ from motor import learn                                       # noqa: E402
 from motor.multiway import (                                  # noqa: E402
     ORDEN, PLAYER_IDS, POSTFLOP, acciones, clasificar_decision,
     contrato_orden_ok, en_bote, en_bote_en_instante, folds_hasta,
-    hero_pos, heroes, instante_decision, no_puede_actuar,
-    no_puede_actuar_en_instante, puede_responder, posiciones_allin,
-    secuencia, ultima_accion,
+    hero_pos, heroes, instante_decision, instantes_decision,
+    no_puede_actuar, no_puede_actuar_en_instante, puede_responder,
+    puntos_decision_mano, posiciones_allin, secuencia,
+    ultima_accion,
 )
 
 
@@ -212,120 +213,125 @@ def main():
     print()
     print('5) QUE ES UN "PUNTO DE DECISION"  (el denominador de verdad)')
     print('-' * 78)
-    print('   El inventario de F7.1 contaba como punto de decision CUALQUIER')
-    print('   calle que tuviera acciones. Eso mete en el numerador puntos en')
-    print('   los que el hero ya no esta en la mano: no hay nada que decidir.')
-    print('   Y al restar 1 al numero de activos para excluir al hero, en')
-    print('   esos puntos resta de mas.')
+    print('   El punto de decision es una ACCION DEL HERO, no una calle. Dos')
+    print('   correcciones, en este orden:')
+    print()
+    print('   a) El hero puede tener MAS DE UNA accion en la misma calle. Si')
+    print('      apuesta y luego tiene que decidir otra vez ante una resubida,')
+    print('      eso son dos decisiones con dos situaciones distintas: entre')
+    print('      una y otra puede incorporarse un rival o irse otro. Contarlas')
+    print('      como una escondia justo los puntos donde mas rivales pueden')
+    print('      responder.')
+    print()
+    print('   b) Una calle con acciones en la que el hero NO aparece no es un')
+    print('      punto de decision: no hay nada que decidir. Y al restar 1 al')
+    print('      numero de activos para excluir al hero, en esos puntos se')
+    print('      restaba de mas.')
     print()
     c5 = collections.Counter()
     for h in manos:
         hp = hero_pos(h)
         for st in POSTFLOP:
-            if not acciones(h, st):
-                continue
-            i = instante_decision(h, st)
-            if i is None:
-                c5['la calle tiene acciones, el hero no esta en ella'] += 1
-            elif hp in folds_hasta(h, st) and acciones(h, st)[i]['action'] != 'f':
-                c5['el hero folteo DESPUES en esa misma calle'] += 1
+            acts = acciones(h, st)
+            n_hero = len(instantes_decision(h, st)) if hp else 0
+            if not acts:
+                c5['calle sin ninguna accion'] += 1
+            elif n_hero == 0:
+                c5['calle con acciones, sin accion del hero'] += 1
             else:
-                c5['decision real del hero'] += 1
-    for k, v in sorted(c5.items(), key=lambda x: -x[1]):
+                c5['calles con >=1 accion del hero'] += 1
+                c5['   de ellas, con 2 o 3 acciones'] += (n_hero > 1)
+    for k, v in sorted(c5.items()):
         print('   %-46s %5d' % (k, v))
     print()
-    print('   -> %d de %d calles con acciones NO son decisiones del hero.'
-          % (c5['la calle tiene acciones, el hero no esta en ella'],
-             sum(c5.values())))
-    print('   Los %d de "folteo despues en esa misma calle" SI son decisiones'
-          % c5['el hero folteo DESPUES en esa misma calle'])
-    print('   reales: el hero apuesta, ve una resubida y foltea. Con el corte')
-    print('   en el instante cuenta como decision; el corte por calle lo')
-    print('   excluia por error.')
+    calles = len(manos) * 3
+    sin_accion = c5['calle sin ninguna accion']
+    sin_hero = c5['calle con acciones, sin accion del hero']
+    con_hero = c5['calles con >=1 accion del hero']
+    print('   CUADRA: %d + %d + %d = %d calles' %
+          (sin_accion, sin_hero, con_hero, calles))
+    assert sin_accion + sin_hero + con_hero == calles, 'no cuadra'
 
     # =====================================================  6  CIFRAS
     print()
     print('6) CIFRAS CON EL CONTRATO DE DECISION  (base para F7.2)')
     print('-' * 78)
     res = collections.Counter()
+    pliegues = collections.Counter()
     mw_calle = mw_inst = 0
     for h in manos:
-        for st in POSTFLOP:
-            i = instante_decision(h, st)
-            if i is not None and acciones(h, st)[i]['action'] == 'f':
-                # Decision real del hero, pero de folding: no consulta
-                # equity, asi que no entra en la politica multiway. Se
-                # cuenta aparte en vez de colarlo dentro de un HU cualquiera.
-                res['FOLD'] += 1
-                continue
-            r = clasificar_decision(h, st)
+        hp = hero_pos(h)
+        for r in puntos_decision_mano(h):
+            st, i = r['calle'], r['instante']
+            fold = acciones(h, st)[i]['action'] == 'f'
             res[r['clase']] += 1
-            hp = hero_pos(h)
-            if i is None or r['sin_evidencia'] or hp is None:
+            pliegues[('fold' if fold else 'no fold', r['clase'])] += 1
+            if r['sin_evidencia'] or r['clase'] == 'SIN_DECISION':
                 continue
-            # Se usa `puede_responder` y no `len(bote) - n - 1`: restar el
-            # hero a mano cuenta mal cuando el hero es el que se
-            # commitmenta, porque entonces ya estaba en el conjunto de
-            # bloqueados y restarlo dos veces deja un rival de menos.
-            pueden_inst = puede_responder(h, st, i)
             ps = no_puede_actuar(h, st)
-            pueden_calle = None
+            pi = no_puede_actuar_en_instante(h, st, i)
             if ps is not None:
-                pueden_calle = (en_bote(h, st) - ps) - {hp}
-            if pueden_inst is not None and pueden_calle is not None:
-                mw_calle += len(pueden_calle) > 1
-                mw_inst += len(pueden_inst) > 1
-    print('   puntos de calle inspeccionados: %d  (%d manos x 3 calles)'
-          % (len(manos) * 3, len(manos)))
+                mw_calle += len((en_bote(h, st) - ps) - {hp}) > 1
+            if pi is not None:
+                mw_inst += len(puede_responder(h, st, i)) > 1
+
+    total = sum(res.values())
+    print('   puntos de DECISION (acciones del hero): %d' % total)
+    print('   %-28s %7s %7s' % ('clase', 'total', 'no fold'))
+    for k in ('HU', 'MULTIWAY', 'DESCONOCIDO', 'SIN_DECISION'):
+        print('   %-28s %7d %7d'
+              % (k, res[k], pliegues[('no fold', k)]))
+    print('   %-28s %7d' % ('  de ellos, el hero FOLDEA',
+                            sum(v for (f, _), v in pliegues.items() if f == 'fold')))
     print()
-    print('   puntos de DECISION del hero:')
-    tot = sum(res.values())
-    for k in ('HU', 'MULTIWAY', 'DESCONOCIDO', 'FOLD', 'SIN_DECISION'):
-        print('      %-14s %5d  (%5.1f%%)'
-              % (k, res[k], res[k] / tot * 100 if tot else 0))
+    clasificables = res['HU'] + res['MULTIWAY']
+    print('   CUADRA: %d + %d + %d = %d puntos'
+          % (clasificables, res['DESCONOCIDO'], res['SIN_DECISION'], total))
+    assert (clasificables + res['DESCONOCIDO'] + res['SIN_DECISION']
+            == total), 'no cuadra el total'
     print()
-    print('   el hero FOLDEA en %d puntos: son decisiones reales, pero no'
-          % res['FOLD'])
-    print('   consumen equity, asi que no entran en la politica multiway.')
+    print('   Un punto FOLD es una decision real pero NO consulta equity:')
+    print('   cuenta como decision y no como punto de politica multiway. Se')
+    print('   declara aqui para que nadie lo compare con los que si la usan.')
     print()
     print('   efecto de la correccion temporal, sobre los %d puntos con'
-          % (res['HU'] + res['MULTIWAY']))
-    print('   evidencia y donde el hero no foldea:')
+          % clasificables)
+    print('   evidencia:')
     print('      MW por calle    : %d' % mw_calle)
-    print('      MW por instante : %d' % mw_inst)
-    print('      el que se firma : %d' % res['MULTIWAY'])
-
-    # cota superior
+    print('      MW por instante : %d   <- el que se firma' % mw_inst)
+    print('      la regla por calle se queda %d spots corto'
+          % (mw_inst - mw_calle))
+    print()
+    print('   DENOMINADOR DE F7.2: %d puntos clasificables' % clasificables)
+    print('      HU %d · MULTIWAY %d · DESCONOCIDO %d (fuera) ·'
+          ' sin rival %d (fuera)'
+          % (res['HU'], res['MULTIWAY'], res['DESCONOCIDO'],
+             res['SIN_DECISION']))
+    print()
     techo = res['MULTIWAY']
+    unknown_mw = 0
     for h in manos:
+        hp = hero_pos(h)
         for st in POSTFLOP:
-            i = instante_decision(h, st)
-            if i is None or acciones(h, st)[i]['action'] == 'f':
-                continue
-            if posiciones_allin(h) is None:
-                hp = hero_pos(h)
-                bote = en_bote_en_instante(h, st, i) | {hp}
-                techo += len(bote) - 1 > 1
-    print()
-    print('   DENOMINADOR DE F7.2:  %d puntos con evidencia'
-          % (res['HU'] + res['MULTIWAY']))
-    print('   MULTIWAY confirmado: %d  (HU %d)'
-          % (res['MULTIWAY'], res['HU']))
-    print('   DESCONOCIDO: %d puntos (no entran en el numerador)'
-          % res['DESCONOCIDO'])
+            for i in instantes_decision(h, st):
+                if posiciones_allin(h) is not None:
+                    continue
+                if acciones(h, st)[i]['action'] == 'f':
+                    continue
+                if len(en_bote_en_instante(h, st, i) | ({hp} if hp else set())) - 1 > 1:
+                    unknown_mw += 1
+    techo += unknown_mw
     print('   COTA (techo, si en los desconocidos nadie estuviera all-in):')
-    print('      %d + %d = %d' % (res['MULTIWAY'],
-                                  techo - res['MULTIWAY'], techo))
+    print('      %d + %d = %d' % (res['MULTIWAY'], unknown_mw, techo))
     print()
-    print('   CONTRASTE con las cifras anteriores:')
-    print('      F7.1 por calle, regla del raise   : HU 702  MW 304')
-    print('      F7.1 por calle, regla de evidencia: MW 225 (cota 276)')
-    print('      contrato de decision + instante   : HU %d  MW %d'
-          % (res['HU'], res['MULTIWAY']))
+    print('   CONTRASTE con las cifras anteriores (NO son la misma metrica):')
+    print('      F7.1 calle + regla del raise   : HU 702  MW 304')
+    print('      F7.1 calle + regla de evidencia: MW 225 (cota 276)')
+    print('      decision por CALLE             : MW 174')
+    print('      decision por INSTANTE (vigente): HU %d  MW %d (cota %d)'
+          % (res['HU'], res['MULTIWAY'], techo))
     print()
-    print('   Las tres cifras no son comparables entre si: cambia QUE se')
-    print('   cuenta (punto de decision) y COMO se cuenta (instante).')
-    print('   La vigente es la ultima. Ver DOCS/CONTRATO_F72A.md.')
+
     return 0
 
 

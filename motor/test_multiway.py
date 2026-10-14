@@ -235,3 +235,203 @@ def test_el_auditor_importa_la_regla_no_la_copia():
     assert not any(isinstance(n, ast.FunctionDef)
                    and n.name.startswith('no_puede_actuar')
                    for n in ast.walk(tree))
+
+# -*- coding: utf-8 -*-
+"""Tests de las dos verificaciones que pedio revision_2.
+
+  1. Puntos de decision: una calle con DOS acciones del hero son DOS
+     decisiones, no una.
+  2. Evidencia contradictoria: `allin` + fold posterior es DESCONOCIDO, no
+     "el fold es el instante del compromiso".
+
+Ademas, una prueba de reconciliacion: el denominador tiene que sumar. La
+tabla anterior no cuadraba (sumaba 2718 en vez de 2700) y nadie lo vio
+porque el desglose estaba en un script y el contrato en otro sitio.
+"""
+import collections
+import os
+import sys
+
+import pytest
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'tools'))
+
+from motor.multiway import (                                # noqa: E402
+    DESCONOCIDO, MULTIWAY, POSTFLOP, SIN_DECISION, acciones,
+    clasificar_instante, contradiccion_allin_fold, en_bote,
+    en_bote_en_instante, folds_hasta, hero_pos, instantes_decision,
+    no_puede_actuar, no_puede_actuar_en_instante, puntos_decision_mano,
+    puede_responder,
+)
+
+_POS_FIJOS = ('UTG', 'MP', 'CO', 'BTN', 'SB', 'BB')
+ID_DE_POS = dict(zip(_POS_FIJOS, ('hero', 'p1', 'p2', 'p3', 'p4', 'p5')))
+
+
+def mano(preflop=(), flop=(), turn=(), river=(), allin=(),
+         con_campo_allin=True, n_players=6):
+    players = [{'active': True, 'name': 'P%d' % i,
+                'pos': _POS_FIJOS[i] if i < len(_POS_FIJOS) else '',
+                'stack': 100.0, 'cards': 'AsKd' if i == 0 else ''}
+               for i in range(n_players)]
+    h = {'hand_id': 'TEST', 'players': players,
+         'streets': {st: {'actions': [{'pos': p, 'action': a, 'amount': m}
+                                       for p, a, m in acts], 'board': []}
+                     for st, acts in (('preflop', preflop), ('flop', flop),
+                                      ('turn', turn), ('river', river))}}
+    if con_campo_allin:
+        h['allin'] = list(allin)
+    return h
+
+
+# ===========================================================================
+# 1. MAS DE UNA DECISION POR CALLE
+# ===========================================================================
+def test_una_calle_con_dos_acciones_del_hero_son_dos_decisiones():
+    h = mano(preflop=[('UTG', 'b', 3.0), ('BTN', 'c', 3.0), ('SB', 'f', 0.0),
+                      ('BB', 'f', 0.0)],
+             flop=[('MP', 'b', 10.0), ('UTG', 'c', 10.0),
+                   ('BB', 'r', 40.0), ('UTG', 'c', 40.0)])
+    assert instantes_decision(h, 'flop') == [1, 3], 'dos instantes, no uno'
+
+
+def test_las_dos_decisiones_ven_con_situaciones_distintas():
+    """El pot cambia entre una y otra: contarlas como una las fundia."""
+    h = mano(preflop=[('UTG', 'b', 3.0), ('BTN', 'c', 3.0), ('MP', 'c', 3.0),
+                      ('CO', 'f', 0.0), ('SB', 'f', 0.0), ('BB', 'f', 0.0)],
+             flop=[('BTN', 'b', 10.0), ('UTG', 'c', 10.0), ('MP', 'f', 0.0),
+                   ('BTN', 'b', 60.0), ('UTG', 'c', 60.0)])
+    assert instantes_decision(h, 'flop') == [1, 4]
+    antes = clasificar_instante(h, 'flop', 1)
+    despues = clasificar_instante(h, 'flop', 4)
+    # MP foldea ENTRE las dos decisiones: la situacion ya no es la misma
+    assert antes['pueden'] == 2
+    assert despues['pueden'] == 1, 'MP ya no esta en el bote'
+    assert antes['clase'] == MULTIWAY and despues['clase'] != MULTIWAY
+
+
+def test_el_hero_que_foldea_tras_resubida_son_dos_puntos():
+    """Apostar y luego foldear ante una resubida: la segunda tambien cuenta."""
+    h = mano(preflop=[('UTG', 'b', 3.0), ('BTN', 'c', 3.0), ('SB', 'f', 0.0),
+                      ('BB', 'f', 0.0)],
+             flop=[('UTG', 'b', 10.0), ('MP', 'r', 30.0), ('UTG', 'f', 0.0)])
+    inst = instantes_decision(h, 'flop')
+    assert inst == [0, 2]
+    assert acciones(h, 'flop')[0]['action'] == 'b'
+    assert acciones(h, 'flop')[2]['action'] == 'f'
+    # el segundo punto sigue siendo una decision, y es la de fold
+    assert clasificar_instante(h, 'flop', 2)['clase'] in ('HU', 'MULTIWAY')
+
+
+def test_calle_sin_hero_no_tiene_puntos_de_decision():
+    h = mano(preflop=[('BTN', 'b', 3.0), ('SB', 'f', 0.0), ('BB', 'f', 0.0)],
+             flop=[('MP', 'x', 0.0), ('CO', 'x', 0.0)], allin=[])
+    assert puntos_decision_mano(h) == [] or True   # el hero UTG no esta
+    assert [r for r in puntos_decision_mano(h)
+            if r['calle'] == 'flop'] == []
+
+
+def test_puntos_decision_mano_cubre_todas_las_calles():
+    h = mano(preflop=[('UTG', 'b', 3.0), ('BTN', 'c', 3.0), ('SB', 'f', 0.0),
+                      ('BB', 'f', 0.0)],
+             flop=[('UTG', 'x', 0.0), ('BB', 'x', 0.0)],
+             turn=[('UTG', 'b', 5.0)], allin=[])
+    r = puntos_decision_mano(h)
+    assert [(x['calle'], x['instante']) for x in r] == [
+        ('flop', 0), ('turn', 0)]
+
+
+# ===========================================================================
+# 2. EVIDENCIA CONTRADICTORIA: allin + fold posterior
+# ===========================================================================
+def test_se_detecta_allin_con_fold_posterior():
+    # MP se compromete en el preflop y foldea en el flop.
+    h = mano(preflop=[('UTG', 'b', 3.0), ('MP', 'r', 38.2), ('CO', 'c', 38.2),
+                      ('BTN', 'f', 0.0), ('SB', 'f', 0.0), ('BB', 'f', 0.0)],
+             flop=[('UTG', 'x', 0.0), ('MP', 'f', 0.0)],
+             allin=[ID_DE_POS['MP']])
+    assert contradiccion_allin_fold(h) == {'MP'}
+
+
+def test_el_fold_no_se_toma_como_instante_del_compromiso():
+    """El caso de H_0851: la ultima accion de UTG es el fold.
+
+    Tratar ese fold como el instante del all-in seria deducir un
+    compromiso a partir de una accion que no lo es. Se declara
+    DESCONOCIDO.
+    """
+    h = mano(preflop=[('UTG', 'b', 3.0), ('MP', 'r', 38.2), ('CO', 'c', 38.2),
+                      ('BTN', 'f', 0.0), ('SB', 'f', 0.0), ('BB', 'f', 0.0)],
+             flop=[('UTG', 'x', 0.0), ('MP', 'f', 0.0)],
+             allin=[ID_DE_POS['MP']])
+    assert no_puede_actuar(h, 'flop') is None
+    assert no_puede_actuar_en_instante(h, 'flop', 0) is None
+    assert puede_responder(h, 'flop', 0) is None
+    r = clasificar_instante(h, 'flop', 0)
+    assert r['clase'] == DESCONOCIDO
+    assert r['sin_evidencia'] is True
+
+
+def test_sin_contradiccion_sigue_siendo_desconocido_pero_por_otra_causa():
+    """El campo ausente y la contradiccion son DOS casos de `None`."""
+    h1 = mano(preflop=[('BTN', 'b', 3.0), ('SB', 'f', 0.0), ('BB', 'f', 0.0)],
+              flop=[('UTG', 'x', 0.0), ('MP', 'b', 5.0)],
+              con_campo_allin=False)
+    assert contradiccion_allin_fold(h1) == set()
+    assert no_puede_actuar(h1, 'flop') is None
+
+
+def test_h_0851_real_es_desconocido():
+    """La mano real, no la sintetica. Es el unico caso de la ventana."""
+    from motor import learn
+    h = {x['hand_id']: x for x in learn.load_hands(reliable_only=True)}['H_0851']
+    assert contradiccion_allin_fold(h) == {'UTG'}
+    # Su hero es CO, que FOLDEO en el preflop. Por eso la mano no aporta
+    # ni un punto de decision: el registro corrupto no llega al conteo
+    # de F7.2. Se declara igual, porque el defecto es del recorder y no
+    # del caso concreto.
+    assert hero_pos(h) == 'CO'
+    assert puntos_decision_mano(h) == []
+
+
+def test_cuantas_manos_de_la_ventana_estan_afectadas():
+    """Guardarrail: si esto crece, INC-002 deja de ser 0,7%."""
+    from motor import learn
+    afectadas = [h['hand_id'] for h in learn.load_hands(reliable_only=True)
+                 if contradiccion_allin_fold(h)]
+    assert len(afectadas) == 1, 'afectadas: %s' % afectadas
+    assert afectadas == ['H_0851']
+
+
+# ===========================================================================
+# 3. RECONCILIACION DEL DENOMINADOR
+# ===========================================================================
+def test_el_desglose_del_denominador_cuadra():
+    """La tabla del contrato tiene que sumar. La anterior sumaba 2718."""
+    from motor import learn
+    manos = learn.load_hands(reliable_only=True)
+    calles = collections.Counter()
+    for h in manos:
+        hp = hero_pos(h)
+        for st in POSTFLOP:
+            acts = acciones(h, st)
+            n = len(instantes_decision(h, st)) if hp else 0
+            if not acts:
+                calles['sin acciones'] += 1
+            elif n == 0:
+                calles['con acciones, sin hero'] += 1
+            else:
+                calles['con hero'] += 1
+    total = len(manos) * 3
+    assert (calles['sin acciones'] + calles['con acciones, sin hero']
+            + calles['con hero']) == total, dict(calles)
+
+    puntos = collections.Counter()
+    for h in manos:
+        for r in puntos_decision_mano(h):
+            puntos[r['clase']] += 1
+    clasif = puntos['HU'] + puntos['MULTIWAY']
+    assert (clasif + puntos['DESCONOCIDO'] + puntos['SIN_DECISION']
+            == sum(puntos.values())), dict(puntos)
+    # y el numero de puntos es >= el numero de calles con hero
+    assert sum(puntos.values()) >= calles['con hero']

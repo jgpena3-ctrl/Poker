@@ -141,20 +141,58 @@ def heroes(hand):
             if (p.get('cards') or '').strip()]
 
 
+def instantes_decision(hand, street):
+    """Indices de TODAS las acciones del hero en `street`, en orden.
+
+    No solo la primera. Si el hero apuesta y despues tiene que decidir
+    otra vez ante una resubida, esa segunda vez es OTRA decision, con otra
+    situacion: entre una y otra puede haberse incorporated un rival al bote
+    o haberse retirado otro. Contarlas como un solo punto escondia
+    justamente los puntos donde mas rivales pueden responder.
+
+    Medido: 110 calles de la ventana fiable tienen 2 o 3 acciones del hero.
+    """
+    hp = hero_pos(hand)
+    if hp is None:
+        return []
+    return [i for i, a in enumerate(acciones(hand, street))
+            if isinstance(a, dict) and a.get('pos') == hp]
+
+
 def instante_decision(hand, street):
     """Indice de la PRIMERA accion del hero en `street`, o None.
+
+    Atajo de `instantes_decision(...)[0]`. Se conserva porque describe el
+    INICIO de la calle, que es lo que quiere el corte por calle. Para
+    enumerar puntos de decision hay que usar `instantes_decision`.
 
     None = en esa calle el hero no tiene ninguna accion registrada: no hay
     decision que tomar. Ojo: si lo que tiene es un 'f', SI es una decision
     (decidir folding), y este indice lo devuelve igual.
     """
-    hp = hero_pos(hand)
-    if hp is None:
-        return None
-    for i, a in enumerate(acciones(hand, street)):
-        if isinstance(a, dict) and a.get('pos') == hp:
-            return i
-    return None
+    inst = instantes_decision(hand, street)
+    return inst[0] if inst else None
+
+
+def contradiccion_allin_fold(hand):
+    """Posiciones con evidencia CONTRADICTORIA: en `allin` y ademas con fold.
+
+    Un jugador que se compromete no puede foldear despues. Si el registro
+    dice las dos cosas, el campo `allin` y las acciones son incompatibles y
+    NO se puede deducir el instante del compromiso: la ultima accion del
+    jugador es justamente el fold, que no es el all-in.
+
+    Es el caso de `H_0851`, y la causa de INC-002. MEDIDO: 1 de 138
+    entradas de `allin` en la ventana fiable (0,7 %).
+
+    Quien encuentre esto NO debe forzar una clasificacion: es
+    `DESCONOCIDO` por la misma via que las manos sin campo.
+    """
+    ai = posiciones_allin(hand)
+    if not ai:
+        return set()
+    folds = {pos for _clave, pos, acc in secuencia(hand) if acc == 'f'}
+    return ai & folds
 
 
 def en_bote(hand, street):
@@ -187,6 +225,22 @@ def en_bote_en_instante(hand, street, indice):
 # ---------------------------------------------------------------------------
 # EL CONTRATO: no puede actuar
 # ---------------------------------------------------------------------------
+def _allin_usable(hand, ai):
+    """`ai` si se puede deducir la calle de cada all-in; None si no.
+
+    None cuando hay una contradiccion `allin` + fold posterior: la ultima
+    accion de ese jugador es el fold, no el compromiso, asi que cualquier
+    instante deducido de ella seria falso. Es el caso de `H_0851`, y es
+    `DESCONOCIDO` por la misma via que las 73 manos sin campo.
+    """
+    if contradiccion_allin_fold(hand):
+        return None
+    for pos in ai:
+        if ultima_accion(hand, pos) is None:
+            return None
+    return ai
+
+
 def no_puede_actuar(hand, street):
     """Rivales en el bote que ya no pueden actuar. POR CALLE. set | None.
 
@@ -201,11 +255,12 @@ def no_puede_actuar(hand, street):
     ai = posiciones_allin(hand)
     if ai is None:
         return None
+    ai = _allin_usable(hand, ai)
+    if ai is None:
+        return None
     fuera = set()
     for pos in ai:
         c = ultima_accion(hand, pos)
-        if c is None:
-            return None
         if c[0] <= ORDEN.index(street):
             fuera.add(pos)
     return fuera
@@ -222,12 +277,13 @@ def no_puede_actuar_en_instante(hand, street, indice):
     ai = posiciones_allin(hand)
     if ai is None:
         return None
+    ai = _allin_usable(hand, ai)
+    if ai is None:
+        return None
     clave = (ORDEN.index(street), indice)
     fuera = set()
     for pos in ai:
         c = ultima_accion(hand, pos)
-        if c is None:
-            return None
         if c <= clave:
             fuera.add(pos)
     return fuera
@@ -261,34 +317,65 @@ MULTIWAY = 'MULTIWAY'
 SIN_DECISION = 'SIN_DECISION'
 
 
-def clasificar_decision(hand, street):
-    """Clasifica UN punto de decision del hero. dict, no tupla.
+def clasificar_instante(hand, street, indice):
+    """Clasifica UN punto de decision, en un instante concreto. dict.
 
-    Devuelve: `clase`, `instante`, `en_bote`, `pueden`, `sin_evidencia`.
-
-    `clase` solo puede ser HU, MULTIWAY, DESCONOCIDO o SIN_DECISION. Un
-    punto donde el hero no decide (ya foldeo, o la calle no tiene su
-    accion) NO es un punto de decision: se dice explicitamente en vez de
-    contarlo como un HU cualquiera.
+    `clase` solo puede ser HU, MULTIWAY, DESCONOCIDO o SIN_DECISION.
+    Un punto donde no se puede clasificar NO se convierte en un HU:
+    se dice explicitamente.
     """
     hp = hero_pos(hand)
     if hp is None:
-        return {'clase': SIN_DECISION, 'instante': None, 'en_bote': 0,
-                'pueden': 0, 'sin_evidencia': True}
-    i = instante_decision(hand, street)
-    if i is None:
-        return {'clase': SIN_DECISION, 'instante': None, 'en_bote': 0,
-                'pueden': 0, 'sin_evidencia': False}
+        return _dict(SIN_DECISION, None, 0, 0, True)
     # El hero se cuenta a si mismo hasta que su accion se ejecute: si lo
     # que hace es foldear, sigue estando en la mesa cuando decide.
-    bote = en_bote_en_instante(hand, street, i) | {hp}
-    pueden = puede_responder(hand, street, i)
+    bote = en_bote_en_instante(hand, street, indice) | {hp}
+    pueden = puede_responder(hand, street, indice)
     if pueden is None:
-        return {'clase': DESCONOCIDO, 'instante': i, 'en_bote': len(bote),
-                'pueden': None, 'sin_evidencia': True}
+        return _dict(DESCONOCIDO, indice, len(bote), None, True)
     n = len(pueden)
     if n == 0:
-        return {'clase': SIN_DECISION, 'instante': i, 'en_bote': len(bote),
-                'pueden': 0, 'sin_evidencia': False}
-    return {'clase': HU if n == 1 else MULTIWAY, 'instante': i,
-            'en_bote': len(bote), 'pueden': n, 'sin_evidencia': False}
+        return _dict(SIN_DECISION, indice, len(bote), 0, False)
+    return _dict(HU if n == 1 else MULTIWAY, indice, len(bote), n, False)
+
+
+def _dict(clase, instante, en_bote, pueden, sin_evidencia):
+    return {'clase': clase, 'instante': instante, 'en_bote': en_bote,
+            'pueden': pueden, 'sin_evidencia': sin_evidencia}
+
+
+def clasificar_decision(hand, street):
+    """PRIMERA decision del hero en la calle. Atajo de `puntos_decision`.
+
+    Se conserva por comodidad. Para el denominador hay que usar
+    `puntos_decision(hand)`, que devuelve una entrada por CADA accion del
+    hero: una calle con dos acciones suyas son dos decisiones.
+    """
+    inst = instantes_decision(hand, street)
+    if not inst:
+        return _dict(SIN_DECISION, None, 0, 0, hero_pos(hand) is None)
+    return clasificar_instante(hand, street, inst[0])
+
+
+def puntos_decision(hand, street):
+    """TODOS los puntos de decision del hero en una calle.
+
+    Una lista de dict, uno por accion del hero. Vacia si el hero no
+    aparece en esa calle.
+    """
+    return [clasificar_instante(hand, street, i)
+            for i in instantes_decision(hand, street)]
+
+
+def puntos_decision_mano(hand, calles=None):
+    """TODOS los puntos de decision del hero en la mano.
+
+    Este es el enumerado que usan el inventario y el auditor: el punto
+    de decision es la ACCION del hero, no la calle.
+    """
+    out = []
+    for st in (calles or POSTFLOP):
+        for r in puntos_decision(hand, st):
+            r = dict(r, calle=st)
+            out.append(r)
+    return out
