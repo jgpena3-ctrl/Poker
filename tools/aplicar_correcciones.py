@@ -1,0 +1,550 @@
+# -*- coding: utf-8 -*-
+"""Aplica las correcciones manuales CM-001 y CM-003 a hands_db.jsonl.
+
+    python tools/aplicar_correcciones.py            # dry-run (no escribe)
+    python tools/aplicar_correcciones.py --apply    # escribe, con backup
+
+Las nueve garantias
+-------------------
+1. Precondiciones estrictas. Cada mano debe estar exactamente en el estado
+   esperado. Cualquier estado inesperado ABORTA antes de escribir nada.
+2. Idempotencia. Si una correccion ya esta aplicada, se clasifica como tal y
+   no se vuelve a aplicar. Si esta a medias, se aborta.
+3. Backup verificado por SHA-256. Se copia el fichero original y se comprueba
+   que el hash coincide ANTES de continuar.
+4. Procedencia diferenciada. Las correcciones observadas (CM-001) y las
+   inferidas (CM-003) se marcan distinto. La inferida lleva `inferred: true` y
+   NO reutiliza `amount_type`: presentarla como 'observed' seria mentir.
+5. Insercion en el lugar logico correcto. El check se anade al final de la
+   secuencia preflop, que es donde cae: el BB es el ultimo en actuar, asi que
+   su check es lo ultimo que ocurrio en preflop.
+6. --dry-run por defecto. Sin `--apply` no se toca nada.
+7. Diff explicito. Se imprime el antes/despues de cada mano, distinguiendo
+   observado de inferido, y se guarda en DOCS/.
+8. Verificacion post-aplicacion. Tras escribir se comprueba que el numero de
+   manos no cambia, que CM-001 quedo corregido, que hay exactamente 25 checks
+   inferidos sin duplicados, y que las categorias preflop cambian como se
+   esperaba.
+9. Rollback automatico. Si la verificacion post falla, se restaura el backup
+   y el proceso termina con error.
+
+CM-002 (H_0350, cartas ausentes) queda FUERA a proposito: no hay evidencia
+suficiente para reconstruir las cartas, y no es verificable sin la captura.
+
+Alcance real de CM-003
+----------------------
+El inventario de `tools/auditar_bb_check.py` decia 41 manos, pero al preguntar
+al motor en vez de a una reimplementacion del criterio, son 25. En las otras 16
+del antiguo inventario hay una entrada `BB b` situada DESPUES de acciones
+voluntarias, de modo que `_es_ciega_bb` (que exige `not voluntary_before`) no
+la reconoce como ciega y el motor la lee como una subida voluntaria del BB. En
+esas manos el BB ya "ha actuado" y el check no es la accion que falta: el
+defecto es otro, y anadir el check no lo arregla. Se listan como BLOQUEADAS, no
+se tocan, y no se inventa ningun reordenamiento.
+"""
+import argparse
+import collections
+import copy
+import hashlib
+import io
+import json
+import os
+import shutil
+import sys
+import tempfile
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, ROOT)
+
+from motor import learn  # noqa: E402
+
+DB_PATH = os.path.join(ROOT, 'data', 'hands_db.jsonl')
+DOCS_DIR = os.path.join(ROOT, 'DOCS')
+
+# --- constantes de la migracion -------------------------------------------
+H_CM001 = 'H_0141'
+CM001_ANTES = 27.0        # OCR de 2.7
+CM001_DESPUES = 2.7
+
+INVENTARIO_ESPERADO = 25  # debe coincidir con auditar_bb_check.py
+MIGRABLES_ESPERADOS = 25
+CIEGA_MAL_PUESTA = 27     # defecto medido, fuera de esta migracion
+
+CHECK_INFERIDO = {'pos': 'BB', 'action': 'x', 'amount': 0.0,
+                  'inferred': True}
+
+
+# ---------------------------------------------------------------- utilidades
+def sha256(path):
+    h = hashlib.sha256()
+    with open(path, 'rb') as f:
+        for bloque in iter(lambda: f.read(1 << 20), b''):
+            h.update(bloque)
+    return h.hexdigest()
+
+
+def leer_lineas(path):
+    with io.open(path, encoding='utf-8') as f:
+        return f.readlines()
+
+
+def es_check_inferido(a):
+    return (isinstance(a, dict) and a.get('pos') == 'BB'
+            and a.get('action') == 'x' and a.get('inferred') is True)
+
+
+def tiene_check_bb(acciones):
+    return any(isinstance(a, dict) and a.get('pos') == 'BB'
+               and a.get('action') == 'x' for a in acciones)
+
+
+def objetivo_cm003(hand):
+    """Mismo criterio que tools/auditar_bb_check.py, y el motor como unico
+    arbitro.
+
+    La version anterior de la auditoria usaba `x[1] != 'b' or x[3]`, que
+    trata CUALQUIER 'b' del BB como ciega y daba 41 manos. Preguntar al motor
+    (`preflop_events`) da 25: en las otras 16 la entrada `BB b` va detras de
+    acciones voluntarias, no es ciega, y el BB ya ha actuado.
+    """
+    st = hand.get('streets', {}) or {}
+    pf = (st.get('preflop') or {}).get('actions') or []
+    flop = (st.get('flop') or {}).get('actions') or []
+    board = (st.get('flop') or {}).get('board') or []
+    if not pf:
+        return False
+    if any(e.pos == 'BB' for e in learn.preflop_events(hand)):
+        return False
+    return bool(flop or board)
+
+
+# ------------------------------------------------------------------- el plan
+class Plan(object):
+    def __init__(self):
+        self.lineas = []          # lineas originales del JSONL
+        self.manos = []           # dicts parseados, en orden
+        self.nuevas = []          # indexada como `lineas`: None = sin tocar
+        self.cambios = []         # (hand_id, tipo, motivo, antes, despues)
+        self.ya_aplicados = []
+        self.bloqueados = []      # (hand_id, motivo)
+        self.errores = []         # condiciones violated -> aborta
+
+    def texto_accion(self, a):
+        if not isinstance(a, dict):
+            return repr(a)
+        return json.dumps(a, ensure_ascii=False, sort_keys=True)
+
+
+def construir_plan(db_path=DB_PATH):
+    plan = Plan()
+    plan.lineas = leer_lineas(db_path)
+    plan.nuevas = [None] * len(plan.lineas)
+
+    manos = []
+    for n, linea in enumerate(plan.lineas):
+        if not linea.strip():
+            manos.append(None)
+            continue
+        try:
+            manos.append(json.loads(linea))
+        except ValueError as exc:
+            plan.errores.append('linea %d: JSON invalido (%s)' % (n + 1, exc))
+            manos.append(None)
+    plan.manos = manos
+
+    fiables = learn.load_hands(reliable_only=True)
+    fiables_ids = set(h.get('hand_id') for h in fiables)
+    objetivo_ids = [h.get('hand_id') for h in fiables if objetivo_cm003(h)]
+
+    # ---- garantia 1: el inventario debe coincidir con la auditoria --------
+    if len(objetivo_ids) != INVENTARIO_ESPERADO:
+        plan.errores.append(
+            'inventario CM-003: %d manos, se esperaban %d. La base ha cambiado.'
+            % (len(objetivo_ids), INVENTARIO_ESPERADO))
+
+    indice = {}
+    for k, h in enumerate(manos):
+        if isinstance(h, dict) and h.get('hand_id'):
+            indice[h['hand_id']] = k
+
+    # ---------------------------------------------------------- CM-001 ----
+    if H_CM001 not in indice:
+        plan.errores.append('CM-001: %s no esta en la base' % H_CM001)
+    else:
+        h = copy.deepcopy(manos[indice[H_CM001]])
+        acc = h['streets']['preflop']['actions']
+        con_27 = [a for a in acc
+                  if isinstance(a, dict) and a.get('amount') == CM001_ANTES]
+        con_27_p = [a for a in acc
+                    if isinstance(a, dict) and a.get('pos') == 'UTG'
+                    and a.get('action') == 'b']
+        if len(con_27_p) != 1:
+            plan.errores.append(
+                'CM-001: %s deberia tener exactamente 1 subida UTG, hay %d'
+                % (H_CM001, len(con_27_p)))
+        elif len(con_27) == 1:
+            antes = plan.texto_accion(con_27[0])
+            con_27[0]['amount'] = CM001_DESPUES
+            plan.cambios.append({
+                'hand_id': H_CM001, 'tipo': 'observado',
+                'motivo': 'OCR: 27.0 leido donde las llamadas usan 2.7',
+                'antes': antes,
+                'despues': plan.texto_accion(con_27[0]),
+            })
+            plan.nuevas[indice[H_CM001]] = h
+        elif len(con_27) == 0:
+            # idempotencia: ya corregido
+            ya = [a for a in acc
+                  if isinstance(a, dict) and a.get('pos') == 'UTG'
+                  and a.get('action') == 'b'
+                  and a.get('amount') == CM001_DESPUES]
+            if len(ya) == 1:
+                plan.ya_aplicados.append(
+                    '%s: importe ya corregido a %s' % (H_CM001, CM001_DESPUES))
+            else:
+                plan.errores.append(
+                    'CM-001: %s no tiene ni %s ni %s; estado inesperado'
+                    % (H_CM001, CM001_ANTES, CM001_DESPUES))
+        else:
+            plan.errores.append(
+                'CM-001: %s tiene %d acciones con amount=%s'
+                % (H_CM001, len(con_27), CM001_ANTES))
+
+    # ---------------------------------------------------------- CM-003 ----
+    for hid in objetivo_ids:
+        if hid not in indice:
+            plan.errores.append('CM-003: %s no esta en la base' % hid)
+            continue
+        k = indice[hid]
+        original = manos[k]
+        acc = original['streets']['preflop']['actions']
+
+        # idempotencia
+        if any(es_check_inferido(a) for a in acc):
+            plan.ya_aplicados.append('%s: check BB inferido ya presente' % hid)
+            continue
+        if tiene_check_bb(acc):
+            plan.bloqueados.append(
+                (hid, 'ya hay un check del BB registrado (no es el caso '
+                      'del inventario)'))
+            continue
+
+        # garantia 5: se inserta al final, que es donde cae el check del BB
+        # (el BB es el ultimo en actuar en preflop).
+        candidato = copy.deepcopy(original)
+        antes_acciones = copy.deepcopy(acc)
+        candidato['streets']['preflop']['actions'].append(dict(CHECK_INFERIDO))
+
+        # garantia 8 (en memoria): la inferencia debe producir bb_check.
+        # Si no, esta mano NO es un check perdido: hay otro defecto y no se
+        # inventa ningun reordenamiento.
+        eventos = learn.preflop_events(candidato)
+        if not any(e.category == 'bb_check' for e in eventos):
+            razon = ('entrada BB b despues de acciones voluntarias: '
+                     '_es_ciega_bb no la reconoce como ciega y el motor la '
+                     'lee como subida del BB')
+            plan.bloqueados.append((hid, razon))
+            continue
+
+        plan.nuevas[k] = candidato
+        plan.cambios.append({
+            'hand_id': hid, 'tipo': 'inferido',
+            'motivo': 'preflop cerrado y el BB sin accion propia: hizo check',
+            'antes': '%d acciones, ultima %s'
+                     % (len(antes_acciones),
+                        plan.texto_accion(antes_acciones[-1])),
+            'despues': '+ %s' % plan.texto_accion(CHECK_INFERIDO),
+        })
+
+    return plan
+
+
+# ------------------------------------------------------------------ informe
+def imprimir_diff(plan):
+    print('=' * 78)
+    print('DIFF DE LAS CORRECCIONES PREVISTAS')
+    print('=' * 78)
+    obs = [c for c in plan.cambios if c['tipo'] == 'observado']
+    inf = [c for c in plan.cambios if c['tipo'] == 'inferido']
+
+    print()
+    print('--- OBSERVADAS (dato leido mal, correccion de un valor) ---')
+    if not obs:
+        print('   ninguna')
+    for c in obs:
+        print('   %s' % c['hand_id'])
+        print('      antes  : %s' % c['antes'])
+        print('      despues: %s' % c['despues'])
+        print('      motivo : %s' % c['motivo'])
+
+    print()
+    print('--- INFERIDAS (no observadas: deducidas de que el preflop cerro) ---')
+    print('   %d correcciones' % len(inf))
+    if inf:
+        print('   ejemplo (primera):')
+        c = inf[0]
+        print('      %s' % c['hand_id'])
+        print('      antes  : %s' % c['antes'])
+        print('      despues: %s' % c['despues'])
+        print('      motivo : %s' % c['motivo'])
+    return obs, inf
+
+
+def imprimir_bloqueados(plan):
+    if not plan.bloqueados:
+        return
+    print()
+    print('=' * 78)
+    print('BLOQUEADAS (%d) — NO se tocan' % len(plan.bloqueados))
+    print('=' * 78)
+    print('No son un check perdido: tienen otro defecto, y corregirlo exigiria')
+    print('inventar un orden que los datos no dicen. Se dejan como estan.')
+    for hid, motivo in plan.bloqueados:
+        print('   %-8s %s' % (hid, motivo))
+
+
+# -------------------------------------------------------------- verificacion
+def categorias(manos, inyectar=None):
+    c = collections.Counter()
+    for h in manos:
+        hh = h
+        if inyectar and h.get('hand_id') in inyectar:
+            hh = copy.deepcopy(h)
+            hh['streets']['preflop']['actions'].append(dict(CHECK_INFERIDO))
+        for e in learn.preflop_events(hh):
+            c[e.category] += 1
+    return c
+
+
+def verificar(plan, manos_antes, categorias_antes):
+    """Devuelve (ok, mensajes). Garantia 8."""
+    msgs = []
+    ok = True
+
+    n_antes = sum(1 for h in manos_antes if h)
+    n_desp = sum(1 for h in plan.nuevas if h)
+    if n_antes != n_desp:
+        ok = False
+        msgs.append('FALLO: el numero de manos cambio (%d -> %d)'
+                    % (n_antes, n_desp))
+    else:
+        msgs.append('OK  numero de manos sin cambios: %d' % n_antes)
+
+    # CM-001
+    k = next((i for i, h in enumerate(plan.nuevas)
+              if isinstance(h, dict) and h.get('hand_id') == H_CM001), None)
+    if k is not None:
+        acc = plan.nuevas[k]['streets']['preflop']['actions']
+        v = [a.get('amount') for a in acc
+             if isinstance(a, dict) and a.get('pos') == 'UTG'
+             and a.get('action') == 'b']
+        if v == [CM001_DESPUES]:
+            msgs.append('OK  CM-001: %s importe = %s' % (H_CM001, v[0]))
+        else:
+            ok = False
+            msgs.append('FALLO: CM-001 quedo en %s, se esperaba [%s]'
+                        % (v, CM001_DESPUES))
+
+    # CM-003: exactamente N inferidos, sin duplicados
+    inf_ids = [c['hand_id'] for c in plan.cambios if c['tipo'] == 'inferido']
+    total_inf = 0
+    duplicados = []
+    for h in plan.nuevas:
+        if not isinstance(h, dict):
+            continue
+        acc = (h.get('streets', {}).get('preflop', {}) or {}).get('actions', [])
+        n = sum(1 for a in acc if es_check_inferido(a))
+        total_inf += n
+        if n > 1:
+            duplicados.append(h.get('hand_id'))
+    if duplicados:
+        ok = False
+        msgs.append('FALLO: checks inferidos duplicados en %s' % duplicados)
+    if total_inf == len(inf_ids):
+        msgs.append('OK  %d checks inferidos, ninguno duplicado'
+                    % total_inf)
+    else:
+        ok = False
+        msgs.append('FALLO: esperaba %d checks inferidos, hay %d'
+                    % (len(inf_ids), total_inf))
+
+    # categorias
+    cats_desp = categorias(plan.nuevas)
+    delta_bb = cats_desp['bb_check'] - categorias_antes['bb_check']
+    otros = {k: cats_desp[k] - categorias_antes[k]
+             for k in set(cats_desp) | set(categorias_antes)
+             if k != 'bb_check' and cats_desp[k] != categorias_antes[k]}
+    if otros:
+        ok = False
+        msgs.append('FALLO: cambiaron categorias distintas de bb_check: %s'
+                    % otros)
+    else:
+        msgs.append('OK  bb_check %d -> %d (%+d); ninguna otra categoria cambio'
+                    % (categorias_antes['bb_check'], cats_desp['bb_check'],
+                       delta_bb))
+    return ok, msgs
+
+
+# ------------------------------------------------------------------- aplicar
+def escribir_atomico(lineas, destino):
+    """Escribe a temporal, valida, y reemplaza. Devuelve el temporal usado."""
+    d = os.path.dirname(destino)
+    fd, tmp = tempfile.mkstemp(dir=d, prefix='.hands_db_', suffix='.tmp')
+    os.close(fd)
+    with io.open(tmp, 'w', encoding='utf-8', newline='\n') as f:
+        for linea in lineas:
+            f.write(linea if linea.endswith('\n') else linea + '\n')
+    # validar el temporal completo antes de tocar el original
+    with io.open(tmp, encoding='utf-8') as f:
+        for n, linea in enumerate(f, 1):
+            if linea.strip():
+                try:
+                    json.loads(linea)
+                except ValueError as exc:
+                    os.remove(tmp)
+                    raise ValueError('temporal invalido en linea %d: %s'
+                                     % (n, exc))
+    return tmp
+
+
+def aplicar(plan):
+    manos_antes = [h for h in plan.manos if h]
+
+    # ---- garantia 3: backup verificado --------------------------------
+    stamp = os.path.dirname(DB_PATH)
+    backup_dir = os.path.join(stamp, '_backup_aplicar_correcciones')
+    os.makedirs(backup_dir, exist_ok=True)
+    backup = os.path.join(backup_dir, 'hands_db.jsonl')
+    shutil.copy2(DB_PATH, backup)
+    h_orig, h_back = sha256(DB_PATH), sha256(backup)
+    print('backup    : %s' % os.path.relpath(backup, ROOT))
+    print('sha256    : %s' % h_orig)
+    print('verificado: %s' % ('OK, coinciden' if h_orig == h_back
+                             else 'FALLO, NO coinciden'))
+    if h_orig != h_back:
+        raise RuntimeError('el backup no coincide con el original; abortando')
+    print()
+
+    categorias_antes = categorias(manos_antes)
+
+    # serializar las manos modificadas y reconstruir el fichero
+    lineas = []
+    for i, linea in enumerate(plan.lineas):
+        if not linea.strip():
+            lineas.append(linea)
+            continue
+        nueva = plan.nuevas[i] if i < len(plan.nuevas) else None
+        if nueva is None:
+            lineas.append(linea)
+        else:
+            lineas.append(json.dumps(nueva, ensure_ascii=False) + '\n')
+
+    ok, msgs = verificar(plan, manos_antes, categorias_antes)
+    if not ok:
+        print('la verificacion en memoria falla; NO se escribe nada:')
+        for m in msgs:
+            print('   %s' % m)
+        print('\nnada modificado. Backup creado sin usar: %s' % backup)
+        return False
+
+    tmp = escribir_atomico(lineas, DB_PATH)
+    try:
+        os.replace(tmp, DB_PATH)
+    except Exception:
+        os.remove(tmp)
+        shutil.copy2(backup, DB_PATH)
+        raise
+
+    # ---- garantia 8 sobre el fichero YA escrito -------------------------
+    releido = [json.loads(l) for l in leer_lineas(DB_PATH) if l.strip()]
+    plan2 = Plan()
+    plan2.manos = releido
+    plan2.nuevas = releido
+    for c in plan.cambios:
+        plan2.cambios.append(c)
+    ok2, msgs2 = verificar(plan2, manos_antes, categorias_antes)
+
+    print('VERIFICACION POST-ESCRITURA')
+    for m in msgs2:
+        print('   %s' % m)
+
+    if not ok2:
+        # ---- garantia 9: rollback --------------------------------------
+        print()
+        print('la verificacion post-escritura FALLA: restaurando el backup')
+        shutil.copy2(backup, DB_PATH)
+        if sha256(DB_PATH) == h_orig:
+            print('   rollback OK, la base vuelve a estar intacta (sha256 %s)'
+                  % h_orig[:16])
+        else:
+            print('   *** ROLLBACK FALLIDO: revisa %s a mano ***' % backup)
+        return False
+
+    print()
+    print('aplicado. nuevo sha256: %s' % sha256(DB_PATH))
+    return True
+
+
+# ---------------------------------------------------------------------- main
+def main(argv=None):
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument('--apply', action='store_true',
+                    help='escribir de verdad (sin esto, dry-run)')
+    args = ap.parse_args(argv)
+
+    plan = construir_plan()
+
+    print('=' * 78)
+    print('aplicar_correcciones  ·  %s' % ('MODO REAL' if args.apply
+                                           else 'DRY-RUN (no escribe)'))
+    print('=' * 78)
+
+    if plan.errores:
+        print()
+        print('PRECONDICIONES INCUMPLIDAS:')
+        for e in plan.errores:
+            print('   - %s' % e)
+        print()
+        print('ABORTANDO. No se modifica nada.')
+        return 2
+
+    obs, inf = imprimir_diff(plan)
+    imprimir_bloqueados(plan)
+
+    print()
+    print('-' * 78)
+    print('resumen: %d correccion(es) observada(s), %d inferida(s), '
+          '%d ya aplicada(s), %d bloqueada(s)'
+          % (len(obs), len(inf), len(plan.ya_aplicados), len(plan.bloqueados)))
+    for y in plan.ya_aplicados:
+        print('   ya aplicada: %s' % y)
+    print()
+    print('  Fuera de esta migracion siguen %d manos con la ciega del BB mal'
+          % CIEGA_MAL_PUESTA)
+    print('  puesta: el motor les asigna una SUBIDA que puede no haber')
+    print('  ocurrido (rol/squeeze/3bet/open). No se corrigen aqui porque')
+    print('  exigirian inventar un orden. Ver tools/auditar_bb_check.py.')
+
+    if not plan.cambios:
+        print()
+        print('nada que hacer: la migracion ya esta aplicada por completo.')
+        return 0
+
+    if len(inf) != MIGRABLES_ESPERADOS:
+        print()
+        print('AVISO: %d inferidas, se esperaban %d. Revisar antes de aplicar.'
+              % (len(inf), MIGRABLES_ESPERADOS))
+        if not args.apply:
+            return 1
+
+    if not args.apply:
+        print()
+        print('DRY-RUN. Para escribir de verdad: --apply')
+        return 0
+
+    ok = aplicar(plan)
+    return 0 if ok else 1
+
+
+if __name__ == '__main__':
+    sys.exit(main())

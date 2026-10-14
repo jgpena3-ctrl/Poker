@@ -1,21 +1,27 @@
 # -*- coding: utf-8 -*-
-"""Mide el `bb_check` perdido y propose la migracion (revision_1 punto 2).
+"""Mide el `bb_check` perdido y clasifica las manos para la migracion.
 
-`_reconstruct_preflop()` no puede emitir `bb_check`: desde UN snapshot, un BB
-con `bet == ciega` es indistinguible de "el BB todavia no ha actuado" frente a
-"el BB ya hizo check". Ambos estados dan `bb_bet = 1.0`.
+Correction (post revision_1/revision_2)
+---------------------------------------
+La version anterior clasificaba con este filtro:
 
-Pero el camino incremental (`_detect_deltas`) si ve el check cuando el stack
-cambia de estado. En la DB actual hay 187 `bb_check` del BB.
+    propias = [x for x in bbs if x[1] != 'b' or x[3]]
 
-Falta un caso: manos cuyo preflop YA TERMINO (hay flop) y en las que el BB solo
-tiene la ciega. Ahi el BB no puede "todavia no haber actuado": la calle se
-cerro, y si no hizo fold (los folds si se detectan) hizo check.
+Es decir,.trataba CUALQUIER accion 'b' del BB como si fuera su ciega. Eso
+daba 41 manos, pero en 16 de ellas la entrada `BB b` esta DESPUES de acciones
+voluntarias: la ciega no puede ir ahi. `learn._es_ciega_bb` exige
+`not voluntary_before` precisamente por eso, y el motor lee esa entrada como
+una SUBIDA voluntaria del BB.
 
-Salida: conteo exacto y el listado, para la migracion.
+En esas 16 el BB ya ha actuado, asi que no le falta un check: le sobra una
+subida que no ocurrio. Anadir el check no las arregla.
+
+Este script clasifica con la MISMA logica que el motor (`preflop_events`), no
+con una reimplementacion, para que inventario y motor no puedan divergir.
+
+Uso:  python tools/auditar_bb_check.py [--json]
 """
 import collections
-import importlib.util
 import json
 import os
 import sys
@@ -23,85 +29,140 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-_spec = importlib.util.spec_from_file_location(
-    'learn', os.path.join(ROOT, 'motor', 'learn.py'))
-learn = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(learn)
+from motor import learn  # noqa: E402
+
+
+def _entradas_bb_rechazadas(h):
+    """Entradas `BB b` que el motor NO reconocio como ciega obligatoria.
+
+    Se reproduce el recorrido de `preflop_events` (que mantiene
+    `voluntary_before`) usando la propia funcion `learn._es_ciega_bb`, en vez
+    de mirar el campo `blind` del dato: los datos antiguos no lo traen y la
+    ciega se reconoce estructuralmente. Mirar el campo daria ~523 falsos
+    positivos.
+    """
+    seq = learn._preflop_sequence(h)
+    rechazadas = []
+    voluntary_before = False
+    for i, (pos, act, amount, is_blind) in enumerate(seq):
+        if learn._es_ciega_bb(i, pos, act, amount, is_blind,
+                              voluntary_before, learn.BB):
+            continue
+        if pos == 'BB' and act == 'b':
+            rechazadas.append((i, amount))
+        if act in ('b', 'r', 'c'):
+            voluntary_before = True
+    return rechazadas
+
+
+def clasificar(h):
+    """(clase, detalle) con la misma logica que motor.learn.preflop_events."""
+    st = h.get('streets', {}) or {}
+    pf = (st.get('preflop') or {}).get('actions') or []
+    flop = (st.get('flop') or {}).get('actions') or []
+    board = (st.get('flop') or {}).get('board') or []
+    if not pf:
+        return 'sin_preflop', None
+
+    eventos = [e for e in learn.preflop_events(h) if e.pos == 'BB']
+
+    if eventos:
+        cat = eventos[0].category
+        if _entradas_bb_rechazadas(h):
+            return 'ciega_mal_puesta', cat
+        return 'registrado', cat
+
+    if flop or board:
+        return 'check_perdido', None
+    return 'ambiguo', None
 
 
 def main():
     hands = learn.load_hands(reliable_only=True)
 
-    registrados = perdidos = ambiguos = 0
-    ids_perdidos = []
-    por_jugador = collections.Counter()
+    conteo = collections.Counter()
+    ids_por_clase = collections.defaultdict(list)
+    cat_por_clase = collections.defaultdict(collections.Counter)
 
     for h in hands:
-        hid = h.get('hand_id', '?')
-        st = h.get('streets', {}) or {}
-        pf = (st.get('preflop') or {}).get('actions') or []
-        flop = (st.get('flop') or {}).get('actions') or []
-        board = (st.get('flop') or {}).get('board') or []
-        if not pf:
-            continue
+        clase, cat = clasificar(h)
+        conteo[clase] += 1
+        ids_por_clase[clase].append(h.get('hand_id'))
+        if cat:
+            cat_por_clase[clase][cat] += 1
 
-        seq = learn._preflop_sequence(h)
-        bbs = [(p, a, v, b) for p, a, v, b in seq if p == 'BB']
-        # acciones propias del BB, excluyendo la ciega
-        propias = [x for x in bbs if x[1] != 'b' or x[3]]
-
-        if propias:
-            registrados += 1
-            continue
-
-        preflop_cerrado = bool(flop) or bool(board)
-        if preflop_cerrado:
-            perdidos += 1
-            ids_perdidos.append(hid)
-            pos_bb = learn.player_of_pos(h, 'BB')
-            if pos_bb:
-                por_jugador[pos_bb] += 1
-        else:
-            ambiguos += 1
-
-    total = registrados + perdidos + ambiguos
+    total = sum(v for k, v in conteo.items() if k != 'sin_preflop')
     print('ventana: %d manos con preflop' % total)
     print()
-    print('  BB con accion propia registrada:      %4d  (%5.1f%%)'
-          % (registrados, registrados / total * 100))
-    print('  BB con check PERDIDO (flop ya existe): %4d  (%5.1f%%)'
-          % (perdidos, perdidos / total * 100))
-    print('  BB aun en preflop (ambiguo):          %4d  (%5.1f%%)'
-          % (ambiguos, ambiguos / total * 100))
+    etiquetas = [
+        ('registrado', 'BB con accion registrada:            '),
+        ('check_perdido', 'BB sin accion y preflop cerrado:      '),
+        ('ciega_mal_puesta', 'BB con la ciega puesta mal:         '),
+        ('ambiguo', 'BB aun en preflop (ambiguo):           '),
+    ]
+    for clave, etiq in etiquetas:
+        n = conteo[clave]
+        pct = n / total * 100 if total else 0
+        print('  %s %4d  (%5.1f%%)' % (etiq, n, pct))
     print()
-    if registrados + perdidos:
-        subrep = perdidos / (registrados + perdidos) * 100
-        print('  -> bb_check esta SUBREPRESENTADO un %.1f%%' % subrep)
-        print('     (sobre %d eventos que&Iacute;stituyen el total real)'
-              % (registrados + perdidos))
+
+    # ---- subrepresentacion del bb_check, sobre bases coherentes -----------
+    perdidos = conteo['check_perdido']
+    check_real = len([e for h in hands for e in learn.preflop_events(h)
+                      if e.category == 'bb_check'])
+    if check_real + perdidos:
+        print('  bb_check observado            : %4d' % check_real)
+        print('  bb_check inferible (perdidos) : %4d' % perdidos)
+        print('  -> subrepresentacion real     : %4.1f%%  (%d de %d eventos)'
+              % (perdidos / (check_real + perdidos) * 100, perdidos,
+                 check_real + perdidos))
+        print('     NOTA: la version anterior de este script daba 4.9% usando')
+        print('     como denominador las %d manos con "cualquier accion del BB",'
+              % conteo['registrado'])
+        print('     no los %d eventos bb_check. Bases distintas, numeros sin'
+              % check_real)
+        print('     relacion. Aqui se usa una sola base.')
     print()
-    print('jugadores afectados (top 8):')
-    for nom, n in por_jugador.most_common(8):
-        print('  %-20s %3d' % (nom, n))
+
+    # ---- el defecto nuevo -------------------------------------------------
+    print('  DEFECTO NUEVO: la ciega del BB esta DESPUES de acciones')
+    print('  voluntarias, asi que el motor la lee como una subida suya.')
+    print('  Estas manos NO son un check perdido: anadir el check no las')
+    print('  arregla, y corregirlas exigiria inventar un orden que los datos')
+    print('  no dicen. Se dejan fuera de CM-003.')
+    print('  Que categoria se les asigna en su lugar:')
+    for cat, n in cat_por_clase['ciega_mal_puesta'].most_common():
+        print('     %-12s %3d' % (cat, n))
+    print('     TOTAL      %3d  (ataques al BB que pueden no haber ocurrido)'
+          % sum(cat_por_clase['ciega_mal_puesta'].values()))
     print()
-    print('hand_ids afectados (%d):' % len(ids_perdidos))
-    print('  ' + ', '.join(ids_perdidos[:30]))
-    if len(ids_perdidos) > 30:
-        print('  ... y %d mas' % (len(ids_perdidos) - 30))
+
+    print('  Manos migrables (check perdido), %d:' % perdidos)
+    print('     ' + ', '.join(ids_por_clase['check_perdido']))
+    print()
+
+    print('  Manos bloqueadas (ciega mal puesta), %d:' % conteo['ciega_mal_puesta'])
+    print('     ' + ', '.join(ids_por_clase['ciega_mal_puesta']))
+    print()
+
+    print('CONCLUSION')
+    print('  El check del BB SÍ es recuperable: si el preflop cerro, la calle se')
+    print('  termino y el BB, sin accion propia, hizo check. Eso da %d manos.'
+          % perdidos)
+    print('  Las otras %d tienen la ciega mal puesta: otro defecto, medido y'
+          % conteo['ciega_mal_puesta'])
+    print('  documentado, no resuelto aqui.')
 
     if '--json' in sys.argv:
         out = os.path.join(ROOT, 'data', 'bb_check_perdidos.json')
         with open(out, 'w', encoding='utf-8') as f:
-            json.dump({'hand_ids': ids_perdidos,
-                       'por_jugador': dict(por_jugador)}, f, indent=2)
+            json.dump({'migrables': ids_por_clase['check_perdido'],
+                       'bloqueadas': ids_por_clase['ciega_mal_puesta'],
+                       'check_perdido': perdidos,
+                       'ciega_mal_puesta': conteo['ciega_mal_puesta'],
+                       'cat_asignada_bloqueadas': dict(
+                           cat_por_clase['ciega_mal_puesta'])}, f, indent=2)
         print('\n-> %s' % out)
-
-    print()
-    print('CONCLUSION')
-    print('  El check del BB NO es recuperable desde el snapshot inicial de')
-    print('  una mano, pero SI es recuperable a posteriori: si el preflop ya')
-    print('  cerro y el BB no tiene accion propia, hizo check. La migracion')
-    print('  anade ese evento con marca implicita, sin tocar el resto.')
     return 0
 
 
