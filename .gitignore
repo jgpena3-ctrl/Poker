@@ -70,3 +70,9 @@ venv/
 # `python tools/reconstruir_derivados.py regen`.
 data/_snapshot_pre_rebuild_*/
 data/_snapshot_pre_audit/
+
+# Backup de hands_db.jsonl antes de una migracion reversible
+# (tools/aplicar_correcciones.py). Copia local: se regenera respaldando el
+# fichero del repo. Guardar el SHA-256 en DOCS/ y el backup se identifica
+# tambien por git, porque hands_db.jsonl esta versionado.
+data/_backup_aplicar_correcciones/

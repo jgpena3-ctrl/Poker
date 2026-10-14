@@ -206,17 +206,30 @@ def _es_ciega_bb(i, pos, act, amount, is_blind, voluntary_before, bb=BB):
 
     Orden de confianza:
       1. Marca explícita del recorder (`blind`) — identidad, no heurística.
-      2. Respaldo estructural para datos antiguos: posición BB, acción 'b',
-         importe de una ciega y sin ninguna acción voluntaria anterior.
+      2. Respaldo estructural para datos antiguos: posición BB, acción 'b' y
+         sin ninguna acción voluntaria anterior.
 
-    El respaldo no usa `i == 0`: medido sobre la ventana fiable, 24 de 586
-    manos tienen la primera acción 'b' del BB en un índice > 0 (por folds o
-    limpes previos), y la regla `i == 0` las habría clasificado mal.
+    Por qué el importe ya NO decide
+    --------------------------------
+    Antes exigía `amount <= bb`, con `bb` = constante nominal. Medido sobre la
+    ventana fiable eso rechazaba 4 manos cuya ciega real es 2.5-92.0 y cuyo
+    `BB b` estaba en el índice 0: el motor las creditaba con una SUBIDA
+    (`rol`/`squeeze`/`3bet`/`open`) que probablemente no ocurrió.
+
+    La condición era además redundante. Si no ha habido ninguna acción
+    voluntaria previa, un `BB b` no puede ser una subida: nadie ha puesto
+    dinero todavía, así que no hay nada que subir. `voluntary_before` ya captura
+    esa información, y los folds no la activan (un fold no pone dinero).
+
+    LIMITACIÓN CONOCIDA: si el recorder perdiera las acciones anteriores y
+    entregara `UTG f, MP f, ..., BB r 6.0`, esa subida sí se leería como ciega.
+    Medido: 0 casos en las 900 manos fiables, donde `BB r` nunca es la primera
+    entrada BB tras solo folds. Es una medición, no una prueba; por eso hay un
+    test que la fija.
     """
     if is_blind:
         return True
-    if pos == 'BB' and act == 'b' and not voluntary_before \
-            and amount is not None and amount <= bb + 1e-9:
+    if pos == 'BB' and act == 'b' and not voluntary_before:
         return True
     return False
 

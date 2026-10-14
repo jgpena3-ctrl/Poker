@@ -33,14 +33,17 @@ suficiente para reconstruir las cartas, y no es verificable sin la captura.
 
 Alcance real de CM-003
 ----------------------
-El inventario de `tools/auditar_bb_check.py` decia 41 manos, pero al preguntar
-al motor en vez de a una reimplementacion del criterio, son 25. En las otras 16
-del antiguo inventario hay una entrada `BB b` situada DESPUES de acciones
+El inventario de `tools/auditar_bb_check.py` decia 41 manos. Al preguntar al
+motor en vez de a una reimplementacion del criterio son 26: en las otras 15 del
+antiguo inventario hay una entrada `BB b` situada DESPUES de acciones
 voluntarias, de modo que `_es_ciega_bb` (que exige `not voluntary_before`) no
 la reconoce como ciega y el motor la lee como una subida voluntaria del BB. En
 esas manos el BB ya "ha actuado" y el check no es la accion que falta: el
-defecto es otro, y anadir el check no lo arregla. Se listan como BLOQUEADAS, no
-se tocan, y no se inventa ningun reordenamiento.
+defecto es otro, y anadir el check no lo arregla.
+
+Quedan 23 manos con ese defecto de orden, fuera de esta migracion y
+documentadas en `tools/auditar_bb_check.py`. No se tocan: corregirlas exigiria
+inventar un reordenamiento que los datos no dicen.
 """
 import argparse
 import collections
@@ -66,9 +69,9 @@ H_CM001 = 'H_0141'
 CM001_ANTES = 27.0        # OCR de 2.7
 CM001_DESPUES = 2.7
 
-INVENTARIO_ESPERADO = 25  # debe coincidir con auditar_bb_check.py
-MIGRABLES_ESPERADOS = 25
-CIEGA_MAL_PUESTA = 27     # defecto medido, fuera de esta migracion
+INVENTARIO_ESPERADO = 26  # debe coincidir con auditar_bb_check.py
+MIGRABLES_ESPERADOS = 26
+CIEGA_MAL_PUESTA = 23     # defecto medido, fuera de esta migracion
 
 CHECK_INFERIDO = {'pos': 'BB', 'action': 'x', 'amount': 0.0,
                   'inferred': True}
@@ -104,7 +107,7 @@ def objetivo_cm003(hand):
 
     La version anterior de la auditoria usaba `x[1] != 'b' or x[3]`, que
     trata CUALQUIER 'b' del BB como ciega y daba 41 manos. Preguntar al motor
-    (`preflop_events`) da 25: en las otras 16 la entrada `BB b` va detras de
+    (`preflop_events`) da 26: en las otras 15 la entrada `BB b` va detras de
     acciones voluntarias, no es ciega, y el BB ya ha actuado.
     """
     st = hand.get('streets', {}) or {}
@@ -127,7 +130,9 @@ class Plan(object):
         self.cambios = []         # (hand_id, tipo, motivo, antes, despues)
         self.ya_aplicados = []
         self.bloqueados = []      # (hand_id, motivo)
-        self.errores = []         # condiciones violated -> aborta
+        self.errores = []         # condiciones violadas -> aborta
+        self.n_inferidas_en_base = 0
+        self.ya_aplicada_en_todo = False
 
     def texto_accion(self, a):
         if not isinstance(a, dict):
@@ -153,19 +158,41 @@ def construir_plan(db_path=DB_PATH):
     plan.manos = manos
 
     fiables = learn.load_hands(reliable_only=True)
-    fiables_ids = set(h.get('hand_id') for h in fiables)
     objetivo_ids = [h.get('hand_id') for h in fiables if objetivo_cm003(h)]
-
-    # ---- garantia 1: el inventario debe coincidir con la auditoria --------
-    if len(objetivo_ids) != INVENTARIO_ESPERADO:
-        plan.errores.append(
-            'inventario CM-003: %d manos, se esperaban %d. La base ha cambiado.'
-            % (len(objetivo_ids), INVENTARIO_ESPERADO))
 
     indice = {}
     for k, h in enumerate(manos):
         if isinstance(h, dict) and h.get('hand_id'):
             indice[h['hand_id']] = k
+
+    # ---- garantia 1 y 2: inventario coherente y migracion integra ---------
+    # Hay tres estados legitimos y nada mas:
+    #   A) sin aplicar   : 0 checks inferidos y 26 manos con check perdido
+    #   B) aplicada      : 26 checks inferidos y 0 manos con check perdido
+    #   C) a medias       : cualquier otra combinacion -> ABORTA
+    # Contar los checks inferidos en la base (no solo en el inventario) es lo
+    # que permite reconocer el estado B despues de aplicar: entonces el
+    # inventario queda vacio, porque las manos ya tienen su check.
+    n_inferidas = 0
+    for h in manos:
+        if not isinstance(h, dict):
+            continue
+        acc = (h.get('streets', {}).get('preflop', {}) or {}).get('actions', [])
+        n_inferidas += sum(1 for a in acc if es_check_inferido(a))
+    plan.n_inferidas_en_base = n_inferidas
+
+    if n_inferidas == 0 and len(objetivo_ids) == INVENTARIO_ESPERADO:
+        pass                                        # estado A
+    elif (n_inferidas == INVENTARIO_ESPERADO
+            and len(objetivo_ids) == 0):
+        plan.ya_aplicada_en_todo = True              # estado B
+    else:
+        plan.errores.append(
+            'estado incoherente: %d checks inferidos en la base y %d manos '
+            'con el check perdido (se esperan 0/%d o %d/0). Migracion a '
+            'medias o base cambiada: NO se continua.'
+            % (n_inferidas, len(objetivo_ids), INVENTARIO_ESPERADO,
+               INVENTARIO_ESPERADO))
 
     # ---------------------------------------------------------- CM-001 ----
     if H_CM001 not in indice:
@@ -307,6 +334,8 @@ def imprimir_bloqueados(plan):
 def categorias(manos, inyectar=None):
     c = collections.Counter()
     for h in manos:
+        if not isinstance(h, dict):
+            continue          # `plan.nuevas` lleva None en lo no modificado
         hh = h
         if inyectar and h.get('hand_id') in inyectar:
             hh = copy.deepcopy(h)
@@ -316,13 +345,21 @@ def categorias(manos, inyectar=None):
     return c
 
 
-def verificar(plan, manos_antes, categorias_antes):
-    """Devuelve (ok, mensajes). Garantia 8."""
+def verificar(plan, manos_antes, categorias_antes, manos_despues=None):
+    """Devuelve (ok, mensajes). Garantia 8.
+
+    `manos_despues` es la base completa tras el plan. Si no se pasa, se
+    reconstruye con `manos_resultantes` (imprescindible: comparar solo las
+    manos tocadas contra la base entera daria un falso fallo).
+    """
+    if manos_despues is None:
+        manos_despues = manos_resultantes(plan)
+
     msgs = []
     ok = True
 
-    n_antes = sum(1 for h in manos_antes if h)
-    n_desp = sum(1 for h in plan.nuevas if h)
+    n_antes = sum(1 for h in manos_antes if isinstance(h, dict))
+    n_desp = sum(1 for h in manos_despues if isinstance(h, dict))
     if n_antes != n_desp:
         ok = False
         msgs.append('FALLO: el numero de manos cambio (%d -> %d)'
@@ -331,10 +368,10 @@ def verificar(plan, manos_antes, categorias_antes):
         msgs.append('OK  numero de manos sin cambios: %d' % n_antes)
 
     # CM-001
-    k = next((i for i, h in enumerate(plan.nuevas)
-              if isinstance(h, dict) and h.get('hand_id') == H_CM001), None)
-    if k is not None:
-        acc = plan.nuevas[k]['streets']['preflop']['actions']
+    h141 = next((h for h in manos_despues
+                 if isinstance(h, dict) and h.get('hand_id') == H_CM001), None)
+    if h141 is not None:
+        acc = h141['streets']['preflop']['actions']
         v = [a.get('amount') for a in acc
              if isinstance(a, dict) and a.get('pos') == 'UTG'
              and a.get('action') == 'b']
@@ -349,7 +386,7 @@ def verificar(plan, manos_antes, categorias_antes):
     inf_ids = [c['hand_id'] for c in plan.cambios if c['tipo'] == 'inferido']
     total_inf = 0
     duplicados = []
-    for h in plan.nuevas:
+    for h in manos_despues:
         if not isinstance(h, dict):
             continue
         acc = (h.get('streets', {}).get('preflop', {}) or {}).get('actions', [])
@@ -369,7 +406,7 @@ def verificar(plan, manos_antes, categorias_antes):
                     % (len(inf_ids), total_inf))
 
     # categorias
-    cats_desp = categorias(plan.nuevas)
+    cats_desp = categorias(manos_despues)
     delta_bb = cats_desp['bb_check'] - categorias_antes['bb_check']
     otros = {k: cats_desp[k] - categorias_antes[k]
              for k in set(cats_desp) | set(categorias_antes)
@@ -407,6 +444,21 @@ def escribir_atomico(lineas, destino):
     return tmp
 
 
+def manos_resultantes(plan):
+    """La lista COMPLETA de manos despues de aplicar el plan.
+
+    `plan.nuevas` solo lleva las manos tocadas; el resto va como None. Para
+    verificar hay que reconstruir la base entera, no comparar 27 contra 1280.
+    """
+    out = []
+    for i, h in enumerate(plan.manos):
+        if h is None:
+            continue
+        out.append(plan.nuevas[i] if i < len(plan.nuevas) and plan.nuevas[i]
+                   else h)
+    return out
+
+
 def aplicar(plan):
     manos_antes = [h for h in plan.manos if h]
 
@@ -439,7 +491,9 @@ def aplicar(plan):
         else:
             lineas.append(json.dumps(nueva, ensure_ascii=False) + '\n')
 
-    ok, msgs = verificar(plan, manos_antes, categorias_antes)
+    manos_despues = manos_resultantes(plan)
+    ok, msgs = verificar(plan, manos_antes, categorias_antes,
+                         manos_despues=manos_despues)
     if not ok:
         print('la verificacion en memoria falla; NO se escribe nada:')
         for m in msgs:
@@ -457,12 +511,8 @@ def aplicar(plan):
 
     # ---- garantia 8 sobre el fichero YA escrito -------------------------
     releido = [json.loads(l) for l in leer_lineas(DB_PATH) if l.strip()]
-    plan2 = Plan()
-    plan2.manos = releido
-    plan2.nuevas = releido
-    for c in plan.cambios:
-        plan2.cambios.append(c)
-    ok2, msgs2 = verificar(plan2, manos_antes, categorias_antes)
+    ok2, msgs2 = verificar(plan, manos_antes, categorias_antes,
+                           manos_despues=releido)
 
     print('VERIFICACION POST-ESCRITURA')
     for m in msgs2:
@@ -518,6 +568,16 @@ def main(argv=None):
           % (len(obs), len(inf), len(plan.ya_aplicados), len(plan.bloqueados)))
     for y in plan.ya_aplicados:
         print('   ya aplicada: %s' % y)
+
+    if plan.ya_aplicada_en_todo and not plan.cambios:
+        print()
+        print('MIGRACION YA APLICADA POR COMPLETO:')
+        print('   CM-001: importe ya corregido')
+        print('   CM-003: %d checks inferidos ya presentes en la base'
+              % plan.n_inferidas_en_base)
+        print()
+        print('no se modifica nada (idempotencia).')
+        return 0
     print()
     print('  Fuera de esta migracion siguen %d manos con la ciega del BB mal'
           % CIEGA_MAL_PUESTA)
