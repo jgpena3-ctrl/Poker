@@ -42,7 +42,20 @@ for h in load_hands(reliable_only=True):
         s = shadow_equity(0.5, board, st, jer, equity_source=jer['main'])
         src[s['penalty_source']] += 1
         if s['penalty_source'] == 'anchor_match':
-            muestras[(st, tuple(sorted(jer.get('checkers_secondary') or ())),
+            # `checkers_all`, NO `checkers_secondary`: dentro de
+            # `anchor_match` el componente `checkers_secondary` es SIEMPRE la
+            # tupla vacía. Motivo: `penalty_source` exige
+            # `len(checkers_all) == 1` y que no haya agresores; sin
+            # agresores `main` sale de `checkers[-1]`, luego `main` ES ese
+            # único checker, y `checkers_secondary` excluye precisamente al
+            # principal.
+            #
+            # MEDIDO sobre las 1269 manos: 5 con `anchor_match`, y
+            # `checkers_secondary` vale `()` en las 5, mientras
+            # `checkers_all` toma 2 valores ({'SB'} y {'BB'}). Agrupar por la
+            # versión anterior colapsaba 5 muestras en un cubo donde había
+            # 2 escenarios distinguibles.
+            muestras[(st, tuple(sorted(jer.get('checkers_all') or ())),
                       tuple(sorted(jer.get('pending') or ())),
                       bool(jer.get('hero_bet')),
                       len(jer.get('aggressors') or ()))] += 1

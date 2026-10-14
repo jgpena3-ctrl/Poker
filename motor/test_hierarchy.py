@@ -443,6 +443,57 @@ def test_equity_main_no_altera_la_accion():
     assert con.shadow['equity_main'] is not None
 
 
+def test_equity_vs_rival_excepcion_al_calcular():
+    """El TERCER modo de fallo: el rangoSirve, pero el calculo revienta.
+
+    MEDIDO: este modo no lo cubria ningun test. El que parecia cubrirlo
+    (`test_equity_main_no_rompe_con_builder_que_falla`) pasa una FUNCION,
+    y un objeto sin `is_empty` cae en la rama de rango vacio, no en la de
+    excepcion.
+    """
+    from motor import situation as _sit
+    from motor.ranges import RangeState
+    from motor.recommend_loop import _equity_vs_rival
+
+    rs = RangeState(reach=np.ones(N_COMBOS, dtype=np.float32))
+    rs.set_known_cards(list(HERO) + list(BOARD_FLOOP))
+    assert getattr(rs, 'is_empty', True) is False, \
+        'el rango debe ser utilizable para llegar a la rama de excepcion'
+
+    original = _sit.equity_vs_range
+
+    def revienta(*a, **k):
+        raise RuntimeError('boom')
+
+    _sit.equity_vs_range = revienta
+    try:
+        eq, src, err = _equity_vs_rival(rs, HERO, BOARD_FLOOP)
+    finally:
+        _sit.equity_vs_range = original
+
+    assert eq is None, 'una excepcion NO puede convertirse en equity'
+    assert err is not None and err.startswith('equity_calculation_failed'), err
+    assert 'boom' in err, 'el motivo real debe quedar en la nota: %r' % err
+
+
+def test_equity_vs_rival_un_rango_sin_is_empty_cae_en_vacio():
+    """Por que el test de abajo NO prueba lo que su nombre promete.
+
+    Un objeto sin atributo `is_empty` (una funcion, por ejemplo) hace que
+    `getattr(rs, 'is_empty', True)` devuelva True, y eso lleva a la rama
+    `empty_range_after_blockers`. Fijado para que nadie lea ese test como
+    cobertura de la rama de excepcion.
+    """
+    from motor.recommend_loop import _equity_vs_rival
+
+    def builder_malo(pos):
+        raise RuntimeError('boom')
+
+    eq, src, err = _equity_vs_rival(builder_malo, HERO, BOARD_FLOOP)
+    assert err == 'empty_range_after_blockers'
+    assert 'boom' not in str(err), 'la funcion ni se llega a llamar'
+
+
 def test_equity_main_no_rompe_con_builder_que_falla():
     """Un builder que lanza no puede tumbar la recomendación."""
     def builder_malo(pos):

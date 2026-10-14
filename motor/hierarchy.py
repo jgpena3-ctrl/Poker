@@ -550,6 +550,15 @@ def shadow_record(hand_id: str, street: str, board_codes, hero_codes,
         # que la incertidumbre se perdía igual que antes. Al menos queda
         # REGISTRADA: quien compare registros puede distinguir "cero
         # pendientes" de "el llamador no declaró los activos".
+        #
+        # MEDIDO: hoy NINGÚN consumidor lee este campo. `ShadowLog` solo
+        # escribe el JSONL; no hay lector de `pending_known` en el repo, y
+        # los análisis que miran `n_pending` siguen usando `len(pending)`.
+        #
+        # Es deliberado, no un descuido: el campo hace que el REGISTRO sea
+        # honesto, y un registro honesto vale aunque hoy nadie lo consulte.
+        # Lo que NO vale es creer que la incertidumbre ya está resuelta en
+        # los consumidores: sigue estándolo. Por eso lleva esta nota.
         'pending_known': hierarchy.get('pending_known'),
         'texture': texture_key(board_codes),
         'equity_production': shadow.get('equity_production'),
