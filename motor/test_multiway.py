@@ -221,20 +221,36 @@ def _lineas_de(modulo, *nombres):
             if any(l.strip().startswith('def %s(' % n) for n in nombres)]
 
 
-def test_el_auditor_importa_la_regla_no_la_copia():
-    """El script de auditoria tiene que IMPORTAR de motor/multiway."""
-    src = io.open(os.path.join(ROOT, 'tools',
-                               'auditar_solapamiento_multiway.py'),
-                  encoding='utf-8').read()
+@pytest.mark.parametrize('script', ['auditar_solapamiento_multiway.py',
+                                    'inventario_multiway.py',
+                                    'correlacionar_capturas.py'])
+def test_los_scripts_de_tools_importan_la_regla_no_la_copian(script):
+    """Cada script de `tools/` que use la regla tiene que IMPORTARLA.
+
+    Y ninguna puede dejar una firma —ni siquiera vacía—: un stub sin cuerpo
+    es deuda silenciosa, porque parece que la regla está disponible en ese
+    fichero y no lo está.
+    """
+    ruta = os.path.join(ROOT, 'tools', script)
+    src = io.open(ruta, encoding='utf-8').read()
     tree = ast.parse(src)
-    importa = any(
-        isinstance(n, ast.ImportFrom) and n.module == 'motor.multiway'
-        for n in ast.walk(tree))
-    assert importa, 'el auditor ya no importa de motor.multiway'
-    # y no vuelve a definirla
-    assert not any(isinstance(n, ast.FunctionDef)
-                   and n.name.startswith('no_puede_actuar')
-                   for n in ast.walk(tree))
+
+    # 1) si menciona la regla, tiene que importarla de motor.multiway
+    usa = 'no_puede_actuar' in src or 'puede_responder' in src
+    if usa:
+        assert any(isinstance(n, ast.ImportFrom)
+                   and n.module == 'motor.multiway'
+                   for n in ast.walk(tree)), (
+            '%s usa la regla pero no la importa de motor.multiway' % script)
+
+    # 2) y no puede redefinirla, con cuerpo o sin él
+    for n in ast.walk(tree):
+        if isinstance(n, ast.FunctionDef) and n.name.startswith('no_puede_actuar'):
+            raise AssertionError(
+                '%s:%d define %s. La regla vive en motor/multiway.py'
+                % (script, n.lineno, n.name))
+        if isinstance(n, ast.ClassDef) and n.name.startswith('no_puede_actuar'):
+            raise AssertionError('%s define una clase %s' % (script, n.name))
 
 # -*- coding: utf-8 -*-
 """Tests de las dos verificaciones que pedio revision_2.

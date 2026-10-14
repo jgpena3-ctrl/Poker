@@ -4,6 +4,8 @@
 clasificación de multiway.
 **Implementación:** `motor/multiway.py`
 **Decisión:** revision_1 (la regla nueva sustituye a la vieja).
+**Denominador:** 578 puntos clasificables, sobre la ventana de 877 manos
+(las 23 de CM-004 están excluidas: `EXCLUSION_CM004.md`).
 **Cifras:** medidas por `python tools/auditar_solapamiento_multiway.py`.
 
 > Este contrato va **antes** que la política multiway. Ningún consumidor
@@ -133,64 +135,110 @@ all-in**. En el flop MP todavía puede responder.
 
 ## 5. El denominador de F7.2
 
-### 5.1 Lo que este contrato cambia respecto a la decisión de revision_1
+### 5.1 Lo que este contrato cambia respecto a F7.1
 
-revision_1 (Tarea 2) fijó el denominador en **225**, con cota **276**.
-Esas cifras eran correctas **bajo el marco por calle**, y ese marco quedó
-invalidado en este mismo bloque. Lo que sigue es el denominador vigente.
+Las cifras de F7.1 no son la misma métrica que estas. Cambian **dos cosas
+a la vez**, y por eso no se comparan:
 
-revision_2 lo pide explícitamente: publicar la diferencia frente a 169 y
-frente al intervalo 225–276.
+1. **QUÉ se cuenta.** F7.1 contaba *calles con acciones*. Aquí se cuentan
+   **acciones del hero**: cada vez que el hero tiene que decidir, incluso
+   si es dos veces en la misma calle.
+2. **CÓMO se cuenta.** F7.1 contaba por calle, y daba por hecho que un
+   all-in bloquea desde el principio de su calle. Aquí se cuenta por
+   **instante**, respetando el orden real de las acciones.
 
 ### 5.2 Qué es un punto de decisión
 
-Un punto de decisión es **una acción del hero**. No "una calle con
-acciones". El inventario de F7.1 contaba lo segundo, y por eso metía en el
-numerador puntos en los que el hero ya no estaba en la mano: no había nada
-que decidir. Peor: al restar 1 al número de activos para excluir al hero,
-en esos puntos restaba de más.
+Una **acción del hero**. Dos motivos, y los dos importan:
+
+- Si el hero **apuesta y luego tiene que decidir otra vez ante una
+  resubida**, son dos decisiones con dos situaciones distintas: entre una y
+  otra puede foldear un rival o incorporarse otro. Medido: **110 calles**
+  de la ventana tienen 2 o 3 acciones del hero.
+- Una calle con acciones en la que el hero **no aparece** no es un punto
+  de decisión: no hay nada que decidir. Y al restar 1 al número de activos
+  para excluir al hero, en esos puntos se restaba de más.
+
+### 5.3 El desglose, cuadrado
 
 | | puntos |
 |---|---|
-| calles inspeccionadas (900 manos × 3 postflop) | 2700 |
-| en las que el hero no tiene ninguna acción | 2159 |
-| el hero **folds** (decisión real, no consulta equity) | 37 |
-| con ningún rival al que responder | 18 |
-| **decisiones clasificables** | **466** |
-| **desconocidas** | **38** |
+| calles inspeccionadas (877 manos × 3 postflop) | **2631** |
+| · sin ninguna acción | 1353 |
+| · con acciones pero sin acción del hero | 730 |
+| · con ≥1 acción del hero | 548 |
+| **acciones del hero = puntos de decisión** | **656** |
+| · HU | 320 |
+| · MULTIWAY | 258 |
+| · DESCONOCIDO | 52 |
+| · sin ningún rival al que responder | 26 |
 
-De las 1316 calles que tenían acciones, **757 no eran decisiones del
-hero**: un 56 % del numerador viejo.
+Las dos sumas cuadran y el script lo verifica con `assert`, no a ojo:
 
-### 5.3 Cifras
+```
+1353 + 730 + 548 = 2631 calles
+320 + 258 + 52 + 26 = 656 puntos
+```
+
+> Una versión anterior de esta tabla sumaba 2718 en vez de 2700, porque
+> los 26 "sin rival" ya estaban dentro del bloque de "sin acción del hero".
+> El número era correcto; la presentación mentía. Por eso ahora hay `assert`
+> y un test que reproduce el cuadre.
+
+### 5.4 Cifras
 
 | | puntos |
 |---|---|
-| HU | **254** |
-| MULTIWAY confirmado | **212** |
-| DESCONOCIDO (fuera del numerador) | 38 |
-| el hero folds (fuera: no consulta equity) | 37 |
-| **denominador de F7.2** | **466** |
+| HU | **320** |
+| **MULTIWAY confirmado** | **258** |
+| DESCONOCIDO (fuera del numerador) | 52 |
+| sin rival (fuera) | 26 |
+| el hero folds (decide, pero no consulta equity) | 89 |
+| **denominador de F7.2** | **578** |
 
-De los 38 desconocidos, 26 serían multiway si en ellos nadie estuviera
+De los 52 desconocidos, 29 serían multiway si en ellos nadie estuviera
 all-in. La cota es:
 
 ```
-212 (base) + 26 (techo sin evidencia) = 238
+258 (base) + 29 (techo sin evidencia) = 287
 ```
 
-### 5.4 Contraste
+Un punto **fold** es una decisión real pero **no consulta equity**. Cuenta
+como decisión y no como punto de política multiway, y se declara aparte
+para que nadie lo compare con los que sí usan la equity.
 
-| cifra | marco | regla | estado |
+### 5.5 ⚠ La cifra que cambia la política
+
+> ## MULTIWAY = 258 de 578 = **44,6 %**
+>
+> **Antes F7.1 decía 16,8 %.** Con el mismo nombre de métrica pero otro
+> denominador, el multiway casi se triplica.
+>
+> Esto no es una mejora del dato: es que se estaba midiendo otra cosa. Pero
+> **quien lea este contrato tiene que verla**, porque 16,8 % y 44,6 % llevan
+> a políticas opuestas: con el primero, el multiway es un caso marginal que
+> se puede ignorar; con el segundo, es casi la mitad de las decisiones y
+> no se puede seguir entrando en él en silencio.
+>
+> Si F7.2.a se firma sobre 16,8 %, se firma sobre un error.
+
+Por qué la diferencia es tan grande, en una línea: F7.1 contaba calles con
+actividad, many de ellas donde el hero ya había folded, y en las que
+restaba un rival de más al excluirlo. El denominador viejo estaba
+inflado por puntos que no son decisiones, y el multiway estaba medido por
+calle, no por instante.
+
+### 5.6 Contraste
+
+| cifra | qué cuenta | regla | estado |
 |---|---|---|---|
-| 304 MW | por calle | del raise | **rechazada** (14,6 % de precisión) |
-| 169 MW | por calle | del raise | **rechazada** (misma causa) |
-| 225 MW (cota 276) | por calle | evidencia | **sustituida**: no cuenta decisiones |
-| **212 MW (cota 238)** | **por instante** | **evidencia** | **vigente** |
+| 304 MW | calle con acciones | del raise | **rechazada** (14,6 % de precisión) |
+| 169 MW | calle con acciones | del raise | **rechazada** (misma causa) |
+| 225 MW (cota 276) | calle con acciones | evidencia | **sustituida**: no cuenta decisiones |
+| 174 MW | acción del hero | evidencia, por calle | **sustituida**: ignora el orden |
+| **258 MW (cota 287)** | **acción del hero** | **evidencia, por instante** | **vigente** |
 
-El **16,8 %** de `RESUMEN_SECCION.md` no significa nada con este
-denominador. Con el vigente, el multiway es **212 de 466 = 45,5 %** de las
-decisiones clasificables.
+El 16,8 % de `RESUMEN_SECCION.md` no significa nada con este denominador.
 
 ---
 
