@@ -52,6 +52,7 @@ from typing import Dict, Optional, Tuple
 
 import numpy as np
 
+from ._procedencia import procedencia
 from .learn import load_hands, preflop_events
 from .preflop import CELL_COL, CELL_ROW, matrix_to_probs
 
@@ -103,34 +104,6 @@ def _cell_(cards: str) -> Optional[Tuple[int, int]]:
     return (i, j) if cards[1] == cards[3] else (j, i)
 
 
-def _procedencia():
-    """Sella en `meta` de donde sale este fichero.
-
-    Sin esto, comparar dos `profile_ranges.json` es imposible: los dos tendrian
-    el mismo `meta` y no se podria saber si la diferencia viene de menos manos,
-    de otra version del codigo o de otra ventana de datos.
-    """
-    import datetime
-    import subprocess
-
-    def _commit():
-        try:
-            return subprocess.check_output(
-                ['git', 'rev-parse', '--short', 'HEAD'],
-                cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                stderr=subprocess.DEVNULL).decode().strip()
-        except Exception:
-            return 'desconocido'
-
-    from .learn import RELIABLE_HANDS
-    return {
-        'hands_window': 'reliable_only',
-        'hands_used': RELIABLE_HANDS,
-        'code_commit': _commit(),
-        'built_at': datetime.datetime.now().isoformat(timespec='seconds'),
-    }
-
-
 class ProfileRangeModel:
     """P(A|H, spot, perfil) preflop — grid 13×13 por (perfil, spot).
 
@@ -145,6 +118,7 @@ class ProfileRangeModel:
         self.cnt: Dict[Tuple[str, str, str], np.ndarray] = {}  # (p,spot,c)
         self.perfil: Dict[str, str] = {}                  # jugador → perfil
         self.profiles = None                             # Profiles (stats/ω)
+        self.n_hands_used = None                       # manos reales usadas
         self._omega = None                               # caché cargada de disco
 
     # ------------------------------------------------------------------
@@ -160,6 +134,7 @@ class ProfileRangeModel:
             profs = Profiles.from_hands(hands)
             labels = {name: p.label for name, p in profs.profiles.items()}
         model = cls(alpha=alpha)
+        model.n_hands_used = len(hands)
         model.perfil = dict(labels)
         model.profiles = Profiles.from_hands(hands)
         model._omega = None
@@ -351,7 +326,8 @@ class ProfileRangeModel:
     def to_json(self) -> dict:
         return {
             'meta': dict({'alpha': self.alpha,
-                          'origen': 'hands_db.jsonl'}, **_procedencia()),
+                          'origen': 'hands_db.jsonl'},
+                         **procedencia(self.n_hands_used)),
             'perfil': dict(self.perfil),
             'opp': {f'{k[0]}|{k[1]}': v.tolist()
                     for k, v in self.opp.items()},

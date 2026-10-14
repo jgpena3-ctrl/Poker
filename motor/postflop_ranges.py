@@ -44,6 +44,7 @@ import numpy as np
 from .behavior import Oracle, build
 from .hand_evaluator import evaluate_batch
 from .observations import STREETS, extract_hands
+from ._procedencia import procedencia
 from .profile import Profiles
 from .ranges import COMBO0, COMBO1, HAND_MASKS, N_COMBOS
 
@@ -98,34 +99,6 @@ def _strength_buckets(board_codes, n_buckets=DEFAULT_BUCKETS):
     return scores, full
 
 
-def _procedencia():
-    """Sella en `meta` de donde sale este fichero.
-
-    Sin esto, comparar dos `profile_ranges.json` es imposible: los dos tendrian
-    el mismo `meta` y no se podria saber si la diferencia viene de menos manos,
-    de otra version del codigo o de otra ventana de datos.
-    """
-    import datetime
-    import subprocess
-
-    def _commit():
-        try:
-            return subprocess.check_output(
-                ['git', 'rev-parse', '--short', 'HEAD'],
-                cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                stderr=subprocess.DEVNULL).decode().strip()
-        except Exception:
-            return 'desconocido'
-
-    from .learn import RELIABLE_HANDS
-    return {
-        'hands_window': 'reliable_only',
-        'hands_used': RELIABLE_HANDS,
-        'code_commit': _commit(),
-        'built_at': datetime.datetime.now().isoformat(timespec='seconds'),
-    }
-
-
 class PostflopRangeModel:
     """P(A|H, street, facing, perfil) postflop, buckets de fuerza + Oracle.
 
@@ -139,6 +112,7 @@ class PostflopRangeModel:
                  n_buckets: int = DEFAULT_BUCKETS):
         self.alpha = float(alpha)
         self.n_buckets = n_buckets
+        self.n_hands_used = None      # manos reales usadas (sello de meta)
         self.opp: Dict[Tuple[str, str, str, int], int] = {}
         self.cnt: Dict[Tuple[str, str, str, int, str], int] = {}
         self.labels: Dict[str, str] = {}
@@ -158,6 +132,7 @@ class PostflopRangeModel:
             profs = Profiles.from_hands(hands)
             labels = {name: p.label for name, p in profs.profiles.items()}
         model = cls(alpha=alpha, n_buckets=n_buckets)
+        model.n_hands_used = len(hands)
         model.labels = dict(labels)
         model._oracle = Oracle(build(hands, labels=model.labels))
         obs = extract_hands(hands)
@@ -275,7 +250,8 @@ class PostflopRangeModel:
         return {
             'meta': dict({'alpha': self.alpha,
                           'n_buckets': self.n_buckets,
-                          'origen': 'hands_db.jsonl'}, **_procedencia()),
+                          'origen': 'hands_db.jsonl'},
+                         **procedencia(self.n_hands_used)),
             'labels': dict(self.labels),
             'opp': {f'{k[0]}|{k[1]}|{k[2]}|{k[3]}': v
                     for k, v in self.opp.items()},
@@ -308,9 +284,8 @@ class PostflopRangeModel:
 
 
 def main(argv=None):
-    import sys
-
     import json
+    import sys
 
     from .learn import load_hands
 

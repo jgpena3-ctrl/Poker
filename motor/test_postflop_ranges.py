@@ -183,3 +183,42 @@ def test_recommend_con_update_postflop():
     assert rec.action in ('fold', 'check', 'call', 'bet_25', 'bet_50',
                           'bet_75', 'all_in')
     assert rec.elapsed_ms > 0
+
+
+# --- procedencia del `meta` (revision_1: faltaba cobertura de to_json) ---
+
+def test_postflop_to_json_sella_procedencia():
+    """to_json() debe sellar de donde sale el fichero.
+
+    revision_1Sr.: si `to_json` se rompe, nada lo detecta salvo que un test
+    lo llame. `test_save_load_roundtrip` lo cubre via save(), pero este
+    test comprueba el CONTENIDO del sello.
+    """
+    m = pf.PostflopRangeModel()
+    meta = m.to_json()['meta']
+    assert meta['hands_window'] in ('reliable_only', 'custom', 'desconocida')
+    assert 'hands_used' in meta
+    assert 'code_commit' in meta
+    assert 'built_at' in meta
+
+
+def test_postflop_meta_refleja_las_manos_reales():
+    """`hands_used` debe ser el numero REAL, no la constante nominal.
+
+    Construir con 50 manos y sellar `hands_used: 900` seria mentir: es
+    justo lo que el sello existe para evitar.
+    """
+    from motor.learn import load_hands
+    hands = load_hands(reliable_only=True)[:50]
+    m = pf.PostflopRangeModel.from_hands(hands)
+    meta = m.to_json()['meta']
+    assert meta['hands_used'] == 50
+    assert meta['hands_window'] == 'custom'
+
+
+def test_postflop_meta_ventana_fiable():
+    from motor.learn import load_hands
+    m = pf.PostflopRangeModel.from_hands(load_hands(reliable_only=True))
+    meta = m.to_json()['meta']
+    assert meta['hands_used'] == 900
+    assert meta['hands_window'] == 'reliable_only'
