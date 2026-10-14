@@ -4,9 +4,12 @@
 clasificación de multiway.
 **Implementación:** `motor/multiway.py`
 **Decisión:** revision_1 (la regla nueva sustituye a la vieja).
-**Denominador:** 578 puntos clasificables, sobre la ventana de 877 manos
+**Denominador:** **507 puntos de política**, sobre la ventana de 877 manos
 (las 23 de CM-004 están excluidas: `EXCLUSION_CM004.md`).
-**Cifras:** medidas por `python tools/auditar_solapamiento_multiway.py`.
+**Cifras:** medidas por `python tools/auditar_solapamiento_multiway.py`, que
+importa `motor/multiway.py::metrica_politica()`. El instrumento vive en el
+motor y el script y los tests lo importan: una copia en cada sitio es
+exactamente como vuelve un bug.
 
 > Este contrato va **antes** que la política multiway. Ningún consumidor
 > puede cablear la regla sin este documento, y ningún documento puede
@@ -161,6 +164,10 @@ Una **acción del hero**. Dos motivos, y los dos importan:
 
 ### 5.3 El desglose, cuadrado
 
+Este cuadro cuenta **todos** los puntos de decisión, folds incluidos. No es el
+denominador de la política: ese sale en §5.4, y la razón de que sean
+distintos es precisamente lo que esta sección prepara.
+
 | | puntos |
 |---|---|
 | calles inspeccionadas (877 manos × 3 postflop) | **2631** |
@@ -185,31 +192,50 @@ Las dos sumas cuadran y el script lo verifica con `assert`, no a ojo:
 > El número era correcto; la presentación mentía. Por eso ahora hay `assert`
 > y un test que reproduce el cuadre.
 
-### 5.4 Cifras
+### 5.4 La tabla cruzada, y por qué el denominador son 507
 
-| | puntos |
-|---|---|
-| HU | **320** |
-| **MULTIWAY confirmado** | **258** |
-| DESCONOCIDO (fuera del numerador) | 52 |
-| sin rival (fuera) | 26 |
-| el hero folds (decide, pero no consulta equity) | 89 |
-| **denominador de F7.2** | **578** |
+Un punto **fold** es una decisión real pero **no consulta equity**: no hay nada
+que repartir entre HU y MULTIWAY para una política multiway. Cuenta como
+decisión y no como punto de política, y se declara aparte para que nadie lo
+compare con los que sí usan la equity.
 
-De los 52 desconocidos, 29 serían multiway si en ellos nadie estuviera
-all-in. La cota es:
+| clase | fold | no fold | total | **de política** |
+|---|---:|---:|---:|---:|
+| HU | 39 | **281** | 320 | **281** |
+| MULTIWAY | 32 | **226** | 258 | **226** |
+| DESCONOCIDO | 9 | 43 | 52 | 0 |
+| sin ningún rival al que responder | 9 | 17 | 26 | 0 |
+| **TOTAL** | **89** | **567** | **656** | **507** |
+
+Tres cuadres, y el script los verifica con `assert`:
 
 ```
-258 (base) + 29 (techo sin evidencia) = 287
+578 + 52 + 26 = 656 puntos      todo lo clasificado, folds incluidos
+ 89 +      567 = 656 puntos      filas por columnas
+507 = 281 + 226                  la política no contiene folds
 ```
 
-Un punto **fold** es una decisión real pero **no consulta equity**. Cuenta
-como decisión y no como punto de política multiway, y se declara aparte
-para que nadie lo compare con los que sí usan la equity.
+> **El denominador son 507, no 578.** La versión anterior de este documento
+> publicaba 578, que incluía 71 folds del hero dentro de HU y MULTIWAY: 39 y
+> 32. Entre ellos, 32 multiway que nunca producen una recomendación.
+>
+> El **porcentaje no se mueve**: 44,6 % antes y después. Lo que cambia son las
+> cuentas, 258/578 → 226/507. Y eso es un argumento **más fuerte**, no más
+> débil: la conclusión de política se llega igual por dos caminos. Lo que
+> estaba mal no era el número, era publicar el denominador sin decir que
+> llevaba folds dentro.
+
+De los 43 desconocidos **no fold**, 29 serían multiway si en ellos nadie
+estuviera all-in. La cota sale de ahí y con el **mismo criterio** que la
+métrica principal — sin contar los 9 folds de esa misma fila:
+
+```
+226 (base) + 29 (techo sin evidencia) = 255
+```
 
 ### 5.5 ⚠ La cifra que cambia la política
 
-> ## MULTIWAY = 258 de 578 = **44,6 %**
+> ## MULTIWAY = 226 de 507 = **44,6 %**
 >
 > **Antes F7.1 decía 16,8 %.** Con el mismo nombre de métrica pero otro
 > denominador, el multiway casi se triplica.
@@ -223,10 +249,23 @@ para que nadie lo compare con los que sí usan la equity.
 > Si F7.2.a se firma sobre 16,8 %, se firma sobre un error.
 
 Por qué la diferencia es tan grande, en una línea: F7.1 contaba calles con
-actividad, many de ellas donde el hero ya había folded, y en las que
+actividad, muchas de ellas donde el hero ya había folded, y en las que
 restaba un rival de más al excluirlo. El denominador viejo estaba
 inflado por puntos que no son decisiones, y el multiway estaba medido por
 calle, no por instante.
+
+La corrección temporal, medida **sobre los mismos 507 puntos de política** —
+sin folds, como la métrica principal:
+
+| | MULTIWAY |
+|---|---:|
+| por calle | 152 |
+| **por instante** | **226** |
+| la regla por calle se queda | **74 spots corto** |
+
+> Compararla con folds dentro era medir una cosa contra otra: el numerador
+> «por instante» venía sin folds y el denominador sí los traía. Los folds
+> volvían por la puerta de atrás.
 
 ### 5.6 Contraste
 
@@ -236,7 +275,8 @@ calle, no por instante.
 | 169 MW | calle con acciones | del raise | **rechazada** (misma causa) |
 | 225 MW (cota 276) | calle con acciones | evidencia | **sustituida**: no cuenta decisiones |
 | 174 MW | acción del hero | evidencia, por calle | **sustituida**: ignora el orden |
-| **258 MW (cota 287)** | **acción del hero** | **evidencia, por instante** | **vigente** |
+| 258 MW (cota 287) | acción del hero | evidencia, por instante | **sustituida**: el denominador llevaba folds |
+| **226 MW (cota 255)** | **acción del hero** | **evidencia, por instante, sin folds** | **vigente** |
 
 El 16,8 % de `RESUMEN_SECCION.md` no significa nada con este denominador.
 

@@ -103,22 +103,32 @@ El denominador se recalcula sobre 877 manos. Ver `CONTRATO_F72A.md` §5.
 
 ## 5. Efecto sobre las cifras (antes → después)
 
+Mismo criterio que `CONTRATO_F72A.md` §5.4: el denominador **excluye los
+folds** del hero, que deciden pero no consultan equity.
+
 | | 900 manos | 877 manos |
 |---|---|---|
-| puntos de decisión | 670 | **656** |
-| HU | 325 | **320** |
-| MULTIWAY | 263 | **258** |
-| DESCONOCIDO | 54 | **52** |
-| sin rival | 28 | **26** |
-| **denominador** | 588 | **578** |
-| **MULTIWAY %** | 44,7 % | **44,6 %** |
-| cota | 293 | **287** |
+| puntos de decisión (con folds) | 670 | **656** |
+| HU (no fold) | 286 | **281** |
+| MULTIWAY (no fold) | 230 | **226** |
+| **denominador de política** | 516 | **507** |
+| **MULTIWAY %** | 44,6 % | **44,6 %** |
+| cota | 260 | **255** |
 
 El efecto es pequeño y va en la dirección esperada: quitar manos dudosas
 de la muestra reduce un poco el numerador y el denominador por igual.
 
+> La tabla de este documento se corrigió el 2026-10-14. Publicaba el
+> denominador **con folds dentro** (588 → 578), que era como se medía antes
+> de que la métrica se corrigiera. Con el criterio vigente, el porcentaje
+> sale **44,6 % en las dos ventanas**: quitar 23 manos no lo mueve.
+
 ## 6. Cómo se revierte
 
 Borrar la entrada de `EXCLUSIONES_VENTANA_FABLE` con clave `CM-004`. La
-ventana vuelve a 900 y los tests de exclusión hay que borrarlos con ella.
-No hay ninguna otra consecuencia: no se tocó el fichero de datos.
+ventana vuelve a 900 y los tests de exclusión hay que borrarlos con ellos.
+
+> **Actualizado 2026-10-14.** Esta sección decía *«no se tocó el fichero de
+> datos»*. Ya no es cierto: las 23 se reescribieron a mano después. Ver
+> `CM004_REINTERPRETACION.md`. El motivo de la exclusión cambió con ello y
+> `DECISION_CM004.md` §0 lo explica.

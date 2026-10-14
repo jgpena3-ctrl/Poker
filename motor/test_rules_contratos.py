@@ -207,12 +207,105 @@ def test_c4_ignora_acciones_no_calculadas():
     assert value == pytest.approx(1.0)
 
 
-def test_c4_tabla_vacia_devuelve_fold_con_cero():
-    """CONTRATO: sin ninguna accion, devuelve ('fold', 0.0), no lanza."""
-    evs = EvTable(ev={}, pot=10.0, hero_equity=0.5)
-    label, value = rules.select_best(evs, None)
-    assert label == 'fold'
-    assert value == 0.0
+NAN = float('nan')
+INF = float('inf')
+
+
+def _evs(**kw):
+    return EvTable(ev=dict(kw), pot=10.0, hero_equity=0.5)
+
+
+# --- las tres ramas que pedia revision_1 Tarea 4 ---------------------------
+
+def test_c4_evs_vacio_lanza_ev_invalido():
+    """No hay datos para decidir. Antes devolvia ('fold', 0.0): un numero
+    inventado que se leia como "fold es break-even"."""
+    with pytest.raises(rules.EvInvalido):
+        rules.select_best(_evs(), None)
+
+
+def test_c4_todos_nan_lanza_ev_invalido():
+    """Un NaN no es un EV. Antes devolvia ('fold', nan): devolvia el
+    numero que no existe como si fuera la decision."""
+    with pytest.raises(rules.EvInvalido):
+        rules.select_best(_evs(fold=NAN, check=NAN, all_in=NAN), None)
+
+
+def test_c4_un_solo_elemento_valido():
+    """Debe funcionar: si hay un solo EV real, ese es el mejor."""
+    label, value = rules.select_best(_evs(check=2.0), None)
+    assert (label, value) == ('check', 2.0)
+    label, value = rules.select_best(_evs(fold=-1.5), None)
+    assert (label, value) == ('fold', -1.5)
+
+
+# --- el defecto que No era solo de informe -------------------------------
+
+def test_c4_fold_nan_no_hace_perder_a_la_alternativa_real():
+    """Comparar contra NaN siempre da False, asi que el bucle entero se
+    quedaba sin mejorar y devolvia ('fold', nan) teniendo 'check' con 3.0.
+
+    Es el caso mas grave de los tres: no era un numero inventado en el
+    informe, era una decision equivocada."""
+    label, value = rules.select_best(_evs(fold=NAN, check=3.0), None)
+    assert (label, value) == ('check', 3.0)
+
+
+def test_c4_infinito_se_ignora():
+    """+inf no es un EV: es un numero que no puede existir."""
+    label, value = rules.select_best(_evs(fold=0.0, all_in=INF), None)
+    assert (label, value) == ('fold', 0.0)
+    label, value = rules.select_best(_evs(fold=0.0, all_in=-INF), None)
+    assert (label, value) == ('fold', 0.0)
+
+
+def test_c4_todos_infinito_lanza():
+    with pytest.raises(rules.EvInvalido):
+        rules.select_best(_evs(fold=INF, check=INF), None)
+
+
+# --- el motivo de la decision --------------------------------------------
+
+def test_c4_el_motivo_dice_que_no_hay_datos():
+    """El mensaje tiene que distinguir 'no hay datos' de 'fold es la mejor'."""
+    with pytest.raises(rules.EvInvalido) as ei:
+        rules.select_best(_evs(check=NAN), None)
+    msg = str(ei.value)
+    assert 'ninguna accion tiene un EV finito' in msg
+    assert 'no hay datos para decidir' in msg.lower()
+    # y nombra las claves que hubo, para poder diagnosticar
+    assert 'check' in msg
+
+
+def test_c4_ev_invalido_es_valueerror():
+    """El contrato dice ValueError; la subclase lo cumple sin romper a
+    quien capture el tipo generico."""
+    assert issubclass(rules.EvInvalido, ValueError)
+
+
+# --- determinismo ---------------------------------------------------------
+
+def test_c4_empate_gana_el_primero():
+    """Empate: gana el primero, y el fold se considera siempre primero.
+    La comparacion es estricta, asi que el resultado es determinista."""
+    evs = _evs(fold=1.0, check=1.0, call=1.0)
+    assert rules.select_best(evs, None)[0] == 'fold'
+    evs = _evs(fold=-1.0, check=2.0, call=2.0)
+    assert rules.select_best(evs, None)[0] == 'check'
+
+
+def test_c4_ninguna_accion_legal_tambien_lanza():
+    """Si el plan no ofrece nada evaluable, es el caso de 'sin datos'."""
+    rp = _plan(to_call=5.0)
+    with pytest.raises(rules.EvInvalido):
+        rules.select_best(_evs(fold=NAN, call=NAN), rp)
+
+
+def test_c4_las_candidatas_ausentes_no_se_inventan():
+    """Una clave que no esta en ev no tiene EV: no se elige."""
+    label, value = rules.select_best(_evs(fold=0.0, check=1.0), _plan())
+    assert label == 'check'
+    assert value == pytest.approx(1.0)
 
 
 # ===========================================================================

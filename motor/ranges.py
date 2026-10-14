@@ -483,14 +483,20 @@ class RangeState:
     ----------
     reach : vector float32 (1326,) o None (rango vacío)
     blockers : bitmask 52 bits o 0
-    position : posición del jugador (solo informativa)
+    position : posición del jugador. Por defecto `SIN_POSITION`, **no** `''`:
+        la cadena vacía no dice "no lo sé", dice "una posición que se llama
+        así". Las 49 construcciones de `RangeState(...)` del repo no la
+        pasaban, así que el campo nacía vacío en todas menos las dos de
+        `asistente_live`, y `equity_main_source` publicaba una identidad de
+        rival que no era de nadie. Cuesta una línea arreglarlo en la
+        construcción, y propagarlo a 49 sitios no cuesta nada.
     confidence : 0..1 — confianza en el modelo del rival
     """
 
     __slots__ = ('reach', 'blockers', 'position', 'confidence', 'source')
 
-    def __init__(self, reach=None, blockers=0, position='', confidence=0.5,
-                 source=''):
+    def __init__(self, reach=None, blockers=0, position=SIN_POSITION,
+                 confidence=0.5, source=''):
         self.reach = np.zeros(N_COMBOS, dtype=np.float32) if reach is None \
             else np.asarray(reach, dtype=np.float32).copy()
         self.blockers = int(blockers)

@@ -60,16 +60,25 @@ RELIABLE_HANDS = 900
 # efecto no esta cuantificado; mantenerlas dentro seria usar unas cifras
 # que el propio proyecto ya sabe que no son fiables.
 #
-# CM-004 (23 manos): la entrada `BB: 'b'` —la ciega— aparece DESPUES de
-# acciones voluntarias. `learn._es_ciega_bb` exige `not voluntary_before`, asi
-# que no la reconoce como ciega y el motor la lee como una subida que puede
-# no haber ocurrido. Es un defecto de ORDEN: corregirlo exigiria inventar el
-# orden que ocurrio, y eso no se hace. Documentacion y estado:
-# `DOCS/EXCLUSION_CM004.md` y `DOCS/DECISION_CM004.md`.
+# CM-004 (23 manos): la entrada `BB: 'b'` —la ciega— aparecia DESPUES de
+# acciones voluntarias. `_es_ciega_bb` exige `not voluntary_before`, asi que
+# no la reconocia como ciega y el motor la leia como una subida que puede no
+# haber ocurrido.
 #
-# El detalle importante: las 23 se excluyen de la calibracion SIN ESPERAR a
-# decidir si se regraba la base. Son dos problemas distintos y la exclusion
-# es reversible en cuanto haya original.
+# ATUALIZADO 2026-10-14: ese defecto ya NO existe. Las 23 se reescribieron a
+# mano (sin original: `DOCS/CORRELACION_CAPTURAS_CM004.md` sigue dando 0 de 23)
+# y `defecto_orden_ciega_bb` da 0 de 1280.
+#
+# OJO: la exclusion sigue puesta, pero POR OTRO MOTIVO, y este comentario ya
+# no lo describe. El texto de arriba era su fundamento y es falso; el motivo
+# vigente —que el sustituto tampoco tiene original— todavia NO esta escrito,
+# y decidir si las 23 vuelven a la ventana es una decision abierta del
+# mantenedor de la base. Ver `DOCS/DECISION_CM004.md` §0 y
+# `DOCS/CM004_REINTERPRETACION.md`.
+#
+# Es reversible en cuanto haya original: borrar la entrada de abajo devuelve
+# las 23 a la ventana, y `tools/verificar_cm004.py` avisa si el conjunto deja
+# de coincidir con lo que el motor señala.
 EXCLUSIONES_VENTANA_FABLE = (
     ('CM-004',
      'ciega del BB despues de acciones voluntarias: el motor la lee como '
@@ -362,6 +371,69 @@ def preflop_events(hand, bb=BB):
                 callers += 1
             voluntary_before = True
     return events
+
+
+# ---------------------------------------------------------------------------
+# CM-004: la ciega del BB puesta donde no puede estar
+# ---------------------------------------------------------------------------
+# Vive aqui y no en `tools/auditar_bb_check.py` porque es una REGLA QUE
+# DECIDE, y la regla no puede vivir en un script de auditoria: la copia se
+# queda vieja y el motor acaba usando la otra (el mismo motivo por el que
+# `no_puede_actuar` esta en `motor/multiway.py` y no en su script).
+# `auditar_bb_check` importa estas funciones; no las reimplementa.
+
+CAUSA_ORDEN = 'tras_accion_voluntaria'
+CAUSA_IMPORTE = 'importe_sobre_nominal'
+
+
+def entradas_bb_rechazadas(hand, bb=BB):
+    """Entradas `BB b` que el motor NO reconocio como ciega obligatoria.
+
+    Se reproduce el recorrido de `preflop_events` (que mantiene
+    `voluntary_before`) usando la propia funcion `_es_ciega_bb`, en vez de
+    mirar el campo `blind` del dato: los datos antiguos no lo traen y la
+    ciega se reconoce estructuralmente. Mirar el campo daria ~523 falsos
+    positivos.
+
+    Devuelve [(indice, importe, causa)]. El indice es de `_preflop_sequence`
+    y coincide con el de `streets.preflop.actions` (lo fija
+    `test_el_indice_apunta_a_la_accion_cruda`).
+
+    `CAUSA_IMPORTE` no es un defecto de dato: era un defecto del motor, ya
+    corregido. `CAUSA_ORDEN` si lo es, y es lo que se conoce como CM-004.
+    """
+    seq = _preflop_sequence(hand)
+    rechazadas = []
+    voluntary_before = False
+    for i, (pos, act, amount, is_blind) in enumerate(seq):
+        if _es_ciega_bb(i, pos, act, amount, is_blind, voluntary_before, bb):
+            if act in ('b', 'r', 'c'):
+                voluntary_before = True
+            continue
+        if pos == 'BB' and act == 'b':
+            causa = CAUSA_ORDEN if voluntary_before else CAUSA_IMPORTE
+            rechazadas.append((i, amount, causa))
+        if act in ('b', 'r', 'c'):
+            voluntary_before = True
+    return rechazadas
+
+
+def defecto_orden_ciega_bb(hand, bb=BB):
+    """True si alguna `BB b` de esta mano no puede ser la ciega (CM-004).
+
+    El INVARIANTE del bloque. Importa la funcion el hecho de que sea el motor
+    quien lo decida: una cuenta hecha fuera podria discrepar de `_es_ciega_bb`
+    y volver a publicar un numero que el motor no sostiene.
+    """
+    return any(causa == CAUSA_ORDEN
+               for _i, _amt, causa in entradas_bb_rechazadas(hand, bb))
+
+
+def manos_con_orden_ciega_malo(hands=None):
+    """`hand_id` de las manos de la lista que violan el invariante CM-004."""
+    if hands is None:
+        hands = load_hands(reliable_only=False)
+    return [h.get('hand_id') for h in hands if defecto_orden_ciega_bb(h)]
 
 
 # ---------------------------------------------------------------------------

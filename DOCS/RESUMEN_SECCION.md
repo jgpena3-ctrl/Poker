@@ -246,20 +246,49 @@ demuestra capaz de fallar no puede usarse para decir que algo está bien.
 
 | | |
 |---|---|
-| **CM-004** | 23 manos con la ciega del BB después de acciones voluntarias. El motor les asigna una subida que puede no haber ocurrido. **No migrable**: corregirlo exigiría inventar un orden. Alternativa: regrabar. |
-| **CM-002** | `H_0350`, cartas ausentes. No verificable sin el pantallazo; no reconstruir. |
-| **F7.2** | Decidir la política multiway. **BLOQUEADA por INC-001**: la cifra de "169 spots realmente multiway" queda invalidada — venía de una regla con 14,6 % de precisión. Ver `AUDIT_NOPUEDE_ACTUAR.md`. |
-| **Fase D** | Calibración. **Bloqueada en parte por CM-004**: CM-003 hace al BB más pasivo y CM-004 más agresivo; se anulan en dirección pero no en magnitud, así que el perfil del BB tiene un error de magnitud desconocida. |
-| `select_best` con `evs` vacío | contrato C4 sin especificar. |
-| `RangeState.position` | sigue naciendo vacía; 40 construcciones, 4 la pasan. Deuda documentada. |
+| **CM-004** | **RESUELTO, por reinterpretación** (`CM004_REINTERPRETACION.md`). El defecto de orden ya no existe en ninguna de las 1280 manos. Pero se corrigió **a mano y sin original**: 17 son un cambio de etiqueta con una regla exacta, y **6 reconstruyen el preflop** (`H_0039`, `H_0051`, `H_0067`, `H_0109`, `H_0143`, `H_0263`). La Opción A de `DECISION_CM004.md` quedó **refutada**: su condición 1 —las 23 intactas— dejó de cumplirse 33 minutos después de firmarse. |
+| **CM-002** | `H_0350`, cartas ausentes. Se normalizó el centinela `'-'` a `''`, que **no** es reconstruir las cartas. Las cartas siguen sin saber. |
+| **F7.2** | Contrato F7.2.a **firmado** (`CONTRATO_F72A.md`). La política multiway **no está implementada** y el motor sigue entrando en multiway en silencio. Cifra vigente: **44,6 %** (226 de 507). |
+| **Fase D** | Calibración. CM-004 ya no la bloquea como *defecto conocido*, pero la ventana de 877 descansa en un motivo que **ya no es el que se escribió**: las 23 se reinterpretaron, así que el defecto de orden desapareció, y su sustituto tampoco tiene original. Decidir si vuelven a la ventana es una decisión **abierta**, y tiene coste de recálculo. siguen bloqueándola, además: CM-003 y CM-004 se anulan en dirección pero no en magnitud, y el motor sigue entrando en multiway en silencio (política F7.2 sin implementar). |
+| `select_best` con `evs` vacío | **resuelto**: contrato C4 firmado (`CONTRATO_C4.md`). Un EV no finito se ignora como candidato; si no queda ninguno, lanza `EvInvalido` en vez de devolver una acción inventada. |
+| `RangeState.position` | **cerrado** (2026-10-14). Nace en `SIN_POSITION` en vez de la cadena vacía. Cuesta **una línea**, no 49: el valor por defecto del constructor, y el único consumidor de producción ya tratarse el centinela. |
+| `H_0970` | **pendiente**: el recorte de `winner` quita al BB de un bote que sí ganó. Valor recomendado `['hero', 'p1']`. Declarado en `tools/verificar_cm004.py`. Fuera de la ventana de 900, así que no mueve ninguna cifra. |
 
-> **Aviso de vigencia.** La sección 5 de este documento describe el
-> multiway «que puede responder» con una regla que luego se auditsó y se
-> encontró mayoritariamente falsa. Sus cifras — 297, 169, 16,8 % y el
-> criterio «el all-in reclasifica 128 spots» — se conservan aquí como
-> registro de lo que se midió en aquel momento, **no** como base para
-> decidir. La cifra vigente es el intervalo 225–276 y su fundamento, en
-> [`AUDIT_NOPUEDE_ACTUAR.md`](AUDIT_NOPUEDE_ACTUAR.md).
+> **Aviso de vigencia — la sección 5 de este documento NO es vigente.**
+>
+> Describe el multiway «que puede responder» con una regla que luego se auditó y se encontró mayoritariamente falsa. Sus cifras — 297, 169,
+> 16,8 % y «el all-in reclasifica 128 spots» — se conservan como **registro de lo que se midió en aquel
+> momento**
+>, no como base para decidir.
+>
+> Han cambiado dos cosas desde entonces, y por eso ninguna cifra de la
+> sección 5 es comparable con las actuales:
+>
+> 1. **Qué se cuenta.** F7.1 contaba *calles con acciones*. Ahora se cuentan
+>    **acciones del hero**: si apuesta y luego decide otra vez ante una
+>    resubida, son dos puntos. Y una calle donde el hero ya foldeó no
+>    es ninguna decisión.
+> 2. **Cómo se cuenta.** F7.1 contaba por calle. Ahora es por **instante**,
+>    respetando el orden real de las acciones.
+>
+> ### La cifra vigente: **44,6 %**
+>
+> | | |
+> |---|---|
+> | HU | 281 |
+> | **MULTIWAY** | **226** |
+> | denominador de política | **507** |
+> | folds excluidos (deciden, pero no consultan equity) | 71 |
+> | cota superior | 255 |
+>
+> Ventana de **877** manos (las 23 de CM-004 excluidas).
+>
+> **16,8 % y 44,6 % llevan a políticas opuestas.** Con el primero el multiway es un caso marginal
+> que se puede ignorar; con el segundo es casi la mitad de las decisiones y no
+> se puede seguir entrando en él en silencio.
+>
+> Fundamento y contrato: [`CONTRATO_F72A.md`](CONTRATO_F72A.md) §5.5.
+> Auditoría reproducible: [`AUDIT_NOPUEDE_ACTUAR.md`](AUDIT_NOPUEDE_ACTUAR.md).
 
 ---
 

@@ -45,33 +45,13 @@ from motor import learn  # noqa: E402
 def _entradas_bb_rechazadas(h):
     """Entradas `BB b` que el motor NO reconocio como ciega obligatoria.
 
-    Se reproduce el recorrido de `preflop_events` (que mantiene
-    `voluntary_before`) usando la propia funcion `learn._es_ciega_bb`, en vez
-    de mirar el campo `blind` del dato: los datos antiguos no lo traen y la
-    ciega se reconoce estructuralmente. Mirar el campo daria ~523 falsos
-    positivos.
-
-    Devuelve [(indice, importe, causa)] con la causa en:
-      'tras_accion_voluntaria'  -> la ciega esta mal ORDENADA (defecto de dato)
-      'importe_sobre_nominal'   -> la regla antigua `amount <= bb` la rechazo
-                                    (defecto del motor, ya corregido)
+    La regla vive en `motor/learn.py` (`entradas_bb_rechazadas`), no aqui. Se
+    reexporta para no romper los llamadores, pero la copia es el motor: una
+    regla que decide no puede vivir en un script de auditoria, porque la copia
+    se queda vieja y el motor acaba usando la otra. Ver `CAUSA_ORDEN` y
+    `CAUSA_IMPORTE`.
     """
-    seq = learn._preflop_sequence(h)
-    rechazadas = []
-    voluntary_before = False
-    for i, (pos, act, amount, is_blind) in enumerate(seq):
-        if learn._es_ciega_bb(i, pos, act, amount, is_blind,
-                              voluntary_before, learn.BB):
-            if act in ('b', 'r', 'c'):
-                voluntary_before = True
-            continue
-        if pos == 'BB' and act == 'b':
-            causa = ('tras_accion_voluntaria' if voluntary_before
-                     else 'importe_sobre_nominal')
-            rechazadas.append((i, amount, causa))
-        if act in ('b', 'r', 'c'):
-            voluntary_before = True
-    return rechazadas
+    return learn.entradas_bb_rechazadas(h)
 
 
 def clasificar(h):

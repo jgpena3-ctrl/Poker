@@ -554,15 +554,24 @@ def test_equity_main_source_also_con_el_rango_reutilizado():
     assert reg['equity_main_source'] == 'MP', reg
 
 
-def test_rangostate_nace_sin_position():
-    """Guarda el ORIGEN del bug: `RangeState` nace con `position` vacia.
+def test_rangostate_nace_sin_position_pero_lo_declara():
+    """El ORIGEN del bug era que `RangeState` nacía con `position = ''`.
 
-    Si algun dia `RangeState` se construyera con `position` por defecto, el
-    sintoma del bug desaparecerse pero la causa seguiria ahi: nadie la fija.
+    La cadena vacía no dice "no lo sé": dice "una posición que se llama así".
+    Con el valor por defecto en `SIN_POSITION`, la ausencia queda declarada en
+    el mismo sitio donde ocurre, y no en el consumidor que ladescubre.
+
+    Este test miraba lo contrario y avisaba de que, si algún día se arreglara,
+    había que revisar por qué se relya en él. Ese día es este, y el relevo
+    se comprobó: `test_un_rango_sin_position_reporta_sin_position` sigue
+    dando `SIN_POSITION`, no `'main'`.
     """
+    from motor.ranges import SIN_POSITION
     rs = RangeState(reach=np.ones(N_COMBOS, dtype=np.float32))
-    assert not getattr(rs, 'position', ''), \
-        'si RangeState ya trajera position, revisar por qué se relied en él'
+    assert rs.position == SIN_POSITION, (
+        'RangeState vuelve a nacer con la cadena vacia, que es lo que hace '
+        'que equity_main_source parezca una identidad sin serlo')
+    assert rs.position != '', 'la cadena vacia no es una ausencia declarada'
 
 # ======================================================================
 # 9. El campo `equity_main_note` es un CODIGO, no texto libre
@@ -641,13 +650,14 @@ def test_un_motivo_fuera_del_vocabulario_sin_detalle_tambien():
 def test_un_rango_sin_position_reporta_sin_position():
     """El fallback ya no es 'main', que parecia una identidad.
 
-    `RangeState` nace sin `position`, y antes `_equity_vs_rival` devolvia
-    `or 'main'`. Ese valor no significaba nada y hacia creER que si.
+    `RangeState` nace en `SIN_POSITION`, y `_equity_vs_rival` lo propaga. Ese
+    valor no significa nada y no hace CREER que sí, que es el problema que
+    tenía cuando valía `'main'`.
     """
     from motor.recommend_loop import SIN_POSITION, _equity_vs_rival
     rs = RangeState(reach=np.ones(N_COMBOS, dtype=np.float32))
     rs.set_known_cards(HERO + BOARD)
-    assert not getattr(rs, 'position', ''), 'el rango no lleva posición'
+    assert rs.position == SIN_POSITION, 'el rango no lleva posición'
 
     eq, src_pos, err = _equity_vs_rival(rs, HERO, BOARD)
     assert err is None, err

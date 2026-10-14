@@ -69,7 +69,7 @@ for h in _load_hands(reliable_only=True):
             continue
         i = hero_idx[-1]
         mi_accion = acts[i].get('action')
-        #区分 CRÍTICA: pasar con check ≠ pasar con apuesta.
+        # DISTINTIVA: pasar con check ≠ pasar con apuesta.
         # Un check al hero limita el rango (amenaza floja).
         # Una apuesta/raise es un agresor: es el rival principal.
         agresores, chequeadores = set(), set()

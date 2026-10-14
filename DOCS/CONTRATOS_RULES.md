@@ -85,7 +85,20 @@ llamada.
   las acciones peor que el fold, devuelve `('fold', <valor real>)`, aunque sea
   negativo. Devolver `0.0` sería inventar un número.
 - **Acciones ausentes:** una clave que no está en `evs.ev` no se elige.
-- **Tabla vacía:** devuelve `('fold', 0.0)`; no lanza.
+- **EV no finito (NaN, ±inf):** no es un EV. Se
+  **ignora** como candidato. Sin esto, un `fold` con NaN hace que
+  toda comparación dé False y el bucle no mejore
+  nunca: devolvía ('fold', nan) teniendo un `check` real.
+- **Ningún EV finito** (tabla vacía o toda NaN):
+  **lanza `EvInvalido`**, subclase de `ValueError`.
+  No devuelve una acción por defecto: «no hay datos
+  para decidir» y «fold es la mejor acción» son
+  cosas distintas.
+- **Empate:** gana el primero, y `fold` se considera siempre primero.
+
+> **Firmado.** Opción (b). El texto largo, con el porqué
+> de no haber elegido (a) ni (c), en
+> [`CONTRATO_C4.md`](CONTRATO_C4.md).
 
 ### C5 — Compatibilidad con los consumidores
 

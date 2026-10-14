@@ -14,6 +14,7 @@ Uso típico en el asistente:
                       raise_to=rp.raise_to, candidates=rp.candidates)
     action, value = select_best(evs, rp)
 """
+import math
 from dataclasses import dataclass
 from typing import Callable, Optional, Tuple
 
@@ -517,24 +518,73 @@ def plan(street, hero_initiator, to_call, board_codes, pot, stack,
 # Selección de la mejor acción candidata (§21)
 # ---------------------------------------------------------------------------
 
-# TODO(F5): con `evs.ev` vacio devuelve ('fold', 0.0). Ese 0.0 es un
-# EV que no existe: es exactamente el "numero inventado" que el
-# proyecto quiere evitar. Decidir: lanzar ValueError, o devolver None.
-# Ver DOCS/CONTRATOS_RULES.md seccion 2, contrato C4.
-def select_best(evs, rp=None):
-    """Mejor acción por EV entre las candidatas del plan (fold si nada la
-    supera). Se usa en vez de `evs.best()` cuando hay un plan de reglas.
+class EvInvalido(ValueError):
+    """No hay ningun EV finito con el que decidir. Ver CONTRATO_C4.md.
 
-    Si no hay plan, devuelve el equivalente a `evs.best()`.
+    Es subclase de ValueError a proposito: el contrato elegido es "lanza
+    ValueError explicito", y quien prefiera el valor generico lo sigue
+    pudiendo capturar.
+    """
+
+
+# ---------------------------------------------------------------------------
+# CONTRATO C4 — la mejor accion por EV
+# ---------------------------------------------------------------------------
+def _ev_finito(evs, label):
+    """El EV de `label` si es un numero real, o None si no lo es.
+
+    Un NaN o un infinito NO son EVs: son la falta de un EV. Tratarlos como
+    numeros es como nace el bug mas grave del contrato, ver mas abajo.
+    """
+    v = evs.ev.get(label)
+    if isinstance(v, bool) or not isinstance(v, (int, float)):
+        return None
+    v = float(v)
+    return v if math.isfinite(v) else None
+
+
+def select_best(evs, rp=None):
+    """Mejor acción por EV entre las candidatas del plan.
+
+    Contrato completo en `DOCS/CONTRATO_C4.md`. Resumen:
+
+    - El **baseline es el EV real del fold**, no 0. Si todas las candidatas
+      están por debajo, devuelve `('fold', <su EV real>)`, que puede ser
+      negativo. Devolver 0.0 ahí sería inventar un número.
+    - Un EV **no finito (NaN, ±inf) o de tipo raro** no es un EV: se
+      **ignora** como candidato y no se compara. Ignorarlo es lo que evita
+      que un `fold` con NaN haga perder a un `check` con 3.0: comparar
+      contra NaN siempre da False, así que el bucle entero se queda sin
+      mejorar y devuelve el NaN como si fuera la decisión.
+    - Si **ningún** candidato tiene un EV finito —`evs` vacío, o todos
+      NaN— **lanza `EvInvalido`**. No devuelve una acción por defecto.
+      "No hay datos para decidir" y "la mejor acción evaluada es fold" son
+      cosas distintas, y confundirlas es un fold inventado.
+    - Sin plan (`rp is None`) se consideran todas las claves de `evs.ev`.
+    - **Empate:** gana el primero que aparezca, y `fold` siempre se
+      considera primero. La comparación es estricta (`>`), así que el
+      resultado es determinista.
+    - Ninguna acción legal: si las candidatas son todas inválidas, es el
+      caso anterior — `EvInvalido`.
+
+    Se usa en vez de `evs.best()` cuando hay un plan de reglas.
     """
     labels = rp.candidates if rp is not None else tuple(evs.ev)
     if 'fold' not in labels:
         labels = ('fold',) + tuple(labels)
-    # baseline = EV real del fold (no asumir 0.0)
-    best_label = 'fold'
-    best_ev = evs.ev.get('fold', 0.0)
+
+    mejor_label, mejor_ev = 'fold', _ev_finito(evs, 'fold')
     for label in labels:
-        val = evs.ev.get(label)
-        if val is not None and val > best_ev:
-            best_label, best_ev = label, val
-    return best_label, best_ev
+        val = _ev_finito(evs, label)
+        if val is None:
+            continue
+        if mejor_ev is None or val > mejor_ev:
+            mejor_label, mejor_ev = label, val
+
+    if mejor_ev is None:
+        raise EvInvalido(
+            'select_best: ninguna accion tiene un EV finito '
+            '(evs con %d clave(s): %s). No hay datos para decidir; devolver '
+            'una accion aqui seria inventarla.'
+            % (len(evs.ev), sorted(evs.ev)))
+    return mejor_label, mejor_ev
