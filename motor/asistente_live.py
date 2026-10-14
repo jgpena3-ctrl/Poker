@@ -53,6 +53,20 @@ HERO_NAME_DEFAULT = 'Jarduan'
 
 HERO_PID = 'hero'
 PLAYER_IDS = ['hero', 'p1', 'p2', 'p3', 'p4', 'p5']
+
+# Vocabulario de `equity_main_note`. Es lo que hace ese campo AGREGABLE: si
+# `_equity_vs_rival` devolviera un motivo fuera de aqui, el productor lo marca
+# como 'unknown' en vez de colarlo en el campo como si fuera un codigo.
+#
+# Los tres primeros los produce `_equity_vs_rival`; los dos ultimos, este
+# mismo productor. Ver su contrato en recommend_loop._equity_vs_rival.
+CODIGOS_EQUITY_MAIN = frozenset({
+    'main_range_unavailable',
+    'empty_range_after_blockers',
+    'equity_calculation_failed',
+    'main_position_unresolved',
+    'error',
+})
 _DEFAULT_NAMES = {'hero': 'Hero', 'p1': 'Player1', 'p2': 'Player2',
                   'p3': 'Player3', 'p4': 'Player4', 'p5': 'Player5'}
 
@@ -904,8 +918,19 @@ class Asistente:
             reg['equity_main_note_detail'] = None
         else:
             cod, _, det = err_main.partition(':')
-            reg['equity_main_note'] = cod.strip()
-            reg['equity_main_note_detail'] = det.strip() or None
+            cod, det = cod.strip(), det.strip() or None
+            if cod not in CODIGOS_EQUITY_MAIN:
+                # Sin esta comprobacion, el campo "estable" se volveria texto
+                # libre en cuanto `_equity_vs_rival` anadiera un motivo nuevo,
+                # y nada lo notaria. Se marca como desconocido CONSERVANDO el
+                # texto: ni se pierde la informacion ni se finge que sea un
+                # codigo del vocabulario.
+                reg['equity_main_note'] = 'unknown'
+                reg['equity_main_note_detail'] = (
+                    cod + (': ' + det if det else ''))
+                return
+            reg['equity_main_note'] = cod
+            reg['equity_main_note_detail'] = det
 
     def _state_key(self, state):
         """Firma de la situación para deduplicar recomendaciones (incluye el

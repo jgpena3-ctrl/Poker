@@ -176,6 +176,13 @@ def build_villain_range(hero_codes, board_codes, villain_pos='UTG',
                                    extra_blockers)
 
 
+# Centinela para "el rango no dice contra quien se calculo". Antes el
+# fallback era la cadena 'main', que PARECIA una identidad y no lo era:
+# como `RangeState` nace sin `position`, `equity_main_source` valia siempre
+# 'main'. Ahora la ausencia se declara, no se supone.
+SIN_POSITION = 'sin_position'
+
+
 def _equity_vs_rival(range_builder, hero_codes, board_codes):
     """Equity del hero contra un rango rival construido aparte.
 
@@ -187,6 +194,23 @@ def _equity_vs_rival(range_builder, hero_codes, board_codes):
     un valor calculado contra el rival equivocado (pegar_3 §2).
 
     Devuelve (equity, fuente, nota_error). equity es None si no se pudo.
+
+    CONTRATO DE `nota_error` — documentado porque `equity_main_note` lo
+    parsea separando código y detalle por el PRIMER ':':
+
+      None                                 todo correcto
+      'main_range_unavailable'              sin rango            (SIN ':')
+      'empty_range_after_blockers'          rango vacío          (SIN ':')
+      'equity_calculation_failed: <texto>'  excepción al calcular
+
+    El separador NO es obligatorio: un código sin `: ` es legítimo y el
+    detalle es opcional. Por eso el parseo es `partition(':')`, que parte una
+    sola vez, y no `split(':', 1)`.
+
+    CONTRATO DE `fuente`: es `rs.position`, la posición del rival. Si el
+    rango no la lleva, se devuelve `SIN_POSITION` en vez de inventar un
+    nombre. `_rango_main` la fija siempre; el centinela solo aparece si otro
+    llamador construye un rango sin posición.
     """
     from .situation import equity_vs_range
 
@@ -198,7 +222,7 @@ def _equity_vs_rival(range_builder, hero_codes, board_codes):
     try:
         # equity_vs_range devuelve (equity, wins, ties, losses)
         eq = equity_vs_range(hero_codes, board_codes, villain_reach=rs)[0]
-        return float(eq), getattr(rs, 'position', '') or 'main', None
+        return float(eq), getattr(rs, 'position', '') or SIN_POSITION, None
     except RangeError as e:
         return None, None, f'equity_calculation_failed: {e}'
     except Exception as e:      # no debe tumbar la recomendación

@@ -457,13 +457,15 @@ def test_el_productor_se_ejecuta_de_verdad(monkeypatch):
 
     monkeypatch.setattr(Asistente, '_equity_main_sombra', espia)
 
+    # El guard va PRIMERO, antes que cualquier otra comprobacion: si otra
+    # asercion peta antes, el mensaje seria el suyo y no dira "VACUO".
     res = _asis_ruta(True).recomendaciones(_estado_postflop(), verbose=False)
-    assert res, 'no hubo recomendaciones'
     assert llamadas, (
         'VACUO: el productor no se ejecuto. Si el escenario pierde el '
         'agresor, el bloque sombra no corre y el test de invariancia no '
         'comprueba nada.')
     assert llamadas[0] == 'MP', llamadas
+    assert res, 'no hubo recomendaciones'
 
 
 def test_accion_identica_con_y_sin_el_productor():
@@ -561,3 +563,128 @@ def test_rangostate_nace_sin_position():
     rs = RangeState(reach=np.ones(N_COMBOS, dtype=np.float32))
     assert not getattr(rs, 'position', ''), \
         'si RangeState ya trajera position, revisar por qué se relied en él'
+
+# ======================================================================
+# 9. El campo `equity_main_note` es un CODIGO, no texto libre
+# ======================================================================
+
+def test_los_codigos_validos_no_se_marcan_como_unknown():
+    """Los cinco motivos del vocabulario deben pasar intactos."""
+    from motor.asistente_live import CODIGOS_EQUITY_MAIN
+    asis = _asistente(_hand([{'pos': 'MP', 'action': 'b'}]))
+    asis.rec._hand_positions = {'hero': 'BTN', 'p1': 'MP'}
+    state = {'p1_state': 'activo', 'p1_stake': 90.0,
+             'community': [_cards('Qh'), _cards('7s'), _cards('2c')]}
+    rs = RangeState(reach=np.ones(N_COMBOS, dtype=np.float32))
+    rs.set_known_cards(HERO + BOARD)
+
+    reg = {}
+    asis._equity_main_sombra(state, _jer('MP'), 'p1', HERO, BOARD, [], rs, reg)
+    assert reg['equity_main_note'] != 'unknown', reg
+    assert 'main_position_unresolved' in CODIGOS_EQUITY_MAIN
+    assert 'error' in CODIGOS_EQUITY_MAIN
+
+
+def test_un_motivo_fuera_del_vocabulario_no_pasa_como_codigo(monkeypatch):
+    """Si `_equity_vs_rival` inventa un motivo nuevo, se marca `unknown`.
+
+    Sin esta validacion, `equity_main_note` —el campo que se pretende
+    AGREGABLE— se convertiria en texto libre en cuanto apareciera un motivo
+    nuevo, y nada lo notaria.
+    """
+    from motor import recommend_loop as rl
+    asis = _asistente(_hand([{'pos': 'MP', 'action': 'b'}]))
+    asis.rec._hand_positions = {'hero': 'BTN', 'p1': 'MP'}
+    state = {'p1_state': 'activo', 'p1_stake': 90.0,
+             'community': [_cards('Qh'), _cards('7s'), _cards('2c')]}
+    rs = RangeState(reach=np.ones(N_COMBOS, dtype=np.float32))
+    rs.set_known_cards(HERO + BOARD)
+
+    monkeypatch.setattr(
+        rl, '_equity_vs_rival',
+        lambda *a, **k: (None, None, 'motivo_inventado_ayer: con detalle'))
+
+    reg = {}
+    asis._equity_main_sombra(state, _jer('MP'), 'p1', HERO, BOARD, [], rs, reg)
+    assert reg['equity_main_note'] == 'unknown', reg
+    # el texto NO se pierde: queda en el detalle
+    assert 'motivo_inventado_ayer' in reg['equity_main_note_detail'], reg
+    assert 'con detalle' in reg['equity_main_note_detail'], reg
+
+
+def test_un_motivo_fuera_del_vocabulario_sin_detalle_tambien():
+    """`partition(':')` sobre un codigo sin separador no debe romperse."""
+    from motor import recommend_loop as rl
+    asis = _asistente(_hand([{'pos': 'MP', 'action': 'b'}]))
+    asis.rec._hand_positions = {'hero': 'BTN', 'p1': 'MP'}
+    state = {'p1_state': 'activo', 'p1_stake': 90.0,
+             'community': [_cards('Qh'), _cards('7s'), _cards('2c')]}
+    rs = RangeState(reach=np.ones(N_COMBOS, dtype=np.float32))
+    rs.set_known_cards(HERO + BOARD)
+
+    monkey = rl._equity_vs_rival
+    try:
+        rl._equity_vs_rival = lambda *a, **k: (None, None, 'raro_sin_detalle')
+        reg = {}
+        asis._equity_main_sombra(state, _jer('MP'), 'p1', HERO, BOARD, [],
+                                 rs, reg)
+    finally:
+        rl._equity_vs_rival = monkey
+    assert reg['equity_main_note'] == 'unknown', reg
+    assert reg['equity_main_note_detail'] == 'raro_sin_detalle', reg
+
+
+# ======================================================================
+# 10. `SIN_POSITION`: la ausencia se declara, no se inventa
+# ======================================================================
+
+def test_un_rango_sin_position_reporta_sin_position():
+    """El fallback ya no es 'main', que parecia una identidad.
+
+    `RangeState` nace sin `position`, y antes `_equity_vs_rival` devolvia
+    `or 'main'`. Ese valor no significaba nada y hacia creER que si.
+    """
+    from motor.recommend_loop import SIN_POSITION, _equity_vs_rival
+    rs = RangeState(reach=np.ones(N_COMBOS, dtype=np.float32))
+    rs.set_known_cards(HERO + BOARD)
+    assert not getattr(rs, 'position', ''), 'el rango no lleva posición'
+
+    eq, src_pos, err = _equity_vs_rival(rs, HERO, BOARD)
+    assert err is None, err
+    assert src_pos == SIN_POSITION, src_pos
+    assert src_pos != 'main', 'el fallback viejo era exactamente esto'
+
+
+def test_con_position_devuelve_la_position():
+    from motor.recommend_loop import _equity_vs_rival
+    rs = RangeState(reach=np.ones(N_COMBOS, dtype=np.float32))
+    rs.position = 'CO'
+    rs.set_known_cards(HERO + BOARD)
+    eq, src_pos, err = _equity_vs_rival(rs, HERO, BOARD)
+    assert src_pos == 'CO', src_pos
+
+
+def test_el_vocabulario_cubre_lo_que_produce_equity_vs_rival():
+    """El vocabulario y el contrato de `_equity_vs_rival` no pueden divergir.
+
+    Se recorre el fuente buscando los codigos literales que devuelve y se
+    comprueba que todos estan en `CODIGOS_EQUITY_MAIN`. Si alguien anade un
+    motivo nuevo y no lo registra, este test lo dice.
+    """
+    import inspect
+
+    from motor.asistente_live import CODIGOS_EQUITY_MAIN
+    from motor.recommend_loop import _equity_vs_rival
+
+    fuente = inspect.getsource(_equity_vs_rival)
+    encontrados = set()
+    for linea in fuente.split('\n'):
+        for trozo in ("'main_range_unavailable'", "'empty_range_after_blockers'",
+                      "'equity_calculation_failed"):
+            if trozo in linea:
+                encontrados.add(trozo.strip("'"))
+
+    assert encontrados, 'no se encontro ningun codigo en el fuente'
+    fuera = encontrados - CODIGOS_EQUITY_MAIN
+    assert not fuera, ('codigos que produce `_equity_vs_rival` y no estan '
+                       'en el vocabulario: %s' % fuera)
