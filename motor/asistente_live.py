@@ -60,12 +60,19 @@ PLAYER_IDS = ['hero', 'p1', 'p2', 'p3', 'p4', 'p5']
 #
 # Los tres primeros los produce `_equity_vs_rival`; los dos ultimos, este
 # mismo productor. Ver su contrato en recommend_loop._equity_vs_rival.
+#
+# `unknown` SI esta aqui, y es deliberado: aparece en la agregacion cuando
+# `_equity_vs_rival` devuelve un motivo fuera de este conjunto. Dejarlo fuera
+# haria que un valor que se ve al contar no estuviera en el vocabulario que
+# define lo contable. El texto original va a `equity_main_note_detail`, asi
+# que no se pierde nada.
 CODIGOS_EQUITY_MAIN = frozenset({
     'main_range_unavailable',
     'empty_range_after_blockers',
     'equity_calculation_failed',
     'main_position_unresolved',
     'error',
+    'unknown',
 })
 _DEFAULT_NAMES = {'hero': 'Hero', 'p1': 'Player1', 'p2': 'Player2',
                   'p3': 'Player3', 'p4': 'Player4', 'p5': 'Player5'}

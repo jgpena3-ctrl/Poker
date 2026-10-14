@@ -664,27 +664,126 @@ def test_con_position_devuelve_la_position():
     assert src_pos == 'CO', src_pos
 
 
-def test_el_vocabulario_cubre_lo_que_produce_equity_vs_rival():
-    """El vocabulario y el contrato de `_equity_vs_rival` no pueden divergir.
+def _codigos_de_motivo(funcion):
+    """Códigos de motivo que devuelve `funcion`, leídos del AST.
 
-    Se recorre el fuente buscando los codigos literales que devuelve y se
-    comprueba que todos estan en `CODIGOS_EQUITY_MAIN`. Si alguien anade un
-    motivo nuevo y no lo registra, este test lo dice.
+    Se mira el valor DIRECTO de cada `return` / `raise`, y en una tupla el
+    último elemento (que es donde va la nota). No se mira lo anidado: por
+    eso `getattr(rs, 'position', '')` no se confunde con un código de motivo.
+
+    MEDIDO: la versión que recorría todas las constantes anidadas lo
+    confundía con un código; la que ignoraba las tuplas no encontraba
+    ninguno. Esta mira las dos cosas.
     """
+    import ast
     import inspect
+    import textwrap
 
+    # MEDIDO: `inspect.getsource` de una función ANIDADA devuelve la fuente
+    # con su sangría, y `ast.parse` falla con IndentationError. `dedent`
+    # quita la sangría común antes de parsear.
+    arbol = ast.parse(textwrap.dedent(inspect.getsource(funcion)))
+    vistos = set()
+
+    def de_valor(nodo):
+        if isinstance(nodo, ast.Tuple):
+            for elemento in reversed(nodo.elts):
+                codigo = de_valor(elemento)
+                if codigo:
+                    return codigo
+            return None
+        if isinstance(nodo, ast.Constant) and isinstance(nodo.value, str):
+            return nodo.value
+        if isinstance(nodo, ast.JoinedStr):
+            for parte in nodo.values:
+                if (isinstance(parte, ast.Constant)
+                        and isinstance(parte.value, str)):
+                    return parte.value
+            return None
+        if (isinstance(nodo, ast.Call) and nodo.args
+                and isinstance(nodo.args[0], ast.Constant)
+                and isinstance(nodo.args[0].value, str)):
+            return nodo.args[0].value
+        return None
+
+    for nodo in ast.walk(arbol):
+        if isinstance(nodo, ast.Return):
+            bruto = de_valor(nodo.value)
+        elif isinstance(nodo, ast.Raise) and nodo.exc is not None:
+            bruto = de_valor(nodo.exc)
+        else:
+            continue
+        if not bruto:
+            continue
+        prefijo = bruto.split(':', 1)[0].strip()
+        if prefijo and ' ' not in prefijo:
+            vistos.add(prefijo)
+    return vistos
+
+
+def test_el_vocabulario_cubre_lo_que_produce_equity_vs_rival():
+    """Con AST, no con regex sobre el texto.
+
+    MEDIDO el motivo del cambio: un regex sobre el fuente solo reconoce una
+    forma de escribir el código.
+    `f'equity_calculation_failed: {e}'` y `'equity_calculation_failed: ' + str(e)`
+    son el mismo motivo, y con texto plano solo se pilla una: el test
+    pasaría en silencio mientras el vocabulario se queda corto.
+    """
     from motor.asistente_live import CODIGOS_EQUITY_MAIN
     from motor.recommend_loop import _equity_vs_rival
 
-    fuente = inspect.getsource(_equity_vs_rival)
-    encontrados = set()
-    for linea in fuente.split('\n'):
-        for trozo in ("'main_range_unavailable'", "'empty_range_after_blockers'",
-                      "'equity_calculation_failed"):
-            if trozo in linea:
-                encontrados.add(trozo.strip("'"))
+    encontrados = _codigos_de_motivo(_equity_vs_rival)
+    assert encontrados, 'no se encontró ningún código en el AST'
 
-    assert encontrados, 'no se encontro ningun codigo en el fuente'
     fuera = encontrados - CODIGOS_EQUITY_MAIN
-    assert not fuera, ('codigos que produce `_equity_vs_rival` y no estan '
-                       'en el vocabulario: %s' % fuera)
+    assert not fuera, ('códigos que produce `_equity_vs_rival` y no están '
+                       'en el vocabulario: %s' % sorted(fuera))
+
+
+def test_el_extractor_detecta_un_motivo_fuera_del_vocabulario():
+    """El extractor tiene que ver un motivo nuevo, o el test anterior no vale.
+
+    Se comprueba aplicándolo a una función sintética. Es la misma disciplina
+    que los guards anti-vacuidad: un instrumento que no se demuestra capaz de
+    fallar no puede usarse para decir que algo está bien.
+    """
+    from motor.asistente_live import CODIGOS_EQUITY_MAIN
+
+    def _sintetica():
+        return None, None, 'motivo_nuevo: detalle'
+
+    assert _codigos_de_motivo(_sintetica) - CODIGOS_EQUITY_MAIN == {
+        'motivo_nuevo'}, 'el extractor no ve un motivo fuera del vocabulario'
+
+
+def test_el_extractor_no_confunde_un_atributo_con_un_codigo():
+    """`getattr(rs, 'position', '')` NO es un código de motivo.
+
+    Es el falso positivo que hizo fallar la primera versión con AST.
+    """
+    from motor.asistente_live import CODIGOS_EQUITY_MAIN
+
+    def _con_getattr():
+        return 0.5, getattr(object(), 'position', '') or 'x', None
+
+    assert not (_codigos_de_motivo(_con_getattr) & CODIGOS_EQUITY_MAIN), \
+        'un nombre de atributo se confundio con un codigo de motivo'
+
+
+def test_el_vocabulario_incluye_unknown():
+    """`unknown` aparece al agregar, así que tiene que ser contable.
+
+    Dejarlo fuera del conjunto haría que un valor visible en la agregación no
+    estuviera en el vocabulario que define lo contable.
+    """
+    from motor.asistente_live import CODIGOS_EQUITY_MAIN
+    assert 'unknown' in CODIGOS_EQUITY_MAIN
+
+
+def test_sin_position_vive_en_ranges():
+    """El centinela es de `RangeState`, no del módulo que lo consume."""
+    from motor.ranges import SIN_POSITION
+    from motor.recommend_loop import SIN_POSITION as reexport
+    assert SIN_POSITION == 'sin_position'
+    assert reexport is SIN_POSITION, 'recommend_loop debe reexportarlo'

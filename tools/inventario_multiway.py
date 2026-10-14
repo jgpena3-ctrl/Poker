@@ -75,6 +75,49 @@ def n_activos_en_calle(hand, street):
                if p.get('active') and p.get('pos') not in fuera)
 
 
+def folds_hasta(hand, street):
+    """Jugadores que ya HAN FOLDEADO en alguna calle hasta `street`."""
+    fuera = set()
+    streets = hand.get('streets') or {}
+    for st in ORDEN:
+        for a in ((streets.get(st) or {}).get('actions') or []):
+            if isinstance(a, dict) and a.get('action') == 'f' and a.get('pos'):
+                fuera.add(a['pos'])
+        if st == street:
+            break
+    return fuera
+
+
+def motivo_no_clasificable(hand, street):
+    """Por que un punto de decision no se puede clasificar."""
+    if not heroes(hand):
+        return 'sin hero (nadie con cartas)'
+    acciones = ((hand.get('streets') or {}).get(street) or {}).get('actions') or []
+    if not acciones:
+        return 'calle sin acciones (check-check)'
+    return 'hero solo en el bote, sin rivales'
+
+
+def no_puede_actuar(hand, street):
+    """Rivales que estan en el bote pero ya NO pueden actuar (all-in).
+
+    MEDIDO: decide el criterio de F7.2. Un all-in sigue en el bote, pero no
+    responde a una apuesta, asi que para "este spot es multiway" no cuenta.
+    """
+    streets = hand.get('streets') or {}
+    activos = {p.get('pos') for p in (hand.get('players') or [])
+               if p.get('active')}
+    for st in ORDEN:
+        for a in ((streets.get(st) or {}).get('actions') or []):
+            if isinstance(a, dict) and a.get('pos') and a.get('action') == 'r':
+                # una resubida consume la capacidad de volver a_actuar
+                activos.discard(a.get('pos'))
+        if st == street:
+            break
+    return {p.get('pos') for p in (hand.get('players') or [])
+            if p.get('active')} - activos
+
+
 def n_activos(hand):
     return sum(1 for p in (hand.get('players') or []) if p.get('active'))
 
@@ -188,6 +231,70 @@ def main():
           % (n_multi_hero, len(manos)))
     print('   -> esos cuentan como el PRIMERO. El impacto va en')
     print('      "NO CLASIFICABLE" de arriba, no en HU/MULTIWAY.')
+
+    # ---------------------------------------------------- 1.b
+    print()
+    print('   POR QUE no clasificables (sin esto no se sabe si el')
+    print('   denominador de los clasificables es representativo):')
+    motivos = collections.Counter()
+    for h in manos:
+        for st in STREETS:
+            acciones = ((h.get('streets') or {}).get(st) or {}).get(
+                'actions') or []
+            if acciones and heroes(h):
+                # clasificable salvo que el hero este solo
+                en_bote = {p.get('pos') for p in (h.get('players') or [])
+                           if p.get('active')} - folds_hasta(h, st)
+                # >= 2, no >= 1: con el hero solo en el bote no hay decision
+                # con rivales. MEDIDO: con `>= 1` el desglose daba 1390 y
+                # faltaban 304 puntos, que son justo los "hero solo".
+                if len(en_bote) >= 2:
+                    continue
+            motivos[motivo_no_clasificable(h, st)] += 1
+    for motivo, c in motivos.most_common():
+        print('      %-40s %5d' % (motivo, c))
+    print('      %-40s %5d' % ('TOTAL', sum(motivos.values())))
+    sin_acciones = motivos.get('calle sin acciones (check-check)', 0)
+    if sum(motivos.values()):
+        print('      -> el %.1f%% son calles SIN ACCIONES: no hay ninguna'
+              % (sin_acciones / sum(motivos.values()) * 100))
+        print('         decision que tomar. No son unholes del motor.')
+
+    # ---------------------------------------------------- 1.c
+    print()
+    print('   EN EL BOTE vs QUE PUEDEN ACTUAR  (esto decide F7.2):')
+    print('   %-8s %12s %16s %10s' % ('calle', 'MW en el bote',
+                                     'MW pueden actuar', 'delta'))
+    print('   ' + '-' * 52)
+    mw_bote = mw_act = 0
+    for st in STREETS:
+        b = a_ = 0
+        for h in manos:
+            acciones = ((h.get('streets') or {}).get(st) or {}).get(
+                'actions') or []
+            if not heroes(h) or not acciones:
+                continue
+            en_bote = {p.get('pos') for p in (h.get('players') or [])
+                       if p.get('active')} - folds_hasta(h, st)
+            actuable = en_bote - no_puede_actuar(h, st)
+            if len(en_bote) - 1 > 1:
+                b += 1
+            if len(actuable) - 1 > 1:
+                a_ += 1
+        print('   %-8s %12d %16d %+10d' % (st, b, a_, a_ - b))
+        mw_bote += b
+        mw_act += a_
+    print('   ' + '-' * 52)
+    print('   %-8s %12d %16d %+10d' % ('TOTAL', mw_bote, mw_act,
+                                       mw_act - mw_bote))
+    print()
+    if mw_bote > mw_act:
+        print('   El all-in RECLASA %d spot(s) de multiway a HU.' %
+              (mw_bote - mw_act))
+        print('   Un rival all-in esta en el bote pero NO responde a una')
+        print('   decision: el motor se comporta como HU sin estar mintiendose')
+        print('   sobre el rango. Por eso el criterio correcto no es')
+        print('   "cuantos estan activos" sino "cuantos pueden actuar".')
 
     clasificables = tot['HU'] + tot['MULTIWAY']
     if clasificables:

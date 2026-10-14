@@ -24,7 +24,7 @@ from .decision import EvTable, compute_evs
 from .hierarchy import shadow_equity, shadow_record
 from .panel import format_insight
 from .preflop import opening_range_or_fallback
-from .ranges import RangeError, RangeState
+from .ranges import RangeError, RangeState, SIN_POSITION
 from .situation import Situation, situation
 from . import rules
 from .hand_state import classify as classify_hand, range_advantage as ha_range_adv
@@ -176,11 +176,8 @@ def build_villain_range(hero_codes, board_codes, villain_pos='UTG',
                                    extra_blockers)
 
 
-# Centinela para "el rango no dice contra quien se calculo". Antes el
-# fallback era la cadena 'main', que PARECIA una identidad y no lo era:
-# como `RangeState` nace sin `position`, `equity_main_source` valia siempre
-# 'main'. Ahora la ausencia se declara, no se supone.
-SIN_POSITION = 'sin_position'
+# `SIN_POSITION` vive en `ranges.py` (es un concepto de `RangeState`) y se
+# re-exporta aqui para quien ya importa de este modulo.
 
 
 def _equity_vs_rival(range_builder, hero_codes, board_codes):

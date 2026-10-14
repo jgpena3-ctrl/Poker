@@ -464,6 +464,18 @@ def villain_weights(villain_reach, villain_ids):
     return w / total
 
 
+# Centinela: "este rango no dice contra quien se calculo".
+#
+# Antes `_equity_vs_rival` usaba el literal 'main' como fallback. Sonaba a
+# identidad y no lo era: como `RangeState` nace sin `position`, el campo
+# `equity_main_source` valia SIEMPRE 'main'. Una cadena constante con forma de
+# nombre es peor que un centinela que declara la ausencia.
+#
+# Vive aqui, y no en el modulo que lo consume, porque es un concepto de
+# `RangeState`.
+SIN_POSITION = 'sin_position'
+
+
 class RangeState:
     """Estado de rango bayesiano sobre las 1326 combinaciones.
 
