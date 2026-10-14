@@ -95,6 +95,37 @@ def test_board_con_pareja_penaliza_mas():
 
 # --- clasificación -------------------------------------------------------
 
+@pytest.fixture
+def sombra_contada(monkeypatch):
+    """Cuenta las veces que `shadow_equity` se ejecuta de verdad.
+
+    Uso en un test de invariancia:
+
+        def test_x_no_altera_la_accion(sombra_contada):
+            ...
+            assert sombra_contada() >= 1, 'el bloque sombra no se ejecutó'
+
+    Sin esto, un test de invariancia puede pasar porque el camino bajo prueba
+    no llego a correr: misma salida, ninguna garantia. Ya paso una vez (ver
+    el bloque de F6.2.b, donde el escenario se quedaba sin agresor y la
+    jerarquia no encontraba `main`), y el fallo es silencioso.
+
+    MEDIDO al introducirlo: los cinco tests SI ejecutaban `shadow_equity`
+    (1 o 4 veces). Ninguno era vacio; lo que faltaba era la comprobacion que
+    avise si dejan de serlo.
+    """
+    from motor import recommend_loop as _rl
+    contador = {'n': 0}
+    original = _rl.shadow_equity
+
+    def contando(*a, **k):
+        contador['n'] += 1
+        return original(*a, **k)
+
+    monkeypatch.setattr(_rl, 'shadow_equity', contando)
+    return lambda: contador['n']
+
+
 def _acts(*pares):
     return [{'pos': p, 'action': a} for p, a in pares]
 
@@ -426,7 +457,7 @@ def test_equity_main_ausente_por_rango_vacio():
     assert err == 'empty_range_after_blockers'
 
 
-def test_equity_main_no_altera_la_accion():
+def test_equity_main_no_altera_la_accion(sombra_contada):
     """Con main_range_builder, la acción y el valor siguen intactos."""
     from motor.ranges import RangeState
     rs = RangeState(reach=np.ones(N_COMBOS, dtype=np.float32))
@@ -437,6 +468,8 @@ def test_equity_main_no_altera_la_accion():
                 villain_pos='UTG', deadline_s=5.0, runout=False)
     sin = recommend(**base)
     con = recommend(**base, hierarchy=jer, main_range_builder=rs)
+    assert sombra_contada() >= 1, \
+        'VACUO: el bloque sombra no se ejecutó y la comparación no dice nada'
     assert con.action == sin.action
     assert con.value == pytest.approx(sin.value, abs=1e-12)
     assert con.shadow['equity_main_available'] is True
@@ -494,7 +527,7 @@ def test_equity_vs_rival_un_rango_sin_is_empty_cae_en_vacio():
     assert 'boom' not in str(err), 'la funcion ni se llega a llamar'
 
 
-def test_equity_main_no_rompe_con_builder_que_falla():
+def test_equity_main_no_rompe_con_builder_que_falla(sombra_contada):
     """Un builder que lanza no puede tumbar la recomendación."""
     def builder_malo(pos):
         raise RuntimeError('boom')
@@ -503,6 +536,8 @@ def test_equity_main_no_rompe_con_builder_que_falla():
                     street='flop', position='BTN', villain_pos='UTG',
                     deadline_s=5.0, runout=False,
                     hierarchy=jer, main_range_builder=builder_malo)
+    assert sombra_contada() >= 1, \
+        'VACUO: el bloque sombra no se ejecutó y la comparación no dice nada'
     assert rec.action in ('fold', 'check', 'call', 'bet_25', 'bet_50',
                           'bet_75', 'raise', 'all_in')
     assert rec.shadow['equity_main'] is None
@@ -765,7 +800,7 @@ def test_shadow_log_fallo_no_propaga(tmp_path):
 
 # --- LA GARANTÍA IMPORTANTE ---------------------------------------------
 
-def test_shadow_no_altera_la_accion():
+def test_shadow_no_altera_la_accion(sombra_contada):
     """Con y sin contexto de jerarquía, la acción es idéntica.
 
     Es la garantía central del modo sombra. Si este test falla, el motor
@@ -780,6 +815,8 @@ def test_shadow_no_altera_la_accion():
                 villain_pos='MP', deadline_s=5.0, runout=False)
     sin = recommend(**base)
     con = recommend(**base, hierarchy=jer)
+    assert sombra_contada() >= 1, \
+        'VACUO: el bloque sombra no se ejecutó y la comparación no dice nada'
     assert con.action == sin.action
     assert con.value == pytest.approx(sin.value, abs=1e-12)
     # y la sombra sí calculó su clasificación, aunque sin emitir equity
@@ -790,7 +827,8 @@ def test_shadow_no_altera_la_accion():
 
 
 @pytest.mark.parametrize('variante', ['log', 'callers', 'pending', 'ancla'])
-def test_shadow_no_altera_la_accion_en_cada_variante(variante, tmp_path):
+def test_shadow_no_altera_la_accion_en_cada_variante(
+        sombra_contada, variante, tmp_path):
     """pegar_2 §2.5: la garantía debe cubrir todos los caminos.
 
     Con log, con callers, con pendientes y con el escenario exacto del
@@ -816,6 +854,8 @@ def test_shadow_no_altera_la_accion_en_cada_variante(variante, tmp_path):
         kwargs['shadow_log'] = ShadowLog(path=str(tmp_path / 's.jsonl'))
     sin = recommend(**base)
     con = recommend(**base, hierarchy=jer, **kwargs)
+    assert sombra_contada() >= 1, \
+        'VACUO: el bloque sombra no se ejecutó y la comparación no dice nada'
     assert con.action == sin.action
     assert con.value == pytest.approx(sin.value, abs=1e-12)
     if variante == 'log':
@@ -830,7 +870,7 @@ def test_shadow_sin_contexto_no_hay_registro():
     assert rec.shadow is None
 
 
-def test_shadow_no_rompe_con_contexto_raro():
+def test_shadow_no_rompe_con_contexto_raro(sombra_contada):
     """Un contexto malformado no puede tumbar la recomendación."""
     base = dict(hero_codes=HERO, board_codes=BOARD_FLOOP, pot=25.0,
                 to_call=0.0, stack=90.0, street='flop', position='BTN',
@@ -838,5 +878,7 @@ def test_shadow_no_rompe_con_contexto_raro():
     roto = {'main': None, 'checkers_secondary': None, 'pending': None,
             'pending_known': False}
     rec = recommend(**base, hierarchy=roto)
+    assert sombra_contada() >= 1, \
+        'VACUO: el bloque sombra no se ejecutó y la comparación no dice nada'
     assert rec.action in ('fold', 'check', 'call', 'bet_25', 'bet_50',
                           'bet_75', 'raise', 'all_in')

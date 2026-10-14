@@ -82,3 +82,12 @@ data/_backup_aplicar_correcciones/
 # observacion, no una fuente: su valor esta en acumularse, no en versionarse.
 # Versionarlo solo anadiria ruido al diff de cada sesion.
 data/shadow_hierarchy.jsonl
+
+# Salidas de herramientas de prueba. MEDIDO: 4 ficheros versionados en data/
+# que NO los escribe ningun modulo del motor, 3 de ellos no los referencia
+# nadie, y el cuarto (`test_output_mano3.jsonl`) es el `output_path` que
+# asigna `tools/test_mano3.py`: es salida, no entrada. Versionarlas era ruido.
+data/test_mano4_output.jsonl
+data/test_output2.jsonl
+data/test_output_mano3.jsonl
+data/test_trace.jsonl

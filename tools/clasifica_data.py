@@ -1,0 +1,83 @@
+# -*- coding: utf-8 -*-
+"""Clasifica `data/`: fuente, derivado regenerable o debris de runtime.
+
+Por qué existe: un `git add -A` metió `data/shadow_hierarchy.jsonl` en el repo.
+La pregunta correcta no es "¿lo escribe el código?" ( Casi todo lo escribe
+`reconstruir_derivados.py`) sino:
+
+  - ¿se LEE como entrada?  -> fuente o derivado, se versiona.
+  - ¿solo se ESCRIBE al usar el sistema? -> runtime, NO se versiona.
+
+MEDIDO, no estimado. Salida usada en DOCS/DATA_FUENTE_VS_RUNTIME.md.
+
+Uso:  python tools/clasifica_data.py
+"""
+import io
+import os
+import re
+import subprocess
+
+ROOT = os.getcwd()
+
+
+def git(*a):
+    return subprocess.check_output(['git'] + list(a), cwd=ROOT,
+                                   stderr=subprocess.DEVNULL).decode().strip()
+
+
+# --- quien escribe cada fichero de data/ ---------------------------------
+ESCRIBEN = {}
+for dp, dn, fns in os.walk(ROOT):
+    dn[:] = [d for d in dn if d not in {'.git', '__pycache__', '.venv'}]
+    for fn in fns:
+        if not fn.endswith('.py'):
+            continue
+        p = os.path.join(dp, fn)
+        rel = os.path.relpath(p, ROOT).replace('\\', '/')
+        src = io.open(p, encoding='utf-8').read()
+        for m in re.finditer(r"['\"](data/[^'\"{}]+)['\"]", src):
+            ESCRIBEN.setdefault(m.group(1), set()).add(rel)
+
+print('=' * 78)
+print('CLASIFICACION DE data/  (versionados)')
+print('=' * 78)
+print('%-34s %-8s %s' % ('fichero', 'escrito', 'por quien'))
+print('-' * 78)
+
+for f in sorted(git('ls-files', 'data').splitlines()):
+    autores = sorted(ESCRIBEN.get(f, ()))
+    marca = 'SI' if autores else '-'
+    print('%-34s %-8s %s' % (f, marca, ', '.join(a[:34] for a in autores) or '-'))
+
+print()
+print('=' * 78)
+print('SOSPECHOSOS: nombre de test/salida y NADIE lo escribe')
+print('=' * 78)
+sospechosos = []
+for f in sorted(git('ls-files', 'data').splitlines()):
+    base = os.path.basename(f)
+    if re.search(r'(test|trace|output|dump|tmp|debug)', base, re.I) \
+            and f not in ESCRIBEN:
+        sospechosos.append(f)
+        print('   %s   (%d bytes)'
+              % (f, os.path.getsize(f) if os.path.exists(f) else -1))
+if not sospechosos:
+    print('   ninguno')
+
+print()
+print('=' * 78)
+print('¿los sospechosos se referencian desde algun sitio?')
+print('=' * 78)
+for f in sospechosos:
+    base = os.path.basename(f)
+    usos = []
+    for dp, dn, fns in os.walk(ROOT):
+        dn[:] = [d for d in dn if d not in {'.git', '__pycache__', '.venv'}]
+        for fn in fns:
+            if not (fn.endswith('.py') or fn.endswith('.md')):
+                continue
+            p = os.path.join(dp, fn)
+            if base in io.open(p, encoding='utf-8', errors='ignore').read():
+                usos.append(os.path.relpath(p, ROOT).replace('\\', '/'))
+    print('   %-34s referenciado en: %s'
+          % (f, ', '.join(sorted(set(usos))) or 'NADA'))

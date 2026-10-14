@@ -779,27 +779,43 @@ class Asistente:
         fold no está en ninguna de las dos listas), pero la comprobación se
         hace igual: es una defensa, no una suposición.
 
-        Devuelve (range_state | None, motivo, pid | None). El motivo va en el
-        vocabulario estable de `equity_main_note`.
+        Devuelve (range_state | None, codigo_motivo, detalle | None). El
+        código va en `equity_main_note` y el detalle en
+        `equity_main_note_detail`: el primero es estable y agregable, el
+        segundo cambia caso a caso.
         """
         main_pos = jer.get('main')
         if not main_pos:
-            return None, 'main_position_unresolved: sin posicion principal', None
+            return None, 'main_position_unresolved', 'sin posicion principal'
 
         candidatos = [pid for pid in PLAYER_IDS
                       if self._pos_of(pid, state) == main_pos
                       and state.get(f'{pid}_state') == 'activo']
         if len(candidatos) != 1:
-            return (None,
-                    'main_position_unresolved: %d candidatos para %s'
-                    % (len(candidatos), main_pos),
-                    None)
+            # `main_position_unresolved` es el CÓDIGO estable; el detalle
+            # variable va aparte. Mezclarlos hacía imposible agrupar por
+            # motivo (revision_2).
+            return (None, 'main_position_unresolved',
+                    '%d candidatos para %s' % (len(candidatos), main_pos))
         pid = candidatos[0]
 
         # Si el principal ES el rival de producción, el rango ya está
         # construido y bloqueado: reutilizarlo evita pagar `prob_vec` dos
         # veces sin cambiar el resultado.
+        #
+        # ACOPLAMIENTO, a propósito: reutilizar ata `equity_main` a
+        # `equity_production`. Hoy es correcto (mismo jugador, mismo rango) y
+        # ahorra un `prob_vec` + refinado postflop. Si algún día producción
+        # cambia cómo construye su rango, esta equity cambia con ella sin que
+        # nada lo diga. Por eso `position` se fija SIEMPRE, también aquí: así
+        # `equity_main_source` sigue diciendo contra quién se calculó, y no
+        # queda atado a lo que devuelva el rango reutilizado.
+        #
+        # `rs_villain` puede ser None si quien llama no construyó el rango de
+        # producción (un test, por ejemplo). No es un error: en ese caso se
+        # construye desde cero, que es lo correcto.
         if pid == villain and rs_villain is not None:
+            rs_villain.position = main_pos
             return rs_villain, None, pid
 
         perfil = self._perfil_for(pid, state)
@@ -808,6 +824,9 @@ class Asistente:
             perfil, spot, action, pos=main_pos,
             villain_pos=_pf_rival_pos(self.rec.hand, main_pos, spot))
         rs = RangeState(reach=reach)
+        # Sin esto, `_equity_vs_rival` devuelve `getattr(rs,'position','') or
+        # 'main'` y `equity_main_source` valía siempre 'main'. MEDIDO: así era.
+        rs.position = main_pos
         rs.set_known_cards(list(hero) + list(board) + list(blockers))
         for st_v, facing, act, board_str in _villain_postflop_actions(
                 self.rec.hand, main_pos):
@@ -825,43 +844,68 @@ class Asistente:
         eso la accion no puede cambiar. Cualquier fallo se anota con su
         motivo y se sigue, nunca se propaga.
 
-        Los cuatro campos conservan el contrato ya inventariado:
-        `equity_main` (float o None), `equity_main_available` (bool),
-        `equity_main_source` (identidad del rival) y `equity_main_note`
-        (identificador estable del fallo).
+        Contrato:
+
+          - `equity_main`           float o None. Nunca 0.0 como sustituto.
+          - `equity_main_available` bool. False = no se pudo calcular.
+          - `equity_main_source`    la POSICION del rival principal contra
+                                    cuyo rango se calculo. Antes valia siempre
+                                    `'main'`, porque `RangeState.position`
+                                    nace vacio y nadie la fijaba: el campo
+                                    no llevaba ninguna identidad.
+          - `equity_main_note`      CÓDIGO estable del motivo, o None. Es lo
+                                    agregable; no lleva texto variable.
+          - `equity_main_note_detail` el detalle que cambia caso a caso, para
+                                    leerlo sin parsear el código.
+
+        La separación código/detalle es deliberada (revision_2): mezclar
+        identificadores estables con texto libre impide agrupar por motivo.
         """
-        def _dejar(motivo):
+        def _dejar(codigo, detalle=None):
             reg['equity_main'] = None
             reg['equity_main_available'] = False
             reg['equity_main_source'] = None
-            reg['equity_main_note'] = motivo
+            reg['equity_main_note'] = codigo
+            reg['equity_main_note_detail'] = detalle
 
         # El try envuelve TODO el cuerpo, no solo el cálculo: un fallo al
         # construir el rango tampoco debe propagarse. El bloque sombra tiene
         # su propia guarda, pero un método que se protege a sí mismo es seguro
         # para cualquier llamador futuro.
-        try:
-            from .recommend_loop import _equity_vs_rival
+        # El import va FUERA del try a proposito (revision_1 §3): si
+        # `recommend_loop` no se puede importar, eso no es un fallo de
+        # `equity_main`, es un fallo estructural del modulo, y debe verse en
+        # la traza en vez de quedar anotado como "no se pudo calcular".
+        from .recommend_loop import _equity_vs_rival
 
-            rs_main, motivo, _pid_main = self._rango_main(
+        try:
+            rs_main, codigo, detalle = self._rango_main(
                 state, jer, villain, hero, board, blockers, rs_villain)
 
             if rs_main is None:
                 # No se sustituye por `villain_pos`: justo se quiere medir un
                 # rival que puede ser DISTINTO del de producción.
-                _dejar(motivo)
+                _dejar(codigo, detalle)
                 return
 
             eq_main, src_main, err_main = _equity_vs_rival(
                 rs_main, hero, board)
         except Exception as e:          # no debe tumbar la recomendación
-            _dejar('error: %s' % e)
+            _dejar('error', str(e))
             return
 
         reg['equity_main'] = eq_main
         reg['equity_main_available'] = eq_main is not None
         reg['equity_main_source'] = src_main
-        reg['equity_main_note'] = err_main
+        # `err_main` llega como `'equity_calculation_failed: <texto>'`: se
+        # separa en código y detalle para que el primero sea agregable.
+        if err_main is None:
+            reg['equity_main_note'] = None
+            reg['equity_main_note_detail'] = None
+        else:
+            cod, _, det = err_main.partition(':')
+            reg['equity_main_note'] = cod.strip()
+            reg['equity_main_note_detail'] = det.strip() or None
 
     def _state_key(self, state):
         """Firma de la situación para deduplicar recomendaciones (incluye el

@@ -102,7 +102,8 @@ def test_la_accion_no_cambia_con_el_productor_encendido(monkeypatch):
     rs.set_known_cards(HERO + BOARD)
 
     reg_sin = {'equity_main': None, 'equity_main_available': False,
-               'equity_main_source': None, 'equity_main_note': None}
+               'equity_main_source': None, 'equity_main_note': None,
+               'equity_main_note_detail': None}
     reg_con = dict(reg_sin)
     asis._equity_main_sombra(state, jer, 'p1', HERO, BOARD, [], rs, reg_con)
 
@@ -196,8 +197,9 @@ def test_posicion_sin_pid_resoluble_anota_el_motivo(estado, motivo_esperado):
 
     assert reg['equity_main'] is None
     assert reg['equity_main_available'] is False
-    assert 'main_position_unresolved' in reg['equity_main_note'], reg
-    assert motivo_esperado in reg['equity_main_note'], reg
+    # el CODIGO es estable y agregable; el DETALLE lleva el caso concreto
+    assert reg['equity_main_note'] == 'main_position_unresolved', reg
+    assert motivo_esperado in reg['equity_main_note_detail'], reg
 
 
 def test_posicion_ambigua_no_elige_uno():
@@ -211,7 +213,8 @@ def test_posicion_ambigua_no_elige_uno():
     rs.set_known_cards(HERO + BOARD)
     reg = {}
     asis._equity_main_sombra(state, _jer('MP'), 'p1', HERO, BOARD, [], rs, reg)
-    assert '2 candidatos' in reg['equity_main_note'], reg
+    assert reg['equity_main_note'] == 'main_position_unresolved', reg
+    assert '2 candidatos' in reg['equity_main_note_detail'], reg
 
 
 def test_rango_vacio_despues_de_blockers():
@@ -228,6 +231,8 @@ def test_rango_vacio_despues_de_blockers():
     asis._equity_main_sombra(state, _jer('CO'), 'p1', HERO, BOARD, [], rs, reg)
     assert reg['equity_main_available'] is False
     assert reg['equity_main_note'] == 'empty_range_after_blockers', reg
+    assert reg['equity_main_note_detail'] is None, \
+        'sin detalle variable, el detalle debe ser None'
 
 
 def test_excepcion_al_calcular_no_tumba_nada(monkeypatch):
@@ -248,7 +253,9 @@ def test_excepcion_al_calcular_no_tumba_nada(monkeypatch):
     asis._equity_main_sombra(state, _jer('MP'), 'p1', HERO, BOARD, [], rs, reg)
     assert reg['equity_main'] is None
     assert reg['equity_main_available'] is False
-    assert 'equity_calculation_failed' in reg['equity_main_note'], reg
+    # el texto de la excepcion va al DETALLE, no al codigo
+    assert reg['equity_main_note'] == 'equity_calculation_failed', reg
+    assert 'boom' in reg['equity_main_note_detail'], reg
 
 
 def test_excepcion_en_el_productor_se_registra_como_error(monkeypatch):
@@ -499,3 +506,58 @@ def test_el_reproducto_tiene_registro_con_equity_main():
     assert 'equity_main' in rec
     assert 'equity_main_available' in rec
     assert rec['pending_known'] is True
+
+# ======================================================================
+# 8. `equity_main_source` lleva la identidad de verdad  (bug corregido)
+# ======================================================================
+
+def test_equity_main_source_dice_la_posicion_del_principal():
+    """BUG: el campo valía SIEMPRE 'main'.
+
+    `_equity_vs_rival` devuelve `getattr(rs, 'position', '') or 'main'`.
+    `RangeState(reach=...)` nace con `position == ''` y, antes del arreglo,
+    NADIE la fijaba: ni el productor ni `recommend_loop`. O sea que el campo
+    documentado como "identidad del rival" era una constante.
+
+    Este test falla con el código anterior.
+    """
+    asis = _asistente(_hand([{'pos': 'CO', 'action': 'b'}]))
+    asis.rec._hand_positions = {'hero': 'BTN', 'p1': 'MP', 'p2': 'CO'}
+    state = {'p1_state': 'activo', 'p2_state': 'activo',
+             'p1_stake': 90.0, 'p2_stake': 90.0,
+             'community': [_cards('Qh'), _cards('7s'), _cards('2c')]}
+    rs = RangeState(reach=np.ones(N_COMBOS, dtype=np.float32))
+    rs.set_known_cards(HERO + BOARD)
+
+    reg = {}
+    asis._equity_main_sombra(state, _jer('CO'), 'p1', HERO, BOARD, [],
+                             rs, reg)
+    assert reg['equity_main_available'] is True, reg
+    assert reg['equity_main_source'] == 'CO', (
+        'debe decir contra QUIEN se calculo, no la constante: %r'
+        % reg['equity_main_source'])
+
+
+def test_equity_main_source_also_con_el_rango_reutilizado():
+    """La reutilización de `rs_villain` tampoco debe perder la identidad."""
+    asis = _asistente(_hand([{'pos': 'MP', 'action': 'b'}]))
+    asis.rec._hand_positions = {'hero': 'BTN', 'p1': 'MP'}
+    state = {'p1_state': 'activo', 'p1_stake': 90.0,
+             'community': [_cards('Qh'), _cards('7s'), _cards('2c')]}
+    rs = RangeState(reach=np.ones(N_COMBOS, dtype=np.float32))
+    rs.set_known_cards(HERO + BOARD)
+
+    reg = {}
+    asis._equity_main_sombra(state, _jer('MP'), 'p1', HERO, BOARD, [], rs, reg)
+    assert reg['equity_main_source'] == 'MP', reg
+
+
+def test_rangostate_nace_sin_position():
+    """Guarda el ORIGEN del bug: `RangeState` nace con `position` vacia.
+
+    Si algun dia `RangeState` se construyera con `position` por defecto, el
+    sintoma del bug desaparecerse pero la causa seguiria ahi: nadie la fija.
+    """
+    rs = RangeState(reach=np.ones(N_COMBOS, dtype=np.float32))
+    assert not getattr(rs, 'position', ''), \
+        'si RangeState ya trajera position, revisar por qué se relied en él'
