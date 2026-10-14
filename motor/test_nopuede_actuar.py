@@ -1,19 +1,16 @@
 # -*- coding: utf-8 -*-
-"""Clasificador de "puede actuar": casos sinteticos que separan una SUBIDA
-de un ALL-IN.
+"""La regla del raise queda rechazada: estos casos la desmontan.
 
-revision_2, punto 1: "Construye casos sinteticos con un raiser que conserva
-fichas, un jugador all-in, un jugador que foldea y una resubida" y
-"un raise ordinario nunca se interpreta automaticamente como all-in".
+La implementacion canonica esta en `motor/multiway.py` y se prueba en
+`motor/test_multiway.py`. Aqui quedan los casos SINTETICOS que separan una
+SUBIDA de un ALL-IN, que es lo que pidio revision_1 para poder firmar el
+contrato F7.2.a sin fear de que la regla nueva vuelva a ser la vieja.
 
-Cada caso mira DOS clasificadores:
-
-  - `no_puede_actuar`               el que hay hoy (regla del raise)
-  - `no_puede_actuar_evidencia`     el propuesto, que lee `hand['allin']`
-
-Y el ultimo bloque hace lo que revision_1 exigio de todo instrumento: que
-se demuestre CAPAZ DE FALLAR. Un test que solo pasa no demuestra nada; por
-eso se comprueba que la regla vieja rompe los casos que la nueva acierta.
+La regla del raise vive aqui como ESPECIMEN CONGELADO, no como
+implementacion: `_regla_del_raise_rechazada`. Vive en el fichero de test y
+no en `motor/` a proposito, para que se pueda demostrar que falla sin
+tenerla cableada en ningun sitio. `test_no_hay_dos_implementaciones` (en
+`motor/test_multiway.py`) vigila que no vuelva a existir una copia viva.
 """
 import os
 import sys
@@ -22,268 +19,271 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'tools'))
 
-from inventario_multiway import no_puede_actuar            # noqa: E402
-from auditar_solapamiento_multiway import (                # noqa: E402
-    PLAYER_IDS, calle_ultima_accion, en_bote, no_puede_actuar_evidencia,
-    posiciones_allin,
+from motor.multiway import (                                # noqa: E402
+    PLAYER_IDS, acciones, clasificar_decision, en_bote,
+    en_bote_en_instante, folds_hasta, instante_decision, no_puede_actuar,
+    no_puede_actuar_en_instante, posiciones_allin, puede_responder,
 )
 
-# ---------------------------------------------------------------------------
-# Constructor de manos sinteticas. `slots` es (pos, stack, cartas) en el ORDEN
-# de PLAYER_IDS, que es como el recorder rellena `players[]` y de lo que
-# depende el mapeo id -> posicion.
-# ---------------------------------------------------------------------------
 _POS_FIJOS = ('UTG', 'MP', 'CO', 'BTN', 'SB', 'BB')
+ID_DE_POS = dict(zip(_POS_FIJOS, PLAYER_IDS))
 
 
-def mano(acciones_preflop=(), flop=(), turn=(), river=(), allin=(),
+def mano(preflop=(), flop=(), turn=(), river=(), allin=(),
          stacks=None, con_campo_allin=True, n_players=6):
     """Mano minima con la forma EXACTA que produce `recorder_live`."""
     stacks = stacks or {}
-    players = []
-    for i in range(n_players):
-        pos = _POS_FIJOS[i] if i < len(_POS_FIJOS) else ''
-        players.append({
-            'active': True,
-            'name': 'P%d' % i,
-            'pos': pos,
-            'stack': stacks.get(pos, 100.0),
-            'cards': 'AsKd' if i == 0 else '',
-        })
-    h = {
-        'hand_id': 'TEST',
-        'players': players,
-        'streets': {
-            'preflop': {'actions': [{'pos': p, 'action': a, 'amount': m}
-                                    for p, a, m in acciones_preflop]},
-            'flop': {'actions': [{'pos': p, 'action': a, 'amount': m}
-                                 for p, a, m in flop], 'board': []},
-            'turn': {'actions': [{'pos': p, 'action': a, 'amount': m}
-                                 for p, a, m in turn], 'board': []},
-            'river': {'actions': [{'pos': p, 'action': a, 'amount': m}
-                                  for p, a, m in river], 'board': []},
-        },
-    }
+    players = [{'active': True, 'name': 'P%d' % i,
+                'pos': _POS_FIJOS[i] if i < len(_POS_FIJOS) else '',
+                'stack': stacks.get(_POS_FIJOS[i], 100.0),
+                'cards': 'AsKd' if i == 0 else ''}
+               for i in range(n_players)]
+    h = {'hand_id': 'TEST', 'players': players,
+         'streets': {st: {'actions': [{'pos': p, 'action': a, 'amount': m}
+                                       for p, a, m in acts], 'board': []}
+                     for st, acts in (('preflop', preflop), ('flop', flop),
+                                      ('turn', turn), ('river', river))}}
     if con_campo_allin:
         h['allin'] = list(allin)
     return h
 
 
-# Los ids internos segun el orden de PLAYER_IDS sobre _POS_FIJOS:
-#   hero=UTG  p1=MP  p2=CO  p3=BTN  p4=SB  p5=BB
-ID_DE_POS = dict(zip(_POS_FIJOS, PLAYER_IDS))
-
-
 # ---------------------------------------------------------------------------
+# ESPECIMEN CONGELADO DE LA REGLA RECHAZADA
+# ---------------------------------------------------------------------------
+def _regla_del_raise_rechazada(hand, street):
+    """La regla de F7.1: "ha subido -> no puede actuar". NO SE USA EN EL MOTOR.
+
+    Se conserva para poder medir su error y para que los tests de abajo
+    Demonstrate que sigue siendo incapaz de estar bien. Medido: 14,6% de
+    precision sobre la ventana fiable.
+    """
+    streets = hand.get('streets') or {}
+    activos = {p.get('pos') for p in (hand.get('players') or [])
+               if p.get('active')}
+    for st in ('preflop', 'flop', 'turn', 'river'):
+        for a in ((streets.get(st) or {}).get('actions') or []):
+            if isinstance(a, dict) and a.get('pos') and a.get('action') == 'r':
+                activos.discard(a.get('pos'))
+        if st == street:
+            break
+    return {p.get('pos') for p in (hand.get('players') or [])
+            if p.get('active')} - activos
+
+
+# ===========================================================================
 # 1. Un raise ordinario NO es un all-in
-# ---------------------------------------------------------------------------
+# ===========================================================================
 def test_raise_ordinario_no_es_allin():
-    """BTN sube 9.0 conservando 141.1: sigue pudiendo actuar."""
-    h = mano(acciones_preflop=[
-        ('MP', 'f', 0.0), ('CO', 'f', 0.0), ('BTN', 'r', 9.0),
-        ('SB', 'f', 0.0), ('BB', 'c', 9.0), ('UTG', 'c', 9.0),
-    ], allin=[], stacks={'BTN': 141.1})
-    assert 'BTN' not in (no_puede_actuar_evidencia(h, 'flop') or set())
+    """BTN sube 9.0 conservando 141.1 de stack: sigue pudiendo actuar."""
+    h = mano(preflop=[('MP', 'f', 0.0), ('CO', 'f', 0.0), ('BTN', 'r', 9.0),
+                      ('SB', 'f', 0.0), ('BB', 'c', 9.0), ('UTG', 'c', 9.0)],
+             allin=[], stacks={'BTN': 141.1})
+    assert 'BTN' not in no_puede_actuar(h, 'flop')
 
 
-def test_raise_ordinario_lo_marca_la_regla_vieja():
-    """Mismo caso, con la regla de hoy: FALLA. Es el bug de revision_2."""
-    h = mano(acciones_preflop=[
-        ('MP', 'f', 0.0), ('CO', 'f', 0.0), ('BTN', 'r', 9.0),
-        ('SB', 'f', 0.0), ('BB', 'c', 9.0), ('UTG', 'c', 9.0),
-    ], allin=[], stacks={'BTN': 141.1})
-    assert 'BTN' in no_puede_actuar(h, 'flop'), (
-        'la regla vieja deberia marcar BTN: si este test falla, el caso ya '
-        'no reproduce el bug y el test ya no prueba nada')
+def test_la_regla_rechazada_marca_el_raise_ordinario():
+    """Su error principal, aislado: confunde subir con comprometerse."""
+    h = mano(preflop=[('MP', 'f', 0.0), ('CO', 'f', 0.0), ('BTN', 'r', 9.0),
+                      ('SB', 'f', 0.0), ('BB', 'c', 9.0), ('UTG', 'c', 9.0)],
+             allin=[], stacks={'BTN': 141.1})
+    assert 'BTN' in _regla_del_raise_rechazada(h, 'flop')
 
 
-# ---------------------------------------------------------------------------
-# 2. Resubida: tres veces subido y ninguna all-in
-# ---------------------------------------------------------------------------
+# ===========================================================================
+# 2. Resubida: tres veces subido y ninguno all-in
+# ===========================================================================
 def test_resubida_no_es_allin():
-    """MP abre, CO resubide y conserva fichas: no puede declararse all-in."""
-    h = mano(acciones_preflop=[
-        ('UTG', 'b', 3.0), ('MP', 'r', 9.0), ('CO', 'r', 24.0),
-        ('BTN', 'f', 0.0), ('SB', 'f', 0.0), ('BB', 'f', 0.0),
-    ], allin=[], stacks={'CO': 99.9})
-    assert 'CO' not in (no_puede_actuar_evidencia(h, 'flop') or set())
+    """MP abre, CO resubide y conserva fichas: no es all-in."""
+    h = mano(preflop=[('UTG', 'b', 3.0), ('MP', 'r', 9.0), ('CO', 'r', 24.0),
+                      ('BTN', 'f', 0.0), ('SB', 'f', 0.0), ('BB', 'f', 0.0)],
+             allin=[], stacks={'CO': 99.9})
+    assert 'CO' not in no_puede_actuar(h, 'flop')
 
 
-def test_resubida_y_call_final_siguen_pudiendo_actuar():
-    """La resubida que nadie puede superar NO convierte al resubidor en all-in."""
-    h = mano(acciones_preflop=[
-        ('UTG', 'b', 3.0), ('MP', 'r', 9.0), ('CO', 'r', 24.0),
-        ('BTN', 'f', 0.0), ('SB', 'f', 0.0), ('BB', 'f', 0.0),
-        ('UTG', 'c', 24.0),
-    ], allin=[], stacks={'CO': 99.9, 'MP': 40.0})
-    # MP seCommitmenta con la llamada final, CO no: al reves de lo que la
-    # regla vieja supone (marca a quien subio y descuenta a quien no).
-    assert 'CO' not in (no_puede_actuar_evidencia(h, 'flop') or set())
+def test_resubida_no_superada_tampoco_es_allin():
+    """Que nadie supere la resubida no convierte al resubidor en all-in."""
+    h = mano(preflop=[('UTG', 'b', 3.0), ('MP', 'r', 9.0), ('CO', 'r', 24.0),
+                      ('BTN', 'f', 0.0), ('SB', 'f', 0.0), ('BB', 'f', 0.0),
+                      ('UTG', 'c', 24.0)],
+             allin=[], stacks={'CO': 99.9, 'MP': 40.0})
+    assert 'CO' not in no_puede_actuar(h, 'flop')
 
 
-# ---------------------------------------------------------------------------
+# ===========================================================================
 # 3. All-in de verdad: por raise y por call
-# ---------------------------------------------------------------------------
+# ===========================================================================
 def test_allin_por_raise_no_puede_actuar():
-    h = mano(acciones_preflop=[
-        ('MP', 'f', 0.0), ('CO', 'f', 0.0), ('BTN', 'r', 9.0),
-        ('SB', 'f', 0.0), ('BB', 'f', 0.0), ('UTG', 'r', 38.2),
-    ], allin=[ID_DE_POS['UTG']], stacks={'UTG': 38.2})
-    assert no_puede_actuar_evidencia(h, 'flop') == {'UTG'}
+    h = mano(preflop=[('MP', 'f', 0.0), ('CO', 'f', 0.0), ('BTN', 'r', 9.0),
+                      ('SB', 'f', 0.0), ('BB', 'f', 0.0), ('UTG', 'r', 38.2)],
+             allin=[ID_DE_POS['UTG']], stacks={'UTG': 38.2})
+    assert no_puede_actuar(h, 'flop') == {'UTG'}
 
 
 def test_allin_por_call_no_puede_actuar():
-    """UTG iguala un all-in y NO ha subido nunca: la regla vieja lo pierde."""
-    h = mano(acciones_preflop=[
-        ('UTG', 'b', 3.0), ('MP', 'f', 0.0), ('CO', 'f', 0.0),
-        ('BTN', 'r', 38.2), ('SB', 'f', 0.0), ('BB', 'f', 0.0),
-        ('UTG', 'c', 38.2),
-    ], allin=[ID_DE_POS['UTG']], stacks={'UTG': 38.2, 'BTN': 141.1})
-    # la nueva lo ve
-    assert no_puede_actuar_evidencia(h, 'flop') == {'UTG'}
-    # la vieja NO: UTG solo puso 'b' y 'c'. Este es el falso negativo.
-    assert 'UTG' not in no_puede_actuar(h, 'flop')
+    """Iguala un all-in sin haber subido nunca: la regla vieja lo pierde.
+
+    Es el falso negativo que Nobody had on the radar: un `call` a un
+    all-in no registra `'r'`, asi que la regla del raise no lo ve nunca.
+    """
+    h = mano(preflop=[('UTG', 'b', 3.0), ('MP', 'f', 0.0), ('CO', 'f', 0.0),
+                      ('BTN', 'r', 38.2), ('SB', 'f', 0.0), ('BB', 'f', 0.0),
+                      ('UTG', 'c', 38.2)],
+             allin=[ID_DE_POS['UTG']], stacks={'UTG': 38.2, 'BTN': 141.1})
+    assert no_puede_actuar(h, 'flop') == {'UTG'}
+    assert 'UTG' not in _regla_del_raise_rechazada(h, 'flop')
 
 
-# ---------------------------------------------------------------------------
-# 4. Fold: un jugador que se fue no esta ni en el bote ni bloqueado
-# ---------------------------------------------------------------------------
+# ===========================================================================
+# 4. Fold
+# ===========================================================================
 def test_fold_no_genera_no_puede_actuar():
-    h = mano(acciones_preflop=[
-        ('UTG', 'f', 0.0), ('MP', 'f', 0.0), ('BTN', 'b', 3.0),
-        ('SB', 'f', 0.0), ('BB', 'f', 0.0),
-    ], allin=[])
-    assert (no_puede_actuar_evidencia(h, 'flop') or set()) == set()
+    h = mano(preflop=[('UTG', 'f', 0.0), ('MP', 'f', 0.0), ('BTN', 'b', 3.0),
+                      ('SB', 'f', 0.0), ('BB', 'f', 0.0)],
+             allin=[])
+    assert no_puede_actuar(h, 'flop') == set()
 
 
 def test_foldeo_una_calle_tarde_no_bloquea_en_la_anterior():
     """BB foldea en el turn: en el flop todavia puede actuar."""
-    h = mano(acciones_preflop=[
-        ('UTG', 'b', 3.0), ('MP', 'c', 3.0), ('CO', 'f', 0.0),
-        ('BTN', 'f', 0.0), ('SB', 'f', 0.0), ('BB', 'c', 3.0),
-    ], turn=[('BB', 'f', 0.0)], allin=[])
-    assert 'BB' not in (no_puede_actuar_evidencia(h, 'flop') or set())
+    h = mano(preflop=[('UTG', 'b', 3.0), ('MP', 'c', 3.0), ('CO', 'f', 0.0),
+                      ('BTN', 'f', 0.0), ('SB', 'f', 0.0), ('BB', 'c', 3.0)],
+             turn=[('BB', 'f', 0.0)], allin=[])
+    assert 'BB' not in no_puede_actuar(h, 'flop')
 
 
-# ---------------------------------------------------------------------------
-# 5. El all-in empieza a contar DESDE su calle
-# ---------------------------------------------------------------------------
-def test_allin_en_el_flop_no_puede_actuar_en_el_flop():
-    h = mano(acciones_preflop=[
-        ('UTG', 'b', 3.0), ('MP', 'c', 3.0), ('CO', 'f', 0.0),
-        ('BTN', 'f', 0.0), ('SB', 'f', 0.0), ('BB', 'c', 3.0),
-    ], flop=[('MP', 'r', 140.1)], allin=[ID_DE_POS['MP']],
-        stacks={'MP': 140.1})
-    assert 'MP' in (no_puede_actuar_evidencia(h, 'flop') or set())
+def test_fold_posterior_al_allin_es_registro_corrupto():
+    """CASO LIMITE CONOCIDO (INC-002), no un fallo de la regla.
+
+    El recorder filtra `allin` con `p['active']`, que significa "estaba
+    sentado al empezar". Un jugador que se commitmenta y despues foldea
+    se queda en la lista. La regla lo cree: es un dato malo, no una
+    inferencia. 1 caso en 900.
+    """
+    h = mano(preflop=[('UTG', 'b', 3.0), ('MP', 'c', 3.0), ('CO', 'f', 0.0),
+                      ('BTN', 'f', 0.0), ('SB', 'f', 0.0), ('BB', 'c', 3.0)],
+             flop=[('UTG', 'b', 10.0), ('BB', 'f', 0.0)],
+             allin=[ID_DE_POS['UTG']])
+    assert 'BB' in folds_hasta(h, 'flop')
+    assert 'UTG' in no_puede_actuar(h, 'flop'), 'y aun asi lo da por all-in'
+    # lo que NO hace es marcar a BB, que solo folteo:
+    assert 'BB' not in no_puede_actuar(h, 'flop')
 
 
-def test_allin_en_el_turn_sigue_pudiendo_actuar_en_el_flop():
-    """El dato `allin` es de FIN de mano: hay que deducir la calle."""
-    h = mano(acciones_preflop=[
-        ('UTG', 'b', 3.0), ('MP', 'c', 3.0), ('CO', 'f', 0.0),
-        ('BTN', 'f', 0.0), ('SB', 'f', 0.0), ('BB', 'c', 3.0),
-    ], flop=[('MP', 'b', 5.0), ('BB', 'c', 5.0)],
-        turn=[('MP', 'r', 140.1)], allin=[ID_DE_POS['MP']],
-        stacks={'MP': 140.1})
-    assert calle_ultima_accion(h, 'MP') == 'turn'
-    assert 'MP' not in (no_puede_actuar_evidencia(h, 'flop') or set())
-    assert 'MP' in (no_puede_actuar_evidencia(h, 'turn') or set())
+# ===========================================================================
+# 5. Calle del all-in
+# ===========================================================================
+def test_allin_en_una_calle_no_bloquea_en_la_anterior():
+    h = mano(preflop=[('UTG', 'b', 3.0), ('MP', 'c', 3.0), ('CO', 'f', 0.0),
+                      ('BTN', 'f', 0.0), ('SB', 'f', 0.0), ('BB', 'c', 3.0)],
+             flop=[('MP', 'b', 5.0), ('BB', 'c', 5.0)],
+             turn=[('MP', 'r', 140.1)], allin=[ID_DE_POS['MP']],
+             stacks={'MP': 140.1})
+    assert 'MP' not in no_puede_actuar(h, 'flop')
+    assert 'MP' in no_puede_actuar(h, 'turn')
 
 
-# ---------------------------------------------------------------------------
-# 6. Estado desconocido: se declara, no se fuerza
-# ---------------------------------------------------------------------------
-def test_sin_campo_allin_es_desconocido_no_vacio():
-    """Ausencia del campo no es "nadie esta all-in": es no saberlo."""
-    h = mano(acciones_preflop=[
-        ('MP', 'f', 0.0), ('CO', 'f', 0.0), ('BTN', 'r', 9.0),
-        ('SB', 'f', 0.0), ('BB', 'c', 9.0), ('UTG', 'c', 9.0),
-    ], con_campo_allin=False)
-    assert no_puede_actuar_evidencia(h, 'flop') is None
+def test_allin_en_el_flop_bloquea_desde_el_flop():
+    h = mano(preflop=[('UTG', 'b', 3.0), ('MP', 'c', 3.0), ('CO', 'f', 0.0),
+                      ('BTN', 'f', 0.0), ('SB', 'f', 0.0), ('BB', 'c', 3.0)],
+             flop=[('MP', 'r', 140.1)], allin=[ID_DE_POS['MP']],
+             stacks={'MP': 140.1})
+    assert 'MP' in no_puede_actuar(h, 'flop')
+
+
+# ===========================================================================
+# 6. Los tres casos de "sin evidencia"
+# ===========================================================================
+def test_caso_1_campo_allin_ausente():
+    h = mano(preflop=[('MP', 'f', 0.0), ('CO', 'f', 0.0), ('BTN', 'r', 9.0),
+                      ('SB', 'f', 0.0), ('BB', 'c', 9.0), ('UTG', 'c', 9.0)],
+             con_campo_allin=False)
+    assert posiciones_allin(h) is None
+    assert no_puede_actuar(h, 'flop') is None
+    assert no_puede_actuar_en_instante(h, 'flop', 0) is None
+    assert puede_responder(h, 'flop', 0) is None
+
+
+def test_caso_2_calle_de_allin_indeterminada():
+    """Esta en `allin` pero no tiene ninguna accion: no se sabe cuando."""
+    # MP no aparece en NINGUNA accion de la mano.
+    h = mano(preflop=[('CO', 'f', 0.0), ('BTN', 'r', 9.0), ('SB', 'f', 0.0),
+                      ('BB', 'c', 9.0), ('UTG', 'c', 9.0)],
+             allin=[ID_DE_POS['MP']])
+    assert posiciones_allin(h) == {'MP'}
+    assert no_puede_actuar(h, 'flop') is None
+
+
+def test_caso_3_players_con_otro_tamano():
+    h = mano(allin=[ID_DE_POS['BTN']], n_players=4)
+    assert posiciones_allin(h) is None
+    assert no_puede_actuar(h, 'flop') is None
 
 
 def test_allin_vacio_es_vacio_de_verdad():
-    h = mano(acciones_preflop=[
-        ('MP', 'f', 0.0), ('CO', 'f', 0.0), ('BTN', 'r', 9.0),
-        ('SB', 'f', 0.0), ('BB', 'c', 9.0), ('UTG', 'c', 9.0),
-    ], allin=[])
-    assert no_puede_actuar_evidencia(h, 'flop') == set()
+    """`allin: []` SI es informacion: significa que nadie se commitmento."""
+    h = mano(preflop=[('MP', 'f', 0.0), ('CO', 'f', 0.0), ('BTN', 'r', 9.0),
+                      ('SB', 'f', 0.0), ('BB', 'c', 9.0), ('UTG', 'c', 9.0)],
+             allin=[])
+    assert posiciones_allin(h) == set()
+    assert no_puede_actuar(h, 'flop') == set()
+    assert puede_responder(h, 'flop', 0) is not None
 
 
-def test_players_con_otro_tamano_es_desconocido():
-    """Si `players[]` no sigue el orden de PLAYER_IDS el mapeo no vale."""
-    h = mano(allin=[ID_DE_POS['BTN']], n_players=4)
-    assert posiciones_allin(h) is None
-    assert no_puede_actuar_evidencia(h, 'flop') is None
-
-
-# ---------------------------------------------------------------------------
-# 7. El clasificador completo: "quien sigue en el bote" vs "quien responde"
-# ---------------------------------------------------------------------------
-def test_multiway_con_un_allin_deja_de_ser_multiway():
-    """UTG y CO pueden responder, BTN esta all-in: es HU, no MULTIWAY."""
-    h = mano(acciones_preflop=[
-        ('UTG', 'b', 3.0), ('MP', 'f', 0.0), ('CO', 'c', 3.0),
-        ('BTN', 'r', 38.2), ('SB', 'f', 0.0), ('BB', 'f', 0.0),
-        ('UTG', 'c', 38.2),
-    ], flop=[('CO', 'b', 10.0)], allin=[ID_DE_POS['BTN']],
-        stacks={'BTN': 38.2})
-    bote = en_bote(h, 'flop')
-    assert bote == {'UTG', 'CO', 'BTN'}, 'los tres siguen en el bote'
-    actuable = bote - (no_puede_actuar_evidencia(h, 'flop') or set())
-    assert actuable == {'UTG', 'CO'}
-    # La regla vieja acierta EN ESTE CASO POR CASUALIDAD: BTN es el que
-    # subio y ademas es el all-in, asi que las dos heuristicas coinciden.
-    # El caso que la delata es el simetrico, justo debajo.
-    assert len(bote - no_puede_actuar(h, 'flop')) == 2
-
-
+# ===========================================================================
+# 7. Decision completa
+# ===========================================================================
 def test_multiway_con_allin_que_no_es_el_raiser():
     """CO se commitmenta igualando; BTN y SB son los que suben.
 
-    Aca la regla vieja se equivoca en las DOS direcciones y por eso cambia
-    la clasificacion del spot: marca a BTN y SB (subieron, pero conservan
-    fichas) y no marca a CO (se commitmento, pero no subio). Deja 1 rival
-    y dice HU, cuando BTN y SB pueden responder los dos.
+    La regla del raise se equivoca en las dos direcciones: marca a BTN y
+    SB (subieron, pero conservan fichas) y no marca a CO (se commitmento,
+    pero no subio). Deja un solo rival y dice HU, cuando BTN y SB pueden
+    responder los dos.
     """
-    h = mano(acciones_preflop=[
-        ('MP', 'f', 0.0), ('CO', 'b', 3.0), ('BTN', 'r', 9.0),
-        ('SB', 'r', 24.0), ('BB', 'f', 0.0), ('UTG', 'c', 24.0),
-        ('CO', 'c', 24.0),
-    ], flop=[('UTG', 'b', 10.0)], allin=[ID_DE_POS['CO']],
-        stacks={'CO': 24.0, 'BTN': 141.1, 'SB': 29.7, 'UTG': 140.0})
-    bote = en_bote(h, 'flop')
+    h = mano(preflop=[('MP', 'f', 0.0), ('CO', 'b', 3.0), ('BTN', 'r', 9.0),
+                      ('SB', 'r', 24.0), ('BB', 'f', 0.0), ('UTG', 'c', 24.0),
+                      ('CO', 'c', 24.0)],
+             flop=[('UTG', 'b', 10.0)], allin=[ID_DE_POS['CO']],
+             stacks={'CO': 24.0, 'BTN': 141.1, 'SB': 29.7, 'UTG': 140.0})
+    bote = en_bote(h, 'flop') | {'UTG'}
     assert bote == {'UTG', 'BTN', 'SB', 'CO'}, 'los cuatro siguen en el bote'
 
-    viejo = no_puede_actuar(h, 'flop')
+    viejo = _regla_del_raise_rechazada(h, 'flop')
     assert viejo == {'BTN', 'SB'}, 'la regla vieja se inventa dos all-ins'
-    nuevo = no_puede_actuar_evidencia(h, 'flop')
+    nuevo = no_puede_actuar(h, 'flop')
     assert nuevo == {'CO'}, 'el unico all-in real es CO'
 
-    # la vieja deja un solo rival -> dice HU
-    assert len(bote - viejo) - 1 == 1
-    # la buena deja dos rivales reales -> dice MULTIWAY
-    assert len(bote - nuevo) - 1 == 2
+    assert len(bote - viejo) - 1 == 1, 'con la vieja sale HU'
+    assert len(bote - nuevo) - 1 == 2, 'con la buena sale MULTIWAY'
 
 
-# ---------------------------------------------------------------------------
-# 8. Autoverificacion del instrumento
-# ---------------------------------------------------------------------------
-@pytest.mark.parametrize('caso', [
-    'raise_ordinario', 'resubida', 'allin_por_call', 'allin_en_turn',
-])
-def test_la_regla_vieja_se_demo_incapaz_de_estar_correcta(caso):
-    """Si la regla vieja empieza a acertar estos casos, el bug desaparecio.
+def test_desconocido_no_se_colapsa_en_hu():
+    """Sin evidencia, la clasificacion es DESCONOCIDO y no HU."""
+    h = mano(preflop=[('MP', 'f', 0.0), ('CO', 'b', 3.0), ('BTN', 'r', 9.0),
+                      ('SB', 'f', 0.0), ('BB', 'c', 9.0), ('UTG', 'c', 9.0)],
+             flop=[('UTG', 'b', 10.0)], con_campo_allin=False)
+    r = clasificar_decision(h, 'flop')
+    assert r['clase'] == 'DESCONOCIDO'
+    assert r['sin_evidencia'] is True
+    assert r['pueden'] is None
 
-    Mientras la regla vieja siga fallando estos cuatro, los tests de arriba
-    estan midiendo EL BUG y no otra cosa. Si este test falla, es que
-    `no_puede_actuar()` ya se ha arreglado y sus expectativas quedan
-    obsoletas: hay que reescribirlas, no borrarlas.
+
+# ===========================================================================
+# 8. Autoverificacion: la regla rechazada sigue sin poder estar bien
+# ===========================================================================
+@pytest.mark.parametrize('caso', ['raise_ordinario', 'allin_por_call',
+                                  'multiway'])
+def test_la_regla_rechazada_no_puede_estar_correcta(caso):
+    """Si algun dia esta funcion acertara estos casos, hay que borrarla.
+
+    Mientras siga fallando, los tests de arriba estan midiendo EL BUG y no
+    otra cosa. Si este test falla de verdad, la regla nueva se ha
+    fusionado con la vieja por error y estas expectativas estan obsoletas.
     """
-    Manor = {
-        'raise_ordinario': test_raise_ordinario_lo_marca_la_regla_vieja,
-        'resubida': test_resubida_no_es_allin,
+    fn = {
+        'raise_ordinario': test_la_regla_rechazada_marca_el_raise_ordinario,
         'allin_por_call': test_allin_por_call_no_puede_actuar,
-        'allin_en_turn': test_allin_en_el_turn_sigue_pudiendo_actuar_en_el_flop,
+        'multiway': test_multiway_con_allin_que_no_es_el_raiser,
     }[caso]
-    Manor()
+    fn()

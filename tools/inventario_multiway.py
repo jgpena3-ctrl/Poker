@@ -41,6 +41,14 @@ sys.path.insert(0, ROOT)
 from motor import learn                                    # noqa: E402
 from motor.ranges import N_COMBOS, RangeState             # noqa: E402
 
+# La regla de "puede actuar" NO vive aqui. Vive en motor/multiway.py,
+# que es donde la usa el motor, y este script la importa. Una segunda
+# copia aqui seria la puerta de atras por la que volvio el bug de la
+# regla del raise; motor/test_multiway.py vigila que no haya dos.
+from motor.multiway import (                                   # noqa: E402
+    no_puede_actuar, no_puede_actuar_en_instante, puede_responder,
+)
+
 STREETS = ('flop', 'turn', 'river')
 
 
@@ -140,26 +148,6 @@ def motivo_no_clasificable(hand, street):
     if not acciones:
         return 'calle sin acciones (check-check)'
     return 'hero solo en el bote, sin rivales'
-
-
-def no_puede_actuar(hand, street):
-    """Rivales que estan en el bote pero ya NO pueden actuar (all-in).
-
-    MEDIDO: decide el criterio de F7.2. Un all-in sigue en el bote, pero no
-    responde a una apuesta, asi que para "este spot es multiway" no cuenta.
-    """
-    streets = hand.get('streets') or {}
-    activos = {p.get('pos') for p in (hand.get('players') or [])
-               if p.get('active')}
-    for st in ORDEN:
-        for a in ((streets.get(st) or {}).get('actions') or []):
-            if isinstance(a, dict) and a.get('pos') and a.get('action') == 'r':
-                # una resubida consume la capacidad de volver a_actuar
-                activos.discard(a.get('pos'))
-        if st == street:
-            break
-    return {p.get('pos') for p in (hand.get('players') or [])
-            if p.get('active')} - activos
 
 
 def n_activos(hand):
@@ -311,9 +299,9 @@ def main():
     print('   %-8s %12s %16s %10s' % ('calle', 'MW en el bote',
                                      'MW pueden actuar', 'delta'))
     print('   ' + '-' * 52)
-    mw_bote = mw_act = 0
+    mw_bote = mw_act = sin_evidencia = 0
     for st in STREETS:
-        b = a_ = 0
+        b = a_ = s_ = 0
         for h in manos:
             acciones = ((h.get('streets') or {}).get(st) or {}).get(
                 'actions') or []
@@ -321,14 +309,22 @@ def main():
                 continue
             en_bote = {p.get('pos') for p in (h.get('players') or [])
                        if p.get('active')} - folds_hasta(h, st)
-            actuable = en_bote - no_puede_actuar(h, st)
+            npa = no_puede_actuar(h, st)
             if len(en_bote) - 1 > 1:
                 b += 1
-            if len(actuable) - 1 > 1:
+            # Politica de None (CONTRATO_F72A.md): sin evidencia no se
+            # fuerza HU ni MULTIWAY. El punto sale del numerador y se
+            # cuenta aparte. NO se trata como set() vacio: eso seria
+            # decir 'nadie esta all-in' sin saberlo.
+            if npa is None:
+                s_ += 1
+                continue
+            if len(en_bote - npa) - 1 > 1:
                 a_ += 1
         print('   %-8s %12d %16d %+10d' % (st, b, a_, a_ - b))
         mw_bote += b
         mw_act += a_
+        sin_evidencia += s_
     print('   ' + '-' * 52)
     print('   %-8s %12d %16d %+10d' % ('TOTAL', mw_bote, mw_act,
                                        mw_act - mw_bote))
@@ -340,6 +336,10 @@ def main():
         print('   decision: el motor se comporta como HU sin estar mintiendose')
         print('   sobre el rango. Por eso el criterio correcto no es')
         print('   "cuantos estan activos" sino "cuantos pueden actuar".')
+    print()
+    print('   puntos de esta seccion SIN EVIDENCIA (campo `allin`')
+    print('   ausente): %d. No entran en el numerador por contrato.'
+          % sin_evidencia)
 
     clasificables = tot['HU'] + tot['MULTIWAY']
     if clasificables:
