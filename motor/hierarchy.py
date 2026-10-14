@@ -47,10 +47,14 @@ REPO_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SHADOW_PATH = os.path.join(REPO_DIR, 'data', 'shadow_hierarchy.jsonl')
 
 # Categorías de rival respecto al hero en la calle actual.
-AGGRESSOR = 'aggressor'      # modelado, no penalizado
-CHECKER = 'checker'          # actuó y pasó (x): penalización pequeña
-CALLER = 'caller'            # igualó (c): registrado, sin penalizar
-PENDING = 'pending'          # no ha actuado: amenaza activa
+#
+# ANTES aquí había `AGGRESSOR`, `CHECKER`, `CALLER` y `PENDING`. Se han
+# eliminado (F6.1.b): `classify_villains` NUNCA emitió esas etiquetas, devuelve
+# claves separadas (`aggressors`, `checkers`, `callers`, `pending`). Solo las
+# importaba un test, y sin llegar a usarlas. Eran un segundo vocabulario que
+# describía algo que el código no hace, que es justo el riesgo de "dos fuentes
+# de verdad". `PENDING` además confundía con la clave `pending`, que es una
+# lista de posiciones, no una etiqueta.
 
 # El ajuste NO está validado. `penalty_source()` clasifica el respaldo
 # real de cada registro; con los datos actuales NINGUNO coincide con el
@@ -238,8 +242,44 @@ def penalty_source(board_codes, street: str, hierarchy: Dict = None) -> str:
 # Clasificación de rivales
 # ---------------------------------------------------------------------------
 
+def pending_positions(acts: List[dict], hero_pos: str, activos) -> List[str]:
+    """Conjunto CANONICO de posiciones con decision pendiente. F6.1.b.
+
+    Una posicion esta pendiente si y solo si cumple las TRES:
+
+      1. sigue en la mano (`activos`),
+      2. no ha actuado en esta calle (`acts`),
+      3. no es el hero.
+
+    `activos` es OBLIGATORIO y no lleva valor por defecto, a proposito. Antes
+    `classify_villains` recibia `pending_positions=()` y devolvia `[]`: una
+    lista vacia se lee como "no hay nadie pendiente" cuando en realidad es
+    "nadie me dijo quienes son". Son cosas distintas, y la segunda no se puede
+    deducir de `acts`: las acciones de la calle solo dicen quien ACTUO, nunca
+    quien falta por actuar. Eso obliga a que el llamador diga quien sigue en la
+    mesa.
+
+    Quien debe pasar que:
+      - motor en vivo (`asistente_live._jerarquia`): los `PLAYER_IDS` con
+        `state[pid_state] == 'activo'`.
+      - herramientas sobre `hands_db.jsonl`: `players[].active` de la mano.
+        En un JSONL no existe estado de mesa, solo ese flag.
+
+    Orden: el de `activos`, sin duplicados, para que dos llamadas comparables
+    den el mismo resultado.
+    """
+    acted = {a.get('pos') for a in (acts or ()) if a.get('pos')}
+    hero_pos = hero_pos or ''
+    out, visto = [], set()
+    for pos in (activos or ()):
+        if pos and pos != hero_pos and pos not in acted and pos not in visto:
+            visto.add(pos)
+            out.append(pos)
+    return out
+
+
 def classify_villains(acts: List[dict], hero_pos: str,
-                      pending_positions=()) -> Dict:
+                      activos) -> Dict:
     """Elige el rival principal y clasifica al resto.
 
     `acts`: acciones de la calle en orden, tal como las guarda el recorder.
@@ -264,9 +304,15 @@ def classify_villains(acts: List[dict], hero_pos: str,
     ninguna medición para él, pero se registra para que no desaparezca
     del análisis.
 
-    `pending_positions`: posiciones candidatas a pendiente. Se filtra
-    contra quienes ya actuaron en `acts`. Son POSICIONES, no pids; el
-    llamador traduce antes de llamar.
+    `activos`: posiciones que siguen en la mano. OBLIGATORIO (F6.1.b). El
+    conjunto pendiente lo calcula `pending_positions()`, la unica
+    implementacion: antes el llamador hacia el filtro y la funcion lo repetia.
+
+    Son POSICIONES, no pids; el llamador traduce antes de llamar.
+
+    `pending_known` es False si `activos` es None: entonces no se puede saber
+    quien esta pendiente, y un `pending` vacio seria un dato falso en lugar de
+    una ausencia de datos.
     """
     hero_pos = hero_pos or ''
     hero_acts = [i for i, a in enumerate(acts) if a.get('pos') == hero_pos]
@@ -302,8 +348,8 @@ def classify_villains(acts: List[dict], hero_pos: str,
         main = checkers[-1]
         reason = 'sin agresión: último que checkeó, por posición'
 
-    # Dos conceptos que no deben mezclarse (pegar_3 §1):
-#   checkers_all       : todos los rivales que hicieron check. Es lo que
+        # Dos conceptos que no deben mezclarse (pegar_3 §1):
+    #   checkers_all       : todos los rivales que hicieron check. Es lo que
 #                        clasifica el ESCENARIO empírico (el ancla dice
 #                        "1 checker").
 #   checkers_secondary : los checkers que NO son el rival principal. Es
@@ -317,12 +363,10 @@ def classify_villains(acts: List[dict], hero_pos: str,
     checkers_secondary = [c for c in checkers_all if c != main]
     callers = [c for c in callers if c not in agresores]
 
-    # Pendientes = candidatos que además NO han actuado en esta calle.
-    pending = []
-    for pos in (pending_positions or ()):
-        if pos and pos != hero_pos and pos not in acted \
-                and pos not in pending:
-            pending.append(pos)
+    # Pendientes = siguen en la mano Y no han actuado en esta calle.
+    # Delegado en la funcion canonica: una sola implementacion (F6.1.b).
+    pending_known = activos is not None
+    pending = pending_positions(acts, hero_pos, activos)
 
     return {
         'main': main,
@@ -342,6 +386,8 @@ def classify_villains(acts: List[dict], hero_pos: str,
         # para que no desaparezca del análisis.
         'callers': [c for c in callers if c != main],
         'pending': pending,
+        # False = no se sabe, no "cero pendientes" (F6.1.b).
+        'pending_known': pending_known,
         'hero_pos': hero_pos,
     }
 

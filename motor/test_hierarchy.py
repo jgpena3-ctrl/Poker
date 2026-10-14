@@ -13,7 +13,10 @@ import os
 import numpy as np
 import pytest
 
-from motor.hierarchy import (AGGRESSOR, CHECKER, PENDING, OBSERVED_ANCHOR,
+# F6.1.b: `AGGRESSOR`, `CHECKER` y `PENDING` se eliminaron. Eran un
+# vocabulario de roles que `classify_villains` nunca emitia y que este test
+# importaba sin usar.
+from motor.hierarchy import (OBSERVED_ANCHOR,
                              ShadowLog, penalty_source,
                              classify_villains, passive_penalty,
                              shadow_equity, shadow_record, texture_key)
@@ -98,21 +101,21 @@ def _acts(*pares):
 
 def test_elige_ultimo_agresor():
     acts = _acts(('UTG', 'b'), ('MP', 'r'), ('CO', 'c'))
-    h = classify_villains(acts, 'BTN')
+    h = classify_villains(acts, 'BTN', ())
     assert h['main'] == 'MP'
     assert 'agresor' in h['main_reason']
 
 
 def test_hero_que_tiene_bet_enfrenta_al_agresor():
     acts = _acts(('UTG', 'b'), ('CO', 'r'), ('BTN', 'c'))
-    h = classify_villains(acts, 'BTN')
+    h = classify_villains(acts, 'BTN', ())
     assert h['main'] == 'CO'
 
 
 def test_pendientes_no_son_checkers():
     """Quien aún no ha actuado puede resubir: no se penaliza como draw."""
     acts = _acts(('UTG', 'b'), ('BTN', 'x'))
-    h = classify_villains(acts, 'BTN', pending_positions=['CO', 'SB'])
+    h = classify_villains(acts, 'BTN', activos=['CO', 'SB'])
     assert 'CO' in h['pending']
     assert 'SB' in h['pending']
     assert 'CO' not in h['checkers']
@@ -121,7 +124,7 @@ def test_pendientes_no_son_checkers():
 
 def test_checkers_quedan_fuera_del_principal():
     acts = _acts(('UTG', 'x'), ('MP', 'x'), ('BTN', 'x'))
-    h = classify_villains(acts, 'BTN')
+    h = classify_villains(acts, 'BTN', ())
     assert h['main'] == 'MP'                  # el último que checkeó
     assert h['checkers'] == ['UTG']
     assert 'BTN' not in h['checkers']
@@ -129,21 +132,21 @@ def test_checkers_quedan_fuera_del_principal():
 
 def test_sin_agresion_usa_posicion():
     acts = _acts(('BTN', 'x'))
-    h = classify_villains(acts, 'BTN', pending_positions=['CO'])
+    h = classify_villains(acts, 'BTN', activos=['CO'])
     assert h['main'] == 'CO' or h['main'] is None
 
 
 def test_clasificacion_no_mezcla_rangos():
     """La jerarquía elige UN rival, no combina varios."""
     acts = _acts(('UTG', 'b'), ('MP', 'r'), ('BTN', 'c'))
-    h = classify_villains(acts, 'BTN')
+    h = classify_villains(acts, 'BTN', ())
     assert isinstance(h['main'], str)
     assert h['aggressors'] == ['UTG', 'MP']
     assert h['main'] == h['aggressors'][-1]
 
 
 def test_hero_sin_acciones_devuelve_estructura_vacia():
-    h = classify_villains([], 'BTN')
+    h = classify_villains([], 'BTN', ())
     assert h['main'] is None
     assert h['checkers'] == []
     assert h['pending'] == []
@@ -158,7 +161,7 @@ def test_hero_no_aparece_en_sus_pendientes():
     comparación siempre era verdadera y el hero nunca se excluía.
     """
     acts = _acts(('UTG', 'x'), ('CO', 'x'), ('BTN', 'x'))
-    h = classify_villains(acts, 'BTN', pending_positions=['UTG', 'CO', 'BTN'])
+    h = classify_villains(acts, 'BTN', activos=['UTG', 'CO', 'BTN'])
     assert 'BTN' not in h['pending']
     assert h['pending'] == []
 
@@ -167,7 +170,7 @@ def test_quien_ya_actuo_no_es_pendiente():
     """Estar activo no significa tener una decisión pendiente."""
     acts = _acts(('UTG', 'x'), ('CO', 'x'), ('BTN', 'x'))
     # BTN y SB están activos pero BTN ya actuó y SB no aparece en la calle
-    h = classify_villains(acts, 'BTN', pending_positions=['UTG', 'CO', 'BTN', 'SB'])
+    h = classify_villains(acts, 'BTN', activos=['UTG', 'CO', 'BTN', 'SB'])
     assert h['pending'] == ['SB']
 
 
@@ -178,7 +181,7 @@ def test_agresion_posterior_al_hero_se_reconoce():
     que todo lo posterior caía en 'pendientes' y `main` quedaba None.
     """
     acts = _acts(('BTN', 'x'), ('CO', 'b'), ('MP', 'r'))
-    h = classify_villains(acts, 'BTN')
+    h = classify_villains(acts, 'BTN', ())
     assert h['main'] == 'MP'
     assert 'ronda que vuelve' in h['main_reason']
     assert h['aggressors'] == ['CO', 'MP']
@@ -188,7 +191,7 @@ def test_agresion_posterior_al_hero_se_reconoce():
 
 def test_agresor_mas_reciente_gana():
     acts = _acts(('UTG', 'b'), ('MP', 'r'), ('CO', 'r'))
-    h = classify_villains(acts, 'BTN')
+    h = classify_villains(acts, 'BTN', ())
     assert h['main'] == 'CO'
 
 
@@ -199,7 +202,7 @@ def test_check_que_va_seguido_de_bet_es_agresor():
     como checker y como agresor.
     """
     acts = _acts(('UTG', 'x'), ('CO', 'x'), ('UTG', 'b'), ('BTN', 'x'))
-    h = classify_villains(acts, 'BTN')
+    h = classify_villains(acts, 'BTN', ())
     assert 'UTG' in h['aggressors']
     assert 'UTG' not in h['checkers']
 
@@ -207,7 +210,7 @@ def test_check_que_va_seguido_de_bet_es_agresor():
 def test_jerarquia_no_mezcla_pids_y_posiciones():
     """Todo en hierarchy.py son posiciones; el llamador traduce."""
     acts = _acts(('BTN', 'x'))
-    h = classify_villains(acts, 'BTN', pending_positions=['SB'])
+    h = classify_villains(acts, 'BTN', activos=['SB'])
     for grupo in ('aggressors', 'checkers', 'pending'):
         for pos in h[grupo]:
             assert pos in ('SB', 'BB', 'UTG', 'MP', 'CO', 'BTN'), pos
@@ -221,7 +224,7 @@ def test_jerarquia_no_mezcla_pids_y_posiciones():
 def test_caso_check_luego_apuesta():
     """Un jugador checkea y después betting: es agresor, no pasivo."""
     acts = _acts(('UTG', 'x'), ('MP', 'x'), ('UTG', 'b'), ('BTN', 'x'))
-    h = classify_villains(acts, 'BTN')
+    h = classify_villains(acts, 'BTN', ())
     assert h['main'] == 'UTG'
     assert 'UTG' in h['aggressors']
     assert 'UTG' not in h['checkers']
@@ -230,7 +233,7 @@ def test_caso_check_luego_apuesta():
 def test_caso_subida_y_resubida_vuelve_al_hero():
     """BTN sube, la resubida de MP es la que el hero enfrenta."""
     acts = _acts(('UTG', 'x'), ('MP', 'b'), ('BTN', 'r'), ('MP', 'r'))
-    h = classify_villains(acts, 'BTN')
+    h = classify_villains(acts, 'BTN', ())
     assert h['main'] == 'MP'
     # el hero no es su propio agresor, aunque su 'r' esté en la calle
     assert 'BTN' not in h['aggressors']
@@ -245,7 +248,7 @@ def test_caso_call_no_es_check():
     tampoco puede desaparecer del registro.
     """
     acts = _acts(('UTG', 'b'), ('MP', 'c'), ('CO', 'c'), ('BTN', 'x'))
-    h = classify_villains(acts, 'BTN')
+    h = classify_villains(acts, 'BTN', ())
     assert h['main'] == 'UTG'
     assert h['checkers'] == []              # nadie pasó
     assert sorted(h['callers']) == ['CO', 'MP']
@@ -255,7 +258,7 @@ def test_caso_call_no_es_check():
 def test_caso_acciones_intercaladas():
     """Check, apuesta y call intercalados."""
     acts = _acts(('UTG', 'x'), ('MP', 'b'), ('CO', 'c'), ('BTN', 'x'))
-    h = classify_villains(acts, 'BTN')
+    h = classify_villains(acts, 'BTN', ())
     assert h['main'] == 'MP'
     assert h['checkers'] == ['UTG']
     assert h['callers'] == ['CO']
@@ -264,7 +267,7 @@ def test_caso_acciones_intercaladas():
 
 def test_callers_no_entran_en_la_penalizacion():
     """Sin dato para callers, no se corrige la equity por ellos."""
-    jer = classify_villains(_acts(('MP', 'b'), ('CO', 'c')), 'BTN')
+    jer = classify_villains(_acts(('MP', 'b'), ('CO', 'c')), 'BTN', ())
     s = shadow_equity(0.6, BOARD_FLOOP, 'flop', jer)
     assert s['n_checker'] == 0
     assert s['n_caller'] == 1
@@ -275,7 +278,7 @@ def test_callers_no_entran_en_la_penalizacion():
 def test_caso_hero_ya_acted_no_es_pendiente():
     """El hero aparece en `acts` pero no debe salir en ningún grupo."""
     acts = _acts(('UTG', 'b'), ('BTN', 'x'))
-    h = classify_villains(acts, 'BTN', pending_positions=['UTG', 'BTN', 'CO'])
+    h = classify_villains(acts, 'BTN', activos=['UTG', 'BTN', 'CO'])
     assert h['main'] == 'UTG'
     assert 'BTN' not in h['checkers']
     assert 'BTN' not in h['aggressors']
@@ -286,7 +289,7 @@ def test_caso_pendientes_segun_estado_y_accion():
     """El pendiente se define por no haber acted, no por estar activo."""
     acted = _acts(('UTG', 'b'), ('BTN', 'x'))
     # CO no ha actuado en la calle: sí es pendiente, aunque esté activo
-    h = classify_villains(acted, 'BTN', pending_positions=['UTG', 'MP', 'CO'])
+    h = classify_villains(acted, 'BTN', activos=['UTG', 'MP', 'CO'])
     assert h['pending'] == ['MP', 'CO']     # UTG ya actuó, no MP ni CO
     assert h['main'] == 'UTG'
 
@@ -294,7 +297,7 @@ def test_caso_pendientes_segun_estado_y_accion():
 def test_caso_folded_no_aparece():
     """Un jugador retirado no es agresor ni pasivo."""
     acts = _acts(('UTG', 'b'), ('MP', 'f'), ('CO', 'x'), ('BTN', 'x'))
-    h = classify_villains(acts, 'BTN')
+    h = classify_villains(acts, 'BTN', ())
     assert 'MP' not in h['aggressors']
     assert 'MP' not in h['checkers']
     assert 'MP' not in h['pending']
@@ -302,7 +305,7 @@ def test_caso_folded_no_aparece():
 
 def test_caso_principal_no_coincide_con_el_de_la_equity():
     """El motor puede usar un rival distinto al principal de la jerarquía."""
-    jer = classify_villains(_acts(('MP', 'b')), 'BTN')   # main = MP
+    jer = classify_villains(_acts(('MP', 'b')), 'BTN', ())   # main = MP
     s = shadow_equity(0.6, BOARD_FLOOP, 'flop', jer,
                       equity_source='UTG')               # engine usó UTG
     rec = shadow_record('H', 'flop', BOARD_FLOOP, HERO, jer, s,
@@ -325,7 +328,7 @@ def test_checkers_all_vs_secondary_no_se_confunden():
     condición del ancla IMPOSIBLE y ocultaba los registros válidos.
     """
     acts = _acts(('UTG', 'x'), ('BTN', 'b'))
-    h = classify_villains(acts, 'BTN', pending_positions=['CO'])
+    h = classify_villains(acts, 'BTN', activos=['CO'])
     assert h['main'] == 'UTG'                 # único checker → principal
     assert h['checkers_all'] == ['UTG']       # pero SÍ hubo un checker
     assert h['checkers_secondary'] == []      # y no es secundario
@@ -336,7 +339,7 @@ def test_checkers_all_vs_secondary_no_se_confunden():
 def test_checkers_all_con_agresor():
     """Con agresor, main no sale de checkers y ambos coinciden."""
     acts = _acts(('UTG', 'x'), ('MP', 'b'), ('BTN', 'x'))
-    h = classify_villains(acts, 'BTN')
+    h = classify_villains(acts, 'BTN', ())
     assert h['main'] == 'MP'
     assert h['checkers_all'] == ['UTG']
     assert h['checkers_secondary'] == ['UTG']
@@ -348,7 +351,7 @@ def test_equity_shadow_es_none_sin_respaldo():
     El modo sombra habíautory estado emitiendo una equity_shadow que
     parecía un cálculo y no lo era.
     """
-    jer = classify_villains(_acts(('MP', 'b')), 'BTN')   # sin las 6 condiciones
+    jer = classify_villains(_acts(('MP', 'b')), 'BTN', ())   # sin las 6 condiciones
     s = shadow_equity(0.69, BOARD_FLOOP, 'flop', jer)
     assert s['penalty_source'] != 'anchor_match'
     assert s['equity_shadow'] is None
@@ -395,7 +398,7 @@ def test_equity_main_se_calcula_con_rango_del_principal():
 
 def test_equity_main_distingue_divergencia():
     """Si la jerarquía elige MP y producción usó UTG, se documenta."""
-    jer = classify_villains(_acts(('MP', 'b')), 'BTN')
+    jer = classify_villains(_acts(('MP', 'b')), 'BTN', ())
     s = shadow_equity(0.6, BOARD_FLOOP, 'flop', jer, equity_source='UTG')
     assert s['equity_source'] == 'UTG'
     assert s['equity_source_is_hierarchy_main'] is False
@@ -428,7 +431,7 @@ def test_equity_main_no_altera_la_accion():
     from motor.ranges import RangeState
     rs = RangeState(reach=np.ones(N_COMBOS, dtype=np.float32))
     rs.set_known_cards(list(HERO) + list(BOARD_FLOOP))
-    jer = classify_villains(_acts(('MP', 'b')), 'BTN')
+    jer = classify_villains(_acts(('MP', 'b')), 'BTN', ())
     base = dict(hero_codes=HERO, board_codes=BOARD_FLOOP, pot=25.0,
                 to_call=0.0, stack=90.0, street='flop', position='BTN',
                 villain_pos='UTG', deadline_s=5.0, runout=False)
@@ -444,7 +447,7 @@ def test_equity_main_no_rompe_con_builder_que_falla():
     """Un builder que lanza no puede tumbar la recomendación."""
     def builder_malo(pos):
         raise RuntimeError('boom')
-    jer = classify_villains(_acts(('MP', 'b')), 'BTN')
+    jer = classify_villains(_acts(('MP', 'b')), 'BTN', ())
     rec = recommend(HERO, BOARD_FLOOP, pot=25.0, to_call=0.0, stack=90.0,
                     street='flop', position='BTN', villain_pos='UTG',
                     deadline_s=5.0, runout=False,
@@ -567,9 +570,9 @@ def test_penalty_anchor_documenta_incertidumbre():
 def test_hero_bet_se_expone_en_la_jerarquia():
     """El ancla exige que el hero aposte: es condición, no suposición."""
     bet = classify_villains(_acts(('UTG', 'x'), ('MP', 'b'), ('BTN', 'b')),
-                            'BTN')
+                            'BTN', ())
     assert bet['hero_bet'] is True
-    check = classify_villains(_acts(('MP', 'b'), ('BTN', 'x')), 'BTN')
+    check = classify_villains(_acts(('MP', 'b'), ('BTN', 'x')), 'BTN', ())
     assert check['hero_bet'] is False
 
 
@@ -586,7 +589,7 @@ def test_equity_shadow_no_se_hace_negativa():
 
 def test_registro_identifica_contra_que_rango():
     """El registro dice contra qué rival se calculó la equity (P0)."""
-    jer = classify_villains(_acts(('MP', 'b')), 'BTN')
+    jer = classify_villains(_acts(('MP', 'b')), 'BTN', ())
     sh = shadow_equity(0.5, BOARD_FLOOP, 'flop', jer, equity_source='CO')
     rec = shadow_record('H_1', 'flop', BOARD_FLOOP, HERO, jer, sh,
                         10.0, 0.0, 90.0, 'bet_25')
@@ -595,7 +598,7 @@ def test_registro_identifica_contra_que_rango():
 
 
 def test_registro_detecta_coincidencia_de_rango():
-    jer = classify_villains(_acts(('MP', 'b')), 'BTN')
+    jer = classify_villains(_acts(('MP', 'b')), 'BTN', ())
     sh = shadow_equity(0.5, BOARD_FLOOP, 'flop', jer, equity_source='MP')
     rec = shadow_record('H_1', 'flop', BOARD_FLOOP, HERO, jer, sh,
                         10.0, 0.0, 90.0, 'bet_25')
@@ -610,7 +613,7 @@ def test_equity_main_no_se_confunde_con_produccion():
     sugería que era la equity contra el rival principal de la jerarquía.
     No lo es, y no se calcula. Debe quedar explícito.
     """
-    jer = classify_villains(_acts(('MP', 'b')), 'BTN')
+    jer = classify_villains(_acts(('MP', 'b')), 'BTN', ())
     s = shadow_equity(0.69, BOARD_FLOOP, 'turn', jer, equity_source='MP')
     assert s['equity_production'] == 0.69      # la del motor
     assert s['equity_main'] is None            # contra el principal: no hay
@@ -652,7 +655,7 @@ def test_shadow_equity_reduce_y_marca_experimental():
 
 
 def test_shadow_equity_sin_anchor_match_no_inventa_numero():
-    jer = classify_villains(_acts(('MP', 'b')), 'BTN')
+    jer = classify_villains(_acts(('MP', 'b')), 'BTN', ())
     s = shadow_equity(0.50, BOARD_FLOOP, 'turn', jer)
     assert s['equity_shadow'] is None
     assert s['delta'] is None
@@ -677,7 +680,7 @@ def test_shadow_log_escribe_jsonl(tmp_path):
     p = tmp_path / 'shadow.jsonl'
     lg = ShadowLog(path=str(p))
     rec = shadow_record('H_1', 'flop', BOARD_FLOOP, HERO,
-                        classify_villains(_acts(('MP', 'b')), 'BTN'),
+                        classify_villains(_acts(('MP', 'b')), 'BTN', ()),
                         shadow_equity(0.5, BOARD_FLOOP, 'flop',
                                       {'checkers': [], 'pending': []}),
                         10.0, 0.0, 90.0, 'bet_25')
@@ -710,7 +713,7 @@ def test_shadow_no_altera_la_accion():
     está calibrando con 36 manos por escenario.
     """
     jer = classify_villains(_acts(('UTG', 'x'), ('MP', 'b'), ('CO', 'x')),
-                            'BTN', pending_positions=['SB'])
+                            'BTN', activos=['SB'])
     jer['checkers_all'] = ['UTG', 'CO']
     jer['checkers_secondary'] = ['UTG', 'CO']
     base = dict(hero_codes=HERO, board_codes=BOARD_FLOOP, pot=25.0,
@@ -735,7 +738,7 @@ def test_shadow_no_altera_la_accion_en_cada_variante(variante, tmp_path):
     ancla. La acción no puede cambiar en ninguno.
     """
     jer = classify_villains(_acts(('UTG', 'x'), ('MP', 'b'), ('CO', 'c')),
-                            'BTN', pending_positions=['SB', 'HJ'])
+                            'BTN', activos=['SB', 'HJ'])
     jer.setdefault('callers', ['CO'])
     if variante == 'callers':
         jer['checkers'] = ['UTG']

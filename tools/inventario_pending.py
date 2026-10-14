@@ -161,6 +161,25 @@ def roles():
     return definidos, usados
 
 
+TEXTO_VEREDICTO = """
+   F6.1.b aplicado. El contrato canonico es
+   `pending_positions(acts, hero_pos, activos)`: sigue en la mano Y no ha
+   actuado en esta calle Y no es el hero.
+
+   - `activos` es OBLIGATORIO, sin valor por defecto. Antes el default `()`
+     devolvia `pending == []`, que se leia como "nadie pendiente" cuando en
+     realidad era "nadie me dijo quienes son". Omitirlo ahora es un TypeError:
+     falla ruido, no miente en silencio.
+   - La clave `pending_known` acompana al resultado para distinguir "cero
+     pendientes" de "no se sabe".
+   - El vocabulario de roles (`AGGRESSOR`, `CHECKER`, `CALLER`, `PENDING`) se
+     elimino: `classify_villains` nunca emitio esas etiquetas. Solo las
+     importaba un test, sin usarlas.
+   - `medir_multiway.py` mantiene su propia cuenta a proposito: responde otra
+     pregunta, y es el alcance de F7.
+"""
+
+
 def main():
     print('=' * 78)
     print('F6.1.a  INVENTARIO DE `pending`   (solo lectura, no modifica nada)')
@@ -183,7 +202,27 @@ def main():
                     break
     print()
     distintos = len(implementaciones)
-    print('   IMPLEMENTACIONES DISTINTAS: %d' % distintos)
+    n_activos = len([r for r in implementaciones
+                     if 'no_ha_actuado_en_la_calle' in implementaciones[r]])
+    print()
+    print('   QUIEN IMPLEMENTA "no ha actuado en la calle": %d' % n_activos)
+    if n_activos == 1:
+        print('   -> correcto: debe ser UNA (motor/hierarchy.py).')
+        print('      Los demas sitios solo DECLARAN `activos`, que es la entrada')
+        print('      del contrato, no una definicion competidora.')
+    elif n_activos > 1:
+        print('   -> hay mas de una fuente de verdad. Pueden divergir sin que')
+        print('      nada lo detecte: cada una filtra con sus propias reglas.')
+
+    otras = [r for r in implementaciones
+             if 'posiciones_posteriores_en_la_lista' in implementaciones[r]]
+    if otras:
+        print()
+        print('   OTRAS definiciones, con OTRA pregunta (no es un conflicto):')
+        for r in otras:
+            print('      %s  -> posiciones posteriores en la lista' % r)
+        print('      Responde "quien puede actuar todavia", no "quien esta')
+        print('      pendiente". Es el alcance multiway (F7), no `pending`.')
 
     # ---------------------------------------------------------------- 2
     esc, lec = consumidores()
@@ -231,24 +270,7 @@ def main():
             print('               %s:%d  %s' % (u[0], u[1], u[3]))
 
     print()
-    print('=' * 78)
-    print('VEREDICTO PRELIMINAR')
-    print('=' * 78)
-    print("""
-   `classify_villains` devuelve 'pending' (salida) y recibe
-   `pending_positions` (entrada). El llamador calcula el conjunto y la funcion
-   lo vuelve a filtrar. Eso ya son dos codigos para el mismo dato.
-
-   Encima hay un vocabulario de roles (`PENDING`, `AGGRESSOR`, `CHECKER`,
-   `CALLER`) que `classify_villains` NUNCA emite: la funcion devuelve claves
-   separadas, no etiquetas de rol. El vocabulario solo lo importa un test.
-   Son dos vocabularios coexistiendo, y solo uno describe lo que el codigo
-   hace de verdad.
-
-   Este script no propone el contrato canonico: solo deja constancia de como
-   esta hoy. Ese contrato es F6.1.b.
-""")
-    return 0
+    print(TEXTO_VEREDICTO)
 
 
 if __name__ == '__main__':

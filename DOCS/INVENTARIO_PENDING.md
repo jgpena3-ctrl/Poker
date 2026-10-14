@@ -98,12 +98,102 @@ había (y hay) varias definiciones conviviendo.
 
 ## Qué NO hace este inventario
 
-No propone el contrato canónico. Para eso está F6.1.b, y la decisión depende de
-algo que aquí solo se constata:
+No propone el contrato canónico. Ese fue **F6.1.b**, abajo.
 
-> ¿`pending` debe ser "activo y no ha actuado" (fuente 1, la del motor en
-> vivo) o "no ha actuado" a secas (lo que asumen las herramientas, que no
-> tienen `state`)?
+---
 
-No se puede unificar sin responder eso antes. Las herramientas trabajan sobre
-`hands_db.jsonl`, donde no existe el estado en vivo de la mesa; solo `active`.
+# F6.1.b — Contrato canónico (aplicado)
+
+## La decisión que había que tomar
+
+Las cinco fuentes no eran equivalentes. Dos incompatibles:
+
+- el motor en vivo exige `estado == 'activo'` **y** no haber actuado;
+- las herramientas solo pueden mirar `players[].active` y "no ha actuado",
+  porque en `hands_db.jsonl` no existe el estado de mesa.
+
+**Decisión: parámetro `activos` explícito.** El "sigue en la mano" pasa a ser
+un dato de entrada declarado por el llamador, no una suposición del
+calculador. Nadie adivina.
+
+## Qué cambió
+
+```python
+def pending_positions(acts, hero_pos, activos) -> List[str]:
+    """sigue en la mano Y no ha actuado en esta calle Y no es el hero."""
+```
+
+`activos` es **obligatorio y sin valor por defecto**. Antes el default `()`
+devolvía `pending == []`, que se lee como "no hay nadie pendiente" cuando en
+realidad es "nadie me dijo quiénes son". No se puede deducir de `acts`: las
+acciones de la calle solo dicen quién **actuó**, nunca quién falta por actuar.
+
+Ahora omitirlo es un `TypeError`: **falla ruido, no miente en silencio**.
+
+| | antes | después |
+|---|---|---|
+| sitios que calculan el conjunto | 5 | **1** (`hierarchy.pending_positions`) |
+| quién declara `activos` | — | motor en vivo, y las 2 herramientas |
+| default sin datos | `()` → `[]` falso | imposible: `TypeError` |
+| "cero" vs "no se sabe" | indistinguibles | clave `pending_known` |
+| vocabulario de roles | 4 constantes, 0 usos en producción | **eliminadas** |
+
+## Equivalencia de comportamiento
+
+Quien antes pasaba candidatos pre-filtrados obtiene **lo mismo**: la función
+canónica aplica esos mismos tres filtros. Está fijado en
+`test_el_resultado_no_cambio_para_quien_ya_filtraba`. Si algún día cambia el
+resultado de una decisión real, ese test lo dice.
+
+## El vocabulario de roles eliminado
+
+`AGGRESSOR`, `CHECKER`, `CALLER` y `PENDING` se han borrado.
+`classify_villains` **nunca emitió** esas etiquetas: devuelve claves separadas.
+Solo los importaba `test_hierarchy.py`, y sin usarlos.
+
+Eran un segundo vocabulario que describía algo que el código no hace. `PENDING`
+además confundía con la clave `pending`, que es una lista de posiciones, no
+una etiqueta.
+
+## `medir_multiway.py` se queda como estaba
+
+Cuenta "posiciones que aparecen después del índice `i`", que **responde otra
+pregunta**: quién *puede actuar todavía*, no quién *tiene una decisión
+pendiente*. No es un conflicto de definiciones sino de alcance, y es el
+territorio de F7 (multiway).
+
+## Verificación
+
+`tools/inventario_pending.py` sigue siendo ejecutable y ahora funciona como
+**detector de regresión**: debe reportar exactamente 1 implementación de "no ha
+actuado en la calle". Si aparece una segunda, salta.
+
+```
+   QUIEN IMPLEMENTA "no ha actuado en la calle": 1
+   -> correcto: debe ser UNA (motor/hierarchy.py).
+
+   OTRAS definiciones, con OTRA pregunta (no es un conflicto):
+      tools/medir_multiway.py  -> posiciones posteriores en la lista
+      Responde "quien puede actuar todavia", no "quien esta
+      pendiente". Es el alcance multiway (F7), no `pending`.
+
+   AGGRESSOR  (no definido)
+   CHECKER    (no definido)
+   CALLER     (no definido)
+   PENDING    (no definido)
+```
+
+## Tests
+
+`motor/test_pending.py`, 14 tests. No cubren solo el resultado, sino sobre todo
+la **honestidad** del resultado:
+
+- `activos=None` → `pending == []` **pero** `pending_known is False`;
+- `activos=[]` → `pending == []` **y** `pending_known is True` (sí se sabe);
+- omitir `activos` → `TypeError`;
+- equivalencia con el comportamiento previo.
+
+## Siguiente: F6.2
+
+Conectar `equity_main` por una interfaz explícita, en modo sombra primero.
+`pending` ya tiene un contrato estable sobre el que apoyarlo.

@@ -31,8 +31,9 @@ for h in load_hands(reliable_only=True):
         if not acts or not any(a.get('pos') == hp for a in acts):
             continue
         acted = {a.get('pos') for a in acts if a.get('pos')}
-        pend = [p for p in activos if p and p != hp and p not in acted]
-        jer = classify_villains(acts, hp, pending_positions=pend)
+        # F6.1.b: se pasan quienes SIGUEN EN LA MANO. El filtro de "no ha
+        # actuado en esta calle" lo hace la función canónica una sola vez.
+        jer = classify_villains(acts, hp, activos)
         if not jer.get('main'):
             continue
         board = [c for c in ((h.get('comunitarias') or {}).get('flop') or [])]

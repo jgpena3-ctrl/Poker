@@ -740,18 +740,20 @@ class Asistente:
             'actions', []) or []
         if not acts:
             return None
-        ya_actuaron = {a.get('pos') for a in acts if a.get('pos')}
-        pendientes = []
+        # F6.1.b: aquí solo se declara QUIÉN SIGUE EN LA MANO. El filtro de
+        # "aún no ha actuado en esta calle" lo hace `pending_positions()`, la
+        # única implementación. Antes esta función repetía ese filtro y
+        # `classify_villains` lo repetía otra vez: el mismo dato, tres veces.
+        activos = []
         for pid in PLAYER_IDS:
             if pid == hero_pid:              # comparación entre PIDS
                 continue
             if state.get(f'{pid}_state') != 'activo':
                 continue
             pos = self._pos_of(pid, state)
-            if pos and pos != hero_pos and pos not in ya_actuaron:
-                pendientes.append(pos)
-        return classify_villains(acts, hero_pos,
-                                 pending_positions=pendientes)
+            if pos and pos != hero_pos:
+                activos.append(pos)
+        return classify_villains(acts, hero_pos, activos)
 
     def _state_key(self, state):
         """Firma de la situación para deduplicar recomendaciones (incluye el

@@ -42,8 +42,9 @@ for h in hands:
         if not acts:
             continue
         acted = {a.get('pos') for a in acts if a.get('pos')}
-        pendientes = [p for p in pos_activos if p and p != hp and p not in acted]
-        jer = classify_villains(acts, hp, pending_positions=pendientes)
+        # F6.1.b: se pasan quienes SIGUEN EN LA MANO; el filtro de "no ha
+        # actuado en esta calle" lo hace la función canónica una sola vez.
+        jer = classify_villains(acts, hp, pos_activos)
         if not jer.get('main'):
             stats['sin_principal'] += 1
             continue
