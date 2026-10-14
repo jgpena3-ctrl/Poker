@@ -118,7 +118,8 @@ class ProfileRangeModel:
         self.cnt: Dict[Tuple[str, str, str], np.ndarray] = {}  # (p,spot,c)
         self.perfil: Dict[str, str] = {}                  # jugador → perfil
         self.profiles = None                             # Profiles (stats/ω)
-        self.n_hands_used = None                       # manos reales usadas
+        self.n_hands_input = None    # manos recibidas
+        self.n_hands_used = None     # manos que aportaron observacion
         self._omega = None                               # caché cargada de disco
 
     # ------------------------------------------------------------------
@@ -134,14 +135,17 @@ class ProfileRangeModel:
             profs = Profiles.from_hands(hands)
             labels = {name: p.label for name, p in profs.profiles.items()}
         model = cls(alpha=alpha)
-        model.n_hands_used = len(hands)
+        model.n_hands_input = len(hands)
+        model.n_hands_used = 0
         model.perfil = dict(labels)
         model.profiles = Profiles.from_hands(hands)
         model._omega = None
         for hand in hands:
+            aporta = False
             for ev in preflop_events(hand):
                 if not ev.hand_known or not ev.cards:
                     continue
+                aporta = True
                 perfil = labels.get(ev.player)
                 if perfil is None:
                     continue
@@ -156,6 +160,8 @@ class ProfileRangeModel:
                 if cnt_key not in model.cnt:
                     model.cnt[cnt_key] = np.zeros((13, 13), dtype=np.float32)
                 model.cnt[cnt_key][cell] += 1.0
+            if aporta:
+                model.n_hands_used += 1
         return model
 
     # ------------------------------------------------------------------
@@ -327,7 +333,8 @@ class ProfileRangeModel:
         return {
             'meta': dict({'alpha': self.alpha,
                           'origen': 'hands_db.jsonl'},
-                         **procedencia(self.n_hands_used)),
+                         **procedencia(self.n_hands_input,
+                                            self.n_hands_used)),
             'perfil': dict(self.perfil),
             'opp': {f'{k[0]}|{k[1]}': v.tolist()
                     for k, v in self.opp.items()},

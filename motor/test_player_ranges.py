@@ -299,3 +299,37 @@ def test_recommend_con_rango_perfilado():
                           'bet_75', 'all_in')
     assert 'Alfa' in rec.villain_label
     assert rec.elapsed_ms > 0
+
+
+# --- procedencia del `meta` (revision_1 §4: faltaba cobertura) ----------
+
+def test_player_ranges_meta_refleja_las_manos_reales():
+    """`hands_used` NO puede ser la constante nominal.
+
+    Construir con 50 manos y sellar `hands_used: 900` seria mentir, que es
+    justo lo que el sello existe para evitar.
+    """
+    from motor.learn import load_hands
+    hands = load_hands(reliable_only=True)[:50]
+    meta = pr.ProfileRangeModel.from_hands(hands).to_json()['meta']
+    assert meta['hands_input'] == 50
+    assert meta['hands_used'] <= 50
+    assert meta['hands_window'] == 'custom'
+
+
+def test_player_ranges_meta_ventana_fiable():
+    from motor.learn import load_hands
+    hands = load_hands(reliable_only=True)
+    meta = pr.ProfileRangeModel.from_hands(hands).to_json()['meta']
+    assert meta['hands_input'] == 900
+    assert meta['hands_window'] == 'reliable_only'
+    # con la ventana completa, algunas manos no aportan ninguna decision
+    # con cartas: `hands_used` es menor, y eso es informacion real
+    assert meta['hands_used'] <= meta['hands_input']
+
+
+def test_arbol_sucio_es_triestado():
+    """revision_2 §1B: si git falla, None (desconocido), no False."""
+    from motor._procedencia import arbol_sucio
+    assert arbol_sucio() in (True, False, None)
+    assert arbol_sucio(paths=('motor/',)) in (True, False, None)

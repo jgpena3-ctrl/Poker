@@ -112,7 +112,8 @@ class PostflopRangeModel:
                  n_buckets: int = DEFAULT_BUCKETS):
         self.alpha = float(alpha)
         self.n_buckets = n_buckets
-        self.n_hands_used = None      # manos reales usadas (sello de meta)
+        self.n_hands_input = None   # manos recibidas
+        self.n_hands_used = None    # manos que aportaron observacion
         self.opp: Dict[Tuple[str, str, str, int], int] = {}
         self.cnt: Dict[Tuple[str, str, str, int, str], int] = {}
         self.labels: Dict[str, str] = {}
@@ -132,13 +133,17 @@ class PostflopRangeModel:
             profs = Profiles.from_hands(hands)
             labels = {name: p.label for name, p in profs.profiles.items()}
         model = cls(alpha=alpha, n_buckets=n_buckets)
-        model.n_hands_used = len(hands)
+        model.n_hands_input = len(hands)
+        model.n_hands_used = 0
         model.labels = dict(labels)
         model._oracle = Oracle(build(hands, labels=model.labels))
         obs = extract_hands(hands)
+        manos_con_obs = set()
         for o in obs:
             if not o.hand_known or not o.cards:
                 continue
+            # Una mano cuenta como 'usada' si aporta >=1 observacion con cartas
+            manos_con_obs.add(o.hand_id)
             if o.street == 'preflop':
                 continue
             bid = _board_ids(o.board)
@@ -163,6 +168,7 @@ class PostflopRangeModel:
             model.opp[key] = model.opp.get(key, 0) + 1
             akey = key + (o.action,)
             model.cnt[akey] = model.cnt.get(akey, 0) + 1
+        model.n_hands_used = len(manos_con_obs)
         return model
 
     def _bucket_of(self, cards: np.ndarray, board_ids: np.ndarray) -> int:
@@ -251,7 +257,8 @@ class PostflopRangeModel:
             'meta': dict({'alpha': self.alpha,
                           'n_buckets': self.n_buckets,
                           'origen': 'hands_db.jsonl'},
-                         **procedencia(self.n_hands_used)),
+                         **procedencia(self.n_hands_input,
+                                            self.n_hands_used)),
             'labels': dict(self.labels),
             'opp': {f'{k[0]}|{k[1]}|{k[2]}|{k[3]}': v
                     for k, v in self.opp.items()},

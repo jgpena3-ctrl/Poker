@@ -217,8 +217,17 @@ def test_postflop_meta_refleja_las_manos_reales():
 
 
 def test_postflop_meta_ventana_fiable():
+    """La ventana la fijan las manos ENTRADAS; `hands_used` es la efectiva.
+
+    revision_2 §1A: `len(hands)` y "manos que aportan" son cosas distintas.
+    Con las 900 fiables, 13 manos no aportan ninguna observacion postflop
+    con cartas, asi que `hands_used` < 900 sin que la ventana cambie.
+    """
     from motor.learn import load_hands
-    m = pf.PostflopRangeModel.from_hands(load_hands(reliable_only=True))
+    hands = load_hands(reliable_only=True)
+    m = pf.PostflopRangeModel.from_hands(hands)
     meta = m.to_json()['meta']
-    assert meta['hands_used'] == 900
+    assert meta['hands_input'] == 900
     assert meta['hands_window'] == 'reliable_only'
+    # la muestra efectiva es menor o igual que la de entrada, nunca mayor
+    assert 0 < meta['hands_used'] <= meta['hands_input']
