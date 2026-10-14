@@ -746,6 +746,10 @@ class Asistente:
         # `classify_villains` lo repetía otra vez: el mismo dato, tres veces.
         activos = []
         for pid in PLAYER_IDS:
+            # Defensa en profundidad: el hero se excluye por PID y por
+            # posición. Las dos comprobaciones no son redundantes si
+            # `_pos_of` falla (OCR, posición sin asignar) y devuelve otra
+            # cosa para el hero: la primera lo captura igualmente.
             if pid == hero_pid:              # comparación entre PIDS
                 continue
             if state.get(f'{pid}_state') != 'activo':
@@ -1056,7 +1060,7 @@ class Asistente:
                 _shadow_ctx = (jer, _reg)
                 label += (f' | jerarquía: principal={jer.get("main")}'
                           f' ({jer.get("main_reason")})'
-                          f', {len(jer.get("checkers") or ())} checker(s)'
+                          f', {len(jer.get("checkers_secondary") or ())} checker(s)'
                           f', {len(jer.get("callers") or ())} caller(s)'
                           f', {len(jer.get("pending") or ())} pendiente(s)'
                           f' [ajuste NO validado, sombra]')

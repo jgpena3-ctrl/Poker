@@ -293,7 +293,7 @@ def recommend(hero_codes, board_codes, *, pot: float, to_call: float = 0.0,
         # Los pendientes también son relevantes: son amenaza activa, y
         # callarlos daría a entender que solo hay checkers (pegar_2 §2.6).
         if hierarchy:
-            n_chk = len(hierarchy.get('checkers') or ())
+            n_chk = len(hierarchy.get('checkers_secondary') or ())
             n_pend = len(hierarchy.get('pending') or ())
             if n_chk or n_pend:
                 etiqueta += f' +{n_chk} checker(s), {n_pend} pendiente(s)'

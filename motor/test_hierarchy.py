@@ -118,16 +118,16 @@ def test_pendientes_no_son_checkers():
     h = classify_villains(acts, 'BTN', activos=['CO', 'SB'])
     assert 'CO' in h['pending']
     assert 'SB' in h['pending']
-    assert 'CO' not in h['checkers']
-    assert 'SB' not in h['checkers']
+    assert 'CO' not in h['checkers_secondary']
+    assert 'SB' not in h['checkers_secondary']
 
 
 def test_checkers_quedan_fuera_del_principal():
     acts = _acts(('UTG', 'x'), ('MP', 'x'), ('BTN', 'x'))
     h = classify_villains(acts, 'BTN', ())
     assert h['main'] == 'MP'                  # el último que checkeó
-    assert h['checkers'] == ['UTG']
-    assert 'BTN' not in h['checkers']
+    assert h['checkers_secondary'] == ['UTG']
+    assert 'BTN' not in h['checkers_secondary']
 
 
 def test_sin_agresion_usa_posicion():
@@ -148,7 +148,7 @@ def test_clasificacion_no_mezcla_rangos():
 def test_hero_sin_acciones_devuelve_estructura_vacia():
     h = classify_villains([], 'BTN', ())
     assert h['main'] is None
-    assert h['checkers'] == []
+    assert h['checkers_secondary'] == []
     assert h['pending'] == []
 
 
@@ -204,14 +204,14 @@ def test_check_que_va_seguido_de_bet_es_agresor():
     acts = _acts(('UTG', 'x'), ('CO', 'x'), ('UTG', 'b'), ('BTN', 'x'))
     h = classify_villains(acts, 'BTN', ())
     assert 'UTG' in h['aggressors']
-    assert 'UTG' not in h['checkers']
+    assert 'UTG' not in h['checkers_secondary']
 
 
 def test_jerarquia_no_mezcla_pids_y_posiciones():
     """Todo en hierarchy.py son posiciones; el llamador traduce."""
     acts = _acts(('BTN', 'x'))
     h = classify_villains(acts, 'BTN', activos=['SB'])
-    for grupo in ('aggressors', 'checkers', 'pending'):
+    for grupo in ('aggressors', 'checkers_secondary', 'pending'):
         for pos in h[grupo]:
             assert pos in ('SB', 'BB', 'UTG', 'MP', 'CO', 'BTN'), pos
 
@@ -227,7 +227,7 @@ def test_caso_check_luego_apuesta():
     h = classify_villains(acts, 'BTN', ())
     assert h['main'] == 'UTG'
     assert 'UTG' in h['aggressors']
-    assert 'UTG' not in h['checkers']
+    assert 'UTG' not in h['checkers_secondary']
 
 
 def test_caso_subida_y_resubida_vuelve_al_hero():
@@ -250,7 +250,7 @@ def test_caso_call_no_es_check():
     acts = _acts(('UTG', 'b'), ('MP', 'c'), ('CO', 'c'), ('BTN', 'x'))
     h = classify_villains(acts, 'BTN', ())
     assert h['main'] == 'UTG'
-    assert h['checkers'] == []              # nadie pasó
+    assert h['checkers_secondary'] == []              # nadie pasó
     assert sorted(h['callers']) == ['CO', 'MP']
     assert h['callers'] not in (h['aggressors'],)
 
@@ -260,7 +260,7 @@ def test_caso_acciones_intercaladas():
     acts = _acts(('UTG', 'x'), ('MP', 'b'), ('CO', 'c'), ('BTN', 'x'))
     h = classify_villains(acts, 'BTN', ())
     assert h['main'] == 'MP'
-    assert h['checkers'] == ['UTG']
+    assert h['checkers_secondary'] == ['UTG']
     assert h['callers'] == ['CO']
     assert h['pending'] == []
 
@@ -280,7 +280,7 @@ def test_caso_hero_ya_acted_no_es_pendiente():
     acts = _acts(('UTG', 'b'), ('BTN', 'x'))
     h = classify_villains(acts, 'BTN', activos=['UTG', 'BTN', 'CO'])
     assert h['main'] == 'UTG'
-    assert 'BTN' not in h['checkers']
+    assert 'BTN' not in h['checkers_secondary']
     assert 'BTN' not in h['aggressors']
     assert 'BTN' not in h['pending']
 
@@ -299,7 +299,7 @@ def test_caso_folded_no_aparece():
     acts = _acts(('UTG', 'b'), ('MP', 'f'), ('CO', 'x'), ('BTN', 'x'))
     h = classify_villains(acts, 'BTN', ())
     assert 'MP' not in h['aggressors']
-    assert 'MP' not in h['checkers']
+    assert 'MP' not in h['checkers_secondary']
     assert 'MP' not in h['pending']
 
 
@@ -498,11 +498,18 @@ def _jerarquia_ancla(hero_bet=True):
     """Jerarquía que reproduce EXACTAMENTE el escenario del ancla:
     turn, board liso, hero que apuesta, sin agresor, 1 checker, 1 pendiente.
     """
+    # `checkers_all` Y `checkers_secondary` valen ambos ['UTG']: como `main`
+    # es None, `checkers_secondary` solo excluye al principal, así que la
+    # salida real de `classify_villains` sería esa. Poner `[]` aquí haría que
+    # este fixture NO representara el ancla, y la penalización desaparecería
+    # sin que nada lo dijera: el fixture mentiría sobre el motor.
     return {'main': None,
             'hero_bet': hero_bet,
             'aggressors': [],
-            'checkers': ['UTG'],
+            'checkers_all': ['UTG'],
+            'checkers_secondary': ['UTG'],
             'pending': ['CO'],
+            'pending_known': True,
             'callers': []}
 
 
@@ -531,7 +538,7 @@ def test_penalty_source_exige_el_escenario_completo():
 
     # dos checkers en vez de uno
     dos = _jerarquia_ancla()
-    dos['checkers'] = ['UTG', 'MP']
+    dos['checkers_all'] = ['UTG', 'MP']
     r2 = shadow_equity(0.69, BOARD_FLOOP, 'turn', dos)
     assert r2['penalty_source'] == 'partial_support'
 
@@ -578,9 +585,8 @@ def test_hero_bet_se_expone_en_la_jerarquia():
 
 def test_equity_shadow_no_se_hace_negativa():
     jer = _jerarquia_ancla()
-    jer['checkers'] = ['UTG'] * 40
-    jer['checkers_secondary'] = jer['checkers']
-    jer['checkers_all'] = jer['checkers']
+    jer['checkers_secondary'] = ['UTG'] * 40
+    jer['checkers_all'] = jer['checkers_secondary']
     s = shadow_equity(0.02, BOARD_FLOOP, 'turn', jer)
     if s['equity_shadow'] is None:
         pytest.skip('sin anchor_match: equity_shadow es None por diseño')
@@ -665,9 +671,9 @@ def test_shadow_equity_sin_anchor_match_no_inventa_numero():
 
 def test_pendientes_no_entran_en_la_penalizacion():
     """Un pendiente no es un checker: siguen siendo amenaza activa."""
-    jer = {'main': 'MP', 'checkers': [], 'checkers_all': [],
-           'pending': ['CO', 'SB'], 'aggressors': ['MP'],
-           'hero_bet': False}
+    jer = {'main': 'MP', 'checkers_all': [], 'checkers_secondary': [],
+           'pending': ['CO', 'SB'], 'pending_known': True,
+           'aggressors': ['MP'], 'hero_bet': False}
     s = shadow_equity(0.50, BOARD_FLOOP, 'turn', jer)
     assert s['penalty'] is None
     assert s['n_pending'] == 2
@@ -682,7 +688,9 @@ def test_shadow_log_escribe_jsonl(tmp_path):
     rec = shadow_record('H_1', 'flop', BOARD_FLOOP, HERO,
                         classify_villains(_acts(('MP', 'b')), 'BTN', ()),
                         shadow_equity(0.5, BOARD_FLOOP, 'flop',
-                                      {'checkers': [], 'pending': []}),
+                                      {'checkers_secondary': [],
+                                       'pending': [],
+                                       'pending_known': True}),
                         10.0, 0.0, 90.0, 'bet_25')
     assert lg.append(rec) is True
     rows = [json.loads(x) for x in p.read_text(encoding='utf-8').splitlines()]
@@ -741,12 +749,13 @@ def test_shadow_no_altera_la_accion_en_cada_variante(variante, tmp_path):
                             'BTN', activos=['SB', 'HJ'])
     jer.setdefault('callers', ['CO'])
     if variante == 'callers':
-        jer['checkers'] = ['UTG']
+        jer['checkers_secondary'] = ['UTG']
     elif variante == 'pending':
-        jer['checkers'] = []
+        jer['checkers_secondary'] = []
     elif variante == 'ancla':
         jer = {'main': 'MP', 'hero_bet': True, 'aggressors': ['MP'],
-               'checkers': ['UTG'], 'pending': ['CO'], 'callers': []}
+               'checkers_all': ['UTG'], 'checkers_secondary': [],
+               'pending': ['CO'], 'pending_known': True, 'callers': []}
 
     base = dict(hero_codes=HERO, board_codes=BOARD_FLOOP, pot=25.0,
                 to_call=0.0, stack=90.0, street='flop', position='BTN',
@@ -775,7 +784,8 @@ def test_shadow_no_rompe_con_contexto_raro():
     base = dict(hero_codes=HERO, board_codes=BOARD_FLOOP, pot=25.0,
                 to_call=0.0, stack=90.0, street='flop', position='BTN',
                 villain_pos='MP', deadline_s=5.0, runout=False)
-    roto = {'main': None, 'checkers': None, 'pending': None}
+    roto = {'main': None, 'checkers_secondary': None, 'pending': None,
+            'pending_known': False}
     rec = recommend(**base, hierarchy=roto)
     assert rec.action in ('fold', 'check', 'call', 'bet_25', 'bet_50',
                           'bet_75', 'raise', 'all_in')

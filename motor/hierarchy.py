@@ -231,7 +231,7 @@ def penalty_source(board_codes, street: str, hierarchy: Dict = None) -> str:
     # El ancla cuenta TODOS los checkers, no solo los secundarios. Usar
     # 'checkers' aquí hacía la condición insatisfacible: sin agresor el
     # único checker es el principal y sale de esa lista.
-    if len(hierarchy.get('checkers_all', hierarchy.get('checkers')) or ()) != 1:
+    if len(hierarchy.get('checkers_all') or ()) != 1:
         return 'partial_support'
     if len(hierarchy.get('pending') or ()) != 1:
         return 'partial_support'
@@ -267,6 +267,34 @@ def pending_positions(acts: List[dict], hero_pos: str, activos) -> List[str]:
 
     Orden: el de `activos`, sin duplicados, para que dos llamadas comparables
     den el mismo resultado.
+
+    CONTRATO IMPLÍCITO: `acts` debe contener acciones de UNA sola calle.
+
+    La calle no se recibe como parámetro: va implícita en `acts`. Si se le
+    pasan acciones de varias calles mezcladas, el resultado es incorrecto y
+    esta función NO puede detectarlo, porque solo ve posiciones e importes.
+
+    Ejemplo del fallo:
+        acts = [{'pos':'UTG','action':'b'},    # flop
+                {'pos':'CO','action':'b'}]    # turn
+        pending_positions(acts, 'BTN', ['UTG','CO'])
+        # -> ['UTG', 'CO'], cuando los dos YA han actuado.
+
+    Hoy los cuatro llamadores cumplen el contrato: `asistente_live._jerarquia`
+    toma `acts` de `streets[street]`, y las herramientas de `streets[st]`.
+    Fijado en `test_acts_de_una_sola_calle`.
+
+    Los TRES estados de `activos` (revision_2):
+
+      - omitido           -> `TypeError`. Es un error de programación.
+      - `activos=None`    -> llamada VÁLIDA con información DESCONOCIDA.
+                             Sale `pending == []` y `pending_known is False`.
+      - `activos=[]`      -> llamada VÁLIDA con información CONOCIDA: no hay
+                             posiciones activas. `pending_known is True`.
+
+    `pending_known=True` NO garantiza que `activos` sea correcto ni completo:
+    solo que el llamador pasó el argumento. No debe leerse como "la jerarquía
+    es fiable".
     """
     acted = {a.get('pos') for a in (acts or ()) if a.get('pos')}
     hero_pos = hero_pos or ''
@@ -297,12 +325,18 @@ def classify_villains(acts: List[dict], hero_pos: str,
       3. Los pendientes solo son los que NO han actuado en la calle. Estar
          activo no significa tener una decisión pendiente.
 
-    Hay CUATRO categorías, no tres: además de agresor / checker /
+    Hay CUATRO categorías de RIVAL, no tres: además de agresor / checker /
     pendiente está `callers`. Un 'c' (igualar) NO es un 'x' (pasar):
     quien igualó aporta fichas voluntariamente y su rango no está capado
     como el de un check. No entra en la penalización porque no hay
     ninguna medición para él, pero se registra para que no desaparezca
     del análisis.
+
+    Ojo con "cuatro": son cuatro categorías de rival, no cuatro claves. El
+    dict devuelve además metadatos que no son categorías — `main`,
+    `main_reason`, `hero_bet`, `hero_pos`, `pending_known` — y dentro de los
+    checkers hay DOS claves distintas (`checkers_all`, `checkers_secondary`),
+    no una.
 
     `activos`: posiciones que siguen en la mano. OBLIGATORIO (F6.1.b). El
     conjunto pendiente lo calcula `pending_positions()`, la unica
@@ -378,7 +412,11 @@ def classify_villains(acts: List[dict], hero_pos: str,
         'aggressors': agresores,
         # Ver la nota de arriba: no son lo mismo.
         'checkers_all': checkers_all,
-        'checkers': checkers_secondary,
+        # ANTES había también la clave `checkers`, alias de esta. Se ha
+        # eliminado: conviven `checkers_all` y `checkers_secondary`, así que
+        # un nombre `checkers` a secas invite a leer "todos los checkers" y
+        # devuelve un subconjunto. Un alias que miente es peor que un
+        # nombre incomodo.
         'checkers_secondary': checkers_secondary,
         # Un 'c' NO es un 'x'. Quien igualó ha aportado fichas
         # voluntariamente: su rango no está capado como el de un check y
@@ -424,8 +462,7 @@ def shadow_equity(equity_production: float, board_codes, street: str,
     Los pendientes no entran en la penalización: pueden resubir, y
     penalizarlos como si fueran draws sobrevaloraría la apuesta.
     """
-    n_chk = len(hierarchy.get('checkers_secondary',
-                            hierarchy.get('checkers')) or ())
+    n_chk = len(hierarchy.get('checkers_secondary') or ())
     n_pend = len(hierarchy.get('pending') or ())
     psource = penalty_source(board_codes, street, hierarchy)
     eq_prod = float(equity_production)
@@ -471,8 +508,7 @@ def shadow_equity(equity_production: float, board_codes, street: str,
         'penalty_anchor': dict(OBSERVED_ANCHOR)
         if psource == 'anchor_match' else None,
         'n_checker': n_chk,
-        'n_checker_all': len(hierarchy.get('checkers_all',
-                                           hierarchy.get('checkers')) or ()),
+        'n_checker_all': len(hierarchy.get('checkers_all') or ()),
         'n_pending': n_pend,
         'n_caller': len(hierarchy.get('callers') or ()),
         'delta': delta,
@@ -507,9 +543,14 @@ def shadow_record(hand_id: str, street: str, board_codes, hero_codes,
         'equity_main_available': shadow.get('equity_main_available'),
         'equity_main_note': shadow.get('equity_main_note'),
         'aggressors': hierarchy.get('aggressors'),
-        'checkers': hierarchy.get('checkers'),
+        'checkers_secondary': hierarchy.get('checkers_secondary'),
         'callers': hierarchy.get('callers'),
         'pending': hierarchy.get('pending'),
+        # revision_2: `pending_known` se producía pero no lo leía nadie, así
+        # que la incertidumbre se perdía igual que antes. Al menos queda
+        # REGISTRADA: quien compare registros puede distinguir "cero
+        # pendientes" de "el llamador no declaró los activos".
+        'pending_known': hierarchy.get('pending_known'),
         'texture': texture_key(board_codes),
         'equity_production': shadow.get('equity_production'),
         'equity_main': shadow.get('equity_main'),

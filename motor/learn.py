@@ -208,6 +208,20 @@ def _es_ciega_bb(i, pos, act, amount, is_blind, voluntary_before, bb=BB):
       - `amount`: ver "Por qué el importe ya NO decide".
       - `bb`: constante nominal, sin uso desde que el importe dejó de decidir.
 
+    Por qué se conservan en vez de borrarse: los 19 llamadores actuales
+    (1 en producción, el resto en tests y auditorías) pasan la tupla
+    desempacada de `_preflop_sequence` de forma POSICIONAL:
+    `_es_ciega_bb(i, pos, act, amount, is_blind, voluntary_before, bb)`.
+    Quitar `i`, `amount` y `bb` obligaría a reescribir los 19 para descartar
+    elementos, en 6 ficheros, sin cambiar ni una línea de comportamiento.
+    Es deuda con coste de mantenimiento, no deuda de corrección; mientras
+    todo el mundo pase la tupla entera, el churn no compensa.
+
+    MEDIDO: 19 llamadas en 6 ficheros (`learn.py`, `test_ciega_bb.py`,
+    `test_orden_preflop.py`, `test_revision12.py`, `auditar_bb_check.py`,
+    `auditar_orden_folds.py`). Si algún día se borran, el cambio es puramente
+    mecánico y la suite lo comprueba.
+
     Orden de confianza:
       1. Marca explícita del recorder (`blind`) — identidad, no heurística.
       2. Respaldo estructural para datos antiguos: posición BB, acción 'b' y

@@ -69,9 +69,9 @@ for h in hands:
         # auditorias
         if hp in jer['pending']:
             problemas.append('hero en pending %s' % h.get('hand_id'))
-        if hp in jer['checkers'] or hp in jer['aggressors']:
+        if hp in jer['checkers_secondary'] or hp in jer['aggressors']:
             problemas.append('hero como rival %s' % h.get('hand_id'))
-        for c in jer['checkers']:
+        for c in jer['checkers_secondary']:
             if c in acted and any(a.get('pos') == c
                                   and a.get('action') in ('b', 'r')
                                   for a in acts):

@@ -19,6 +19,16 @@ subida que no ocurrio. Anadir el check no las arregla.
 Este script clasifica con la MISMA logica que el motor (`preflop_events`), no
 con una reimplementacion, para que inventario y motor no puedan divergir.
 
+SOBRE LA CAUSA `importe_sobre_nominal`: es CÓDIGO MUERTO A PROPÓSITO.
+
+Es la causa que atribuía un `BB b` rechazado al bug de `_es_ciega_bb`
+(`amount <= bb` contra la ciega nominal). Ese bug se corrigió en `9f4869f`, así
+que la rama hoy no puede dispararse. Se conserva como DETECTOR DE REGRESIÓN:
+si algún día vuelve a aparecer, el script lo dirá en vez de callar. Si se
+eliminara, una reintroducción de la condición pasaría inadvertida.
+
+Por eso el informe de abajo avisa cuando esa causa reaparece.
+
 Uso:  python tools/auditar_bb_check.py [--json]
 """
 import collections

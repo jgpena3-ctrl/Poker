@@ -1136,6 +1136,59 @@ def test_jerarquia_no_mete_al_hero_en_pendientes(asis):
     assert 'CO' not in jer['pending']
 
 
+def test_jerarquia_excluye_al_hero_aunque_pos_of_falle(asis, monkeypatch):
+    """Defensa en profundidad: el hero se excluye por PID y por posición.
+
+    Si `_pos_of` devolviera una posición distinta de la real para el hero
+    (OCR, posición sin asignar), el filtro por PID lo seguiría excluyendo.
+    Antes esto era una afirmación sobre el texto del fuente; aquí se
+    comprueba lo que hace.
+    """
+    asis.rec._hand_positions = {'hero': 'BTN', 'p1': 'UTG', 'p2': 'CO'}
+    state = {'p1_state': 'activo', 'p2_state': 'activo',
+             'p3_state': 'activo',
+             'community': _cards('Qh', '7s', '2c')}
+    asis.rec.hand = {
+        'hand_id': 'H_DEF', 'streets': {
+            'flop': {'actions': [{'pos': 'MP', 'action': 'b'}]},
+            'turn': {'actions': []}, 'river': {'actions': []}},
+        'current_street': 'flop'}
+
+    real = asis._pos_of
+
+    def pos_of_roto(pid, state_):
+        if pid == 'hero':
+            return 'SB'          # posicion incorrecta para el hero
+        return real(pid, state_)
+
+    monkeypatch.setattr(asis, '_pos_of', pos_of_roto)
+    jer = asis._jerarquia('hero', state)
+
+    assert jer is not None
+    # 'SB' es la posicion que el hero "tendria" segun el fallo: si el filtro
+    # por PID no existiera, entraria como pendiente.
+    assert 'SB' not in jer['pending'], (
+        'el hero debe excluirse por PID aunque _pos_of falle: %s'
+        % jer['pending'])
+
+
+def test_jerarquia_pasa_activos_y_no_pendientes(asis):
+    """Lo que `_jerarquia` DECLARA son los activos; el filtro es canónico."""
+    asis.rec._hand_positions = {'hero': 'BTN', 'p1': 'UTG', 'p2': 'CO'}
+    state = {'p1_state': 'activo', 'p2_state': 'activo',
+             'p3_state': 'inactivo',
+             'community': _cards('Qh', '7s', '2c')}
+    asis.rec.hand = {
+        'hand_id': 'H_ACT', 'streets': {
+            'flop': {'actions': [{'pos': 'UTG', 'action': 'x'}]},
+            'turn': {'actions': []}, 'river': {'actions': []}},
+        'current_street': 'flop'}
+    jer = asis._jerarquia('hero', state)
+    assert jer['pending_known'] is True
+    # UTG activo y ya actuado; CO activo y sin actuar; p3 inactivo
+    assert jer['pending'] == ['CO']
+
+
 def test_jerarquia_registra_ronda_que_vuelve(asis):
     """P0: si el hero actuó primero y vuelven aتربirle, el agresor
     posterior es el rival principal, no un pendiente."""
