@@ -8,6 +8,14 @@ Se para aquí: hay solapamiento, así que F7.2 queda bloqueada.
 - **Salida cruda:** `DOCS/AUDIT_NOPUEDE_ACTUAR.txt`
 - **Suite:** 610 passed, 1 skipped (591 → 610, +19)
 
+> Los dos `.txt` de este bloque (`AUDIT_NOPUEDE_ACTUAR.txt` e
+> `INVENTARIO_MULTIWAY_HEAD.txt`) **están en `.gitignore`**: `.gitignore:34`
+> trae `*.txt` y el proyecto solo versiona `.md` en `DOCS/` (verificado:
+> `baseline_folds_900.txt` tampoco está versionado). Son salidas de
+> herramienta, regenerables; este `.md` es la versión que sí queda en el
+> historial. Si se quieren versionar, hay que pasarlos con `git add -f`, y
+> esa decisión es de quien revise.
+
 ---
 
 ## 1. Representación real del all-in

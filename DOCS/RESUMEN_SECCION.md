@@ -248,10 +248,18 @@ demuestra capaz de fallar no puede usarse para decir que algo está bien.
 |---|---|
 | **CM-004** | 23 manos con la ciega del BB después de acciones voluntarias. El motor les asigna una subida que puede no haber ocurrido. **No migrable**: corregirlo exigiría inventar un orden. Alternativa: regrabar. |
 | **CM-002** | `H_0350`, cartas ausentes. No verificable sin el pantallazo; no reconstruir. |
-| **F7.2** | Decidir la política multiway sobre los datos de F7.1 (169 spots realmente multiway, no 297). |
+| **F7.2** | Decidir la política multiway. **BLOQUEADA por INC-001**: la cifra de "169 spots realmente multiway" queda invalidada — venía de una regla con 14,6 % de precisión. Ver `AUDIT_NOPUEDE_ACTUAR.md`. |
 | **Fase D** | Calibración. **Bloqueada en parte por CM-004**: CM-003 hace al BB más pasivo y CM-004 más agresivo; se anulan en dirección pero no en magnitud, así que el perfil del BB tiene un error de magnitud desconocida. |
 | `select_best` con `evs` vacío | contrato C4 sin especificar. |
 | `RangeState.position` | sigue naciendo vacía; 40 construcciones, 4 la pasan. Deuda documentada. |
+
+> **Aviso de vigencia.** La sección 5 de este documento describe el
+> multiway «que puede responder» con una regla que luego se auditsó y se
+> encontró mayoritariamente falsa. Sus cifras — 297, 169, 16,8 % y el
+> criterio «el all-in reclasifica 128 spots» — se conservan aquí como
+> registro de lo que se midió en aquel momento, **no** como base para
+> decidir. La cifra vigente es el intervalo 225–276 y su fundamento, en
+> [`AUDIT_NOPUEDE_ACTUAR.md`](AUDIT_NOPUEDE_ACTUAR.md).
 
 ---
 
@@ -265,6 +273,7 @@ demuestra capaz de fallar no puede usarse para decir que algo está bien.
 | `F62B_INSERCION.md` | las 4 preguntas del punto de inserción y el resultado |
 | `AUDIT_CONSUMIDORES.md` | por qué `inferred: true` sobrevive al pipeline |
 | `DATA_FUENTE_VS_RUNTIME.md` | qué es fuente y qué es runtime en `data/` |
+| `AUDIT_NOPUEDE_ACTUAR.md` | **INC-001**: representación real del all-in, el 14,6 % de precisión de la regla vieja, y el intervalo 225–276 que sustituye al 169 |
 
 Y los instrumentos, que son ejecutables:
 
