@@ -759,6 +759,110 @@ class Asistente:
                 activos.append(pos)
         return classify_villains(acts, hero_pos, activos)
 
+    # ------------------------------------------------------------------
+    # F6.2.b — rango del rival PRINCIPAL de la jerarquía
+    # ------------------------------------------------------------------
+    def _rango_main(self, state, jer, villain, hero, board, blockers,
+                    rs_villain):
+        """RangeState del rival `jer['main']`, para la `equity_main` del sombra.
+
+        `jer['main']` es una POSICION, no un pid. Resolverla es el trabajo
+        real de F6.2.b, y tiene que ser exacto:
+
+          - cero candidatos  -> no hay nadie en esa posición (no se inventa)
+          - varios candidatos-> la posición es ambigua (no se elige uno)
+
+        Un rival puede haber hecho fold en una calle ANTERIOR y seguir
+        `activo` ahora; por eso se exige `estado == 'activo'` además de que la
+        posición case. `jer['main']` no puede ser un fold de ESTA calle
+        (`classify_villains` saca `main` de agresores o de checkers, y un
+        fold no está en ninguna de las dos listas), pero la comprobación se
+        hace igual: es una defensa, no una suposición.
+
+        Devuelve (range_state | None, motivo, pid | None). El motivo va en el
+        vocabulario estable de `equity_main_note`.
+        """
+        main_pos = jer.get('main')
+        if not main_pos:
+            return None, 'main_position_unresolved: sin posicion principal', None
+
+        candidatos = [pid for pid in PLAYER_IDS
+                      if self._pos_of(pid, state) == main_pos
+                      and state.get(f'{pid}_state') == 'activo']
+        if len(candidatos) != 1:
+            return (None,
+                    'main_position_unresolved: %d candidatos para %s'
+                    % (len(candidatos), main_pos),
+                    None)
+        pid = candidatos[0]
+
+        # Si el principal ES el rival de producción, el rango ya está
+        # construido y bloqueado: reutilizarlo evita pagar `prob_vec` dos
+        # veces sin cambiar el resultado.
+        if pid == villain and rs_villain is not None:
+            return rs_villain, None, pid
+
+        perfil = self._perfil_for(pid, state)
+        spot, action = _preflop_spot(self.rec.hand, main_pos)
+        reach = self.models.range_model.prob_vec(
+            perfil, spot, action, pos=main_pos,
+            villain_pos=_pf_rival_pos(self.rec.hand, main_pos, spot))
+        rs = RangeState(reach=reach)
+        rs.set_known_cards(list(hero) + list(board) + list(blockers))
+        for st_v, facing, act, board_str in _villain_postflop_actions(
+                self.rec.hand, main_pos):
+            board_v = ([c.strip() for c in board_str.split(',')]
+                       if board_str else [])
+            rs.update(self.models.postflop_model.prob_vec(
+                perfil, st_v, facing, board_v, act))
+        return rs, None, pid
+
+    def _equity_main_sombra(self, state, jer, villain, hero, board, blockers,
+                            rs_villain, reg):
+        """Escribe las cuatro claves de `equity_main` sobre `reg`.
+
+        `reg` es el dict del registro sombra. ES LO UNICO que se escribe: por
+        eso la accion no puede cambiar. Cualquier fallo se anota con su
+        motivo y se sigue, nunca se propaga.
+
+        Los cuatro campos conservan el contrato ya inventariado:
+        `equity_main` (float o None), `equity_main_available` (bool),
+        `equity_main_source` (identidad del rival) y `equity_main_note`
+        (identificador estable del fallo).
+        """
+        def _dejar(motivo):
+            reg['equity_main'] = None
+            reg['equity_main_available'] = False
+            reg['equity_main_source'] = None
+            reg['equity_main_note'] = motivo
+
+        # El try envuelve TODO el cuerpo, no solo el cálculo: un fallo al
+        # construir el rango tampoco debe propagarse. El bloque sombra tiene
+        # su propia guarda, pero un método que se protege a sí mismo es seguro
+        # para cualquier llamador futuro.
+        try:
+            from .recommend_loop import _equity_vs_rival
+
+            rs_main, motivo, _pid_main = self._rango_main(
+                state, jer, villain, hero, board, blockers, rs_villain)
+
+            if rs_main is None:
+                # No se sustituye por `villain_pos`: justo se quiere medir un
+                # rival que puede ser DISTINTO del de producción.
+                _dejar(motivo)
+                return
+
+            eq_main, src_main, err_main = _equity_vs_rival(
+                rs_main, hero, board)
+        except Exception as e:          # no debe tumbar la recomendación
+            _dejar('error: %s' % e)
+            return
+
+        reg['equity_main'] = eq_main
+        reg['equity_main_available'] = eq_main is not None
+        reg['equity_main_source'] = src_main
+        reg['equity_main_note'] = err_main
+
     def _state_key(self, state):
         """Firma de la situación para deduplicar recomendaciones (incluye el
         hand_id para que una MANO NUEVA siempre recomiende de nuevo)."""
@@ -1057,6 +1161,18 @@ class Asistente:
             if jer and jer.get('main'):
                 _reg = shadow_equity(sit.equity, board, street, jer,
                                      equity_source=villain_pos)
+                # F6.2.b: equity contra el rango del rival PRINCIPAL de la
+                # jerarquía, que puede no ser `villain_pos`. EsCRIBE SOLO
+                # sobre `_reg`: `evs`, `rp` y `rules_select_best` quedan
+                # intactos, así que la acción no puede cambiar.
+                try:
+                    self._equity_main_sombra(state, jer, villain, hero, board,
+                                             blockers, rs, _reg)
+                except Exception as e:      # el registro nunca rompe la reco
+                    _reg['equity_main'] = None
+                    _reg['equity_main_available'] = False
+                    _reg['equity_main_source'] = None
+                    _reg['equity_main_note'] = 'error: %s' % e
                 _shadow_ctx = (jer, _reg)
                 label += (f' | jerarquía: principal={jer.get("main")}'
                           f' ({jer.get("main_reason")})'

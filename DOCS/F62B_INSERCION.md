@@ -93,6 +93,65 @@ Aun así, la resolución posición → pid debe exigir `state[pid_state] ==
 seguir spelled activo en el estado. Si no se encuentra exactamente un pid
 activo, se registra el motivo y no se sustituye por `villain_pos`.
 
+## Estado: APLICADO
+
+Commit de código: el de este bloque. Tests: `motor/test_equity_main_live.py`,
+16 casos.
+
+### Qué se añadió
+
+| sitio | qué |
+|---|---|
+| `Asistente._rango_main` | resuelve `jer['main']` (posición) → PID → `RangeState` |
+| `Asistente._equity_main_sombra` | escribe las 4 claves sobre `reg`, y solo sobre `reg` |
+| bloque sombra (L1059) | una llamada al productor, con guarda propia |
+
+### Las cuatro respuestas, comprobadas
+
+1. **El punto de inserción es correcto.** `_reg` se captura en `shadow_record`
+   después, así que escribir sobre él a L1059-1060 llega al registro.
+2. **El patrón de rango es replicable.** Se reutiliza tal cual
+   (`prob_vec` → `RangeState` → `set_known_cards` → refinado postflop). Si el
+   principal resulta ser el rival de producción, se **reutiliza `rs`** en vez
+   de pagar `prob_vec` dos veces.
+3. **`main` ≠ `villain_pos` es el caso normal.** El rango se construye para la
+   posición del principal, nunca para `villain_pos`.
+4. **`main` no puede ser un fold de esta calle** (`classify_villains` lo saca
+   de agresores o checkers), pero se exige `estado == 'activo'` al resolver la
+   posición, porque un rival puede haber foldeado en una calle *anterior*.
+
+### La invariancia, verificada de verdad
+
+El primer intento de test era **vacuo**: `_asis_postflop` sobrescribe
+`rec.hand` con una mano de flop vacío, así que la jerarquía no encontraba
+`main`, el bloque sombra no corría y comparar "mismo resultado" era
+trivialmente cierto. Detectado instrumentando el productor con un espía.
+
+Corregido, y con un guard explícito (`test_el_productor_se_ejecuta_de_verdad`)
+que falla si el escenario vuelve a quedarse sin agresor. **El guard está
+verificado**: se simuló la regresión y falla con el mensaje `VACUO`.
+
+La comparación usa la **huella completa del `EvTable`**, no solo `chosen`: si
+el producto se filtrara hasta la selección, aunque la acción coincidiera, el
+reparto de EVs delataría el cambio.
+
+### Casos de fallo cubiertos
+
+Todos dejan la decisión intacta y anotan el motivo:
+
+| caso | motivo registrado |
+|---|---|
+| nadie en la posición | `main_position_unresolved: 0 candidatos para …` |
+| posición ambigua | `main_position_unresolved: 2 candidatos para …` |
+| rango vacío tras blockers | `empty_range_after_blockers` |
+| excepción al calcular | `equity_calculation_failed: …` |
+| excepción en el productor | `error: …` |
+| rival no activo | `main_position_unresolved` |
+
+Ninguno devuelve `0.0`, y ninguno se convierte en recomendación de acción.
+
+---
+
 ## Requisitos de la salida (contrato ya inventariado, no se inventa)
 
 | clave | tipo |
