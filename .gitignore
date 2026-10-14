@@ -76,3 +76,9 @@ data/_snapshot_pre_audit/
 # fichero del repo. Guardar el SHA-256 en DOCS/ y el backup se identifica
 # tambien por git, porque hands_db.jsonl esta versionado.
 data/_backup_aplicar_correcciones/
+
+# Telemetria del modo sombra: se escribe CADA vez que el asistente en vivo
+# registra una situacion, y tambien al correr los tests. Es un log de
+# observacion, no una fuente: su valor esta en acumularse, no en versionarse.
+# Versionarlo solo anadiria ruido al diff de cada sesion.
+data/shadow_hierarchy.jsonl
