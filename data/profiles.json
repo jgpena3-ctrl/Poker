@@ -25,10 +25,10 @@
   "ANJO2017": {
     "player": "ANJO2017",
     "hero": false,
-    "n": 88,
+    "n": 89,
     "stats": {
-      "vpip": 0.2614,
-      "pfr": 0.1477,
+      "vpip": 0.2584,
+      "pfr": 0.1461,
       "b3": 0.027,
       "wtsd": 0.4286,
       "b4": 0.0,
@@ -51,7 +51,7 @@
     "label": "TIBURON",
     "subtype": "Regular",
     "stack_mean": 137.58,
-    "confidence": 0.596,
+    "confidence": 0.599,
     "reliability": "confiable"
   },
   "AZ de A": {
@@ -313,8 +313,8 @@
       "vpip": 0.4286,
       "pfr": 0.2857,
       "cbet": 1.0,
-      "bar": 0.0,
-      "f2bar": 0.5,
+      "bar": 0.5,
+      "f2bar": 0.3333,
       "wtsd": 0.3333,
       "wsd": 0.0,
       "b3": 0.0
@@ -386,6 +386,26 @@
     "subtype": "Loose-passive",
     "stack_mean": 16.54,
     "confidence": 0.657,
+    "reliability": "probable"
+  },
+  "CO": {
+    "player": "CO",
+    "hero": false,
+    "n": 0,
+    "stats": {
+      "f2bar": 1.0
+    },
+    "bins": {
+      "vpip": "n/a",
+      "pfr": "n/a",
+      "b3": "n/a",
+      "cbet": "n/a",
+      "wtsd": "n/a"
+    },
+    "label": "TIBURON",
+    "subtype": "unknown",
+    "stack_mean": null,
+    "confidence": 0.0,
     "reliability": "probable"
   },
   "CamiloG208": {
@@ -539,11 +559,11 @@
       "pfr": 0.0,
       "b3": 0.0,
       "c2cb": 1.0,
+      "f2bar": 0.0,
       "rb": 1.0,
       "wtsd": 0.5,
       "wsd": 1.0,
-      "bar": 0.0,
-      "f2bar": 0.0
+      "bar": 0.0
     },
     "bins": {
       "vpip": "loose",
@@ -561,10 +581,10 @@
   "ComboHunter": {
     "player": "ComboHunter",
     "hero": false,
-    "n": 29,
+    "n": 28,
     "stats": {
-      "vpip": 0.1724,
-      "pfr": 0.1034,
+      "vpip": 0.1786,
+      "pfr": 0.1071,
       "b3": 0.0,
       "wtsd": 0.1429,
       "wsd": 1.0,
@@ -582,7 +602,7 @@
     "label": "TIBURON",
     "subtype": "Regular",
     "stack_mean": 101.51,
-    "confidence": 0.537,
+    "confidence": 0.542,
     "reliability": "probable"
   },
   "CorajeRaise": {
@@ -723,12 +743,12 @@
   "Davi-Ari": {
     "player": "Davi-Ari",
     "hero": false,
-    "n": 104,
+    "n": 105,
     "stats": {
-      "vpip": 0.2019,
-      "pfr": 0.1731,
+      "vpip": 0.2,
+      "pfr": 0.1714,
       "b3": 0.0,
-      "wtsd": 0.1667,
+      "wtsd": 0.1538,
       "c2cb": 1.0,
       "f2bar": 0.5,
       "b4": 0.0,
@@ -748,7 +768,7 @@
     "label": "TIBURON",
     "subtype": "Regular",
     "stack_mean": 123.51,
-    "confidence": 0.623,
+    "confidence": 0.636,
     "reliability": "confiable"
   },
   "David P.": {
@@ -1031,13 +1051,13 @@
     "stats": {
       "vpip": 0.8269,
       "pfr": 0.0192,
-      "f2bar": 0.5556,
+      "f2bar": 0.5,
       "wtsd": 0.3158,
       "b3": 0.0714,
       "cbet": 1.0,
       "f2cb": 1.0,
       "bar": 1.0,
-      "rb": 0.3333,
+      "rb": 0.4,
       "wsd": 0.6667,
       "c2cb": 1.0,
       "r2cb": 1.0
@@ -1167,10 +1187,10 @@
   "Hachirama": {
     "player": "Hachirama",
     "hero": false,
-    "n": 40,
+    "n": 41,
     "stats": {
-      "vpip": 0.825,
-      "pfr": 0.275,
+      "vpip": 0.8049,
+      "pfr": 0.2683,
       "b3": 0.1875,
       "wtsd": 0.0541,
       "cbet": 0.6667,
@@ -1192,24 +1212,24 @@
     "label": "TIBURON",
     "subtype": "Loose-passive",
     "stack_mean": 59.91,
-    "confidence": 0.872,
+    "confidence": 0.87,
     "reliability": "confiable"
   },
   "HarryPoker18": {
     "player": "HarryPoker18",
     "hero": false,
-    "n": 199,
+    "n": 198,
     "stats": {
-      "vpip": 0.2211,
-      "pfr": 0.1307,
+      "vpip": 0.2172,
+      "pfr": 0.1313,
       "b3": 0.0128,
       "wtsd": 0.2609,
       "c2cb": 1.0,
-      "f2bar": 0.5455,
+      "f2bar": 0.6,
       "f2cb": 1.0,
       "bar": 0.75,
       "wsd": 0.8333,
-      "rb": 0.6667,
+      "rb": 0.75,
       "b4": 0.0,
       "cbet": 0.4444
     },
@@ -1223,7 +1243,7 @@
     "label": "TIBURON",
     "subtype": "Regular",
     "stack_mean": 85.41,
-    "confidence": 0.712,
+    "confidence": 0.709,
     "reliability": "confiable"
   },
   "Hector1320": {
@@ -1317,8 +1337,8 @@
     "stats": {
       "vpip": 0.2532,
       "pfr": 0.2152,
-      "wtsd": 0.0217,
-      "b3": 0.0909,
+      "wtsd": 0.0213,
+      "b3": 0.087,
       "f2cb": 1.0,
       "b4": 0.0,
       "bar": 0.75,
@@ -1337,7 +1357,7 @@
     "label": "TIBURON",
     "subtype": "Regular",
     "stack_mean": 111.69,
-    "confidence": 0.751,
+    "confidence": 0.743,
     "reliability": "confiable"
   },
   "Isagomez": {
@@ -1480,18 +1500,18 @@
   "Jarduan": {
     "player": "Jarduan",
     "hero": true,
-    "n": 858,
+    "n": 861,
     "stats": {
-      "vpip": 0.3228,
-      "pfr": 0.2284,
-      "cbet": 0.3736,
-      "b3": 0.0688,
+      "vpip": 0.3229,
+      "pfr": 0.2288,
+      "cbet": 0.3804,
+      "b3": 0.0683,
       "b4": 0.0526,
       "bar": 0.8305,
-      "rb": 0.66,
+      "rb": 0.6667,
       "f2cb": 1.0,
       "c2cb": 1.0,
-      "f2bar": 0.4714,
+      "f2bar": 0.4648,
       "r2cb": 1.0
     },
     "bins": {
@@ -1504,7 +1524,7 @@
     "label": "TIBURON",
     "subtype": "Regular",
     "stack_mean": 124.26,
-    "confidence": 0.77,
+    "confidence": 0.757,
     "reliability": "individual"
   },
   "Jeffer30bog": {
@@ -1757,30 +1777,30 @@
   "Juancuellar987": {
     "player": "Juancuellar987",
     "hero": false,
-    "n": 13,
+    "n": 12,
     "stats": {
-      "vpip": 0.6923,
-      "pfr": 0.0769,
-      "b3": 0.0,
-      "f2bar": 0.6,
+      "vpip": 0.75,
+      "pfr": 0.0833,
       "wtsd": 0.4,
       "wsd": 0.5,
+      "f2bar": 0.5,
       "cbet": 0.0,
       "bar": 0.0,
       "rb": 0.5,
+      "b3": 0.0,
       "c2cb": 1.0
     },
     "bins": {
       "vpip": "loose",
       "pfr": "mid",
-      "b3": "mid",
+      "b3": "high",
       "cbet": "low",
       "wtsd": "mid"
     },
     "label": "PEZ",
     "subtype": "Loose-passive",
     "stack_mean": 47.46,
-    "confidence": 0.637,
+    "confidence": 0.639,
     "reliability": "probable"
   },
   "Juanfelipe1": {
@@ -1818,8 +1838,8 @@
     "stats": {
       "vpip": 0.32,
       "pfr": 0.02,
-      "b3": 0.0417,
-      "wtsd": 0.0541,
+      "b3": 0.0435,
+      "wtsd": 0.0556,
       "b4": 0.0,
       "bar": 1.0,
       "wsd": 0.0
@@ -1834,7 +1854,7 @@
     "label": "TIBURON",
     "subtype": "Passive-reg",
     "stack_mean": 62.03,
-    "confidence": 0.66,
+    "confidence": 0.659,
     "reliability": "confiable"
   },
   "Juanpablogrz": {
@@ -2264,7 +2284,7 @@
     "hero": false,
     "n": 30,
     "stats": {
-      "vpip": 0.5,
+      "vpip": 0.4667,
       "pfr": 0.0333,
       "wtsd": 0.3077,
       "b3": 0.0,
@@ -2286,7 +2306,7 @@
     "label": "PEZ",
     "subtype": "Loose-passive",
     "stack_mean": 29.62,
-    "confidence": 0.678,
+    "confidence": 0.674,
     "reliability": "probable"
   },
   "Memelo": {
@@ -2319,25 +2339,24 @@
     "n": 35,
     "stats": {
       "vpip": 0.4,
-      "pfr": 0.0571,
+      "pfr": 0.0286,
       "wtsd": 0.0,
       "f2bar": 0.8333,
       "b4": 0.0,
-      "b3": 0.1111,
-      "cbet": 0.0,
+      "b3": 0.0,
       "bar": 1.0
     },
     "bins": {
       "vpip": "mid",
       "pfr": "low",
       "b3": "mid",
-      "cbet": "low",
+      "cbet": "n/a",
       "wtsd": "low"
     },
     "label": "PEZ",
     "subtype": "Passive-reg",
     "stack_mean": 20.13,
-    "confidence": 0.779,
+    "confidence": 0.736,
     "reliability": "probable"
   },
   "Mrcash": {
@@ -2511,7 +2530,7 @@
     "hero": false,
     "n": 16,
     "stats": {
-      "vpip": 0.3125,
+      "vpip": 0.375,
       "pfr": 0.0,
       "b4": 0.0,
       "wtsd": 0.2,
@@ -2530,7 +2549,7 @@
     "label": "PEZ",
     "subtype": "Passive-reg",
     "stack_mean": 46.49,
-    "confidence": 0.574,
+    "confidence": 0.62,
     "reliability": "probable"
   },
   "Ocampo99": {
@@ -2896,7 +2915,7 @@
     "n": 46,
     "stats": {
       "vpip": 0.4565,
-      "pfr": 0.1522,
+      "pfr": 0.1304,
       "b3": 0.0,
       "wtsd": 0.2059,
       "wsd": 0.7143,
@@ -2918,7 +2937,7 @@
     "label": "PEZ",
     "subtype": "Loose-passive",
     "stack_mean": 20.69,
-    "confidence": 0.689,
+    "confidence": 0.678,
     "reliability": "confiable"
   },
   "Rompechuchas": {
@@ -2951,10 +2970,10 @@
   "SAE_AAAA": {
     "player": "SAE_AAAA",
     "hero": false,
-    "n": 18,
+    "n": 17,
     "stats": {
-      "vpip": 0.5,
-      "pfr": 0.2778,
+      "vpip": 0.5294,
+      "pfr": 0.2941,
       "b3": 0.1667,
       "wtsd": 0.0833,
       "f2bar": 0.3333,
@@ -2974,16 +2993,16 @@
     "label": "TIBURON",
     "subtype": "Loose-passive",
     "stack_mean": 108.78,
-    "confidence": 0.839,
+    "confidence": 0.846,
     "reliability": "probable"
   },
   "SamPachero30": {
     "player": "SamPachero30",
     "hero": false,
-    "n": 48,
+    "n": 47,
     "stats": {
-      "vpip": 0.2917,
-      "pfr": 0.25,
+      "vpip": 0.2979,
+      "pfr": 0.2553,
       "b3": 0.0,
       "wtsd": 0.0769,
       "cbet": 0.125,
@@ -3004,7 +3023,7 @@
     "label": "TIBURON",
     "subtype": "Regular",
     "stack_mean": 114.68,
-    "confidence": 0.789,
+    "confidence": 0.782,
     "reliability": "confiable"
   },
   "Samuel1598": {
@@ -3280,28 +3299,6 @@
     "confidence": 0.565,
     "reliability": "probable"
   },
-  "UTG": {
-    "player": "UTG",
-    "hero": false,
-    "n": 3,
-    "stats": {
-      "vpip": 0.3333,
-      "pfr": 0.0,
-      "wtsd": 0.0
-    },
-    "bins": {
-      "vpip": "mid",
-      "pfr": "mid",
-      "b3": "n/a",
-      "cbet": "n/a",
-      "wtsd": "mid"
-    },
-    "label": "PEZ",
-    "subtype": "Regular",
-    "stack_mean": null,
-    "confidence": 0.496,
-    "reliability": "probable"
-  },
   "Valentina22": {
     "player": "Valentina22",
     "hero": false,
@@ -3360,7 +3357,7 @@
       "b3": 0.0,
       "rb": 0.6667,
       "wtsd": 0.2222,
-      "f2bar": 0.5714,
+      "f2bar": 0.625,
       "f2cb": 1.0,
       "c2cb": 1.0,
       "wsd": 0.5,
@@ -3390,6 +3387,7 @@
       "wtsd": 0.2857,
       "b4": 0.0,
       "wsd": 0.0,
+      "c2cb": 1.0,
       "rb": 1.0,
       "cbet": 1.0
     },
@@ -3403,7 +3401,7 @@
     "label": "PEZ",
     "subtype": "Regular",
     "stack_mean": 25.85,
-    "confidence": 0.468,
+    "confidence": 0.458,
     "reliability": "probable"
   },
   "anro": {
@@ -3677,7 +3675,7 @@
       "rb": 0.0,
       "b4": 0.0,
       "cbet": 0.3333,
-      "f2bar": 0.2778,
+      "f2bar": 0.3158,
       "c2cb": 1.0,
       "r2cb": 1.0,
       "f2cb": 1.0,

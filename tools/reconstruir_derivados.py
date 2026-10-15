@@ -74,6 +74,21 @@ def cmd_backup():
     with open(os.path.join(snap, '_hashes.json'), 'w', encoding='utf-8') as f:
         json.dump({'commit': _head(), 'dirty': bool(dirty),
                    'files': hashes}, f, indent=2)
+    # --- paso 3: el BASELINE de metricas -------------------------------
+    #
+    # Este paso estaba en el docstring desde que se escribio el script, y NUNCA
+    # se implemento: `cmd_backup` solo escribia `_hashes.json`, y
+    # `cmd_comparar` abre `baseline_metricas.json`. O sea que `comparar` lleva
+    # roto desde el primer dia, con un FileNotFoundError en vez de una
+    # comparacion.
+    #
+    # No se ha notado porque `backup` y `regen` se usan mucho y `comparar` no
+    # se usa nunca —que es exactamente como se rompe una cosa en silencio—.
+    baseline = _metricas()
+    with open(os.path.join(snap, 'baseline_metricas.json'), 'w',
+              encoding='utf-8') as f:
+        json.dump(baseline, f, indent=2, ensure_ascii=False)
+    print('\nbaseline -> %s' % os.path.join(snap, 'baseline_metricas.json'))
     print('\nbackup -> %s' % snap)
     print('verifica antes de continuar: comparar los hashes con _hashes.json')
     return 0
