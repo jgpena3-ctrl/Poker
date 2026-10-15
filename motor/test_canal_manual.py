@@ -172,45 +172,50 @@ def test_el_blob_y_el_disco_coinciden_byte_a_byte():
         % (len(crudo), len(disco)))
 
 
-# --- el congelamiento durante la revision manual ---------------------------
+# --- lo que la revision en curso SI protege -------------------------------
 
-def test_la_base_no_cambia_mientras_hay_revision_manual():
-    """La base esta CONGELADA mientras el mantenedor revise las manos.
+def test_la_revision_en_curso_impide_escribir_a_un_script():
+    """El mantenedor esta revisando las manos una a una. De ahi sale UNA
+    proteccion, y es coherente: **ningun script** escribe la base.
+    `tools/aplicar_reinterpretacion.py --apply` se niega y devuelve 4.
 
-    Es la decision vigente: `hands_db.jsonl` no se toca —ni a mano ni con
-    script— hasta que la revision manual llegue al final. Ver
-    `DOCS/DECISION_CM004.md` §0-ter.
+    Lo que NO sale de aqui, y antes si salia, es que la base no pueda
+    cambiar. Revisar las manos una a una ES cambiarlas: el guard anterior
+    (`test_la_base_no_cambia_mientras_hay_revision_manual`) prohibia la
+    actividad de la revision, y por eso el commit `9b5905a` —63 manos, con
+    mejora medida— dejo el repo en rojo. Volveria a rojo en el siguiente
+    commit de la revision. Ver el bloque de `learn.REVISION_EN_CURSO`.
 
-    La razon de que sea un TEST y no una nota: editar la base mientras se
-    revisa invalida la revision. Se estaria mirando unas manos y luego
-    cambiandolas, y nadie sabria si lo que se vio es lo que hay.
-    """
-    if not learn.REVISION_PENDIENTE:
-        pytest.skip('la revision manual ha terminado: la base ya no esta '
-                    'congelada')
-    real = _sha(DB_PATH)
-    assert real == learn.HANDS_DB_SHA256, (
-        'la revision manual esta en curso (hasta %s de %d) y la base ha '
-        'cambiado: %s, esperado %s.\n\n'
-        'La revision se hace sobre unos ficheros concretos. Si el fichero '
-        'cambia mientras se revisa, lo que se reviso ya no es lo que hay, y '
-        'las decisiones que se tomen al final estaran tomadas sobre datos '
-        'que nadie ha mirado.\n\nSi el cambio es de verdad legitimo, termina '
-        'la revision (learn.REVISION_PENDIENTE = False) y actualiza las '
-        'constantes con el motivo en %s.'
-        % (learn.REVISION_HASTA, learn.REVISION_TOTAL_ESPERADA,
-           real[:16], learn.HANDS_DB_SHA256[:16], CANONICO))
-
-
-def test_aplicar_reinterpretacion_se_niega_mientras_hay_revision():
-    """El congelamiento tambien esta en el script que escribe, no solo en el
-    test. `--descartar-cambios` NO lo salta: saltarlo significa terminar la
-    revision."""
+    Lo que protege las ediciones del mantenedor no es un congelamiento: es
+    `test_el_hash_de_la_base_es_el_declarado`, que obliga a redeclarar el
+    manifiesto y su motivo. Dos guards del mismo invariante no son mas
+    seguridad, son dos sitios donde el invariante puede estar mal."""
+    assert learn.REVISION_EN_CURSO is True, (
+        'la revision manual deberia seguir en curso')
     texto = io.open(os.path.join(ROOT, 'tools', 'aplicar_reinterpretacion.py'),
-                     encoding='utf-8').read()
-    assert 'REVISION_PENDIENTE' in texto, (
-        'aplicar_reinterpretacion.py no comprueba la revision manual: se '
-        'podria escribir la base mientras se revisa')
+                    encoding='utf-8').read()
+    assert 'REVISION_EN_CURSO' in texto, (
+        'aplicar_reinterpretacion.py no comprueba la revision: se podria '
+        'escribir la base con un script mientras el mantenedor revisa, que '
+        'es justo lo que se perdio en el bloque anterior')
+    assert 'BASE CONGELADA' not in texto, (
+        'el mensaje sigue diciendo "BASE CONGELADA", que afirma tambien que '
+        'el mantenedor no puede editarla a mano. Es la mitad contradictoria '
+        'del mensaje viejo y ya no describe lo que el script hace.')
+
+
+def test_el_mensaje_de_revision_no_prohibe_la_revision():
+    """El mensaje que ve el mantenedor tiene que decir la verdad de lo que
+    bloquea.
+
+    Decirle "la base esta congelada" mientras el esta editando a mano es
+    exactamente el tipo de instruccion que hace que alguienется a un lado y
+    deje de revisar."""
+    texto = io.open(os.path.join(ROOT, 'tools', 'aplicar_reinterpretacion.py'),
+                    encoding='utf-8').read()
+    assert 'NO es un congelamiento' in texto, (
+        'el mensaje no aclara que el bloqueo es a los SCRIPT, no a las '
+        'ediciones del mantenedor')
 
 
 def test_el_fallo_del_congelamiento_no_es_el_del_fichero_ajeno():

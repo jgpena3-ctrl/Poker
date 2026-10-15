@@ -4,18 +4,24 @@
 clasificación de multiway.
 **Implementación:** `motor/multiway.py`
 **Decisión:** revision_1 (la regla nueva sustituye a la vieja).
-**Denominador:** **519 puntos de política**, sobre la ventana de 877 manos
+**Denominador:** **521 puntos de política**, sobre la ventana de 877 manos
 (las 23 de CM-004 están excluidas: `EXCLUSION_CM004.md`).
 **Cifras:** medidas por `python tools/auditar_solapamiento_multiway.py`, que
 importa `motor/multiway.py::metrica_politica()`. El instrumento vive en el
 motor y el script y los tests lo importan: una copia en cada sitio es
 exactamente como vuelve un bug.
 
-> **Recalculadas el 2026-10-14.** Estas cifras se publicaron antes sobre el
-> fichero de 1280 líneas. El fichero tiene 1258, y la ventana de 877 líneas
-> contiene ahora **otras 70 manos**: al borrar 22 del rango entró gente que
-> estaba fuera. El denominador pasó de 507 a 519 y **el porcentaje de 44,6 %
-> a 45,9 %**. No es un redondeo: es otra muestra. Ver `RANGO_VIGENTE.md` §4.
+> **Recalculadas el 2026-10-15.** Estas cifras se publicaron antes sobre el
+> fichero de 1280 líneas, luego sobre el de 1258 de `5c41b23`, y ahora sobre el
+> estado vigente `9b5905a`, que cambió **63 manos más de la ventana**.
+> El denominador pasó de 507 a 519 a **521**, y el porcentaje se quedó en
+> **45,9 %** — pero las cuentas de dentro no: HU pasó de 281 a 282 y MULTIWAY
+> de 238 a **239**.
+>
+> No es un redondeo: es otra muestra, por tercera vez en tres bloques, y
+> siempre por el mismo motivo —las manos de debajo cambiaron—. Por eso esta
+> tabla se **regenera** con `tools/auditar_solapamiento_multiway.py` y no se
+> ajusta a mano. Ver `CANAL_MANUAL_CERRADO.md` §4 y `RANGO_VIGENTE.md` §4.
 
 > Este contrato va **antes** que la política multiway. Ningún consumidor
 > puede cablear la regla sin este documento, y ningún documento puede
@@ -162,7 +168,7 @@ Una **acción del hero**. Dos motivos, y los dos importan:
 
 - Si el hero **apuesta y luego tiene que decidir otra vez ante una
   resubida**, son dos decisiones con dos situaciones distintas: entre una y
-  otra puede foldear un rival o incorporarse otro. Medido: **110 calles**
+  otra puede foldear un rival o incorporarse otro. Medido: **112 calles**
   de la ventana tienen 2 o 3 acciones del hero.
 - Una calle con acciones en la que el hero **no aparece** no es un punto
   de decisión: no hay nada que decidir. Y al restar 1 al número de activos
@@ -177,28 +183,34 @@ distintos es precisamente lo que esta sección prepara.
 | | puntos |
 |---|---|
 | calles inspeccionadas (877 manos × 3 postflop) | **2631** |
-| · sin ninguna acción | 1353 |
-| · con acciones pero sin acción del hero | 730 |
-| · con ≥1 acción del hero | 548 |
-| **acciones del hero = puntos de decisión** | **656** |
-| · HU | 320 |
-| · MULTIWAY | 258 |
+| · sin ninguna acción | 1321 |
+| · con acciones pero sin acción del hero | 749 |
+| · con ≥1 acción del hero | 561 |
+| **acciones del hero = puntos de decisión** | **674** |
+| · HU | 321 |
+| · MULTIWAY | 275 |
 | · DESCONOCIDO | 52 |
 | · sin ningún rival al que responder | 26 |
 
 Las dos sumas cuadran y el script lo verifica con `assert`, no a ojo:
 
 ```
-1353 + 730 + 548 = 2631 calles
-320 + 258 + 52 + 26 = 656 puntos
+1321 + 749 + 561 = 2631 calles
+321 + 275 + 52 + 26 = 674 puntos
 ```
 
 > Una versión anterior de esta tabla sumaba 2718 en vez de 2700, porque
 > los 26 "sin rival" ya estaban dentro del bloque de "sin acción del hero".
 > El número era correcto; la presentación mentía. Por eso ahora hay `assert`
 > y un test que reproduce el cuadre.
+>
+> Y una versión anterior a esa sumaba 2631 calles pero **656** puntos. La
+> diferencia son 18 puntos y no es un error de suma: el commit `9b5905a`
+> cambió 63 manos de la ventana (§4 de `CANAL_MANUAL_CERRADO.md`) y el
+> denominador se movió con ellas. Cuando cambien las manos, cambian las cifras,
+> y por eso esta tabla se regenera en vez de ajustarse a ojo.
 
-### 5.4 La tabla cruzada, y por qué el denominador son 519
+### 5.4 La tabla cruzada, y por qué el denominador son 521
 
 Un punto **fold** es una decisión real pero **no consulta equity**: no hay nada
 que repartir entre HU y MULTIWAY para una política multiway. Cuenta como
@@ -207,41 +219,42 @@ compare con los que sí usan la equity.
 
 | clase | fold | no fold | total | **de política** |
 |---|---:|---:|---:|---:|
-| HU | 39 | **281** | 320 | **281** |
-| MULTIWAY | 36 | **238** | 274 | **238** |
+| HU | 39 | **282** | 321 | **282** |
+| MULTIWAY | 36 | **239** | 275 | **239** |
 | DESCONOCIDO | 9 | 43 | 52 | 0 |
 | sin ningún rival al que responder | 9 | 17 | 26 | 0 |
-| **TOTAL** | **93** | **579** | **672** | **519** |
+| **TOTAL** | **93** | **581** | **674** | **521** |
 
 Tres cuadres, y el script los verifica con `assert`:
 
 ```
-519 + 43 + 17 = 579 no-fold  ->  + 93 folds  =  672 puntos
-519 = 281 HU + 238 MULTIWAY
+521 + 43 + 17 = 581 no-fold  ->  + 93 folds  =  674 puntos
+521 = 282 HU + 239 MULTIWAY
 ```
 
-> **El denominador son 519, y antes fueron 578 y luego 507.** La primera
-> versión de este documento publicaba 578, que incluía 71 folds del hero
-> dentro de HU y MULTIWAY. Corregido, bajó a 507. Y al recalcular sobre el
-> fichero actual ha subido a **519**, porque la ventana ya no contiene las
-> mismas manos.
+> **El denominador son 521, y antes fueron 578, luego 507 y luego 519.** La
+> primera versión de este documento publicaba 578, que incluía 71 folds del
+> hero dentro de HU y MULTIWAY. Corregido, bajó a 507; al recalcular sobre el
+> fichero de `5c41b23` subió a 519; y con el estado vigente (`9b5905a`) son
+> **521**. Tres veces en tres bloques, siempre porque la ventana había cambiado,
+> nunca por un redondeo.
 >
-> El porcentaje es la parte que importa: **44,6 % → 45,9 %**. Con cualquiera
-> de los dos, el multiway es casi la mitad de las decisiones y no se puede
-> seguir entrando en él en silencio. Que se mueva un punto no cambia la
-> política; que se moviera diez, sí, y por eso está aquí y no en un informe.
+> El porcentaje es la parte que importa: **44,6 % → 45,9 %**. Con cualquiera de
+> los dos, el multiway es casi la mitad de las decisiones y no se puede seguir
+> entrando en él en silencio. Que se mueva un punto no cambia la política; que
+> se moviera diez, sí, y por eso está aquí y no en un informe.
 
 De los 43 desconocidos **no fold**, 29 serían multiway si en ellos nadie
 estuviera all-in. La cota sale de ahí y con el **mismo criterio** que la
 métrica principal — sin contar los 9 folds de esa misma fila:
 
 ```
-238 (base) + 29 (techo sin evidencia) = 267
+239 (base) + 29 (techo sin evidencia) = 268
 ```
 
 ### 5.5 ⚠ La cifra que cambia la política
 
-> ## MULTIWAY = 238 de 519 = **45,9 %**
+> ## MULTIWAY = 239 de 521 = **45,9 %**
 >
 > **Antes F7.1 decía 16,8 %.** Con el mismo nombre de métrica pero otro
 > denominador, el multiway casi se triplica.
@@ -260,13 +273,13 @@ restaba un rival de más al excluirlo. El denominador viejo estaba
 inflado por puntos que no son decisiones, y el multiway estaba medido por
 calle, no por instante.
 
-La corrección temporal, medida **sobre los mismos 519 puntos de política** —
+La corrección temporal, medida **sobre los mismos 521 puntos de política** —
 sin folds, como la métrica principal:
 
 | | MULTIWAY |
 |---|---:|
-| por calle | 160 |
-| **por instante** | **238** |
+| por calle | 161 |
+| **por instante** | **239** |
 | la regla por calle se queda | **78 spots corto** |
 
 > Compararla con folds dentro era medir una cosa contra otra: el numerador
@@ -283,7 +296,8 @@ sin folds, como la métrica principal:
 | 174 MW | acción del hero | evidencia, por calle | **sustituida**: ignora el orden |
 | 258 MW (cota 287) | acción del hero | evidencia, por instante | **sustituida**: el denominador llevaba folds |
 | 226 MW (cota 255) | acción del hero | por instante, sin folds | **sustituida**: ventana anterior |
-| **238 MW (cota 267)** | **acción del hero** | **por instante, sin folds, ventana vigente** | **vigente** |
+| 238 MW (cota 267) | acción del hero | por instante, sin folds | **sustituida**: ventana anterior |
+| **239 MW (cota 268)** | **acción del hero** | **por instante, sin folds, ventana vigente** | **vigente** |
 
 El 16,8 % de `RESUMEN_SECCION.md` no significa nada con este denominador.
 

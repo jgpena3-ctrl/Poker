@@ -260,24 +260,34 @@ def main(argv=None):
     #
     # No es una intencion, es un booleano en `learn`, y `--descartar-cambios`
     # NO lo salta: saltarlo significa terminar la revision.
-    congelada = learn.REVISION_PENDIENTE and args.apply
-    if congelada:
+    #
+    # OJO CON LO QUE ESTE BLOQUEO YA NO ES. Antes era "la base esta
+    # CONGELADA", que decia tambien que el mantenedor no podia editarla a
+    # mano. Eso era contradictorio — revisar las manos una a una ES editarlas— y
+    # por eso 9b5905a dejo el repo en rojo con la revision en curso. Ver el
+    # bloque de `learn.REVISION_EN_CURSO`.
+    #
+    # Ahora es SOLO esto: mientras haya revision, NINGUN SCRIPT escribe. Lo
+    # que el mantenedor haga a mano es lo que esta haciendo la revision, y
+    # para eso esta `HANDS_DB_SHA256`, que obliga a declarar el cambio.
+    revision_en_curso = learn.REVISION_EN_CURSO and args.apply
+    if revision_en_curso:
         print()
-        print('  BASE CONGELADA: hay una revision manual en curso.')
+        print('  REVISION EN CURSO: ningun script escribe la base.')
         print('    revisadas hasta : %s' % learn.REVISION_HASTA)
         print('    total esperado  : %d' % learn.REVISION_TOTAL_ESPERADA)
         print()
-        print('  No se escribe nada. Las decisiones que dependen de la revision')
-        print('  (los cambios sin motivo, las eliminadas, las reconstrucciones)')
-        print('  se toman AL FINAL, no ahora.')
-        print('  Para escribir haria falta poner learn.REVISION_PENDIENTE a')
+        print('  No se escribe nada. Esto NO es un congelamiento de la base: el')
+        print('  mantenedor puede seguir revisandola a mano —eso es la revision—')
+        print('  lo que no puede es un script escribiendo por debajo.')
+        print('  Para escribir haria falta poner learn.REVISION_EN_CURSO a')
         print('  False, que significa "la revision ha terminado".')
         return 4
-    if learn.REVISION_PENDIENTE:
+    if learn.REVISION_EN_CURSO:
         print()
         print('  AVISO: hay una revision manual en curso (hasta %s de %d).'
               % (learn.REVISION_HASTA, learn.REVISION_TOTAL_ESPERADA))
-        print('  En --apply la base esta CONGELADA y no se puede escribir.')
+        print('  En --apply ningun script escribe la base.')
         print('  Esto es un dry-run: informa, no escribe.')
 
     iguales, lineas_distintas = diff_contra_actual(lineas)

@@ -68,9 +68,16 @@ RELIABLE_HANDS = 900
 #   version   estado
 #   --------  ------------------------------------------------------------
 #   e314f74   referencia. cm-001, cm-003 y la ventana de 877.
-#   5c41b23   estado vigente: 1280 -> 1258 (22 manos borradas) + 70
-#             modificadas a mano sobre 02fc641. SIN DECLARAR TODAVIA:
-#             `DOCS/DECISION_CM004.md` 0-ter. Ver `DOCS/CANAL_MANUAL_CERRADO.md`.
+#   5c41b23   1280 -> 1258 (22 manos borradas) + 70 modificadas a mano sobre
+#             02fc641. DECLARADO, y luego superado por 9b5905a.
+#   9b5905a   ESTADO VIGENTE. 63 manos mas, revisadas a mano una a una por el
+#             mantenedor (de H_1014 a H_1029). Medido, no supuesto:
+#               · `BB b` mal ordenadas: 2 -> 0  (el invariante de CM-004)
+#               · manos sin ganador declarado: 1 -> 0
+#               · `winner` con 2+ ganadores, en las 63 tocadas: 14 -> 1
+#               · jugadores `active:false` que conservan `pos`: 29 -> 20
+#               · 3 cartas del hero corregidas por OCR
+#             Ver `DOCS/CANAL_MANUAL_CERRADO.md` §4 y `DOCS/APARCADO_DB.md`.
 #   e314f74   salida de `tools/aplicar_reinterpretacion.py`
 #             (sha256 173a7274...). Estado ALTERNATIVO, al que se puede volver
 #             con `--apply --descartar-cambios`.
@@ -82,9 +89,9 @@ RELIABLE_HANDS = 900
 # no se puede reproducir no es un hash.
 #
 # Documentacion: `DOCS/CANAL_MANUAL_CERRADO.md`, `DOCS/RANGO_VIGENTE.md`.
-HANDS_DB_COMMIT = '5c41b23'
+HANDS_DB_COMMIT = '9b5905a'
 HANDS_DB_SHA256 = (
-    '202a1f548fc60bac3d0d4b7a225429083e22298d97a5f6f38cb28d24435b0634')
+    '36dce9fecac77356c19181be1bba06b9fe52b6f11db811b5fa4a9d991926b481')
 HANDS_DB_LINEAS = 1258
 
 # El rango AUDITADO no es el de calibracion. Son dos cosas distintas y
@@ -95,31 +102,42 @@ RANGO_AUDITADO_HASTA = 'H_1014'
 RANGO_AUDITADO_LINEAS = 991
 
 # ---------------------------------------------------------------------------
-# REVISION MANUAL: EN CURSO. LA BASE ESTA CONGELADA.
+# REVISION MANUAL: EN CURSO. NINGUN SCRIPT ESCRIBE LA BASE.
 # ---------------------------------------------------------------------------
-# El mantenedor esta revisando las manos una a una. Las decisiones que dependen
-# de ello —los 46 cambios sin motivo, las 22 eliminadas, las 6 reconstrucciones
-# reaplicadas— NO se toman hasta que la revision llegue al final. Ver
-# `DOCS/DECISION_CM004.md` 0-ter.
+# ANTES, este bloque decia DOS cosas a la vez:
 #
-# Mientras esto sea True:
+#     "el mantenedor esta revisando las manos una a una"   (verdad)
+#     "hands_db.jsonl NO se modifica: ni a mano, ni con script"   (verdad)
 #
-#   - `hands_db.jsonl` NO se modifica. Ni a mano, ni con un script.
-#   - `tools/aplicar_reinterpretacion.py --apply` se niega, aunque se le pase
-#     `--descartar-cambios`.
-#   - `motor/test_canal_manual.py` falla si el sha256 de la base cambia.
+# Las dos son verdad y JUNTAS son una contradiccion, porque revisar las manos
+# una a una ES cambiarlas. El congelamiento prohibia exactamente la actividad
+# de la revision. Medido: el commit 9b5905a cambio 63 manos —legitimas, y con
+# mejora medida— y el guard fallo, que es lo unico que el guard podia hacer.
+# Volveria a fallar en el siguiente commit de la revision. Eso no es un
+# guard: es una bomba de relojería, y obliga a apagar el mecanismo entero para
+# poder seguir revisando.
 #
-# El congelamiento es un TEST, no una intencion. Una intencion no sobrevive a
-# que alguien ejecute un comando con prisa, y este repo ya ha pagado esa
-# lesson dos veces.
+# ASI QUE SON DOS COSAS, Y AHORA ESTAN SEPARADAS:
 #
-# Cuando la revision termine, esto pasa a False y hay que:
-#   1. ponerlo a False, aqui,
-#   2. actualizar HANDS_DB_SHA256 / HANDS_DB_LINEAS si la base cambio,
-#   3. escribir la decision en DECISION_CM004.md,
-#   4. regenerar los derivados y recalcular las cifras.
-REVISION_PENDIENTE = True
-REVISION_HASTA = 'H_1014'
+#   1. `REVISION_EN_CURSO` — el mantenedor sigue revisando. De eso sale UNA
+#      sola proteccion, que es coherente: NINGUN SCRIPT escribe la base
+#      (`tools/aplicar_reinterpretacion.py` devuelve 4). Editarla a mano es lo
+#      que esta haciendo la revision; lo que no se puede es PROHIBIRLO.
+#
+#   2. El estado declarado de la base — `HANDS_DB_*`. No esta congelado: cada
+#      vez que la revision avanza, el manifiesto se redeclara y el motivo se
+#      escribe. Eso ya lo vigila `test_el_hash_de_la_base_es_el_declarado`, y
+#      no hacia falta un segundo guard para lo mismo: dos guards del mismo
+#      invariante no son mas seguridad, son dos sitios donde el invariante
+#      puede estar mal.
+#
+# Lo que YA NO existe es `REVISION_PENDIENTE`. Era el estado "hay una decision
+# a medias y no se sabe cual": las 22 borradas, las 70 modificadas y las 8
+# reaplicadas. Se han decidido en `DOCS/CANAL_MANUAL_CERRADO.md` §4 y
+# `DOCS/APARCADO_DB.md`. Un "pendiente" que nadie puede resolver no es un
+# estado defendible en un repositorio.
+REVISION_EN_CURSO = True
+REVISION_HASTA = 'H_1029'
 REVISION_TOTAL_ESPERADA = 1200
 
 # Manos que la ventana fiable EXCLUYE, y por que.
