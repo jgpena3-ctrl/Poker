@@ -174,15 +174,52 @@ python -m pytest motor recorder tests -q
 **Actualizar el hash sin escribir el motivo en este documento es editar a
 mano con más pasos.** Es la misma falta de trazabilidad, con más pasos.
 
-## 6. `aplicar_correcciones.py` todavía no declara su salida
+## 6. Quién escribe la base, medido
 
-Es el otro script que escribe este fichero, y **no declara el sha256 de lo
-que produce**. Mientras sea así, su salida es indistinguible de una edición
-manual, que es justo el problema que se quiere cerrar.
+> Esta sección **no** decía la verdad hasta ahora. Afirmaba que el canal
+> manual estaba cerrado sin haber comprobado quién escribe. Se ha medido:
+> `python tools/quien_escribe.py`, y `motor/test_quien_escribe.py` verifica
+> que la lista de aquí y la del instrumento coinciden.
 
-Hay un test que lo dice (`test_los_dos_scripts_de_escritura_declaran_a_que_script_se_debe`).
-Está pendiente de resolverse: o se le declara el SHA de salida, o se declara
-que ya no se usa.
+Hay **cinco** módulos que escriben `data/hands_db.jsonl`:
+
+| módulo | cómo | ¿guard? |
+|---|---|---|
+| `recorder/recorder_live.py` | `open(self.output_path, 'a')` | **no hace falta**: solo AÑADE manos, no puede destruirlas |
+| `recorder/record_hand.py` | `open(self.output_path, 'a')` | **no hace falta**, por lo mismo |
+| `hand_editor.py` | `_guardar_base()` → backup, temporal, `os.replace` | **sí**, añadido en este bloque (§6.1) |
+| `tools/aplicar_reinterpretacion.py` | `shutil.copy2` / `os.replace` | **sí**: `estado_del_fichero_actual()` → 3, revisión en curso → 4, SHA de salida declarado |
+| `tools/aplicar_correcciones.py` | `shutil.copy2` / `os.replace` | **sí**: backup verificado por SHA y rollback automático |
+
+Los otros cuatro módulos que tocan el fichero **solo leen**, y no les pasa
+nada: `motor/learn.py` escribe `preflop_stats.json`, no la base.
+
+> **Dos correcciones a lo que este mismo documento decía antes.**
+>
+> 1. Afirmaba que `aplicar_correcciones.py` «no declara el sha256 de lo que
+>    produce». **Es falso**: lo declara, y hay un test que lo comprueba.
+>    La afirmación era verdad en su día y nadie la actualizó.
+> 2. `hand_editor.py` **no aparecía en ninguna lista**. Es una GUI que
+>    reescribe las 1258 manos enteras. Eso sí era un agujero real.
+
+### 6.1 El guard de `hand_editor.py`
+
+Antes, `_write()` hacía `open(DATA_PATH, 'w')` a pelo: podía perder la base
+entera con un fallo de disco a mitad, y no había backup ni aviso.
+
+No se le **prohíbe** escribir —la revisión manual es editar el fichero, y sin
+eso el mantenedor no puede trabajar—, se le pone **red**:
+
+| | |
+|---|---|
+| backup `hands_db.jsonl.bak` | verificado por SHA antes de escribir nada |
+| escritura a `.tmp` + `os.replace` | atómica: un fallo deja la original intacta |
+| aviso de manifiesto obsoleto | si el hash nuevo no es el declarado, dice qué tres constantes actualizar |
+
+Si el backup no se verifica o la escritura falla, **no se escribe nada** y se
+dice. Hay dos tests que lo comprueban simulando justo esos dos fallos.
+
+---
 
 ## 7. Lo que este documento NO dice
 

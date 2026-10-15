@@ -1,8 +1,70 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
+import hashlib
 import json, os
+import shutil
 
 DATA_PATH = os.path.join(os.path.dirname(__file__), 'data', 'hands_db.jsonl')
+
+def _sha256_de(ruta):
+    h = hashlib.sha256()
+    with open(ruta, 'rb') as f:
+        for b in iter(lambda: f.read(1 << 20), b''):
+            h.update(b)
+    return h.hexdigest()
+
+
+def _guardar_base(manos, ruta=DATA_PATH):
+    """Escribe la base con backup verificado, o no escribe nada.
+
+    POR QUE HAY UN GUARD AQUI, y no solo en los scripts. Este editor es un
+    canal MANUAL —no un script— y escribir a mano es justo lo que hace: es
+    una de las tres formas de editar la base que siguen abiertas (las otras
+    son `recorder_live` y `record_hand`, que solo AÑADEN manos). Asi que no
+    se prohibe escribir: se prohibe escribir sin red.
+
+    Antes, `_write()` hacia `open(DATA_PATH, 'w')` a pelo. Eso puede perder
+    1258 manos con un fallo de disco a mitad, y ningun test lo detectaba
+    porque `hand_editor.py` no aparecia en ningun sitio. Ver
+    `DOCS/CANAL_MANUAL_CERRADO.md` §6.
+
+    El patron es el de `tools/aplicar_reinterpretacion.py`: backup verificado
+    por hash, escritura a un temporal, verificacion posterior y `os.replace`
+    atomico. Si algo falla, el original sigue intacto.
+
+    Devuelve `(ok, sha_nuevo)`. El sha es lo que hay que declarar despues:
+    `learn.HANDS_DB_SHA256`, `HANDS_DB_COMMIT` y el motivo en
+    `CANAL_MANUAL_CERRADO.md`. Editar la base sin declarar despues es
+    dejar constancia de algo que no se sabe por que paso.
+    """
+    if not os.path.exists(ruta):
+        # Base vacia o recien creada: no hay nada que perder.
+        with open(ruta, 'w', encoding='utf-8') as f:
+            for h in manos:
+                f.write(json.dumps(h, ensure_ascii=False) + '\n')
+        return True, _sha256_de(ruta)
+
+    sha_antes = _sha256_de(ruta)
+    backup = ruta + '.bak'
+    shutil.copy2(ruta, backup)
+    # El backup puede no existir (la copia fallo) o no ser lo mismo. Las dos
+    # cosas son "no hay red", y las dos tienen que acabar en `False` sin
+    # reventar: una excepcion aqui se comeria el guardar y dejaria al usuario
+    # sin saber por que.
+    if not os.path.exists(backup) or _sha256_de(backup) != sha_antes:
+        return False, None            # el backup no sirve: no se escribe
+    tmp = ruta + '.tmp'
+    try:
+        with open(tmp, 'w', encoding='utf-8', newline='\n') as f:
+            for h in manos:
+                f.write(json.dumps(h, ensure_ascii=False) + '\n')
+        os.replace(tmp, ruta)          # atomico
+    except OSError:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+        return False, None            # el original sigue intacto
+    return True, _sha256_de(ruta)
+
 
 class HandEditor:
     def __init__(self, root):
@@ -584,9 +646,31 @@ class HandEditor:
         self._mod(False); self.sstatus.config(text='Recargado')
 
     def _write(self):
+        """Guarda la base. Ver `_guardar_base`, que es donde esta el guard."""
         os.makedirs(os.path.dirname(DATA_PATH), exist_ok=True)
-        with open(DATA_PATH,'w',encoding='utf-8') as f:
-            for h in self.hands: f.write(json.dumps(h, ensure_ascii=False) + '\n')
+        ok, sha = _guardar_base(self.hands, DATA_PATH)
+        if not ok:
+            messagebox.showerror(
+                'NO GUARDADO',
+                'No se ha escrito nada.\n\n'
+                'El backup no se pudo verificar, o la escritura fallo a mitad.\n'
+                'La base sigue como estaba. El intento queda en %s.bak'
+                % DATA_PATH)
+            return False
+        from motor.learn import HANDS_DB_SHA256
+        declarada = HANDS_DB_SHA256[:16]
+        if sha[:16] != declarada:
+            messagebox.showwarning(
+                'Guardado, pero SIN DECLARAR',
+                'La base se ha escrito y ahora tiene otro hash.\n\n'
+                '  antes : %s (declarado)\n'
+                '  ahora : %s\n\n'
+                'Hay que actualizar, con el motivo escrito:\n'
+                '  motor/learn.py  HANDS_DB_SHA256, HANDS_DB_COMMIT\n'
+                '  DOCS/CANAL_MANUAL_CERRADO.md\n\n'
+                'Si no, el motor cree usar una base que ya no existe.'
+                % (declarada, sha[:16]))
+        return True
 
 if __name__ == '__main__':
     root = tk.Tk()
