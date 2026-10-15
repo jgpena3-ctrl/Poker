@@ -2,10 +2,11 @@
 
 **Estado:** vigente.
 **Fecha:** 2026-10-15
-**Commit del estado canónico:** `9b5905a`
-**SHA-256:** `36dce9fecac77356c19181be1bba06b9fe52b6f11db811b5fa4a9d991926b481`
+**Commit del estado canónico:** `bf60aa8`
+**SHA-256:** `92f450b0d758596a17c321a0d6387cf9b4f70c1e506e961f96307e3d78ba24ee`
 **Líneas:** 1258
-**Vigila:** `motor/test_canal_manual.py` — 12 tests
+**Revisión manual:** en curso, `H_1070` de ~1200.
+**Vigila:** `motor/test_canal_manual.py` — 15 tests
 
 ---
 
@@ -79,7 +80,7 @@ supusieron.
 | tramo | commit | manos | rango | qué corrigió |
 |---|---|---|---|---|
 | 1.º | `9b5905a` | 63 | `H_1014` → `H_1029` | orden de la ciega del BB, `winner`, `active`/`pos`, 3 cartas por OCR |
-| 2.º | *(este)* | **40** | `H_1029` → **`H_1070`** | casi todo `winner`: listas de 2 a 6 nombres reducidas a uno |
+| **2.º** | **`bf60aa8`** | **40** | `H_1029` → **`H_1070`** | casi todo `winner`: listas de 2 a 6 nombres reducidas a una |
 
 ### 4.0 El segundo tramo, en detalle
 
