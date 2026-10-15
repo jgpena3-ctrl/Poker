@@ -703,12 +703,15 @@ Otros problemas de `learn.py`:
   rango inicial trata P(AA) = P(72o). `class_weights_for_reach()` existe pero está **DEPRECADO y sin
   llamadores en producción**. Nota: `BASE_WEIGHT_MAP` y `_ACTION_PROBS` **no están conectados a la ruta
   productiva**; `DEFAULT_ALPHA` sigue en 2.0 sin tocar.
-- **Política ante EVs `NaN`.** **RESUELTO** para
-  `rules.select_best()`: un EV no finito no es un EV, se ignora; y si
-  no queda ninguno, lanza `EvInvalido` (`ValueError`). Ver
-  `CONTRATO_C4.md`. `EvTable.best()` sigue sin contrato propio: solo
-  se usa cuando no hay plan, y ahí la validación de
-  `decision.compute_evs` ya rechaza entradas no finitas.
+- **Política ante EVs `NaN`.** **RESUELTO**, en los dos caminos:
+  - `rules.select_best()` **decide**: un EV no finito no es un EV, se ignora;
+    y si no queda ninguno, lanza `EvInvalido` (`ValueError`).
+  - `EvTable.best()` **pinta**: mismo criterio de selección, pero sin datos
+    devuelve `('fold', nan)` en vez de lanzar, porque sus llamadores son el
+    panel y la GUI. Y ya no decide nadie con él: `recommend_loop` usa
+    `select_best(evs, None)` cuando no hay plan.
+
+  Contrato: `CONTRATO_C4.md` §2 y §3.
 - **Contrato para `candidates` vacío** en `rules.py`, sin el efecto colateral de convertirse en fold.
 
 ### 6.3 Datos y calibración

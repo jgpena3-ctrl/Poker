@@ -470,7 +470,12 @@ def recommend(hero_codes, board_codes, *, pot: float, to_call: float = 0.0,
     if rp is not None:
         action, value = rules.select_best(evs, rp)
     else:
-        action, value = evs.best()
+        # Sin plan NO se decide con `evs.best()`. Ese metodo es de PINTADO:
+        # devuelve nan en vez de lanzar, porque sus llamadores son el panel
+        # y la GUI, y pintar un hueco no es lo mismo que decidir sobre el.
+        # Decidir aqui con el es el bug que C4 arregla en `select_best` y
+        # que se colaba por la puerta de `rp=None`. Ver CONTRATO_C4.md §4.
+        action, value = rules.select_best(evs, None)
     best_action, best_value, best_evs, best_runout = action, value, evs, False
 
     # Pasada 2 (opcional): runout para refinar si hay tiempo
@@ -491,7 +496,7 @@ def recommend(hero_codes, board_codes, *, pot: float, to_call: float = 0.0,
             if rp is not None:
                 action2, value2 = rules.select_best(evs_runout, rp)
             else:
-                action2, value2 = evs_runout.best()
+                action2, value2 = rules.select_best(evs_runout, None)
             # Anytime honesto: la pasada 2 refina, se reporta siempre.
             # Si la acción cambia, se registra para telemetría.
             if action2 != best_action:

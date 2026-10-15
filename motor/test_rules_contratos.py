@@ -10,6 +10,8 @@ lo que hay, para que un cambio posterior sea deliberado y detectable.
 
 Referencia: DOCS/CONTRATOS_RULES.md
 """
+import math
+
 import numpy as np
 import pytest
 
@@ -306,6 +308,149 @@ def test_c4_las_candidatas_ausentes_no_se_inventan():
     label, value = rules.select_best(_evs(fold=0.0, check=1.0), _plan())
     assert label == 'check'
     assert value == pytest.approx(1.0)
+
+
+# ===========================================================================
+# CONTRATO 4.b — `EvTable.best()`, el otro camino
+# ===========================================================================
+# El contrato entero esta en `DOCS/CONTRATO_C4.md` §4. Resumen: MISMA regla de
+# seleccion que `select_best`, y una diferencia deliberada en como falla.
+#
+#   `select_best`  -> LANZA `EvInvalido`. Es el que DECIDE.
+#   `best()`       -> devuelve `('fold', nan)`. Es el que PINTA.
+#
+# La diferencia no es un capricho: sus cuatro llamadores son el panel y la
+# GUI, y pintar «nan» es la verdad mientras que lanzar ahi revienta el panel
+# entero para pintar un hueco. Quien decida, usa `select_best`.
+
+def test_c4b_best_ignora_el_nan():
+    """El defecto real de `best()`, y el mismo que C4 arregla en select_best.
+
+    Antes: `best_ev = self.ev.get('fold', 0.0)` y luego `val > best_ev`. Con
+    un NaN, `nan > 0.0` es False SIEMPRE, asi que el bucle entero se queda
+    sin mejorar y devuelve el NaN **como si fuera la mejor accion**.
+
+    Ahora ignora los no finitos, y devuelve la alternativa real.
+    """
+    evs = _evs(fold=NAN, check=3.0, call=1.0)
+    label, value = evs.best()
+    assert label == 'check', 'el NaN del fold se llevo la decision'
+    assert value == pytest.approx(3.0)
+    assert math.isfinite(value)
+
+
+def test_c4b_best_devuelve_nan_y_no_cero_sin_datos():
+    """Sin ningún EV finito devuelve NaN, NO 0.0.
+
+    `0.0` dice «el fold es break-even», que es un número que nadie midió.
+    Es exactamente el `TODO(F5)` que C4 sustituyo en `select_best`."""
+    label, value = _evs(fold=NAN, call=NAN, check=float('inf')).best()
+    assert label == 'fold'
+    assert math.isnan(value), 'un 0.0 aqui seria un EV inventado'
+
+
+def test_c4b_best_no_lanza_donde_select_best_s_i():
+    """La diferencia que hace que sean DOS contratos y no uno.
+
+    Mismo `evs` imposible: `select_best` revienta, `best()` contesta. Si
+    `best()` llegara a lanzar, el panel se caeria pintando."""
+    evs = _evs(fold=NAN, call=NAN)
+    with pytest.raises(rules.EvInvalido):
+        rules.select_best(evs, None)
+    label, value = evs.best()          # no revienta
+    assert label == 'fold' and math.isnan(value)
+
+
+def test_c4b_best_ignora_los_tipos_raros():
+    """Un EV que no es un numero no es un EV.
+
+    Antes, `val > best_ev` con un `str` reventaba con TypeError. Ahora se
+    ignora, igual que en `select_best`."""
+    evs = EvTable(ev={'fold': 0.0, 'check': 'mucho', 'call': True,
+                      'all_in': 2.0})
+    label, value = evs.best()
+    assert label == 'all_in'
+    assert value == pytest.approx(2.0)
+
+
+def test_c4b_best_es_el_mismo_ganador_que_select_best():
+    """En todo lo decidible, los dos coinciden.
+
+    Si no coincidieran habria dos reglas de seleccion en el motor, y la
+    diferencia entre el EV que se pinta y el que se decide seria invisible.
+    """
+    for ev in ({'fold': 0.0, 'check': 1.0, 'call': 0.5},
+               {'fold': -5.0, 'check': -9.0, 'call': -9.0},
+               {'fold': 1.0, 'check': 1.0, 'call': 1.0},
+               {'fold': -1.0, 'check': 2.0, 'call': 2.0},
+               {'fold': 0.0, 'check': 3.0, 'call': float('inf')},
+               {'fold': 0.0, 'check': 3.0, 'call': 3.0}):
+        t = EvTable(ev=dict(ev))
+        a = rules.select_best(t, None)
+        b = t.best()
+        assert a[0] == b[0], (ev, a, b)
+        assert a[1] == pytest.approx(b[1]), (ev, a, b)
+
+
+def test_c4b_best_respeta_candidates():
+    """El filtro `candidates` sigue funcionando: es su unico parametro."""
+    t = _evs(fold=0.0, check=1.0, call=5.0)
+    assert t.best(candidates=('fold', 'call'))[0] == 'call'
+    assert t.best(candidates=('fold',))[0] == 'fold'
+
+
+def test_c4b_el_panel_aguanta_el_nan():
+    """El contrato tiene que servir para algo: pintar un NaN no rompe el panel.
+
+    Si esto reventara, la razon de que `best()` no lance se cae, y habria que
+    volver a decidir entre las dos malas opciones."""
+    from motor.panel import format_insight
+    from motor.situation import situation
+    from motor.recommend_loop import recommend
+    rec = recommend(hero_codes=['Jd', 'Jh'], board_codes=FLOP,
+                    street='flop', position='BB', villain_pos='UTG',
+                    pot=12.5, to_call=5.0, stack=90.0, runout=False)
+    rec.evs.ev = {k: NAN for k in rec.evs.ev}
+    texto = format_insight(rec.situation, rec.evs, 'x')
+    assert 'nan' in texto.lower(), 'el panel deberia DECIR que no hay dato'
+
+
+def test_c4b_el_motor_no_decide_con_best():
+    """El invariante: `recommend()` decide con `select_best`, siempre.
+
+    `rp is None` es un camino de produccion —`rules.plan` lanza en
+    `street='preflop'` y eso lo convierte en None— y por ahi se colaba el
+    `evs.best()`, que devuelve nan en vez de lanzar. El motor no puede
+    devolver un NaN como si fuera una decision.
+
+    Se comprueba con AST y no buscando texto: la version con `getsource`
+    fallaba porque el comentario que explica el cambio menciona `evs.best()`.
+    Un guard que se dispara por su propia documentacion no vigila nada."""
+    import ast
+    import inspect
+    import textwrap
+
+    from motor import recommend_loop
+    src = textwrap.dedent(inspect.getsource(recommend_loop.recommend))
+    arbol = ast.parse(src)
+
+    llamadas_best, llamadas_select = [], 0
+    for nodo in ast.walk(arbol):
+        if not isinstance(nodo, ast.Call):
+            continue
+        f = nodo.func
+        if isinstance(f, ast.Attribute) and f.attr == 'best':
+            llamadas_best.append((nodo.lineno, ast.dump(f.value)[:40]))
+        if isinstance(f, ast.Attribute) and f.attr == 'select_best':
+            llamadas_select += 1
+
+    assert not llamadas_best, (
+        'recommend() sigue llamando a .best(): %s. Ese metodo es de PINTADO '
+        '(devuelve nan) y no puede decidir.' % llamadas_best)
+    assert llamadas_select >= 2, (
+        'se esperaba select_best en las DOS pasadas (rapida y runout), y hay '
+        '%d. Con una sola, la otra pasada decide por otro camino.'
+        % llamadas_select)
 
 
 # ===========================================================================

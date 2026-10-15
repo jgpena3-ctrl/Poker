@@ -21,6 +21,7 @@ Etapa MVP 2: `compute_evs` usa por defecto **equity a showdown con sorteo de
 runout** para cada acción. `runout=False` conserva el modo rápido de fuerza
 actual, útil solo para diagnósticos o presupuestos muy cortos.
 """
+import math
 from dataclasses import dataclass, field
 from typing import Dict, Tuple
 
@@ -418,23 +419,68 @@ def _tree_values(hero_ids, board_ids, ids0, w, pot, stack, response_fn,
 @dataclass
 class EvTable:
     """EV inmediato por acción (MVP 1) + recomendación derivada."""
+
     ev: Dict[str, float] = field(default_factory=dict)
     pot: float = 0.0
     hero_equity: float = 0.0
 
     def best(self, candidates=None) -> Tuple[str, float]:
-        """La mejor acción por EV entre `candidates` (o todas si None).
+        """La etiqueta con mejor EV **finito**, para PINTAR. No para decidir.
 
-        Consistente con rules.select_best: baseline = EV real del fold.
+        ─────────────────────────────────────────────────────────────────
+        ESTO NO DECIDE. `rules.select_best()` es el que decide, y es el que
+        tiene contrato (`CONTRATO_C4.md`).
+        ─────────────────────────────────────────────────────────────────
+
+        La función estaba haciendo las dos cosas, y por eso tenía el bug que
+        C4 arregló en `select_best` pero que aquí seguía vivo: el baseline
+        era `self.ev.get('fold', 0.0)`, un **0.0 inventado** cuando no había
+        fold, y la comparación era `val > best_ev`. Con un NaN, eso es
+        `nan > 0.0` → `False` siempre, así que el bucle entero se queda sin
+        mejorar y devuelve `('fold', nan)`: un NaN **disfrazado de decisión**.
+
+        El contrato, en corto — el largo está en `CONTRATO_C4.md` §4:
+
+        | | regla |
+        |---|---|
+        | baseline | el EV **real** del fold; si no hay fold o no es finito, `nan` |
+        | candidatos | un EV no finito, o de un tipo raro, **se ignora**: no es un EV |
+        | comparación | estricta (`>`), así que **gana el primero**, y `fold` se considera primero |
+        | sin ningún EV finito | devuelve `('fold', nan)`. **NaN, no 0.0.** |
+
+        Por qué `nan` y no una excepción: los cuatro llamadores de este método
+        son de **pintado** (`panel.format_insight`, `panel.format_evs` y los
+        dos `on_reco` de la GUI), y pintar «nan» es la verdad. Lanzar aquí
+        reventaría el panel entero para pintar un hueco. Quien quiera el
+        comportamiento estricto lo tiene en `select_best`, que lanza
+        `EvInvalido` — y que es lo que usa el motor para decidir.
+
+        Por qué `nan` y no `0.0`: `0.0` dice «el fold es break-even», que es
+        un número que nadie midió. `nan` dice «no hay dato». Es la misma
+        diferencia que `CONTRATO_C4.md` §2.1 defiende para `select_best`, y
+        Aqui no hay excepción que la compense.
         """
         labels = tuple(self.ev) if candidates is None else tuple(candidates)
         if 'fold' not in labels:
             labels = ('fold',) + labels
-        best_label, best_ev = 'fold', self.ev.get('fold', 0.0)
+
+        def _finito(label):
+            v = self.ev.get(label)
+            if isinstance(v, bool) or not isinstance(v, (int, float)):
+                return None
+            v = float(v)
+            return v if math.isfinite(v) else None
+
+        best_label, best_ev = 'fold', _finito('fold')
         for label in labels:
-            val = self.ev.get(label)
-            if val is not None and val > best_ev:
+            val = _finito(label)
+            if val is None:
+                continue
+            if best_ev is None or val > best_ev:
                 best_label, best_ev = label, val
+        if best_ev is None:
+            # Ningún EV finito: se DICE que no lo hay. No se inventa 0.0.
+            return 'fold', float('nan')
         return best_label, best_ev
 
 
