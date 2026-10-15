@@ -44,6 +44,7 @@ from .profile import PEZ, Profiles, TIBURON, STACK_FISH_BB
 from .ranges import COMBO0, COMBO1, RangeState
 from .rules import plan as rules_plan
 from .rules import select_best as rules_select_best
+from .rules import POLITICA_MULTIWAY
 from .situation import Situation, situation
 from .hand_state import classify as hand_classify
 from .hand_state import range_advantage as range_adv
@@ -1249,6 +1250,25 @@ class Asistente:
                     _reg['equity_main_available'] = False
                     _reg['equity_main_source'] = None
                     _reg['equity_main_note'] = 'error: %s' % e
+                # F7.2.b: el alcance. Se escribe sobre `_reg`, igual que las
+                # claves de `equity_main`: `evs`, `rp` y `rules_select_best`
+                # quedan intactos, así que la acción no puede cambiar.
+                #
+                # Sin estas cinco líneas, el log de este camino —que es el que
+                # corre en PRODUCCIÓN— escribía `multiway_soportado: None` en
+                # todas las manos. El tri-estato que lo hace inconfundible
+                # ("nadie miró") acabaría diciendo la verdad equivocada: no es
+                # que nadie mirara, es que este camino no miraba. Y eso es
+                # justo lo que T3 prohíbe: n_players > 2 pasando sin marcar.
+                #
+                # Los valores salen de `rp`, que los tiene porque
+                # `rules.plan()` ya recibe `n_players`. No es lógica nueva: es
+                # propagar lo que ya estaba calculado dos líneas más arriba.
+                _reg['multiway'] = rp.multiway
+                _reg['multiway_soportado'] = rp.multiway_soportado
+                _reg['multiway_motivo'] = rp.multiway_motivo
+                _reg['politica_multiway'] = POLITICA_MULTIWAY
+                _reg['n_players'] = max(1, n_players)
                 _shadow_ctx = (jer, _reg)
                 label += (f' | jerarquía: principal={jer.get("main")}'
                           f' ({jer.get("main_reason")})'

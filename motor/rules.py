@@ -273,6 +273,18 @@ class RulePlan:
         """
         return not self.multiway or MULTIWAY_SOPORTADO
 
+    @property
+    def multiway_motivo(self) -> Optional[str]:
+        """Por qué no se soporta, o None si no hay nada que declarar.
+
+        Vive en `RulePlan` y no en el panel a propósito: los dos caminos de
+        decisión tienen que poder escribir el MISMO motivo en su registro
+        sombra, y si cada uno lo compusiera por su cuenta acabarían
+        divergiendo sin que nada lo notara. Un motivo que se escribe de dos
+        maneras es un motivo que dentro de un mes son dos.
+        """
+        return None if self.multiway_soportado else MOTIVO_MULTIWAY
+
 
 # ---------------------------------------------------------------------------
 # Tabla de reglas v1 (pegar.txt §18-§19): IF → filtros → acciones → sizing

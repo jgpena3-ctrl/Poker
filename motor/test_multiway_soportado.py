@@ -369,6 +369,178 @@ def test_el_camino_de_asistente_live_queda_marcado_sin_tocarlo():
     assert 'NO SOPORTADO' in text
 
 
+# ---------------------------------------------------------------------------
+# 6. T2 — el camino de `asistente_live` escribe el alcance
+# ---------------------------------------------------------------------------
+# El `shadow_record` de este camino escribía `multiway_soportado: None` en
+# TODAS las manos. El tri-estado lo hace inconfundible, pero eso no lo
+# arregla: `None` significa "nadie miró", y aquí lo que pasaba es que este
+# camino no miraba. Que es justo lo que T3 prohíbe.
+#
+# Y es el camino que corre en PRODUCCIÓN: `recommend_loop.recommend()` solo la
+# llama `run_demo()`.
+
+from types import SimpleNamespace                                    # noqa: E402
+
+import numpy as np                                                   # noqa: E402
+
+from motor import asistente_live as al                               # noqa: E402
+from motor.asistente_live import Asistente                           # noqa: E402
+from motor.ranges import N_COMBOS, RangeState                        # noqa: E402
+
+_HERO = ['Ah', 'Kd']
+
+
+def _cards(*codes):
+    """`state['community']` es una lista de DICTOS, no de strings."""
+    return [{'rank': c[0], 'suit': c[1]} for c in codes]
+
+
+class _ProbVec:
+    def __call__(self, *args, **kw):
+        return np.ones(N_COMBOS, dtype=np.float32)
+
+
+class _ShadowLog:
+    def __init__(self):
+        self.registros = []
+
+    def append(self, registro):
+        self.registros.append(registro)
+        return True
+
+
+def _asistente(hand):
+    a = Asistente.__new__(Asistente)
+    a.models = SimpleNamespace(
+        range_model=SimpleNamespace(prob_vec=_ProbVec()),
+        postflop_model=SimpleNamespace(prob_vec=_ProbVec()))
+    a.live_stacks = {}
+    a._last_seen_stake = {}
+    a.rec = SimpleNamespace(hand=hand, _hand_positions={})
+    a.verbose = False
+    a.shadow = True
+    a.runout = False
+    a.oracle = None
+    return a
+
+
+def _hand(acts):
+    return {
+        'hand_id': 'H_MW', 'streets': {
+            'preflop': {'actions': []},
+            'flop': {'actions': acts, 'board': BOARD},
+            'turn': {'actions': [], 'board': []},
+            'river': {'actions': [], 'board': []}},
+        'current_street': 'flop'}
+
+
+def _estado_activos(n):
+    """Estado con `n` jugadores activos, el hero entre ellos.
+
+    Es lo que lee `asistente_live` para contar `n_players`, así que el número
+    del test y el del motor son el mismo número, no dos que se parecen.
+    """
+    state = {'community': [_cards('Qh'), _cards('7s'), _cards('2c')],
+             'pot': 25.0, 'hero_stake': 90.0}
+    activos = ['hero', 'p1', 'p2', 'p3', 'p4', 'p5'][:n]
+    for pid in al.PLAYER_IDS:
+        state['%s_state' % pid] = 'activo' if pid in activos else 'fold'
+        state['%s_stake' % pid] = 90.0
+        state['%s_bet' % pid] = 0.0
+    return state
+
+
+def _correr_recomendacion(n_activos):
+    """Llama a `_recomendacion_para` de verdad y devuelve el registro sombra."""
+    a = _asistente(_hand([{'pos': 'MP', 'action': 'b', 'amount': 5.0}]))
+    a.rec._hand_positions = {'hero': 'BB', 'p1': 'MP'}
+    a._pos_of = lambda pid, state: {'hero': 'BB', 'p1': 'MP'}.get(pid) or 'UTG'
+    a._perfil_for = lambda pid, state: 'TIBURON'
+    a._villain_name = lambda pid: 'rival'
+    a._max_bet = lambda state: (5.0, None)
+    a._jerarquia = lambda hero_pid, state: {
+        'main': 'MP', 'main_reason': 'test', 'aggressors': [],
+        'checkers_all': [], 'checkers_secondary': [], 'callers': [],
+        'pending': [], 'pending_known': True, 'hero_bet': False,
+        'hero_pos': 'BB'}
+    log = _ShadowLog()
+    a._shadow_log = lambda: log
+
+    a._recomendacion_para(_estado_activos(n_activos), 'hero', _HERO, BOARD,
+                          'p1', [], runout=False)
+    assert len(log.registros) == 1, (
+        'no se escribio ningun registro sombra; el test no seria capaz de '
+        'detectar la regresion que dice detectar')
+    return log.registros[0]
+
+
+def test_asistente_live_marca_el_multiway():
+    """4 activos: el registro tiene que decir que NO se soporta.
+
+    `None` sería "nadie miró", y no es el caso: este camino ha mirado y ha
+    decidido que no puede. Es la diferencia entre un dato ausente y un dato
+    que dice que no lo hay."""
+    reg = _correr_recomendacion(4)
+    assert reg['multiway'] is True, reg
+    assert reg['multiway_soportado'] is False, (
+        'multiway_soportado es None: el registro dice "nadie miro" cuando lo '
+        'que pasa es que este camino no propagaba el flag')
+    assert reg['n_players'] == 4, reg
+    assert reg['politica_multiway'] == rules.POLITICA_MULTIWAY
+    assert reg['multiway_motivo'] == rules.MOTIVO_MULTIWAY
+
+
+def test_asistente_live_no_marca_lo_que_no_es_multiway():
+    """2 activos: el alcance se declara soportado y el motivo es None.
+
+    El otro extremo del tri-estado. Sin esto, un `False` a pelo pasaría por
+    "todo está mal" en vez de por "aquí no hay nada que declarar"."""
+    reg = _correr_recomendacion(2)
+    assert reg['multiway'] is False, reg
+    assert reg['multiway_soportado'] is True, reg
+    assert reg['multiway_motivo'] is None, reg
+    assert reg['n_players'] == 2, reg
+
+
+def test_el_flag_de_asistente_live_no_altera_la_accion():
+    """La misma garantía que en `recommend_loop`: marcar no es decidir."""
+    acts = [{'pos': 'MP', 'action': 'b', 'amount': 5.0}]
+    acciones = []
+    for n in (2, 4):
+        a = _asistente(_hand(acts))
+        a.rec._hand_positions = {'hero': 'BB', 'p1': 'MP'}
+        a._pos_of = lambda pid, state: {'hero': 'BB', 'p1': 'MP'}.get(pid) or 'UTG'
+        a._perfil_for = lambda pid, state: 'TIBURON'
+        a._villain_name = lambda pid: 'rival'
+        a._max_bet = lambda state: (5.0, None)
+        a._jerarquia = lambda hero_pid, state: {
+            'main': 'MP', 'main_reason': 'test', 'aggressors': [],
+            'checkers_all': [], 'checkers_secondary': [], 'callers': [],
+            'pending': [], 'pending_known': True, 'hero_bet': False,
+            'hero_pos': 'BB'}
+        log = _ShadowLog()
+        a._shadow_log = lambda: log
+        evs = a._recomendacion_para(_estado_activos(n), 'hero', _HERO, BOARD,
+                                    'p1', [], runout=False)
+        acciones.append((evs.chosen, dict(evs.ev)))
+    assert acciones[0][0] == acciones[1][0], acciones
+    assert acciones[0][1] == acciones[1][1], 'los EVs no pueden cambiar'
+
+
+def test_el_motivo_viene_de_rp_y_no_de_cada_camino():
+    """El motivo se lee de `RulePlan.multiway_motivo`, no se compone en el
+    llamador.
+
+    Los dos caminos escriben en el mismo log. Si cada uno compusiera su
+    texto, dentro de un mes serían dos motivos distintos y nadie sabría cuál
+    es el vigente."""
+    rp = rules.plan('flop', False, 5.0, BOARD, 12.5, 90.0, n_players=4)
+    assert rp.multiway_motivo == rules.MOTIVO_MULTIWAY
+    assert rules.plan('flop', False, 5.0, BOARD, 12.5, 90.0,
+n_players=2).multiway_motivo is None
+
+
 def test_el_inventario_se_demuestra_capaz_de_fallar():
     """Un guard que no se demuestra capaz de fallar no puede usarse para decir
     que algo está bien (`RESUMEN_SECCION.md` §8).

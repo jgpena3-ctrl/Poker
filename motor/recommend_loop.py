@@ -436,7 +436,8 @@ def recommend(hero_codes, board_codes, *, pot: float, to_call: float = 0.0,
     # La sombra de `n_players` es la MISMA que usa `rules.plan`.
     multiway = rp.multiway if rp is not None else n_players > 2
     multiway_soportado = (not multiway) or MULTIWAY_SOPORTADO
-    multiway_motivo = None if multiway_soportado else MOTIVO_MULTIWAY
+    multiway_motivo = (rp.multiway_motivo if rp is not None
+                       else (None if multiway_soportado else MOTIVO_MULTIWAY))
 
     # --- Anytime: EV en dos pasadas (rápido → refinado con runout) ---
     best_action, best_value, best_evs = None, -999.0, None
