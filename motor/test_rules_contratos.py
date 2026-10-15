@@ -11,6 +11,7 @@ lo que hay, para que un cambio posterior sea deliberado y detectable.
 Referencia: DOCS/CONTRATOS_RULES.md
 """
 import math
+import re
 
 import numpy as np
 import pytest
@@ -413,6 +414,61 @@ def test_c4b_el_panel_aguanta_el_nan():
     rec.evs.ev = {k: NAN for k in rec.evs.ev}
     texto = format_insight(rec.situation, rec.evs, 'x')
     assert 'nan' in texto.lower(), 'el panel deberia DECIR que no hay dato'
+
+
+def test_c4b_el_contrato_documentado_dice_lo_que_hace_el_codigo():
+    """El `.md` y el código tienen que decir LO MISMO.
+
+    Sin esto, el contrato se queda viejo solo: el código se arregla, el
+    documento se queda describiendo el bug anterior, y un contrato que ya no
+    describe nada es peor que no tener contrato porque se sigue citando.
+
+    Se comprueban las tres cosas que DISTINGUEN a `best()` de `select_best`,
+    que es donde el documento puede mentir sin que se note:
+      · sin datos sale NaN, no 0.0
+      · no lanza
+      · ignora los EV no finitos
+    """
+    import io
+    import os
+    doc = os.path.join(os.path.dirname(os.path.dirname(
+        os.path.abspath(__file__))), 'DOCS', 'CONTRATO_C4.md')
+    texto = io.open(doc, encoding='utf-8').read()
+    assert "('fold', nan)" in texto, (
+        'CONTRATO_C4.md no dice que best() devuelve nan sin datos. Si lo que '
+        'queda es que "no tiene contrato", hay que decirlo, no dejar de '
+        'mencionarlo.')
+    assert re.search(r'na lanza|sin lanzar|nunca lanza', texto), (
+        'CONTRATO_C4.md no dice que best() no lanza')
+    assert 'nan' in texto.lower(), 'el contrato tiene que hablar de NaN'
+
+
+def test_c4b_el_codigo_hace_lo_que_dice_el_contrato():
+    """La otra mitad del mismo invariante, sobre el código.
+
+    Los tres comportamientos, leidos del docstring del propio metodo — que es
+    donde un contrato se desincroniza sin que nadie lo note, porque el
+    docstring se copia una vez y se queda."""
+    import inspect
+
+    from motor.decision import EvTable
+    doc = inspect.getdoc(EvTable.best)
+
+    # 1. sin EV finito devuelve nan y NO 0.0
+    etiqueta, valor = EvTable(ev={}).best()
+    assert etiqueta == 'fold' and math.isnan(valor)
+    assert 'nan' in doc and '0.0' in doc, (
+        'el docstring de best() ya no explica ni el nan ni el 0.0 que no se '
+        'devuelve')
+
+    # 2. ignora los no finitos
+    etiqueta, valor = EvTable(ev={'fold': float('inf'),
+                                  'check': 2.0}).best()
+    assert (etiqueta, valor) == ('check', 2.0)
+
+    # 3. el baseline es el EV REAL del fold, que puede ser negativo
+    etiqueta, valor = EvTable(ev={'fold': -5.0, 'check': -9.0}).best()
+    assert etiqueta == 'fold' and valor == pytest.approx(-5.0)
 
 
 def test_c4b_el_motor_no_decide_con_best():

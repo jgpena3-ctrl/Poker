@@ -33,6 +33,7 @@ dejar constancia de algo que no se sabe por que paso.
 import hashlib
 import io
 import os
+import re
 import subprocess
 
 import pytest
@@ -115,6 +116,87 @@ def test_el_estado_canonico_esta_documentado():
     assert learn.HANDS_DB_COMMIT[:7] in texto, (
         '%s no menciona el commit vigente (%s).' % (CANONICO,
                                                     learn.HANDS_DB_COMMIT))
+
+
+def test_el_documento_declara_TAMBIEN_el_numero_de_lineas():
+    """La reserva B de la revision tecnica: el hash solo no basta.
+
+    Un sha256 dice QUEFICHERO es, nunca si es el correcto. Por eso el
+    manifiesto tiene TRES cosas —hash, commit y lineas— y este test mira la
+    tercera, que es la unica de las tres que se puede comprobar sin mirar el
+    fichero: `1258` contra `1258`.
+
+    Sin el, el patron «copiar el documento anterior y cambiar el hash»
+    pasaria: el hash nuevo encaja en un documento que describe la base
+    anterior con dos lineas menos y otro hash viejo dentro.
+    """
+    texto = io.open(os.path.join(ROOT, *CANONICO.split('/')),
+                    encoding='utf-8').read()
+    declarado = re.search(r'\*\*L[ií]neas:\*\*\s*(\d+)', texto)
+    assert declarado, (
+        '%s no declara el numero de lineas. El manifiesto son TRES datos '
+        '(hash, commit, lineas) y el documento tiene que llevar los tres: con '
+        'dos, cambiar el hash es copiar el documento viejo.' % CANONICO)
+    assert int(declarado.group(1)) == learn.HANDS_DB_LINEAS, (
+        '%s declara %s lineas y el manifiesto declara %d. Uno de los dos esta '
+        'desactualizado, y son la misma base.'
+        % (CANONICO, declarado.group(1), learn.HANDS_DB_LINEAS))
+
+
+def test_el_documento_explica_y_no_solo_repite():
+    """La segunda mitad de la reserva B: el hash necesita un POR QUE.
+
+    Un sha256 es una afirmacion sin respaldo; el motivo escrito es el
+    respaldo. Este test no puede comprobar que el motivo sea CIERTO —eso hay
+    que medirlo, y esta midiendo quien lo cambia—, pero si comprueba que
+    EXISTA, que es lo que hacia falta para que no se pueda actualizar el
+    manifiesto en silencio.
+
+    Se exige una seccion de justificacion con numeros medidos: una tabla con
+    una flecha `antes -> despues`. Con hash, commit y lineas ya declarados,
+    una flecha es lo unico que el documento puede tener y que el manifiesto
+    no puede aportar."""
+    texto = io.open(os.path.join(ROOT, *CANONICO.split('/')),
+                    encoding='utf-8').read()
+    flechas = re.findall(r'\S+\s*[-=]*>\s*\S+', texto)
+    assert flechas, (
+        '%s declara el hash pero no explica el cambio. Un sha dice QUE '
+        'FICHERO es, no si es el correcto: hace falta la medicion del antes y '
+        'el despues, escrita. Ver CANAL_MANUAL_CERRADO.md §4.'
+        % CANONICO)
+
+
+# --- los DOS invariantes, por separado ------------------------------------
+#
+# La revision tecnica (revision_2, reserva B) pide comprobar que los dos
+# invariantes se cubren POR SEPARADO, no que uno tape al otro. Son
+# independientes y se rompen por motivos distintos:
+#
+#   1. el hash declarado coincide con el disco  -> `test_el_hash_de_la_base_es_el_declarado`
+#   2. ningun script escribe mientras se revisa -> `test_la_revision_en_curso_impide_escribir_a_un_script`
+#
+# Que se comprueben por separado importa porque uno puede romperse solo: si
+# el mantenedor declara el hash y el flag lo dice, el segundo invariante es
+# el unico que queda, y si esta tapado por el primero nadie se entera de que
+# un script puede escribir.
+
+
+def test_los_dos_invariantes_se_comprueban_por_separado():
+    """Los dos guards existen, y cada uno mira lo suyo.
+
+    Se comprueba que los dos tests existen y que NO son el mismo: si alguien
+    fusionara los dos invariantes en una sola comprobacion, perderiamos la
+    capacidad de decir QUE se rompio."""
+    import inspect
+    from motor import test_canal_manual as M
+    hash_test = getattr(M, 'test_el_hash_de_la_base_es_el_declarado', None)
+    rev_test = getattr(M, 'test_la_revision_en_curso_impide_escribir_a_un_script',
+                       None)
+    assert hash_test is not None, 'falta el invariante del hash'
+    assert rev_test is not None, 'falta el invariante de la revision en curso'
+    assert inspect.getsource(hash_test) != inspect.getsource(rev_test), (
+        'los dos invariantes tienen el MISMO cuerpo: uno de los dos no se '
+        'esta comprobando')
 
 
 def test_el_commit_declarado_existe():

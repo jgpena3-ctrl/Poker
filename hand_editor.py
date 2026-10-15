@@ -36,33 +36,59 @@ def _guardar_base(manos, ruta=DATA_PATH):
     `learn.HANDS_DB_SHA256`, `HANDS_DB_COMMIT` y el motivo en
     `CANAL_MANUAL_CERRADO.md`. Editar la base sin declarar despues es
     dejar constancia de algo que no se sabe por que paso.
+
+    CONTRATO DE ERROR: **cualquier fallo devuelve `(False, None)`, y esta
+    funcion no lanza nunca.** Salvo que se lance, el usuario se queda con un
+    guardar que no guarda y un error que no explica, que es peor que no
+    guardar. Por eso los cuatro caminos que pueden fallar —leer el sha, copiar
+    el backup, escribir el temporal, y limpiarlo— estan dentro de try.
     """
     if not os.path.exists(ruta):
         # Base vacia o recien creada: no hay nada que perder.
-        with open(ruta, 'w', encoding='utf-8') as f:
-            for h in manos:
-                f.write(json.dumps(h, ensure_ascii=False) + '\n')
-        return True, _sha256_de(ruta)
+        try:
+            with open(ruta, 'w', encoding='utf-8') as f:
+                for h in manos:
+                    f.write(json.dumps(h, ensure_ascii=False) + '\n')
+            return True, _sha256_de(ruta)
+        except OSError:
+            return False, None
 
-    sha_antes = _sha256_de(ruta)
-    backup = ruta + '.bak'
-    shutil.copy2(ruta, backup)
-    # El backup puede no existir (la copia fallo) o no ser lo mismo. Las dos
-    # cosas son "no hay red", y las dos tienen que acabar en `False` sin
-    # reventar: una excepcion aqui se comeria el guardar y dejaria al usuario
-    # sin saber por que.
-    if not os.path.exists(backup) or _sha256_de(backup) != sha_antes:
-        return False, None            # el backup no sirve: no se escribe
+    # --- 1. poder leer el original y dejar una copia verificada -----------
+    try:
+        sha_antes = _sha256_de(ruta)
+        backup = ruta + '.bak'
+        shutil.copy2(ruta, backup)
+    except OSError:
+        # La copia FUERA del try era el agujero: sin permisos, o sin disco,
+        # la excepcion subia y se comia el guardar. Ahora es un `False`.
+        return False, None
+
+    try:
+        # El backup puede no existir (la copia fallo) o no ser lo mismo.
+        if not os.path.exists(backup) or _sha256_de(backup) != sha_antes:
+            return False, None            # el backup no sirve: no se escribe
+    except OSError:
+        return False, None
+
+    # --- 2. escribir a un temporal y sustituir de golpe -------------------
     tmp = ruta + '.tmp'
     try:
         with open(tmp, 'w', encoding='utf-8', newline='\n') as f:
             for h in manos:
                 f.write(json.dumps(h, ensure_ascii=False) + '\n')
-        os.replace(tmp, ruta)          # atomico
+        os.replace(tmp, ruta)              # atomico
     except OSError:
-        if os.path.exists(tmp):
-            os.remove(tmp)
-        return False, None            # el original sigue intacto
+        # La limpieza NO puede tapar el error original. Si `os.remove` falla
+        # tambien —que es lo que pasa cuando el disco esta lleno, que es el
+        # mismo motivo por el que falló la escritura— se traga el `OSError`
+        # bueno y el usuario recibe un error que no explica nada.
+        try:
+            if os.path.exists(tmp):
+                os.remove(tmp)
+        except OSError:
+            pass
+        return False, None                # el original sigue intacto
+
     return True, _sha256_de(ruta)
 
 

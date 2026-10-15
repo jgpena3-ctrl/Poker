@@ -541,6 +541,58 @@ def test_el_motivo_viene_de_rp_y_no_de_cada_camino():
 n_players=2).multiway_motivo is None
 
 
+def test_el_aviso_llega_a_todas_las_salidas():
+    """El aviso tiene que aparecer en CADA salida del motor, no en unas sí
+    y otras no.
+
+    Este test existe por un agujero real: `Recommendation.text` llamaba a
+    `format_insight()` SIN `plan=self.rule_plan`, así que el aviso se perdía
+    justo en la salida que usa `run_demo()` y cualquier consumidor de
+    `Recommendation`. Dos salidas, el mismo dato, y un aviso y otro — que es
+    peor que no avisar, porque parece que avisa.
+
+    Se comprueba la salida completa, no la función: el fallo estaba en qué
+    se le pasa a `format_insight`, no en `format_insight`.
+    """
+    for n, debe_avisar in ((2, False), (4, True)):
+        rec = recommend(**_fixture(n_players=n))
+        texto = rec.text
+        hay_aviso = 'NO SOPORTADO' in texto
+        assert hay_aviso is debe_avisar, (
+            'con n_players=%d, Recommendation.text %s el aviso de multiway'
+            % (n, 'tiene' if not hay_aviso else 'NO tiene'))
+        # Y el panel por las dos vias tiene que DECIR LO MISMO.
+        directo = format_insight(rec.situation, rec.evs, rec.villain_label,
+                                 plan=rec.rule_plan)
+        assert ('NO SOPORTADO' in directo) is debe_avisar, \
+            'format_insight y Recommendation.text discrepan'
+
+
+def test_el_panel_dice_que_equity_es_la_que_se_usa():
+    """F7.2.b: no basta con decir que el spot es multiway.
+
+    Hay que decir contra QUIÉN es la equity que hay detrás, porque «el spot
+    no está soportado» sin más deja al que lee sin saber si el 40 % que ve es
+    contra un rival o contra dos. Esa es justo la confusión que el contrato
+    existe para cerrar.
+    """
+    rec = recommend(**_fixture(n_players=4))
+    texto = format_insight(rec.situation, rec.evs, 'OR UTG', plan=rec.rule_plan)
+    assert 'equity usada' in texto.lower(), texto
+    assert 'HU' in texto
+    # El rival del que se habla es el que dice la etiqueta, no un texto fijo.
+    assert 'UTG' in texto
+
+
+def test_en_hu_no_dice_que_la_equity_es_hu():
+    """En un spot HU no hay nada que aclarar: la equity ya es HU.
+
+    Decirlo ahí sería ruido, y un aviso que aparece siempre deja de avisar."""
+    rec = recommend(**_fixture(n_players=2))
+    texto = format_insight(rec.situation, rec.evs, 'OR UTG', plan=rec.rule_plan)
+    assert 'equity usada' not in texto.lower()
+
+
 def test_el_inventario_se_demuestra_capaz_de_fallar():
     """Un guard que no se demuestra capaz de fallar no puede usarse para decir
     que algo está bien (`RESUMEN_SECCION.md` §8).

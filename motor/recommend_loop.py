@@ -86,8 +86,19 @@ class Recommendation:
 
     @property
     def text(self) -> str:
+        """El panel completo de ESTA recomendación.
+
+        Pasa `plan=self.rule_plan` y no solo la situación: sin el plan, el
+        panel no puede avisar de nada — F7.2.b entre otros— y esta propiedad
+        se quedaba muda justo en la salida que `run_demo()` y cualquier
+        consumidor de `Recommendation` usan.
+
+        Se comprobó que era un agujero de verdad y no teórico: el aviso de
+        multiway se ve en `asistente_live` (que sí pasa el plan) y NO se veía
+        aquí. Dos salidas, el mismo dato, un aviso y otro.
+        """
         return format_insight(self.situation, self.evs, self.villain_label,
-                              runout=self.runout)
+                              runout=self.runout, plan=self.rule_plan)
 
 
 def _build_villain_range(hero_codes, board_codes, villain_pos='UTG',

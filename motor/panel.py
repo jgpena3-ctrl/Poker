@@ -90,9 +90,20 @@ def format_insight(sit: Situation, evs: EvTable,
             # F7.2.b. Va ANTES de la recomendación y no después a propósito: el
             # que lee el panel de arriba abajo tiene que ver el aviso antes de
             # leer la acción, o se queda con "raise" y el matiz se pierde.
+            #
+            # Son DOS avisos y no uno, y la razón es que no dicen lo mismo.
+            # El primero dice que el SPOT no tiene política. El segundo dice
+            # de QUIÉN es el equity que hay detrás, que es lo que el primero
+            # deja sin contestar: "no soportado" sin más deja al que lee sin
+            # saber si el 40 % de la línea de Equity es contra un rival o
+            # contra dos.
+            rival = villain_label.split('|')[0].strip() or 'el rival principal'
             lines.append(f'  ⚠ Recomendación HU; spot multiway NO SOPORTADO '
-                         f'({plan.n_players} jugadores en la mano). La equity '
-                         f'es contra UN solo rival.')
+                         f'({plan.n_players} jugadores en la mano).')
+            lines.append(f'    equity usada: HU contra {rival}.')
+            lines.append(f'    No es la equity del spot: la de arriba es '
+                         f'contra UN rival y no se puede leer como si fueran '
+                         f'todos.')
     if runout and len(sit.board_codes) < 5:
         lines.append('  Equity a showdown: sorteo de turn+river aplicado a '
                      'todas las acciones')
