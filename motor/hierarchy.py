@@ -575,6 +575,20 @@ def shadow_record(hand_id: str, street: str, board_codes, hero_codes,
         'n_pending': shadow.get('n_pending'),
         'n_caller': shadow.get('n_caller'),
         'delta': shadow.get('delta'),
+        # --- F7.2.b: el alcance, A TRES ESTADOS --------------------------
+        #   True  = el spot es multiway y la política vigente lo soporta
+        #   False = el spot es multiway y NO se soporta (lo normal hoy)
+        #   None  = ESTA EJECUCIÓN NO DECLARÓ EL ALCANCE
+        #
+        # El tri-estado, y no un `False` por defecto, porque son cosas
+        # distintas "es multiway y no lo soportamos" y "nadie miró". Ponerlo
+        # False a pelo haría que un log sin el dato se leyera como una
+        # medición, y es justo el error que este bloque existe para evitar.
+        'multiway': shadow.get('multiway'),
+        'multiway_soportado': shadow.get('multiway_soportado'),
+        'multiway_motivo': shadow.get('multiway_motivo'),
+        'politica_multiway': shadow.get('politica_multiway'),
+        'n_players': shadow.get('n_players'),
         'action_production': action_production,
         'action_shadow': action_shadow,
         'experimental': True,

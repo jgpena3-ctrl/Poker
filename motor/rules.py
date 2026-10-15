@@ -22,6 +22,43 @@ from .situation import board_texture
 
 
 # ---------------------------------------------------------------------------
+# F7.2.b — la politica multiway vigente. Ver `DOCS/CONTRATO_F72A.md` §6.
+#
+# Este bloque es la FUENTE UNICA de "este spot es multiway". No esta aqui por
+# comodidad: esta aqui porque los DOS caminos de decision del motor
+# (`recommend_loop.recommend` y `asistente_live._recomendacion_para`) llaman a
+# `plan()`, y `plan()` ya tiene `n_players` en la mano. Si el flag se calculara
+# en el llamador, habria dos calculos que se pueden divergir.
+# `motor/test_multiway_soportado.py` vigila que no aparezcan mas.
+#
+# LO QUE NO SE HACE AQUI, y por que (CONTRATO_F72A.md §6.3):
+#   No se implementa `RangeState.union()` como atajo. Suma masas sin
+#   normalizar — dos rangos uniformes dan 2.000 por combo, masa total 2652— y
+#   eso no es la distribucion conjunta contra dos rivales. La tentacion va a
+#   ser "implemento union() bien y soporto multiway de verdad". No. Si algún
+#   dia se implementa, se hace con un contrato NUEVO, no editando este.
+#
+# LO QUE ESTA HECHO, y es lo unico autorizado hasta ese dia: MARCAR. La
+# equity se calcula igual (HU contra el rival principal), la decision no
+# cambia, y la recomendacion dice que no es una equity multiway.
+# ---------------------------------------------------------------------------
+
+#: False mientras no exista una evaluacion conjunta validada. Cuando se
+#: implemente, cambia aqui y SOLO aqui: todos los consumidores lo leen.
+MULTIWAY_SOPORTADO = False
+
+#: Version de la politica, va al registro sombra. Sin esto, "no soportado" es
+#: una palabra sin fecha: dentro de seis meses nadie sabe si era la politica de
+#: hoy o la de la semana pasada.
+POLITICA_MULTIWAY = 'F7.2.b/hu-contra-un-rival'
+
+#: El motivo, en texto. Se muestra en el panel y se registra en el log.
+MOTIVO_MULTIWAY = (
+    'el motor solo tiene equity heads-up contra UN rival; en un spot con mas '
+    'de uno esa equity no es la equity del spot (CONTRATO_F72A.md §6)')
+
+
+# ---------------------------------------------------------------------------
 # Textura (§23): DRY / SEMI_DRY / WET
 # ---------------------------------------------------------------------------
 
@@ -209,6 +246,33 @@ class RulePlan:
     structure: Optional[str] = None
     note: str = ''
     n_players: int = 1
+
+    @property
+    def multiway(self) -> bool:
+        """¿El spot tiene más de UN rival? F7.2.b.
+
+        Vive aquí, y no en los llamadores, porque `plan()` ya recibe
+        `n_players` y ambos caminos de decisión pasan por él. Que se pueda
+        marcar desde `rp` es lo que permite que el panel avise sin que
+        `asistente_live` tenga que saber que existe este problema.
+
+        Mismo umbral que `Ctx.multi` (que ya existía y solo se usaba para los
+        sizings): más de dos jugadores en la mano = multiway.
+        """
+        return self.n_players > 2
+
+    @property
+    def multiway_soportado(self) -> bool:
+        """¿Se puede dar una recomendación multiway? F7.2.b. Hoy, no.
+
+        Distinto de `multiway` a propósito: una cosa es *el spot es multiway* y
+        otra *sabríamos decidir en él*. Hoy siempre que la primera es verdad la
+        segunda es falsa, pero el día que haya equity conjunta la segunda
+        caducará sola y `multiway` no. Fusionarlas escribiría el contrato de §6
+        en el sitio donde menos se va a leer.
+        """
+        return not self.multiway or MULTIWAY_SOPORTADO
+
 
 # ---------------------------------------------------------------------------
 # Tabla de reglas v1 (pegar.txt §18-§19): IF → filtros → acciones → sizing

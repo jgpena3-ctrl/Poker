@@ -337,6 +337,14 @@ Y una tercera, que no es un bloqueo sino una condición de calidad:
   implementada**, y el motor sigue entrando en multiway en silencio.
   `CONTRATO_F72A.md` §7 lo prohíbe cablearlo todavía.
 
+> **Aviso de vigencia (2026-10-15).** El párrafo de arriba describe el estado
+> en el momento de firmarse esta decisión. **F7.2.b ya está implementado**: el
+> motor marca `multiway_soportado=False` cuando `n_players>2`, y el panel lo
+> dice antes de la recomendación. Lo que sigue sin hacer es **soportar**
+> multiway — la equity continúa siendo heads-up contra un rival y
+> `RangeState.union()` no se ha tocado. La condición de calidad sigue, con otro
+> nombre; la frase «no está implementada» ya no describe el código.
+
 ## 7. Lo que queda hecho de lo que se propuso
 
 | | |

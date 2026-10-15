@@ -27,6 +27,7 @@ from .preflop import opening_range_or_fallback
 from .ranges import RangeError, RangeState, SIN_POSITION
 from .situation import Situation, situation
 from . import rules
+from .rules import MOTIVO_MULTIWAY, MULTIWAY_SOPORTADO, POLITICA_MULTIWAY
 from .hand_state import classify as classify_hand, range_advantage as ha_range_adv
 
 # Orden postflop: primero en actuar → último
@@ -67,6 +68,21 @@ class Recommendation:
     # `value`, que son siempre los de producción. Ver hierarchy.py.
     shadow: Optional[Dict] = None
     hierarchy: Optional[Dict] = None
+
+    # --- F7.2.b: alcance de la recomendación -------------------------------
+    # `multiway_soportado=False` NO significa "el motor no recomienda": el
+    # motor sigue recomendando exactamente lo mismo que antes. Significa que la
+    # equity que hay detrás es heads-up contra UN rival, y que en un spot con
+    # más de uno esa equity no es la equity del spot. Ver CONTRATO_F72A.md §6.
+    #
+    # `multiway` es el HECHO (el spot tiene más de un rival) y
+    # `multiway_soportado` la CONSECUENCIA (sabemos o no decidir en él). Son
+    # campos distintos a propósito: el día que haya equity conjunta, el
+    # segundo caducará solo y el primero seguirá siendo un hecho.
+    multiway: bool = False
+    multiway_soportado: bool = True
+    multiway_motivo: Optional[str] = None
+    politica_multiway: str = POLITICA_MULTIWAY
 
     @property
     def text(self) -> str:
@@ -410,6 +426,18 @@ def recommend(hero_codes, board_codes, *, pot: float, to_call: float = 0.0,
 
     candidates = rp.candidates if rp is not None else None
 
+    # --- F7.2.b: el alcance de lo que se va a recomendar -------------------
+    #
+    # Se calcula AQUÍ y no en el return, para que sea lo mismo que consume el
+    # panel (que lo lee de `rp`). La rama de `rp is None` no es un caso
+    # defensivo: `rules.plan` lanza en `street='preflop'` y eso lo transforma
+    # en `rp=None` en el `except` de arriba, que es un camino de producción.
+    # Si aquí se escribiera `multiway = rp.multiway`, ese camino reventaría.
+    # La sombra de `n_players` es la MISMA que usa `rules.plan`.
+    multiway = rp.multiway if rp is not None else n_players > 2
+    multiway_soportado = (not multiway) or MULTIWAY_SOPORTADO
+    multiway_motivo = None if multiway_soportado else MOTIVO_MULTIWAY
+
     # --- Anytime: EV en dos pasadas (rápido → refinado con runout) ---
     best_action, best_value, best_evs = None, -999.0, None
     best_runout = False
@@ -517,6 +545,19 @@ def recommend(hero_codes, board_codes, *, pot: float, to_call: float = 0.0,
                     shadow_info['equity_main_available'] = False
                     shadow_info['equity_main_source'] = None
                     shadow_info['equity_main_note'] = f'error: {e}'
+            # F7.2.b: el alcance, en el registro. Se escribe SOBRE
+            # `shadow_info`, igual que las claves de `equity_main`: ni `evs`
+            # ni `rp` se tocan, así que la acción no puede cambiar.
+            #
+            # Va en el log porque el flag es la forma de CONTAR cuántos puntos
+            # de decisión entran al motor siendo multiway. Sin esto, la
+            # medición de CONTRATO_F72A §5.5 (45,9 % de las decisiones) no
+            # tiene con qué contrastar en producción.
+            shadow_info['multiway'] = multiway
+            shadow_info['multiway_soportado'] = multiway_soportado
+            shadow_info['multiway_motivo'] = multiway_motivo
+            shadow_info['politica_multiway'] = POLITICA_MULTIWAY
+            shadow_info['n_players'] = n_players
             # El registro es opcional; el cálculo no. Con `hierarchy` el
             # llamador ya pidió la comparación, aunque no la persista.
             if shadow_log is not None:
@@ -536,7 +577,11 @@ def recommend(hero_codes, board_codes, *, pot: float, to_call: float = 0.0,
                           elapsed_ms=elapsed_ms,
                           stages=stages, runout=best_runout,
                           rule_plan=rp, shadow=shadow_info,
-                          hierarchy=hierarchy)
+                          hierarchy=hierarchy,
+                          multiway=multiway,
+                          multiway_soportado=multiway_soportado,
+                          multiway_motivo=multiway_motivo,
+                          politica_multiway=POLITICA_MULTIWAY)
 
 
 def run_demo(runout: bool = False):

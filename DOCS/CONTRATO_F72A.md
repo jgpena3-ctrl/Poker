@@ -311,8 +311,42 @@ Consecuencias, hasta que exista una evaluación conjunta validada:
    recomendación se marca como **no soportada**, con la razón y la
    versión de la política en sombra.
 
-**Ninguna de estas cuatro está implementada todavía.** Implementarlas es
-F7.2.b y queda bloqueada detrás de este contrato.
+**Estado de las cuatro, a 2026-10-15: las cuatro están implementadas.**
+Implementar esto fue **F7.2.b**. Lo que se hizo y lo que NO se hizo:
+
+| | regla | estado |
+|---|---|---|
+| 1 | `equity_main` es HU por construcción también en multiway | ✅ heredado por construcción; ahora **declarado** en `Recommendation.multiway` |
+| 2 | **No** se presenta `equity_main` como estimación multiway | ✅ el panel lo dice antes de la línea de recomendación |
+| 3 | **No** se implementa `RangeState.union()` como atajo | ✅ sigue sin implementarse, y es lo único que **no** se va a hacer |
+| 4 | la recomendación se marca como **no soportada**, con razón y versión de la política en sombra | ✅ `multiway_soportado`, `multiway_motivo`, `politica_multiway` |
+
+Dónde vive:
+
+```
+motor/rules.py         MULTIWAY_SOPORTADO, POLITICA_MULTIWAY, MOTIVO_MULTIWAY
+                        RulePlan.multiway / RulePlan.multiway_soportado
+                        ↑ FUENTE ÚNICA. Los dos caminos de decisión pasan por
+                          aquí, y por eso el aviso llega a `asistente_live` sin
+                          tocar ese fichero.
+motor/panel.py         "⚠ Recomendación HU; spot multiway NO SOPORTADO"
+motor/recommend_loop.py  Recommendation.multiway{,_soportado,_motivo,_politica}
+motor/hierarchy.py      shadow_record lleva el caso a tres estados
+motor/test_multiway_soportado.py   20 tests
+```
+
+> **Lo que NO se hizo, y es lo importante: no se soporta multiway.**
+> El motor sigue recomendando lo mismo que antes, con la misma equity de
+> siempre: heads-up contra **un** rival. Lo único nuevo es que **lo dice**.
+>
+> `RangeState.union()` sigue sin tocarse, y `MULTIWAY_SOPORTADO` sigue en
+> `False`. El día que haya una evaluación conjunta validada, se cambia esa
+> constante y se firma un contrato nuevo. Antes de eso, marcar.
+>
+> Medido: en el mismo spot, la acción y los EVs son **idénticos** con
+> `n_players=2` y con `n_players=4` (`call +11.05 BB` en los dos). Lo único que
+> se mueve son los sizings candidatos, y eso es anterior a este bloque
+> (`rules._multi_sizes`).
 
 ---
 

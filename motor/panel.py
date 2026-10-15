@@ -67,6 +67,12 @@ def format_insight(sit: Situation, evs: EvTable,
     `plan` (opcional): `RulePlan` de rules.py — añade la línea de la regla
     postflop aplicada (pegar.txt §22) para que la recomendación sea
     explicable (§21).
+
+    F7.2.b — y además el aviso de multiway. Se lee de `plan`, NO se calcula
+    aquí: los DOS caminos de decisión del motor llaman a `rules.plan()` y le
+    pasan el plan entero a esta función, así que avisar desde aquí marca los
+    dos sin que ninguno tenga que acordarse de hacerlo. El que lo recuerde se
+    lo recuerda el panel.
     """
     best_label, best_value = evs.best()
     head = f'== {format_cards(sit.hero_codes)} | {sit.street} | {sit.position or "-"}'
@@ -79,6 +85,14 @@ def format_insight(sit: Situation, evs: EvTable,
     ]
     if plan is not None:
         lines.append(f'  Regla: {plan.note or f"spot {plan.spot}"}')
+        if getattr(plan, 'multiway', False) and not getattr(
+                plan, 'multiway_soportado', True):
+            # F7.2.b. Va ANTES de la recomendación y no después a propósito: el
+            # que lee el panel de arriba abajo tiene que ver el aviso antes de
+            # leer la acción, o se queda con "raise" y el matiz se pierde.
+            lines.append(f'  ⚠ Recomendación HU; spot multiway NO SOPORTADO '
+                         f'({plan.n_players} jugadores en la mano). La equity '
+                         f'es contra UN solo rival.')
     if runout and len(sit.board_codes) < 5:
         lines.append('  Equity a showdown: sorteo de turn+river aplicado a '
                      'todas las acciones')
