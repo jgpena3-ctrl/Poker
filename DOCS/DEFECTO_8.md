@@ -45,12 +45,29 @@ revertirlo porque el patrón salía 8 veces y se tocaba 1.
 ## 5. Consecuencia para Fase D
 
 **No bloquea.** 5 de 991. Pero son 5 manos cuyas frecuencias están
-systemáticamente sesgadas: una acción posterior a un fold infla la frecuencia
+sistemáticamente sesgadas: una acción posterior a un fold infla la frecuencia
 de esa categoría para quien la emitió.
 
 Conviene comprobarlas antes de mirar cualquier perfil que pase por estas
 manos.
 
-> **Aviso de cifra.** Se publicó **8**; el detector permanente da **5**.
-> Mismo motivo que en `DEFECTO_45.md`: el 8 vino de un script que no se ha
-> versionado.
+## 6. Decisión sobre la cifra: opción A
+
+> **La cifra publicada de 8 no tiene código que la produzca, y por tanto no
+> es un dato. Se acepta como cifra histórica sin instrumento y la que vale es
+> la del detector permanente.**
+
+Se publicó 8 desde un script de un solo uso que no se versionó. El detector
+permanente da **5**, y la diferencia viene de que aquel script miraba todas
+las calles y este **solo preflop**, que es el alcance con el que se describes
+la clase.
+
+Que el alcance este declarado es parte del contrato: medirlo en todas las
+calles daría otro número, y no sería la misma métrica con otro nombre.
+
+`tools/auditar_rango.py --validar` lo dice explícitamente: esta cifra **no
+se reproduce** y por qué. Un instrumento que declara que su número no tiene
+origen es más útil que uno que lo publica sin avisar.
+
+> No se ha intentado recuperar el criterio original. Un criterio que solo
+> existe en el recuerdo de una conversación no es un criterio.

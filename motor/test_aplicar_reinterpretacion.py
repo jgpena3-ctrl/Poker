@@ -57,6 +57,53 @@ def _sin_una_mano(monkeypatch, hid):
     return valor
 
 
+def _sin_congelacion(monkeypatch):
+    """Quita el congelamiento por revision manual para probar el resto.
+
+    Los tres bloqueos se prueban por separado: alcance (2), fichero ajeno (3)
+    y congelamiento (4). Un test que los mezclara no sabria cual fallo.
+    """
+    monkeypatch.setattr(AR.learn, 'REVISION_PENDIENTE', False)
+
+
+# --- el congelamiento, que va antes que los otros dos ---------------------
+
+def test_la_revision_manual_congela_la_escritura(monkeypatch, tmp_path, capsys):
+    """`--apply` se niega mientras el mantenedor revise las manos.
+
+    Y `--descartar-cambios` NO lo salta: saltarlo significaria terminar la
+    revision, no escribir mas rapido.
+    """
+    destino = tmp_path / 'hands_db.jsonl'
+    _escribir(_previa(), destino)
+    monkeypatch.setattr(AR, 'DB_PATH', str(destino))
+    assert AR.learn.REVISION_PENDIENTE is True, (
+        'la revision manual deberia seguir en curso')
+    rc = main(['--apply'])
+    out = capsys.readouterr().out
+    assert rc == 4, out
+    assert 'BASE CONGELADA' in out, out
+    rc2 = main(['--apply', '--descartar-cambios'])
+    out2 = capsys.readouterr().out
+    assert rc2 == 4, out2
+    assert 'BASE CONGELADA' in out2, out2
+
+
+def test_el_dry_run_informa_del_congelamiento_pero_no_falla(monkeypatch,
+                                                           tmp_path, capsys):
+    """Un dry-run no escribe nada, asi que informa y sigue.
+
+    Un informe que no se puede ver no sirve para decidir.
+    """
+    destino = tmp_path / 'hands_db.jsonl'
+    _escribir(_previa(), destino)
+    monkeypatch.setattr(AR, 'DB_PATH', str(destino))
+    rc = main([])
+    out = capsys.readouterr().out
+    assert rc == 0, out
+    assert 'revision manual en curso' in out, out
+
+
 def test_el_alcance_bloquea_el_camino_idempotente(monkeypatch, tmp_path, capsys):
     """revision_2 §1 (a).
 
@@ -68,6 +115,7 @@ def test_el_alcance_bloquea_el_camino_idempotente(monkeypatch, tmp_path, capsys)
     destino = tmp_path / 'hands_db.jsonl'
     _escribir(_esperado(), destino)
     monkeypatch.setattr(AR, 'DB_PATH', str(destino))
+    _sin_congelacion(monkeypatch)
     _sin_una_mano(monkeypatch, 'H_0722')
     rc = main([])
     out = capsys.readouterr().out
@@ -80,6 +128,7 @@ def test_el_alcance_bloquea_el_dry_run(monkeypatch, tmp_path, capsys):
     destino = tmp_path / 'hands_db.jsonl'
     _escribir(_previa(), destino)
     monkeypatch.setattr(AR, 'DB_PATH', str(destino))
+    _sin_congelacion(monkeypatch)
     _sin_una_mano(monkeypatch, 'H_0722')
     rc = main([])
     out = capsys.readouterr().out
@@ -92,6 +141,7 @@ def test_alcance_correcto_en_dry_run_da_cero(monkeypatch, tmp_path, capsys):
     destino = tmp_path / 'hands_db.jsonl'
     _escribir(_previa(), destino)
     monkeypatch.setattr(AR, 'DB_PATH', str(destino))
+    _sin_congelacion(monkeypatch)
     rc = main([])
     out = capsys.readouterr().out
     assert rc == 0, out
@@ -117,6 +167,7 @@ def test_no_sobrescribe_un_fichero_ajeno(monkeypatch, tmp_path, capsys):
     # `cwd` de `git show`, y parchearlo rompe la lectura de la referencia.
     # El backup va al directorio real, que esta en `.gitignore`.
     monkeypatch.setattr(AR, 'DB_PATH', str(destino))
+    _sin_congelacion(monkeypatch)
 
     rc = main(['--apply'])
     out = capsys.readouterr().out
@@ -136,6 +187,7 @@ def test_descartar_cambios_requiere_los_dos_flags(monkeypatch, tmp_path, capsys)
     lines[5] = json.dumps(una, ensure_ascii=False)
     _escribir(lines, destino)
     monkeypatch.setattr(AR, 'DB_PATH', str(destino))
+    _sin_congelacion(monkeypatch)
     antes = io.open(str(destino), encoding='utf-8').read()
     rc = main(['--descartar-cambios'])
     assert rc == 0, capsys.readouterr().out

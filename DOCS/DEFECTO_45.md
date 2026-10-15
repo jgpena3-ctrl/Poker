@@ -56,15 +56,40 @@ casos de `r 0.5` son un subconjunto con decisión propia.
 ## 5. Consecuencia para Fase D
 
 **No bloquea el arranque, pero hay que decirlo antes de mirar cifras del BB.**
-36 de 991 son el 3,6 % del rango, y todas son del BB o de la última
-posición. Si el BB tiene una frecuencia de subida anómala, parte de eso puede
-venir de aquí.
+Las subidas imposibles son del BB o de la última posición, y si el BB tiene
+una frecuencia de subida anómala, parte de eso puede venir de aquí.
 
 Lo que **no** se debe hacer es usar esto para «limpiar» las 36 antes de
 medir: sería volver a parchear a mano, la tercera vez, y esta sobre una clase
 entera.
 
-> **Aviso de cifra.** Se publicó **45** para esta clase. El detector
-> permanente da **36**. El 45 vino de un script de un solo uso que no se ha
-> versionado y que ya no se puede consultar. Las cifras de este documento
-> salen de `tools/auditar_rango.py`; las de documentos anteriores, no.
+## 6. Decisión sobre la cifra: opción A
+
+> **La cifra publicada de 45 no tiene código que la produzca, y por tanto no
+> es un dato. Se acepta como cifra histórica sin instrumento y la que vale es
+> la del detector permanente.**
+
+Se publicó 45 desde un script de un solo uso que no se versionó. El detector
+permanente da una cifra distinta, y además la lógica era incorrecta: comparaba
+cada `r` contra `learn.BB`, la **ciega nominal**, en vez de contra la
+**apuesta viva anterior**. Con eso, una subida que superaba la ciega pero no la
+apuesta anterior pasaba desapercibida.
+
+Corregida la lógica, el recuento cambia otra vez. `tools/auditar_rango.py`
+es el que vale, y se autocomprueba:
+
+```
+python tools/auditar_rango.py --validar
+```
+
+- **Dos cifras reproducen**: el patrón del BB (652) y su ausencia real (23).
+- **Dos no reproducen**: esta y la de `DEFECTO_8.md`. No se esconden: el
+  script lo dice y explica por qué.
+
+**La cifra vigente sale del script, no de este documento.** Si cambia el
+script, cambia el número, y `--validar` lo contrasta contra lo que se publicó
+para que la discrepancia se vea.
+
+> No se ha intentado recuperar el criterio original con el que se midieron
+> las 45. Un criterio que solo existe en el recuerdo de una conversación no es
+> un criterio: es una excusa para no decidir.

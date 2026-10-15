@@ -249,6 +249,37 @@ def main(argv=None):
             print('  (dry-run tambien falla: es el mismo defecto.)')
         return 2
 
+    # --- la base esta CONGELADA mientras la revision manual siga en curso ---
+    #
+    # El mantenedor esta revisando las manos una a una, y las decisiones que
+    # dependen de ello no se toman hasta el final. Editar la base mientras tanto
+    # invalida la revision: se estarian revisando manos que luego cambian.
+    #
+    # Solo bloquea ESCRIBIR. El dry-run informa y sigue: no escribe nada, y un
+    # informe que no se puede ver no sirve para decidir.
+    #
+    # No es una intencion, es un booleano en `learn`, y `--descartar-cambios`
+    # NO lo salta: saltarlo significa terminar la revision.
+    congelada = learn.REVISION_PENDIENTE and args.apply
+    if congelada:
+        print()
+        print('  BASE CONGELADA: hay una revision manual en curso.')
+        print('    revisadas hasta : %s' % learn.REVISION_HASTA)
+        print('    total esperado  : %d' % learn.REVISION_TOTAL_ESPERADA)
+        print()
+        print('  No se escribe nada. Las decisiones que dependen de la revision')
+        print('  (los cambios sin motivo, las eliminadas, las reconstrucciones)')
+        print('  se toman AL FINAL, no ahora.')
+        print('  Para escribir haria falta poner learn.REVISION_PENDIENTE a')
+        print('  False, que significa "la revision ha terminado".')
+        return 4
+    if learn.REVISION_PENDIENTE:
+        print()
+        print('  AVISO: hay una revision manual en curso (hasta %s de %d).'
+              % (learn.REVISION_HASTA, learn.REVISION_TOTAL_ESPERADA))
+        print('  En --apply la base esta CONGELADA y no se puede escribir.')
+        print('  Esto es un dry-run: informa, no escribe.')
+
     iguales, lineas_distintas = diff_contra_actual(lineas)
     print()
 

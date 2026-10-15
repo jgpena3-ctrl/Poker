@@ -66,6 +66,83 @@ casos, derivados regenerados— y esto.
 
 ---
 
+## 0-ter. Canal manual: base congelada, decisiones aplazadas
+
+**Estado: DECIDIDO — documentar y aplazar. Ninguna corrección más hasta que
+termine la revisión manual.**
+
+### La regla
+
+> **`hands_db.jsonl` no se modifica: ni a mano, ni con un script.** Hasta que
+> el mantenedor haya revisado las ~1200 manos una a una. Lleva **1014**.
+
+Y todas las decisiones que dependen de esa revisión se toman **al final**, no
+ahora.
+
+### Qué queda sin decidir, y por qué se aplaza
+
+`tools/reconciliar.py` —**solo lectura**— dice exactamente esto:
+
+| | |
+|---|---:|
+| manos modificadas frente a `e314f74` | 70 |
+| · con motivo identificable (23 de CM-004 + `H_0350`) | 24 |
+| · **sin motivo escrito en ninguna parte** | **46** |
+| · de las cuales, **reaplicadas** sobre `02fc641` | 8 |
+| **borradas, sin evidencia que las autorice** | **22** |
+| añadidas | 0 |
+
+Las 8 reaplicadas son las reconstrucciones que `02fc641` revirtió:
+`H_0039`, `H_0051`, `H_0067`, `H_0109`, `H_0143`, `H_0263`, `H_0969`,
+`H_0970`. Los cuatro `DEFECTO_*.md` explican por qué se revirtieron: sus
+patrones salen 8, 45 y 652 veces, y corregir una no hace que las otras sean
+menos.
+
+**No se revierten, y no se declaran.** Se dejan como están, escritas.
+
+### Por qué se aplaza en vez de decidirse
+
+Porque las tres cosas son la misma pregunta —*¿qué es correcto en esta
+mano?*— y esa pregunta la está contestando una persona, una mano por una. Un
+script no puede contestarla: la evidencia que hace falta para decidir si una
+subida a 1,0 fue un limp o un error de importe es la grabación, y no la hay.
+
+Además, decidir ahora invalidaría la revisión: si `hands_db.jsonl` cambia
+mientras se revisa, lo que se revisó ya no es lo que hay.
+
+### Cómo se hace cumplir
+
+**Con un test, no con una nota.** `motor/learn.py` tiene
+`REVISION_PENDIENTE = True`, y:
+
+- `motor/test_canal_manual.py::test_la_base_no_cambia_mientras_hay_revision_manual`
+  falla si el sha256 de la base cambia.
+- `tools/aplicar_reinterpretacion.py --apply` se niega y devuelve **4**.
+  `--descartar-cambios` **no lo salta**: saltarlo significa terminar la
+  revisión, no escribir más rápido.
+
+Los tres bloqueos del script devuelven códigos distintos, y se distinguen:
+
+| código | significa |
+|---|---|
+| 2 | el alcance no cuadra: el script produciría otra cosa |
+| 3 | el fichero actual no es ni la referencia ni su salida: es ajeno |
+| **4** | **base congelada por revisión manual en curso** |
+
+### Cuando la revisión termine
+
+1. `learn.REVISION_PENDIENTE = False`.
+2. Actualizar `HANDS_DB_SHA256` y `HANDS_DB_LINEAS` si la base cambió.
+3. Escribir aquí la decisión sobre los 46, las 22 y las 6.
+4. Regenerar derivados y recalcular las cifras de F7.2.
+5. Quitar los `xfail(strict=True)` de `motor/test_cm004.py`.
+
+Los cinco tests afectados **no están para taparse**: están diciendo la verdad
+sobre el fichero, y son `strict=True` para que, al resolver la decisión,
+**pasen** y obliguen a quitar la marca.
+
+---
+
 ## 0. Decisión
 
 > ### Opción A — aceptar la pérdida. **Firmada, y luego retirada.**

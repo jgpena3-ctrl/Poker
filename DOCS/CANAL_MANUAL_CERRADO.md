@@ -2,7 +2,7 @@
 
 **Estado:** vigente.
 **Fecha:** 2026-10-14
-**Commit del estado canónico:** `75bbdb7`
+**Commit del estado canónico:** `5c41b23`
 **SHA-256:** `202a1f548fc60bac3d0d4b7a225429083e22298d97a5f6f38cb28d24435b0634`
 **Líneas:** 1258
 **Vigila:** `motor/test_canal_manual.py`
@@ -65,17 +65,41 @@ Con `ajeno`, `--apply` se niega y dice cuántas líneas se perderían. En
 ## 4. El estado vigente tiene 68 cambios sin declarar
 
 Este es el punto abierto, y por eso el estado canónico no es la salida del
-script:
+script. Lo que sigue sale de `python tools/reconciliar.py`, que es **solo
+lectura**:
 
-- `75bbdb7` tiene **1258** líneas. La referencia `e314f74` tenía **1280**.
-- **22 manos borradas**, **74 modificadas** sobre `02fc641`.
-- De esas 74, **8** son las reversiones que `02fc641` deshizo y que volvieron
+- `5c41b23` tiene **1258** líneas. La referencia `e314f74` tenía **1280**.
+- **22 manos borradas**, **70 modificadas** sobre la referencia.
+- De esas 70, **24** son los 23 de CM-004 más `H_0350`, con motivo
+  identificable.
+- **46 no tienen motivo escrito en ninguna parte.**
+- De esas 46, **8** son las reversiones que `02fc641` deshizo y que volvieron
   a aplicarse.
-- Las **66** restantes no tienen motivo escrito en ninguna parte.
 
-La decisión que falta —declarar las 66 o volver al estado reproducible— está
-en `DECISION_CM004.md` §0-ter. Hasta que se tome, el estado canónico es este,
-**y queda dicho que no está declarado**.
+### 4.1 La base está CONGELADA
+
+> **Mientras haya revisión manual en curso, `hands_db.jsonl` no se modifica:
+> ni a mano, ni con script.**
+
+`learn.REVISION_PENDIENTE = True`. El mantenedor va revisando las manos una a
+una —lleva **1014** de ~1200— y las decisiones que dependen de eso se toman al
+final. Editar la base mientras se revisa invalidaría la revisión.
+
+Se hace cumplir con tests, no con una nota:
+
+| | |
+|---|---|
+| `test_la_base_no_cambia_mientras_hay_revision_manual` | falla si el sha256 cambia |
+| `aplicar_reinterpretacion.py --apply` | se niega y devuelve **4** |
+
+`--descartar-cambios` **no salta** el congelamiento. Saltarlo significa
+terminar la revisión, no escribir más rápido.
+
+### 4.2 Decisión vigente
+
+**Documentar y aplazar.** No se declaran los 46, no se revierten las 8
+reaplicadas, no se restauran las 22 borradas. Se dejan escritas y se deciden
+cuando la revisión llegue al final. Ver `DECISION_CM004.md` §0-ter.
 
 ## 5. Cómo se cambia la base a partir de ahora
 

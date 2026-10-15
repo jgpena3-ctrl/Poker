@@ -35,6 +35,8 @@ import io
 import os
 import subprocess
 
+import pytest
+
 from motor import learn
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -60,7 +62,7 @@ def _git(*args):
 
 def test_no_hay_cambios_sin_commitear_en_la_base():
     """Si el fichero tiene cambios sin commitear, se ha tocado y no se ha
-    declarado. O se commitea, o se revierte: no hay第三条 via."""
+    declarado. O se commitea, o se revierte: no hay tercera via."""
     sucios = [l for l in _git('status', '--porcelain', '--', DB_REL).split('\n')
               if l.strip()]
     assert not sucios, (
@@ -170,7 +172,59 @@ def test_el_blob_y_el_disco_coinciden_byte_a_byte():
         % (len(crudo), len(disco)))
 
 
-# --- el mecanismo que de verdad lo hacia posible ----------------------------
+# --- el congelamiento durante la revision manual ---------------------------
+
+def test_la_base_no_cambia_mientras_hay_revision_manual():
+    """La base esta CONGELADA mientras el mantenedor revise las manos.
+
+    Es la decision vigente: `hands_db.jsonl` no se toca —ni a mano ni con
+    script— hasta que la revision manual llegue al final. Ver
+    `DOCS/DECISION_CM004.md` §0-ter.
+
+    La razon de que sea un TEST y no una nota: editar la base mientras se
+    revisa invalida la revision. Se estaria mirando unas manos y luego
+    cambiandolas, y nadie sabria si lo que se vio es lo que hay.
+    """
+    if not learn.REVISION_PENDIENTE:
+        pytest.skip('la revision manual ha terminado: la base ya no esta '
+                    'congelada')
+    real = _sha(DB_PATH)
+    assert real == learn.HANDS_DB_SHA256, (
+        'la revision manual esta en curso (hasta %s de %d) y la base ha '
+        'cambiado: %s, esperado %s.\n\n'
+        'La revision se hace sobre unos ficheros concretos. Si el fichero '
+        'cambia mientras se revisa, lo que se reviso ya no es lo que hay, y '
+        'las decisiones que se tomen al final estaran tomadas sobre datos '
+        'que nadie ha mirado.\n\nSi el cambio es de verdad legitimo, termina '
+        'la revision (learn.REVISION_PENDIENTE = False) y actualiza las '
+        'constantes con el motivo en %s.'
+        % (learn.REVISION_HASTA, learn.REVISION_TOTAL_ESPERADA,
+           real[:16], learn.HANDS_DB_SHA256[:16], CANONICO))
+
+
+def test_aplicar_reinterpretacion_se_niega_mientras_hay_revision():
+    """El congelamiento tambien esta en el script que escribe, no solo en el
+    test. `--descartar-cambios` NO lo salta: saltarlo significa terminar la
+    revision."""
+    texto = io.open(os.path.join(ROOT, 'tools', 'aplicar_reinterpretacion.py'),
+                     encoding='utf-8').read()
+    assert 'REVISION_PENDIENTE' in texto, (
+        'aplicar_reinterpretacion.py no comprueba la revision manual: se '
+        'podria escribir la base mientras se revisa')
+
+
+def test_el_fallo_del_congelamiento_no_es_el_del_fichero_ajeno():
+    """Los dos bloqueos devuelven codigos distintos y se distinguen.
+
+    Razon: si los dos devolvieran lo mismo, con la base congelada no se podria
+    saber si el problema es "no se toca" o "esto no es mio".
+    """
+    codigo = io.open(os.path.join(ROOT, 'tools',
+                                  'aplicar_reinterpretacion.py'),
+                     encoding='utf-8').read()
+    assert 'return 4' in codigo, 'el congelamiento deberia devolver 4'
+    assert 'return 3' in codigo, 'el fichero ajeno deberia devolver 3'
+    assert 'return 2' in codigo, 'el alcance incorrecto deberia devolver 2'
 
 def test_aplicar_reinterpretacion_no_puede_sobrescribir_un_ajeno():
     """La garantia de `aplicar_reinterpretacion.py`, sobre el fichero de verdad.

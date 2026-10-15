@@ -271,21 +271,26 @@ demuestra capaz de fallar no puede usarse para decir que algo está bien.
 > 2. **Cómo se cuenta.** F7.1 contaba por calle. Ahora es por **instante**,
 >    respetando el orden real de las acciones.
 >
-> ### La cifra vigente: **44,6 %**
+> ### La cifra vigente: **45,9 %**
 >
 > | | |
 > |---|---|
-> | HU | 281 |
-> | **MULTIWAY** | **226** |
-> | denominador de política | **507** |
-> | folds excluidos (deciden, pero no consultan equity) | 71 |
-> | cota superior | 255 |
+> | HU (no fold) | 281 |
+> | **MULTIWAY (no fold)** | **238** |
+> | denominador de política | **519** |
+> | folds excluidos (deciden, pero no consultan equity) | 93 |
+> | cota superior | 267 |
 >
-> Ventana de **877** manos (las 23 de CM-004 excluidas).
+> Ventana de **877** manos. Puntos de decisión: **672**.
 >
-> **16,8 % y 44,6 % llevan a políticas opuestas.** Con el primero el multiway es un caso marginal
-> que se puede ignorar; con el segundo es casi la mitad de las decisiones y no
-> se puede seguir entrando en él en silencio.
+> **Recalculada el 2026-10-14.** Antes publicaba 226/507 = 44,6 %. El
+> fichero pasó de 1280 a 1258 líneas y la ventana de 877 contiene ahora
+> otras 70 manos: el denominador subió a 519 y el **porcentaje pasó de 44,6 %
+> a 45,9 %**. No es un redondeo, es otra muestra. Ver `RANGO_VIGENTE.md`.
+>
+> **16,8 % y 45,9 % llevan a políticas opuestas.** Con el primero el multiway
+> es un caso marginal que se puede ignorar; con el segundo es casi la mitad de
+> las decisiones y no se puede seguir entrando en él en silencio.
 >
 > Fundamento y contrato: [`CONTRATO_F72A.md`](CONTRATO_F72A.md) §5.5.
 > Auditoría reproducible: [`AUDIT_NOPUEDE_ACTUAR.md`](AUDIT_NOPUEDE_ACTUAR.md).

@@ -3,7 +3,7 @@
 
 review revision_2 §3: el detector de subidas implementaba una comprobación
 distinta de la que su docstring prometia —comparaba contra la ciega nominal
-en vez de contra la apuesta viva— y sin una prueba de caso构造ado nadie puede
+en vez de contra la apuesta viva— y sin una prueba de casoado nadie puede
 distinguir "detecta menos de lo que dice" de "detecta menos porque hay menos".
 
 Aqui hay una mano minima por caso, con la respuesta ESPERADA escrita al lado.
@@ -99,7 +99,7 @@ def test_cegas_seguidas_de_la_primera_accion_voluntaria():
     """
     sin_ciega = mano(preflop=[acc('UTG', 'r', 1.0)])
     assert len(A.importe_subida(sin_ciega)) == 1, (
-        'una subida a la ciega sin ciega grabada tiene que、盐 seguir el suelo '
+        'una subida a la ciega sin ciega grabada tiene que、 seguir el suelo '
         'de 1.0')
     con_ciega = mano(preflop=[acc('BB', 'b', 1.0), acc('UTG', 'r', 1.0)])
     assert len(A.importe_subida(con_ciega)) == 1

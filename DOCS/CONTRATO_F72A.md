@@ -4,12 +4,18 @@
 clasificación de multiway.
 **Implementación:** `motor/multiway.py`
 **Decisión:** revision_1 (la regla nueva sustituye a la vieja).
-**Denominador:** **507 puntos de política**, sobre la ventana de 877 manos
+**Denominador:** **519 puntos de política**, sobre la ventana de 877 manos
 (las 23 de CM-004 están excluidas: `EXCLUSION_CM004.md`).
 **Cifras:** medidas por `python tools/auditar_solapamiento_multiway.py`, que
 importa `motor/multiway.py::metrica_politica()`. El instrumento vive en el
 motor y el script y los tests lo importan: una copia en cada sitio es
 exactamente como vuelve un bug.
+
+> **Recalculadas el 2026-10-14.** Estas cifras se publicaron antes sobre el
+> fichero de 1280 líneas. El fichero tiene 1258, y la ventana de 877 líneas
+> contiene ahora **otras 70 manos**: al borrar 22 del rango entró gente que
+> estaba fuera. El denominador pasó de 507 a 519 y **el porcentaje de 44,6 %
+> a 45,9 %**. No es un redondeo: es otra muestra. Ver `RANGO_VIGENTE.md` §4.
 
 > Este contrato va **antes** que la política multiway. Ningún consumidor
 > puede cablear la regla sin este documento, y ningún documento puede
@@ -192,7 +198,7 @@ Las dos sumas cuadran y el script lo verifica con `assert`, no a ojo:
 > El número era correcto; la presentación mentía. Por eso ahora hay `assert`
 > y un test que reproduce el cuadre.
 
-### 5.4 La tabla cruzada, y por qué el denominador son 507
+### 5.4 La tabla cruzada, y por qué el denominador son 519
 
 Un punto **fold** es una decisión real pero **no consulta equity**: no hay nada
 que repartir entre HU y MULTIWAY para una política multiway. Cuenta como
@@ -202,46 +208,46 @@ compare con los que sí usan la equity.
 | clase | fold | no fold | total | **de política** |
 |---|---:|---:|---:|---:|
 | HU | 39 | **281** | 320 | **281** |
-| MULTIWAY | 32 | **226** | 258 | **226** |
+| MULTIWAY | 36 | **238** | 274 | **238** |
 | DESCONOCIDO | 9 | 43 | 52 | 0 |
 | sin ningún rival al que responder | 9 | 17 | 26 | 0 |
-| **TOTAL** | **89** | **567** | **656** | **507** |
+| **TOTAL** | **93** | **579** | **672** | **519** |
 
 Tres cuadres, y el script los verifica con `assert`:
 
 ```
-578 + 52 + 26 = 656 puntos      todo lo clasificado, folds incluidos
- 89 +      567 = 656 puntos      filas por columnas
-507 = 281 + 226                  la política no contiene folds
+519 + 43 + 17 = 579 no-fold  ->  + 93 folds  =  672 puntos
+519 = 281 HU + 238 MULTIWAY
 ```
 
-> **El denominador son 507, no 578.** La versión anterior de este documento
-> publicaba 578, que incluía 71 folds del hero dentro de HU y MULTIWAY: 39 y
-> 32. Entre ellos, 32 multiway que nunca producen una recomendación.
+> **El denominador son 519, y antes fueron 578 y luego 507.** La primera
+> versión de este documento publicaba 578, que incluía 71 folds del hero
+> dentro de HU y MULTIWAY. Corregido, bajó a 507. Y al recalcular sobre el
+> fichero actual ha subido a **519**, porque la ventana ya no contiene las
+> mismas manos.
 >
-> El **porcentaje no se mueve**: 44,6 % antes y después. Lo que cambia son las
-> cuentas, 258/578 → 226/507. Y eso es un argumento **más fuerte**, no más
-> débil: la conclusión de política se llega igual por dos caminos. Lo que
-> estaba mal no era el número, era publicar el denominador sin decir que
-> llevaba folds dentro.
+> El porcentaje es la parte que importa: **44,6 % → 45,9 %**. Con cualquiera
+> de los dos, el multiway es casi la mitad de las decisiones y no se puede
+> seguir entrando en él en silencio. Que se mueva un punto no cambia la
+> política; que se moviera diez, sí, y por eso está aquí y no en un informe.
 
 De los 43 desconocidos **no fold**, 29 serían multiway si en ellos nadie
 estuviera all-in. La cota sale de ahí y con el **mismo criterio** que la
 métrica principal — sin contar los 9 folds de esa misma fila:
 
 ```
-226 (base) + 29 (techo sin evidencia) = 255
+238 (base) + 29 (techo sin evidencia) = 267
 ```
 
 ### 5.5 ⚠ La cifra que cambia la política
 
-> ## MULTIWAY = 226 de 507 = **44,6 %**
+> ## MULTIWAY = 238 de 519 = **45,9 %**
 >
 > **Antes F7.1 decía 16,8 %.** Con el mismo nombre de métrica pero otro
 > denominador, el multiway casi se triplica.
 >
 > Esto no es una mejora del dato: es que se estaba midiendo otra cosa. Pero
-> **quien lea este contrato tiene que verla**, porque 16,8 % y 44,6 % llevan
+> **quien lea este contrato tiene que verla**, porque 16,8 % y 45,9 % llevan
 > a políticas opuestas: con el primero, el multiway es un caso marginal que
 > se puede ignorar; con el segundo, es casi la mitad de las decisiones y
 > no se puede seguir entrando en él en silencio.
@@ -254,14 +260,14 @@ restaba un rival de más al excluirlo. El denominador viejo estaba
 inflado por puntos que no son decisiones, y el multiway estaba medido por
 calle, no por instante.
 
-La corrección temporal, medida **sobre los mismos 507 puntos de política** —
+La corrección temporal, medida **sobre los mismos 519 puntos de política** —
 sin folds, como la métrica principal:
 
 | | MULTIWAY |
 |---|---:|
-| por calle | 152 |
-| **por instante** | **226** |
-| la regla por calle se queda | **74 spots corto** |
+| por calle | 160 |
+| **por instante** | **238** |
+| la regla por calle se queda | **78 spots corto** |
 
 > Compararla con folds dentro era medir una cosa contra otra: el numerador
 > «por instante» venía sin folds y el denominador sí los traía. Los folds
@@ -276,7 +282,8 @@ sin folds, como la métrica principal:
 | 225 MW (cota 276) | calle con acciones | evidencia | **sustituida**: no cuenta decisiones |
 | 174 MW | acción del hero | evidencia, por calle | **sustituida**: ignora el orden |
 | 258 MW (cota 287) | acción del hero | evidencia, por instante | **sustituida**: el denominador llevaba folds |
-| **226 MW (cota 255)** | **acción del hero** | **evidencia, por instante, sin folds** | **vigente** |
+| 226 MW (cota 255) | acción del hero | por instante, sin folds | **sustituida**: ventana anterior |
+| **238 MW (cota 267)** | **acción del hero** | **por instante, sin folds, ventana vigente** | **vigente** |
 
 El 16,8 % de `RESUMEN_SECCION.md` no significa nada con este denominador.
 

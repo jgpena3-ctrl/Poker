@@ -68,9 +68,9 @@ RELIABLE_HANDS = 900
 #   version   estado
 #   --------  ------------------------------------------------------------
 #   e314f74   referencia. cm-001, cm-003 y la ventana de 877.
-#   75bbdb7   estado vigente: 1280 -> 1258 (22 manos borradas) + 74
+#   5c41b23   estado vigente: 1280 -> 1258 (22 manos borradas) + 70
 #             modificadas a mano sobre 02fc641. SIN DECLARAR TODAVIA:
-#             `DOCS/CAMBIOS_MANUALES_68.md`. Ver `CANAL_MANUAL_CERRADO.md`.
+#             `DOCS/DECISION_CM004.md` 0-ter. Ver `DOCS/CANAL_MANUAL_CERRADO.md`.
 #   e314f74   salida de `tools/aplicar_reinterpretacion.py`
 #             (sha256 173a7274...). Estado ALTERNATIVO, al que se puede volver
 #             con `--apply --descartar-cambios`.
@@ -82,7 +82,7 @@ RELIABLE_HANDS = 900
 # no se puede reproducir no es un hash.
 #
 # Documentacion: `DOCS/CANAL_MANUAL_CERRADO.md`, `DOCS/RANGO_VIGENTE.md`.
-HANDS_DB_COMMIT = '75bbdb7'
+HANDS_DB_COMMIT = '5c41b23'
 HANDS_DB_SHA256 = (
     '202a1f548fc60bac3d0d4b7a225429083e22298d97a5f6f38cb28d24435b0634')
 HANDS_DB_LINEAS = 1258
@@ -93,6 +93,34 @@ HANDS_DB_LINEAS = 1258
 # auditado = 991. Ver `DOCS/RANGO_VIGENTE.md`.
 RANGO_AUDITADO_HASTA = 'H_1014'
 RANGO_AUDITADO_LINEAS = 991
+
+# ---------------------------------------------------------------------------
+# REVISION MANUAL: EN CURSO. LA BASE ESTA CONGELADA.
+# ---------------------------------------------------------------------------
+# El mantenedor esta revisando las manos una a una. Las decisiones que dependen
+# de ello —los 46 cambios sin motivo, las 22 eliminadas, las 6 reconstrucciones
+# reaplicadas— NO se toman hasta que la revision llegue al final. Ver
+# `DOCS/DECISION_CM004.md` 0-ter.
+#
+# Mientras esto sea True:
+#
+#   - `hands_db.jsonl` NO se modifica. Ni a mano, ni con un script.
+#   - `tools/aplicar_reinterpretacion.py --apply` se niega, aunque se le pase
+#     `--descartar-cambios`.
+#   - `motor/test_canal_manual.py` falla si el sha256 de la base cambia.
+#
+# El congelamiento es un TEST, no una intencion. Una intencion no sobrevive a
+# que alguien ejecute un comando con prisa, y este repo ya ha pagado esa
+# lesson dos veces.
+#
+# Cuando la revision termine, esto pasa a False y hay que:
+#   1. ponerlo a False, aqui,
+#   2. actualizar HANDS_DB_SHA256 / HANDS_DB_LINEAS si la base cambio,
+#   3. escribir la decision en DECISION_CM004.md,
+#   4. regenerar los derivados y recalcular las cifras.
+REVISION_PENDIENTE = True
+REVISION_HASTA = 'H_1014'
+REVISION_TOTAL_ESPERADA = 1200
 
 # Manos que la ventana fiable EXCLUYE, y por que.
 #
