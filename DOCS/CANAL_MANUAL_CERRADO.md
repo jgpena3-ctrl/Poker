@@ -70,11 +70,46 @@ Con `ajeno`, `--apply` se niega y dice cuántas líneas se perderían. En
 
 El estado vigente (`9b5905a`) es `ajeno`, y con razón: es la revisión manual.
 
-## 4. El estado vigente: 63 manos revisadas, y medida
+## 4. El estado vigente: la revisión manual, medida
 
-`9b5905a` cambió **63** manos sobre `5c41b23`. No es un cambio único, son
-cuatro familias de corrección, todas sobre manos que el mantenedor estaba
-revisando una a una (de `H_1014` a `H_1029`).
+`hands_db.jsonl` la está revisando el mantenedor mano a mano. Va en dos
+tramos declarados, y los dos se midieron contra el estado anterior, no se
+supusieron.
+
+| tramo | commit | manos | rango | qué corrigió |
+|---|---|---|---|---|
+| 1.º | `9b5905a` | 63 | `H_1014` → `H_1029` | orden de la ciega del BB, `winner`, `active`/`pos`, 3 cartas por OCR |
+| 2.º | *(este)* | **40** | `H_1029` → **`H_1070`** | casi todo `winner`: listas de 2 a 6 nombres reducidas a uno |
+
+### 4.0 El segundo tramo, en detalle
+
+| | antes | después |
+|---|---|---|
+| líneas del fichero | 1258 | 1258 |
+| manos añadidas o borradas | — | ninguna |
+| manos modificadas | — | **40** (`H_1030`..`H_1070`) |
+| de 2+ ganadores a 1 ganador | — | **32** |
+| de 1 ganador a 2+ (**empeoran**) | — | **0** |
+| `winner` con 2+ en la base entera | 179 | **147** |
+| `BB b` mal ordenadas (invariante de CM-004) | 0 | **0** |
+| violaciones del invariante **introducidas** | — | **0** |
+| manos sin ganador declarado | 0 | 0 |
+| `active:false` conservando `pos` | 20 | 20 |
+
+**Es una mejora y no una regresión**, y se puede comprobar: las 32 manos que
+cambian lo hacen en una sola dirección, y ninguna de las 40 introduce una
+violación del invariante de CM-004.
+
+> **Y no mueve las cifras de `CONTRATO_F72A.md` §5.** Las 40 manos son
+> **posteriores a la ventana de 877**, así que no entran en la métrica. Se
+> comprobó midiendo, no suponiendo: `tools/auditar_solapamiento_multiway.py`
+> sigue dando 674 puntos · 521 de política · 239 MULTIWAY · 45,9 % · cota 268.
+>
+> El tramo anterior (63 manos) **sí** los movió, de 519 a 521. Que este no los
+> mueva no es que la cifra sea insensible a la base: es que estas manos están
+> fuera de la ventana. Un tramo que no cambia nada también se declara.
+
+### 4.1 El primer tramo, en detalle
 
 Lo que se comprobó, contra el fichero anterior y no contra una impresión:
 

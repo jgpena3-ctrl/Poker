@@ -78,6 +78,15 @@ RELIABLE_HANDS = 900
 #               · jugadores `active:false` que conservan `pos`: 29 -> 20
 #               · 3 cartas del hero corregidas por OCR
 #             Ver `DOCS/CANAL_MANUAL_CERRADO.md` §4 y `DOCS/APARCADO_DB.md`.
+#   <HEAD>    40 manos mas (H_1030 .. H_1070), misma revision manual:
+#               · `winner` con 2+ ganadores, en las 40 tocadas: 32 -> 1
+#               · `winner` con 2+ en la base entera: 179 -> 147
+#               · manos que pasan de 2+ ganadores a 1: 32
+#               · manos que pasan de 1 a 2+ (empeoran): 0
+#               · violaciones del invariante de CM-004 introducidas: 0
+#               · `BB b` mal ordenadas: 0 -> 0.  Sin ganador: 0 -> 0.
+#             Las 40 son POSTERIORES a la ventana de 877, asi que las cifras
+#             de `CONTRATO_F72A.md` §5 NO se mueven: se comprobo mediendo.
 #   e314f74   salida de `tools/aplicar_reinterpretacion.py`
 #             (sha256 173a7274...). Estado ALTERNATIVO, al que se puede volver
 #             con `--apply --descartar-cambios`.
@@ -137,7 +146,7 @@ RANGO_AUDITADO_LINEAS = 991
 # `DOCS/APARCADO_DB.md`. Un "pendiente" que nadie puede resolver no es un
 # estado defendible en un repositorio.
 REVISION_EN_CURSO = True
-REVISION_HASTA = 'H_1029'
+REVISION_HASTA = 'H_1070'
 REVISION_TOTAL_ESPERADA = 1200
 
 # Manos que la ventana fiable EXCLUYE, y por que.
