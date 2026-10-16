@@ -196,8 +196,9 @@ def test_la_columna_calculada_solo_cuenta_la_version_vigente(ins):
     version sea la actual."""
     texto = open(ins.__file__, encoding='utf-8').read()
     i = texto.index('def calculadas_para(spot):')
-    cuerpo = texto[i:i + 700]
-    assert "x['spot'] != spot" in cuerpo, 'filtra por spot'
+    cuerpo = texto[i:i + 900]
+    assert "spot is not None and x['spot'] != spot" in cuerpo, (
+        'filtra por spot, y spot=None significa TOTAL')
     assert "hechos.get(x['id'])" in cuerpo, (
         'recorre las ADMITIDAS, no todas las entradas de la cache')
     assert "e.get('version') == VERSION" in cuerpo, (

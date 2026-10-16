@@ -71,6 +71,10 @@ from motor.ranges import COMBO0, COMBO1, HAND_MASKS
 
 N_COMBOS = 40
 VERSION = 2
+
+# El nombre del estimador va en la cache. Sin el, dos procedimientos
+# distintos con la misma VERSION serian indistinguibles, y eso ya paso.
+ESTIMADOR = 'iid-media-simple'
 CACHE = os.path.join(ROOT, 'data',
                      '_cache_equity_observable.json.v%d.json' % VERSION)
 
@@ -249,6 +253,21 @@ def semilla_de(hand_id):
     ).hexdigest()[:8], 16)
 
 
+def id_desconocido(hid, por_id):
+    """Un hand_id de la particion que no esta en la ventana.
+
+    `revision_2`: `h = por_id[hid]` presupone que todos los IDs de la
+    particion estan en `ventana`. Puede ser una invariante legitima, pero
+    reventar con un KeyError sin contexto no lo demuestra: deja claro QUE
+    falta y nada mas.
+    """
+    raise KeyError(
+        'la particion trae el hand_id %r y no esta en la ventana fiable. '
+        'O la particion y la ventana no se construyeron del mismo sitio, o '
+        'hay una mano fiable que se perdio por el camino. Sin esto no se '
+        'puede saber cual de las dos es.' % (hid,))
+
+
 def seleccionar_manos(etiqueta, por_id, model):
     """Las manos preflop que el camino preflop mete, con el recuento POR
     ETAPA y por spot.
@@ -272,6 +291,8 @@ def seleccionar_manos(etiqueta, por_id, model):
         etapas[etapa]["__total__"] += 1
 
     for hid, y in sorted(etiqueta.items()):
+        if hid not in por_id:
+            id_desconocido(hid, por_id)
         h = por_id[hid]
         hero = eqm.hero_pos_de(h)
         if not hero or y == 0.5:
@@ -363,10 +384,13 @@ def main():
         `revision_2`: contar cualquier diccionario con el spot coincide mete
         manos de otra VERSION y manos que ya no se admiten. Y el texto decia
         "de esta VERSION", que el filtro NO garantizaba.
+
+        `spot=None` cuenta el TOTAL, con el mismo filtro. Es lo que evita
+        que la fila TOTAL diga 0 con subtotales positivos.
         """
         n = 0
         for x in trabajo:
-            if x['spot'] != spot:
+            if spot is not None and x['spot'] != spot:
                 continue
             e = hechos.get(x['id'])
             if (isinstance(e, dict) and 'equity' in e
@@ -374,7 +398,10 @@ def main():
                 n += 1
         return n
 
-    total_calc = 0
+    # El TOTAL se cuenta con la MISMA funcion de validacion que los
+    # subtotales. Antes se inicializaba a 0 y nunca se incrementaba, o sea
+    # que la fila TOTAL decia 0 con subtotales positivos: `revision_2`.
+    total_calc = calculadas_para(None)
     for spot in sorted(ACCIONES_SPOT):
         adm = sum(1 for x in trabajo if x['spot'] == spot)
         n_calc = calculadas_para(spot)
@@ -425,8 +452,30 @@ def main():
 
     for i, t in enumerate(trabajo, 1):
         hid = t['id']
-        if hid in cache and 'equity' in cache[hid]:
-            continue
+        # ⚠️ Reciclar la AGREGADA exige que coincidan TODOS los parametros
+        # que la determinan: version del procedimiento, estimador, semilla,
+        # numero de combos, villano, spot y mano del hero. `revision_2` §2:
+        # el `if hid in cache and 'equity' in cache[hid]` de antes ignoraba
+        # todo eso, y hacia que el INFORME contara una version mientras el
+        # CALCULO usaba otra. Informe y calculo tienen que mirar lo mismo.
+        #
+        # La equity POR COMBO, en cambio, se reutiliza sin comprobar nada:
+        # `equity_preflop_contra_combo` es una funcion pura de las dos
+        # manos, no depende del estimador ni de la VERSION.
+        entrada = cache.get(hid)
+        if isinstance(entrada, dict) and 'equity' in entrada:
+            if entrada.get('version') == VERSION \
+                    and entrada.get('estimador') == ESTIMADOR \
+                    and entrada.get('semilla') == t['semilla'] \
+                    and entrada.get('n_combos') == N_COMBOS \
+                    and entrada.get('villano') == t['villano'] \
+                    and entrada.get('spot') == t['spot'] \
+                    and entrada.get('hero') == t['hero']:
+                continue
+            # no coincide: se recalcula y se AVISA, no se reutiliza en
+            # silencio
+            print('   %s: la entrada en cache es de otra version o de otro '
+                  'estimador; se recalcula.' % hid)
         try:
             w = rango_del_villano(model, t['villano'], t['spot'])
         except Exception as exc:                       # pragma: no cover
@@ -472,7 +521,7 @@ def main():
                       'villano': t['villano'], 'spot': t['spot'],
                       'y': t['y'], 'hero': t['hero'],
                       'semilla': t['semilla'], 'version': VERSION,
-                      'estimador': 'iid-media-simple'}
+                      'estimador': ESTIMADOR}
         hechos += 1
         mins = (time.time() - t0) / 60.0
         print('   [%3d/%3d] %-9s %-4s vs %-14s %-14s eq %.4f  '

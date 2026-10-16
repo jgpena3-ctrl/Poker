@@ -96,23 +96,45 @@ señala.
 
 ## Cómo se previene, y no solo cómo se recuerda
 
-Hay un test. Un archivo no puede contener caracteres fuera de un conjunto
-explícito, y el conjunto está escrito:
+Son **tres** cosas distintas, y este documento las mezclaba en una.
 
-```python
-CJK = (0x3000, 0x9FFF)
+### 1. Un test de conjunto explícito
+
+Un fichero no puede contener caracteres fuera de un conjunto escrito:
+
+```
+CJK      = (0x3000, 0x9FFF)
 CIRILICO = (0x0400, 0x04FF)
 ```
 
-Más lo que este proyecto usa de verdad y no es contamination:
-`·§«»¿¡…—–` y las vocales acentuadas.
+Más lo que este proyecto usa de verdad y no es contaminación: `·§«»¿¡…—–` y
+las vocales acentuadas.
 
-Lo que **no** tiene el test, y es lo que de verdad hacía falta:
+Lo que este test **no** hace, aunque lo parezca: **no impide escrituras**.
+Comprueba el estado final de los ficheros, no quién los cambió.
 
-> **Ningún script de revisión escribe en ficheros.**
+### 2. El diagnóstico diferencial, y qué NO es
 
-La regla es de procedimiento, no de código, y por eso vive aquí y no en un
-`Makefile`.
+Pregunta **¿este hallazgo pertenece al cambio?**, mirando las líneas que
+`git diff` añade, no si el carácter estaba antes en el fichero.
+
+Eso no es lo mismo que preguntar «¿estaba en `HEAD`?». Si un carácter ya
+estaba en otro párrafo del mismo fichero, una aparición **nueva** en el
+código salía clasificada como preexistente: justo lo que se buscaba, con el
+signo cambiado.
+
+### 3. La política: no escribir por defecto
+
+Ni el test ni el diagnóstico **tocan** nada. `verificar_caracteres.py`
+informa; escribir exige `--corregir`, y aun así corrige **una sola
+secuencia conocida**, comprobando que el carácter sea el que se cree. Con
+dos o más coincidencias las reporta y **no escribe**: dos coincidencias ya
+no son «el caso conocido».
+
+> **El preventor que faltaba no era un conjunto de caracteres. Era no
+> escribir.**
+
+
 
 ## Lo que este incidente cuesta decir
 
