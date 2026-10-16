@@ -75,6 +75,102 @@ ACCIONES_DE = {
 }
 
 
+def coherencia(modelo, alpha):
+    """La INVARIANTE CORRECTA, por celda.
+
+    Para cada (perfil, spot) y cada celda c, la suma de las probabilidades
+    de las acciones MUTUAMENTE EXCLUYENTES mas el prior del fold tiene que
+    ser <= 1. Devuelve el maximo observado y donde se dio.
+
+    Y el texto de por que la equivalencia del documento era falsa:
+
+        N(c) + alpha*S(c) <= opp(c) + alpha
+      <=> S(c) <= 1 + (opp(c) - N(c)) / alpha
+
+    `S(c) <= 1` es SUFICIENTE y, en estos datos, NECESARIA (hay celdas con
+    N(c) = opp(c), donde el limite cae a 1 exacto), pero no EQUIVALENTE
+    celda a celda: donde el margen es > 0 el limite es mas laxo que 1.
+    """
+    modelo.alpha = alpha
+    peor = 0.0
+    quien = None
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        for (perfil, spot), _opp in sorted(modelo.opp.items()):
+            accs = ACCIONES_DE.get(spot)
+            if not accs:
+                continue
+            t = np.zeros((13, 13))
+            for a in accs:
+                t += np.asarray(modelo.p_matrix(perfil, spot, a),
+                                dtype=float)
+            # el prior del fold: `_prior_grid('fold', ...)` da el PLANO para
+            # cualquier pos, porque 'fold' no esta en CAT_TABLE. Y el motor
+            # SI pide ese prior: tiene conteos de fold y `p_matrix` con
+            # action='fold' cae al plano con warning. Lo que se anade aqui
+            # es exactamente lo que usaria el motor.
+            t += np.asarray(modelo._prior_grid('fold', '', ''), dtype=float)
+            if float(t.max()) > peor:
+                peor = float(t.max())
+                quien = (perfil, spot)
+    modelo.alpha = player_ranges.DEFAULT_ALPHA
+    return peor, quien
+
+
+def margen_minimo(modelo):
+    """min sobre celdas de (opp(c) - N(c)). El margen de la equivalencia."""
+    peor = None
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        for (perfil, spot), opp in sorted(modelo.opp.items()):
+            accs = ACCIONES_DE.get(spot)
+            if not accs:
+                continue
+            N = np.zeros((13, 13))
+            for a in accs:
+                c = modelo.cnt.get((perfil, spot, a))
+                if c is not None:
+                    N += np.asarray(c, dtype=float)
+            m = float((np.asarray(opp, dtype=float) - N).min())
+            peor = m if peor is None else min(peor, m)
+    return peor
+
+
+def biseccion(modelo, lo=1.20, hi=1.60, tol=1e-6, max_iter=60):
+    """El menor alpha con la invariante por celda, por biseccion.
+
+    Devuelve (borde, iteraciones, monotona). UNA BISECCION SIN MONOTONIA
+    NO VALE, asi que se comprueba antes y se devuelve si era o no.
+
+    `revision_2` §2: el numero tiene que ser reproducible desde aqui, con
+    la tolerancia escrita y el conjunto de celdas declarado.
+    """
+    fila = []
+    for a in (0.2, 0.5, 0.8, 1.0, 1.2, 1.4, 1.6, 2.0, 2.5, 3.0, 5.0,
+              10.0):
+        fila.append((a, coherencia(modelo, a)[0]))
+    caidas = sum(1 for i in range(1, len(fila))
+                 if fila[i][1] <= fila[i - 1][1])
+    monotona = caidas == len(fila) - 1
+
+    v_lo = coherencia(modelo, lo)[0]
+    v_hi = coherencia(modelo, hi)[0]
+    if not (v_lo > 1.0 >= v_hi):
+        raise AssertionError(
+            'el intervalo [%.2f, %.2f] no brackets el borde: %.4f / %.4f'
+            % (lo, hi, v_lo, v_hi))
+    n = 0
+    for n in range(1, max_iter + 1):
+        mid = (lo + hi) / 2.0
+        if coherencia(modelo, mid)[0] > 1.0:
+            lo = mid
+        else:
+            hi = mid
+        if hi - lo < tol:
+            break
+    return hi, n, monotona, fila, caidas
+
+
 def sumas():
     filas = []
     for clave, val in sorted(TABLAS.items()):
@@ -259,7 +355,61 @@ def main():
     print()
 
     print('=' * 78)
-    print('4) QUE ES matrix, Y QUE ES LO QUE NO SE SABE')
+    print('3d) LA EQUIVALENCIA DEL DOCUMENTO, CORREGIDA')
+    print('=' * 78)
+    print()
+    print('   El documento escribia:')
+    print()
+    print('       sum_k p_k(c) <= 1   <=>   sum_k prior_k(c) <= 1')
+    print()
+    print('   `revision_2` §2: la segunda es SUFICIENTE, no equivalente. La')
+    print('   exacta es, y `opp` es un array POR CELDA:')
+    print()
+    print('       N(c) + alpha*S(c) <= opp(c) + alpha')
+    print('     <=> S(c) <= 1 + (opp(c) - N(c)) / alpha')
+    print()
+    mm = margen_minimo(model)
+    print('   minimo de (opp(c) - N(c)) sobre las celdas medidas: %.0f' % mm)
+    print()
+    if abs(mm) < 1e-9:
+        print('   O sea que HAY celdas con N(c) = opp(c). Para esas, el limite')
+        print('   cae a 1 exacto y `S(c) <= 1` es NECESARIA en estos datos.')
+        print('   En las celdas con margen > 0 el limite es mas laxo que 1, y')
+        print('   ahi NO es equivalente. Esa diferencia es la que hace que el')
+        print('   umbral de abajo sea un limite OBSERVADO y no deducido.')
+    else:
+        print('   El margen minimo es %.3f, o sea que S(c) puede llegar hasta'
+              % mm)
+        print('   1 + %.3f sin violacion, y el 1 de la equivalencia retirada'
+              % (mm / 2.0))
+        print('   era demasiado estricto.')
+    print()
+
+    print('   3e) LA BISECCION, REPRODUCIBLE Y CON MONOTONIA')
+    print()
+    borde, n_iter, monotona, fila, caidas = biseccion(model)
+    print('       %-9s %11s' % ('alpha', 'max suma'))
+    print('       ' + '-' * 24)
+    for a, v in fila:
+        print('       %-9.2f %11.4f' % (a, v))
+    print()
+    print('       pasos monótonos no crecientes: %d de %d'
+          % (caidas, len(fila) - 1))
+    print('       %s' % ('MONOTONA: la biseccion es valida' if monotona else
+                         'NO MONOTONA: la biseccion NO seria valida'))
+    print()
+    print('       intervalo [1,20, 1,60] · tolerancia 1e-06 · %d iteraciones'
+          % n_iter)
+    print('       BORDE OBSERVADO: alpha = %.4f' % borde)
+    print()
+    print('       Y esto es lo que hay que decir de el, y nada mas: es el')
+    print('       limite OBSERVADO para este modelo, estos datos y estas')
+    print('       combinaciones. No es una cota universal deducida de la')
+    print('       formula, porque la equivalencia que lo sostenia era falsa.')
+    print()
+
+    print('=' * 78)
+    print('3d) y 3e: LO QUE PIDIO REVISION_2')
     print('=' * 78)
     print()
     print('   LO QUE SE PUEDE DECIR, con la prueba buena:')

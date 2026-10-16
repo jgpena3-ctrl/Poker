@@ -19,7 +19,9 @@ from typing import Optional, Sequence
 import numpy as np
 
 from .cards import card_id, cards_to_bits, suit_of, rank_of
-from .hand_evaluator import evaluate_batch, evaluate_hand, legal_hands, compare_ranks
+from .hand_evaluator import (DEFAULT_RUNOUT_COMBOS, compare_ranks,
+                          equity_preflop_rango, evaluate_batch,
+                          evaluate_hand, legal_hands)
 from .ranges import (COMBO0, COMBO1, HAND_MASKS, N_COMBOS, RangeError,
                      RangeState, validate_reach, villain_weights)
 
@@ -50,17 +52,28 @@ def _weights_for(villain_reach, villain_ids):
 
 
 def equity_vs_range(hero_codes, board_codes, villain_reach=None,
-                    villain_ids=None):
+                    villain_ids=None, n_combos=DEFAULT_RUNOUT_COMBOS,
+                    seed=7):
     """Equity del hero vs el rango rival, ponderada por reach.
 
     Returns (equity, wins, ties, losses) en masa (fracciones de 1.0).
 
     hero_codes  : ['As', 'Kd']
-    board_codes : 3..5 cartas
+    board_codes : 0..5 cartas. **Si esta vacio, delega en el camino preflop**
     villain_reach : None (uniforme) | RangeState | vector (1326,)
     villain_ids : restringir combos (p. ej. legal_hands(known)); por defecto
                   todos los que no chocan con hero+board.
+    n_combos, seed : solo para el camino preflop.
+
+    Con `board_codes` vacio antes reventaba: `evaluate_batch` pide un board
+    de 3 a 5 y `_SUBSETS` solo tiene {5, 6, 7}. Delegar es la minima
+    superficie: la firma que ya usaba `decision` no cambia de forma.
     """
+    if len(board_codes) == 0:
+        eq = equity_preflop_rango(hero_codes, villain_reach,
+                                  n_combos=n_combos, seed=seed)
+        return eq, eq, 0.0, 1.0 - eq
+
     ids = _legal_ids(hero_codes, board_codes, villain_ids)
     hero, scores = _range_scores(hero_codes, board_codes, ids)
     w = _weights_for(villain_reach, ids)

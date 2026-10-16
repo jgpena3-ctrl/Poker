@@ -233,14 +233,21 @@ def test_lo_retirado_en_el_documento_esta_marcado():
     assert '1,3636' in plano, 'la cota medida tiene que estar'
 
 
-def test_el_documento_dice_que_no_es_nunca():
-    """La distincion que mas importa: no distinguir != no ser parametro."""
+def test_el_documento_separa_las_tres_afirmaciones():
+    """
+evision_2 §3: coherencia, discriminacion y decision son cosas
+    distintas, y confundirlas es lo que hace que una decision de ingenieria
+    parezca una demostracion."""
     d = io.open(os.path.join(ROOT, 'DOCS', 'QUE_ES_MATRIX.md'),
                 encoding='utf-8').read()
     plano = ' '.join(d.split())
-    assert 'distinguirían' in plano, (
-        'el documento tiene que decir POR QUE no se calibra, no solo que no')
-    assert 'mucho más débil' in plano
+    for seccion in ('(1) Coherencia', '(2) Discriminación',
+                    '(3) Decisión'):
+        assert seccion in plano, (
+            'falta la seccion %s: las tres van separadas' % seccion)
+    assert 'no depende de (2)' in plano, (
+        'la decision tiene que decir que no depende de la discriminacion')
+    assert 'Discriminación: ninguna' in plano
 
 
 def test_el_bloque_3_esta_reabierto():

@@ -296,6 +296,177 @@ def hero_vs_range(hero_codes, board_codes, known_mask, villain_ids):
     return compare_ranks(hero_score, scores)
 
 
+# ---------------------------------------------------------------------------
+# Equity preflop contra rango  (CONTRATO_PREFLOP.md, firmado)
+# ---------------------------------------------------------------------------
+#
+# El problema que resuelve: `evaluate_batch` quiere un board COMPARTIDO por
+# todas las filas y de 3 a 5 cartas. En preflop no hay board, y el que hace
+# falta es un sorteo DISTINTO por fila. Por eso este camino NO reutiliza
+# `evaluate_batch`: construye (N, 7) = 2 del jugador + 5 del sorteo y llama
+# a `evaluate_n_batch`, que si acepta n en (5, 6, 7). `_SUBSETS` no se toca.
+
+DEFAULT_RUNOUTS = 1
+DEFAULT_RUNOUT_COMBOS = 200
+
+_TROZO_BOARDS = 200_000
+
+# Tope de seguridad: con 1326 combos serian 2,3 x 10^9 evaluaciones. Un
+# `n_combos` equivocado tiene que fallar aqui, no durar dias en silencio.
+_MAX_COMBOS = 2000
+
+
+def _cards_de_hero(hero_codes):
+    """(2,) de ids de carta, venga como ['As', 'Kd'] o como ndarray."""
+    a = np.asarray(hero_codes).ravel()
+    if a.dtype.kind in 'US' or a.dtype == object:
+        return np.array([card_id(str(x)) for x in a], dtype=np.intp)
+    return a.astype(np.intp)
+
+
+def _boards_preflop(resto):
+    """Los C(n,5) como (N,5) de ids de carta."""
+    return np.fromiter((c for combo in itertools.combinations(resto, 5)
+                        for c in combo),
+                       dtype=np.intp).reshape(-1, 5)
+
+
+def equity_preflop_contra_combo(hero, villain):
+    """Equity EXACTA del hero contra UN combo rival, sin board.
+
+    `hero` y `villain` son (2,) de ids de carta. Enumera los C(48,5) =
+    1 712 304 sorteos, que es lo que hace que esto sea de segundos y no de
+    microsegundos.
+
+    Devuelve un float en [0, 1], con 0,5 en los repartos.
+    """
+    usados = set(int(x) for x in hero) | set(int(x) for x in villain)
+    if len(usados) != 4:
+        raise ValueError(
+            'hero y villain tienen que ser 2 cartas distintas cada uno; '
+            'hay %d cartas distintas' % len(usados))
+    resto = [c for c in range(52) if c not in usados]
+    boards = _boards_preflop(resto)
+    n = boards.shape[0]
+
+    h2 = np.asarray(hero, dtype=np.intp).reshape(1, 2)
+    v2 = np.asarray(villain, dtype=np.intp).reshape(1, 2)
+    sh = np.empty(n, dtype=np.int64)
+    sv = np.empty(n, dtype=np.int64)
+    for ini in range(0, n, _TROZO_BOARDS):
+        b = boards[ini:ini + _TROZO_BOARDS]
+        m = b.shape[0]
+        sh[ini:ini + m] = evaluate_n_batch(
+            np.concatenate([np.repeat(h2, m, axis=0), b], axis=1))
+        sv[ini:ini + m] = evaluate_n_batch(
+            np.concatenate([np.repeat(v2, m, axis=0), b], axis=1))
+
+    # GANA EL HERO cuando SU score es MAYOR. Al reves, `sv > sh` contaria
+    # al rival ganando y la equity saldria complementada: AA contra KK tiene
+    # que dar ~0,82, no ~0,18.
+    gana = int((sh > sv).sum())
+    empata = int((sh == sv).sum())
+    return (gana + 0.5 * empata) / n
+
+
+def _pesos_del_rango(villain_reach):
+    """Pesos (1326,) de los combos rivales, de donde venga el rango.
+
+    Acepta None (uniforme), un ndarray de 1326, u un objeto con `.reach`.
+    """
+    if villain_reach is None:
+        return np.full(N_COMBOS, 1.0 / N_COMBOS)
+    if isinstance(villain_reach, np.ndarray):
+        w = np.asarray(villain_reach, dtype=float).ravel()
+        if w.shape[0] != N_COMBOS:
+            raise ValueError(
+                'villain_reach tiene que tener %d entradas (los %d combos); '
+                'tiene %d' % (N_COMBOS, N_COMBOS, w.shape[0]))
+        return w
+    reach = getattr(villain_reach, 'reach', None)
+    if reach is not None:
+        w = np.asarray(reach, dtype=float).ravel()
+        if w.shape[0] != N_COMBOS:
+            raise ValueError('`.reach` tiene que tener %d entradas; tiene %d'
+                             % (N_COMBOS, w.shape[0]))
+        return w
+    arr = np.asarray(villain_reach, dtype=float).ravel()
+    if arr.shape[0] != N_COMBOS:
+        raise ValueError('villain_reach tiene una forma que no entiendo: %s'
+                         % (arr.shape,))
+    return arr
+
+
+def equity_preflop_rango(hero_codes, villain_reach=None,
+                         n_runouts=DEFAULT_RUNOUTS,
+                         n_combos=DEFAULT_RUNOUT_COMBOS,
+                         seed=7):
+    """Equity del hero en PREFLOP contra un RANGO. Sin board.
+
+    hero_codes    : ['As', 'Kd'] o (2,) de ids de carta
+    villain_reach : None (uniforme) | (1326,) pesos | objeto con `.reach`
+    n_combos     : cuantos combos rivales se MUESTREAN del rango
+    seed         : determinista para el mismo (hero, reach, n_combos, seed)
+
+    Devuelve float en [0, 1], con 0,5 para los repartos.
+
+    Lanza ValueError si el rango no tiene combos legales.
+
+    Muestreado, y es por FUERZA: contra 1326 combos serian 1326 x C(48,5)
+    = 2,3 x 10^9 evaluaciones. La varianza de este estimador esta MEDIDA y
+    escrita en `CONTRATO_PREFLOP.md`: con 40 combos, sigma ~ 0,09 y mueve
+    el AUC 0,18x el semiancho de su propio intervalo. El estimador no es lo
+    que limita la conclusion; las manos son muy pocas.
+
+    Y no usa las cartas del rival: solo `villain_reach`, que es lo unico
+    que se sabia al decidir. Por eso la equity que devuelve es OBSERVABLE.
+    """
+    if n_combos > _MAX_COMBOS:
+        raise ValueError(
+            'n_combos = %d son %d evaluaciones de C(48,5). El tope es %d: '
+            'pasarse aqui cuesta dias en silencio.'
+            % (n_combos, n_combos * 1712304, _MAX_COMBOS))
+    if n_runouts < 1:
+        raise ValueError('n_runouts tiene que ser >= 1, no %r' % (n_runouts,))
+
+    hero = _cards_de_hero(hero_codes)
+    if hero.shape[0] != 2:
+        raise ValueError('hero_codes tiene que tener 2 cartas, tiene %d'
+                         % hero.shape[0])
+
+    w = _pesos_del_rango(villain_reach)
+
+    # combos legales: los que no contienen ninguna carta del hero
+    mask_hero = 0
+    for c in hero:
+        mask_hero |= (1 << int(c))
+    ids = np.where((HAND_MASKS & mask_hero) == 0)[0]
+    if ids.size == 0:
+        raise ValueError('el rango no tiene combos legales del hero')
+
+    w_leg = w[ids]
+    total = float(w_leg.sum())
+    if not np.isfinite(total) or total <= 0.0:
+        raise ValueError(
+            'el rango no tiene masa sobre los combos legales del hero '
+            '(suma = %r). Con un rango todo cero no hay equity que calcular.'
+            % total)
+
+    n = int(min(n_combos, ids.size))
+    rng = np.random.default_rng(seed)
+    elegidos = rng.choice(len(ids), size=n, replace=False,
+                           p=w_leg / total)
+
+    acc = 0.0
+    peso = 0.0
+    for k in elegidos:
+        i = int(ids[int(k)])
+        acc += equity_preflop_contra_combo(
+            hero, np.array([COMBO0[i], COMBO1[i]], dtype=np.intp)) * w_leg[k]
+        peso += w_leg[k]
+    return float(acc / peso)
+
+
 if __name__ == '__main__':
     import time
     from .preflop import load_tables

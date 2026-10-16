@@ -39,12 +39,26 @@ mano distinta.
 De la fórmula, sin discusión:
 
 ```
-p_k(c) = (cnt_k(c) + α·prior_k(c)) / (opp + α)
+p_k(c) = (cnt_k(c) + α·prior_k(c)) / (opp(c) + α)
 
 para cada celda c:  sum_k p_k(c) ≤ 1
-  ⟺  N(c) + α·sum_k prior_k(c) ≤ opp + α
-  ⟺  sum_k prior_k(c) ≤ 1        (porque N(c) ≤ opp)
+  ⟺  N(c) + α·sum_k prior_k(c) ≤ opp(c) + α
+  ⟺  sum_k prior_k(c) ≤ 1 + (opp(c) − N(c)) / α
 ```
+
+> **La equivalencia que este documento tenía antes era falsa.** Escribía
+> `sum_k prior_k(c) ≤ 1` como *equivalente*, y `revision_2` §2 tiene razón:
+> es **suficiente**, y en estos datos también **necesaria**, pero no
+> equivalente celda a celda.
+>
+> Y `opp` resultó ser un **array por celda**, no un escalar. El margen
+> `min (opp(c) − N(c))` sobre las celdas medidas es **0**: hay celdas donde
+> `N(c) = opp(c)`, o sea manos que siempre hicieron esa misma acción. Para
+> esas el límite cae a 1 exacto, y por eso `S(c) ≤ 1` es necesaria aquí.
+>
+> En las celdas con margen > 0 el límite es **más laxo que 1**, y ahí no es
+> equivalente. Esa diferencia es exactamente la que hace que el umbral de
+> abajo sea un **límite observado** y no deducido.
 
 **Por celda, sumando acciones.** Y en vez de álgebra, lo que el motor produce:
 
@@ -74,12 +88,33 @@ Barriendo `alpha` y mirando si la suma por celda se pasa de 1:
 | 3,00 | 0,6812 | 0,8875 | sí |
 | 200,00 | 0,1707 | 0,4671 | sí |
 
-Bisección, 22 iteraciones: el borde inferior es **α ≈ 1,3636**.
+**Bisección, 19 iteraciones, tolerancia 1e-06, en `auditar_matrix.py`.**
 
-> ### Por debajo de 1,3636 el motor produce probabilidades incoherentes.
+Y con la comprobación que hace falta para que una bisección valga:
+
+| `alpha` | suma por celda |
+|---:|---:|
+| 0,20 | 1,1231 |
+| 0,50 | 1,0864 |
+| 0,80 | 1,0534 |
+| 1,00 | 1,0333 |
+| 1,20 | 1,0145 |
+| 1,40 | 0,9969 |
+| 2,00 | 0,9500 |
+| 5,00 | 0,8000 |
+| 10,00 | 0,6833 |
+
+**11 de 11 pasos no crecientes: la función es monótona en el rango
+explorado.** Sin eso, una bisección no demuestra nada.
+
+> ### Por debajo de **1,3636** el motor produce probabilidades incoherentes.
 >
 > Para una mano dada, asigna más probabilidad total a acciones que son
 > mutuamente excluyentes. Eso no es una uncommon: es imposible.
+>
+> Y lo que es: el **límite observado** para este modelo, estos datos y estas
+> combinaciones. No una cota universal deducida de la fórmula, porque la
+> equivalencia que lo sostenía era falsa.
 
 **Y `DEFAULT_ALPHA = 2,0 está 1,47× por encima del borde.** No está pegado al
 límite, pero tampoco es arbitrario: hay una razón medida para no bajar.
@@ -116,13 +151,48 @@ Y `preflop_matrices.json` **no lleva metadatos**: no hay campo `origen`,
 
 ## Y `DEFAULT_ALPHA`, con la formulación honesta
 
-La conclusión **«no se calibra» se sostiene**, pero por otra razón, y hay que
-decirla porque es **mucho más débil**:
+`revision_2` §3 pide separar tres afirmaciones, y tiene razón: son cosas
+distintas y confundirlas es lo que hace que una decisión de ingeniería parezca
+una demostración.
 
-| | razón | fuerza |
-|---|---|---|
-| 1 | `L_prim` es **monótona** en α: 224 de 256 celdas empujan en el mismo sentido, así que su ganador es siempre el candidato **menor**, por definición | no **distingue** entre valores |
-| 2 | no hay métrica secundaria **admisible** para arbitrar: el Brier se pierde contra el predictor constante en la mitad retrospectiva, y el AUC no es afirmable con 11 manos | no hay **árbitro** |
+### (1) Coherencia — **medida**
+
+Los valores probados respetan la invariante por celda. Con α = 2 el máximo es
+**0,7571** y la suma por celda **0,9500**. Y hay una cota por debajo de la
+cual **no**: **α ≥ 1,3636** (límite observado).
+
+### (2) Discriminación — **medida sobre la función agregada**
+
+Antes se decía «224 de 256 celdas empujan en el mismo sentido». Eso **no**
+demuestra que `L_prim` sea monótona: importan las **magnitudes y los pesos**
+de las que quedan. Medido sobre `L_prim` completa:
+
+| `alpha` | `L_prim` |
+|---:|---:|
+| 0,5 | 0,387150 |
+| 1,0 | 0,527915 |
+| 1,3636 | 0,607984 |
+| 1,5 | 0,634504 |
+| **2,0** | **0,719102** |
+| 3,0 | 0,846569 |
+| 5,0 | 1,010302 |
+| 10,0 | 1,212890 |
+
+**8 de 8 pasos estrictamente crecientes.** La agregada sí es monótona, y no
+tiene mínimo interior: la curva crece sin parar. Su «mejor» es siempre el
+**menor** α.
+
+> **Discriminación: ninguna.** `L_prim` ordena α por cuánto se diluyó el
+> prior, no por calidad.
+
+### (3) Decisión — **de ingeniería, y no depende de (2)**
+
+Se conserva α = 2,0 porque **no hay evidencia admisible que justifique
+sustituirlo**. Eso es una decisión de ingeniería, y puede ser buena aunque (2)
+no estuviera probada.
+
+> Que (3) no dependa de (2) es lo que hace que la decisión siga en pie. Lo
+> que no es admisible es presentar (3) como si **fundara** (2). No lo hace.
 
 > **`DEFAULT_ALPHA` no se calibra porque las métricas disponibles no lo
 > distinguirían, no porque `alpha` no pueda ser un parámetro de
