@@ -193,21 +193,82 @@ def test_por_defecto_cubre_toda_la_base():
 def test_las_manos_fuera_del_rango_auditado_tienen_defectos():
     """El agujero era real, y esto lo demuestra en vez de recordarlo.
 
-    Si estas cuatro manos dejaran de fallar, el motivo para auditar mas alla
-    de `H_1014` seria historico, y el alcance poderia volver a recortarse sin
-    que nadie notase que se pierde cobertura.
+    Se mide contra `dfef471`, el commit ANTERIOR al saneamiento, y no contra
+    la base de hoy. La razon: `H_1063` y `H_1203` ya estan corregidas, asi que
+    si el test mirara la base actual solo veria una de las cuatro yaria bien.
+
+    Medir contra el pasado tiene una ventaja que medir contra el presente no
+    tiene: el defecto no puede desaparecer. `dfef471` esta en git, y dentro
+    de el los cuatro existen siempre. Si alguien recorta el alcance otra vez,
+    este test sigue viendo lo mismo y sigue fallando.
+
+    Y las cuatro importan por lo mismo: estan en las 267 manos que la revision
+    toco sin que ningun detector las mirase.
+    """
+    import subprocess
+    crudo = subprocess.run(
+        ['git', 'show', 'dfef471:data/hands_db.jsonl'],
+        cwd=ROOT, capture_output=True).stdout.decode('utf-8')
+    manos = {json.loads(l)['hand_id']: json.loads(l)
+             for l in crudo.splitlines() if l.strip()}
+    hall, _m = AR.auditar(list(manos.values()))
+
+    fuera = {hid for hid in manos
+             if (AR.num(hid) or 0) > (AR.num('H_1014') or 0)}
+    esperadas = {
+        'H_1203': 'INACTIVO_QUE_ACTUA',
+        'H_1063': 'AUSENCIA_RESPUESTA_BB',
+        'H_1241': 'AUSENCIA_RESPUESTA_BB',
+        'H_1196': 'CM-004',
+    }
+    for hid, clase in sorted(esperadas.items()):
+        h = manos[hid]
+        detector = {'INACTIVO_QUE_ACTUA': AR.inactivo_que_actua,
+                    'AUSENCIA_RESPUESTA_BB': AR.ausencia_respuesta_bb,
+                    'CM-004': AR.cm_004}[clase]
+        assert detector(h), (
+            '%s estaba fuera de H_1014 y en dfef471 no daba %s. Si eso '
+            'cambio, dfef471 cambio y este test esta obsoleto.'
+            % (hid, clase))
+        assert hid in fuera
+
+
+def test_el_detector_nuevo_encuentra_lo_que_ninguno_miraba():
+    """`INACTIVO_QUE_ACTUA` existe porque un agujero se escondio como silencio.
+
+    La historia, que es el motivo de que el detector sea permanente: el
+    defecto real de `H_1203` era un BB con `active: false` jugando cuatro
+    calles. `accion_fantasma` lo rozaba, pero de rebote y por el motivo
+    equivocado —confundia `active` con «esta en la mesa»—. Al corregir ese
+    detector, el defecto de `H_1203` desaparecio del informe sin haberse
+    corregido. Un agujero que no se ve no se arregla nunca.
+
+    Por eso el test mira el commit viejo: `dfef471` tiene el defecto, y lo
+    tiene para siempre.
+    """
+    import subprocess
+    crudo = subprocess.run(
+        ['git', 'show', 'dfef471:data/hands_db.jsonl'],
+        cwd=ROOT, capture_output=True).stdout.decode('utf-8')
+    antes = {json.loads(l)['hand_id']: json.loads(l)
+             for l in crudo.splitlines() if l.strip()}
+    assert AR.inactivo_que_actua(antes['H_1203']) == ['BB(Jarduan)']
+
+    # y hoy ya no, porque se corrigio
+    assert not AR.inactivo_que_actua(LS.cargar()['H_1203'])
+
+
+def test_el_rango_por_defecto_sigue_siendo_toda_la_base():
+    """Que el alcance no se haya recortado al corregir las que se corregian.
+
+    Es el modo de fallo natural de un saneamiento: corriges lo que sale, y el
+    alcance se queda en lo que ya conocias. Aqui se comprueba que `H_1282`,
+    la ultima mano, sigue dentro.
     """
     manos = LS.cargar()
-    hall, _m = AR.auditar(list(manos.values()))
-    fuera = {hid for hid in manos if (AR.num(hid) or 0) > (AR.num('H_1014') or 0)}
-    for hid in ('H_1203', 'H_1063', 'H_1241'):
-        clases = [c for c, casos in hall.items()
-                  if any(h == hid for h, _d in casos)]
-        assert clases, ('%s esta fuera de H_1014 y ya no tiene ningun defecto. '
-                        'O se corrigio —y entonces este test esta obsoleto y hay '
-                        'que decirlo—, o el alcance se recorto otra vez.'
-                        % hid)
-        assert hid in fuera
+    _lotes, _mult, resumen = LS.construir(manos, None)
+    assert resumen['manos'] == 1258
+    assert 'H_1282' in manos
 
 
 def test_h1196_sigue_siendo_la_unica_violacion_de_cm004():

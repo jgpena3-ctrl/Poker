@@ -218,9 +218,10 @@ LOTES = (
         'LIMPIO',
         LIMPIO,
         ['ACCION_DESPUES_FOLD', 'FOLD_TRAS_APUESTA', 'POSICION_DUPLICADA',
-         'CARTAS_ILEGALES', 'BOARD_ILLEGAL', 'CM-002', 'WINNER_VACIO'],
+         'CARTAS_ILEGALES', 'BOARD_ILLEGAL', 'CM-002', 'WINNER_VACIO',
+         'INACTIVO_QUE_ACTUA'],
         'clases que hoy dan cero, declaradas para que se vean',
-        'Estas siete dan 0 casos en las 1258 manos. Se declaran igualmente, '
+        'Estas clases dan 0 casos en las 1258 manos. Se declaran igualmente, '
         'y el motivo es concreto: un lote que se queda vacio porque su '
         'defecto se corrigio se queda DECLARADO, y borrar la fila borraria '
         'la evidencia de que se corrigio — y la proxima vez que se cuente, '
@@ -228,7 +229,12 @@ LOTES = (
         'Que esten a 0 es una MEDICION de hoy, no una garantia. La razon por '
         'la que 30 `IMPORTE_SUBIDA` escondian un unico patron es la misma '
         'que hace que un 0 pueda esconder otra cosa: por eso estan en la '
-        'tabla y no en un documento que nadie relee.',
+        'tabla y no en un documento que nadie relee.\n'
+        'Y `INACTIVO_QUE_ACTUA` merece su propia linea porque SE HA VISTO. Daba '
+        '1 —`H_1203`— y no lolooked porque el detector que la rozaba, '
+        '`accion_fantasma`, lo hacia por el motivo equivocado. Al arreglar '
+        'ese, el defecto desaparecio del informe sin haberse corregido: un '
+        'agujero que se esconde no como error sino como silencio.',
         [],
     ),
 )

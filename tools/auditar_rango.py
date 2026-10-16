@@ -301,11 +301,54 @@ def fold_tras_apuesta(hand):
     return fallos
 
 
+def inactivo_que_actua(hand):
+    """Jugadores marcados `active: false` que tienen acciones.
+
+    MEDIDO, y el motivo de que exista: el defecto real de `H_1203` era este,
+    y ningun detector lo miraba. `accion_fantasma` lo rozaba —decia que el BB
+    de esa mano no estaba en la mesa— pero por el motivo equivocado, porque
+    confundia `active` con «está en la mesa». Al arreglar ese detector, el
+    defecto de `H_1203` desaparecio del informe sin haberse corregido, que es
+    la forma mas uncomfortable de que un agujero se esconda: no como error,
+    sino como silencio.
+
+    Que `active: false` se pueda interpretar, y cuando: en la base hay 21
+    jugadores con `pos` puesta y `active: false`, y 20 de ellos no tienen
+    ninguna accion. Son los que se sentaron y noMigration jugado, que es
+    justo lo que la bandera significa. Uno, en cambio, postea y llama tres
+    calles, y ese es un dato roto.
+    """
+    actions = {a.get('pos') for _s, a in todas_las_acciones(hand) if a.get('pos')}
+    return sorted(
+        '%s(%s)' % (p.get('pos'), p.get('name'))
+        for p in (hand.get('players') or [])
+        if p.get('pos') and not p.get('active') and p.get('pos') in actions)
+
+
 def accion_fantasma(hand):
-    activos = {p.get('pos') for p in (hand.get('players') or [])
-               if p.get('active') and p.get('pos')}
+    """Posiciones que actuaron y no estan en la mesa. Una posicion esta en la
+    mesa si ALGUN jugador la tiene puesta, este activo o no.
+
+    MEDIDO, y por que importa: antes miraba solo los jugadores `active`, y eso
+    daba UN falso positivo, `H_1203`. En esa mano el BB (Jarduan) postea y
+    llama tres calles con `active: false`, y el detector lo decia ausente de la
+    mesa.
+
+    Por que el filtro de `active` no vale aqui: `active` NO significa «sigue
+    en la mano». Medido sobre las 1258: hay **4991** jugadores con
+    `active: true` que.foldan. Es decir, la bandera dice «se sento a jugar»,
+    no «esta en el bote». Un detector que la lea como «esta en la mesa» no
+    mide lo que dice medir, y un detector que no mide lo que dice medir no se
+    puede usar para decidir.
+
+    Lo que si distingue a los sentados de verdad es que NO tienen acciones, y
+    eso lo mide otro sitio: de los 21 jugadores con `pos` y `active: false` en
+    toda la base, solo uno tiene acciones, y es el BB de `H_1203`.
+    """
+    en_la_mesa = {p.get('pos') for p in (hand.get('players') or [])
+                  if p.get('pos')}
     return sorted({a.get('pos') for _s, a in todas_las_acciones(hand)
-                   if a.get('pos') and a.get('pos') not in activos})
+                   if a.get('pos') and a.get('pos') not in en_la_mesa})
 
 
 def posicion_duplicada(hand):
@@ -475,6 +518,8 @@ CLASES = (
      showdown_sin_winner, 'contradiccion'),
     ('WINNER_VACIO', 'la mano no dice quien la gana',
      winner_vacio, 'contradiccion'),
+    ('INACTIVO_QUE_ACTUA', 'jugador marcado ausente que tiene acciones',
+     inactivo_que_actua, 'contradiccion'),
     ('SIN_ALLIN', 'el campo allin falta o no es una lista',
      sin_allin, 'ausencia'),
     ('AUSENCIA_RESPUESTA_BB', 'el BB esta en la mesa y no responde',

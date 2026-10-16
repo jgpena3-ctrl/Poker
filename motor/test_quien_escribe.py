@@ -62,6 +62,7 @@ ESCRITORES_DECLARADOS = {
     'recorder/recorder_live.py',      # AÑADE manos
     'tools/aplicar_correcciones.py',  # migraciones, con backup
     'tools/aplicar_reinterpretacion.py',
+    'tools/sanear_base.py',           # saneamiento, con backup y dry-run
 }
 
 
