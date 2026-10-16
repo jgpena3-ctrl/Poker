@@ -201,3 +201,74 @@ python tools/calibrar.py --param DEFAULT_ALPHA --valores 0.5 1.0 2.0 5.0
 
 `calibrar.py` reporta en cada corrida las celdas con `p = 0` de los eventos
 que mide, para que esto se pueda volver a comprobar.
+
+---
+
+## Actualización: con el objetivo ya decidido, ¿sigue bloqueando?
+
+Pregunta de `revision_1`, y la respuesta es **medida, no opinada**.
+
+### Qué cambió
+
+El objetivo de la calibración pasó de ser «minimizar una pérdida que depende
+de la probabilidad» a **«¿ordena las manos?»** (`CONTRATO_L_SEC.md` §8).
+Un AUC **no depende de la escala** de la probabilidad: si el motor
+subestima la equity en un factor constante, el orden no cambia.
+
+| | bloquea todavía |
+|---|---|
+| **A** — el objetivo anterior, perder contra `y` | **sí**, y mucho: la escala es justo lo que se compara |
+| **B** — el objetivo actual, ordenar | **medido, y no** |
+
+### La medición
+
+De las 57 manos que entran al AUC:
+
+| | |
+|---|---:|
+| equity **mínima** de la muestra | **0,018587** |
+| manos con equity exactamente 0 | **0** |
+
+> **Ninguna mano del AUC se apoya en una celda con `p = 0`.** Y la equity
+> mínima es 0,0186, no un valor arbitrariamente pequeño: el rango estimado
+> tiene masa real en todas las manos observadas de esta muestra.
+
+### Entonces, ¿bloquea?
+
+**No para el objetivo actual. Sí para `DEFAULT_ALPHA`.**
+
+| | |
+|---|---|
+| ¿bloquea el **AUC**? | **no.** Ninguna de las 57 manos toca un cero, y la equity es monótona en `alpha` aunque su escala sea rara |
+| ¿bloquea **`DEFAULT_ALPHA`**? | **sí, y sigue** |
+
+Y la razón de que siga bloqueando `DEFAULT_ALPHA` **no** es el AUC. Es esto:
+
+> `p_matrix` hace `p = (cnt + alpha * prior) / (opp + alpha)`, y `prior`
+> **no es una frecuencia** (suman entre 0,91 y 89,75, con el 86,7 % de
+> ceros). `alpha` son pseudo-conteos que se suman al lado de `cnt`, que sí
+> es un conteo.
+
+Un AUC no le importa a la escala. **Un `DEFAULT_ALPHA` es la escala.** Si
+`alpha * prior` no son pseudo-conteos, entonces «cambiar `alpha`» es
+cambiar un número cuya unidad no se sabe qué es, y eso no es una
+calibración.
+
+Así que el estado es:
+
+| | bloqueado por los ceros |
+|---|---|
+| el **AUC como métrica** | no |
+| **`DEFAULT_ALPHA`** | **sí** |
+| la **equity** en general | no, con esta muestra; habría que medirlo en la muestra completa, que es lo que hace el camino preflop |
+
+### Y la decisión sigue siendo B
+
+Declarar que `matrix` **no es un prior** y ajustar el shrinkage a esa
+realidad sigue siendo lo acotado. Pero **no desbloquea `DEFAULT_ALPHA` por
+sí solo**, y eso ya estaba escrito: `L_prim` es monótona y no distingue, así
+que normalizar la escala no da un ganador.
+
+Lo que sí falta, y no cambia con esto, es la respuesta a
+[`QUE_ES_MATRIX.md`](QUE_ES_MATRIX.md): **qué representa el campo**. No se
+deduce del dato.

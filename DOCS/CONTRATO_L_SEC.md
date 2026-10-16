@@ -94,14 +94,14 @@ Y la coherencia con las cartas es **condición de aceptación**, no un
 detalle:
 
 1. Si el ganador llegó al showdown y tiene cartas, tiene que hacer **la
-  mejor mano de la mesa**, y los declarados tienen que ser exactamente
-  quienes la alcanzan.
+ mejor mano de la mesa**, y los declarados tienen que ser exactamente
+ quienes la alcanzan.
 2. Si **ningún** ganador declarado llegó al showdown, hace falta
-  **evidencia positiva** de victoria por fold: que quede un único jugador
-  sin foldear en toda la mano y que sea el declarado.
+ **evidencia positiva** de victoria por fold: que quede un único jugador
+ sin foldear en toda la mano y que sea el declarado.
 3. Si no hay ninguna de las dos, **la mano no se etiqueta**. No se acepta
-  «el registro dice que ganó» sin comprobar, porque es exactamente el
-  error que ya se cometió dos veces.
+ «el registro dice que ganó» sin comprobar, porque es exactamente el
+ error que ya se cometió dos veces.
 
 ## Referencia
 
@@ -164,3 +164,46 @@ es un resultado honesto y es información.
 python tools/calibrar.py particion
 python tools/equity_de_mano.py --mano H_0798
 ```
+
+## 8. La población, decidida
+
+**B — el hero continúa (`b`/`c`/`r`) o checkea (`x`), en la partición de
+validación.**
+
+Inicialmente parecía que había que excluir también los checks, y se
+excluyeron: el subgrupo de check tenía 50 % de victorias contra el 12 % de
+la muestra. Pero eso era un argumento de **Brier**, que es sensible a la
+base rate. El AUC **no lo es**.
+
+| | A (continúa) | **B (continúa + check)** |
+|---|---:|---:|
+| n | 25 | **47** |
+| 95 % IC | [0,60, 0,96] | **[0,70, 0,94]** |
+| ancho | 0,36 | **0,24** |
+
+Medido y publicado en [`AUC_INTERVALO.md`](AUC_INTERVALO.md).
+
+> **Excluir los checks era una decisión de métrica, no de objetivo.** Y al
+> cambiar de métrica, la decisión cambia. Eso es exactamente lo que
+> significa que el objetivo estuviera escondido detrás de un nombre.
+
+## 9. La regla del reparto
+
+`y = 0,5` **no entra** en el AUC y **no se convierte** en victoria ni en
+derrota.
+
+No hay una tercera opción honesta: un AUC binario necesita dos clases, y
+cualquier regla para meter un empate en una de ellas es una decisión
+arbitraria. Se excluye y **se cuenta**: en la muestra son 3 manos.
+
+## 10. Lo que se midió, y con qué
+
+| | |
+|---|---|
+| intervalo | bootstrap percentil, 10 000 remuestreos, **semilla 7** |
+| contraste | permutaciones, 10 000 barajados, **semilla 7** |
+| condición | los dos tienen que coincidir; si uno incluye 0,5 y el otro no, no se publica ninguno |
+
+Un tercer método (Hanley-McNeil) se intentó y **se descartó**: da un error
+estándar de 0,42 para un AUC de 0,80, y se degrada cuando el AUC se aleja
+de 0,5 en muestras pequeñas.

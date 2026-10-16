@@ -137,57 +137,6 @@ def ultima_calle(h):
     return None
 
 
-def llego_al_showdown(h, pos, ult=None):
-    """True si `pos` NO folteo en ninguna calle de la mano.
-
-    **Cualquier** calle, incluida la última. `revision_2`: antes retornaba
-    True al LLEGAR a la ultima calle sin inspeccionar sus acciones, así
-    que un jugador que folteaba en el river entraba como si hubiera
-    llegado al showdown.
-
-    Un fold es definitivo: el que folio salio del bote y no puede ganar.
-    No hace falta `ult`; se queda por compatibilidad.
-    """
-    for st in ORDEN_CALLES:
-        acts = ((h.get('streets') or {}).get(st) or {}).get('actions') or []
-        for a in acts:
-            if a.get('pos') == pos and a.get('action') == 'f':
-                return False
-    return True
-
-
-def no_folteo_ever(h, pos):
-    """True si `pos` no tiene un 'f' en NINGUNA calle de la mano."""
-    for st in ORDEN_CALLES:
-        acts = ((h.get('streets') or {}).get(st) or {}).get('actions') or []
-        for a in acts:
-            if a.get('pos') == pos and a.get('action') == 'f':
-                return False
-    return True
-
-
-def gano_por_fold(h, declarados):
-    """EVIDENCIA POSITIVA de que el bote se gano sin showdown.
-
-    La regla del recorder: es victoria por fold cuando queda **un solo**
-    jugador que no ha folteado, y ese es el declarado. Si quedan dos, no
-    hay ganador por fold: hubo showdown (o la mano esta incompleta), y sin
-    las cartas no se puede saber cual.
-
-    Devuelve (True, '') si hay evidencia, (False, motivo) si no la hay.
-    """
-    vivos = {p.get('pos') for p in h.get('players') or []
-             if p.get('pos') and no_folteo_ever(h, p.get('pos'))}
-    if len(vivos) != 1:
-        return False, ('%d jugadores sin foldear: no es una victoria por '
-                       'fold' % len(vivos))
-    unico = next(iter(vivos))
-    if declarados and declarados != {unico}:
-        return False, ('el unico sin foldear es %s y el ganador declarado '
-                       'es %s' % (unico, sorted(declarados)))
-    return True, ''
-
-
 def mejores_manos(h):
     """({pos: score}, maximo) SOLO de los que llegaron al showdown.
 
@@ -760,6 +709,58 @@ def escribir_valor(param, valor):
     print('   test_default_alpha_sigue_en_dos falla hasta entonces.')
     return 0
 
+
+def no_folteo_ever(h, pos):
+    """True si `pos` no tiene un 'f' en NINGUNA calle de la mano.
+
+    UN FOLD ES DEFINITIVO. El que folio salio del bote y no puede ganar,
+    y da igual la calle en la que ocurriera.
+
+    Esta es la REGLA CANONICA del fold. `llego_al_showdown` delega aqui y
+    no la reimplementa: dos reglas del fold en el mismo proyecto es como se
+    diverge sin que nadie se entere.
+    """
+    for st in ORDEN_CALLES:
+        acts = ((h.get('streets') or {}).get(st) or {}).get('actions') or []
+        for a in acts:
+            if a.get('pos') == pos and a.get('action') == 'f':
+                return False
+    return True
+
+
+def llego_al_showdown(h, pos, ult=None):
+    """True si `pos` llego al bote. Delega en la regla canonica.
+
+    `ult` se conserva por compatibilidad y ya no se usa: antes retornaba
+    True al LLEGAR a la ultima calle sin inspeccionar sus acciones, y un
+    fold en el river entraba como si hubiera llegado al showdown.
+    """
+    return no_folteo_ever(h, pos)
+
+
+def gano_por_fold(h, declarados):
+    """EVIDENCIA POSITIVA de victoria por fold, o (False, motivo).
+
+    La regla del recorder: es victoria por fold cuando queda **un solo**
+    jugador sin foldear en toda la mano, y ese es el declarado.
+
+    `declarados` vacio NO es evidencia de nada: no hay ganador contra el
+    que comprobar. `revision_2`: antes la condicion era `if declarados and
+    declarados != {unico}`, asi que con el conjunto vacio devolvia True y
+    la seguridad dependia de que cada llamador hiciera el filtro previo.
+    """
+    vivos = {p.get('pos') for p in h.get('players') or []
+             if p.get('pos') and no_folteo_ever(h, p.get('pos'))}
+    if not declarados:
+        return False, 'sin ganador declarado no hay evidencia de nada'
+    if len(vivos) != 1:
+        return False, ('%d jugadores sin foldear: no es una victoria por '
+                       'fold' % len(vivos))
+    unico = next(iter(vivos))
+    if declarados != {unico}:
+        return False, ('el unico sin foldear es %s y el ganador declarado '
+                       'es %s' % (unico, sorted(declarados)))
+    return True, ''
 
 def main():
     # `particion` es subcomando; medir es lo que se hace sin decir nada.
