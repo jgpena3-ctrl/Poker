@@ -5,9 +5,9 @@
     "hands_window": "reliable_only",
     "hands_input": 877,
     "hands_used": 863,
-    "code_commit": "f833620",
-    "arbol_sucio": false,
-    "built_at": "2026-10-15T23:22:28+00:00"
+    "code_commit": "8e527c3",
+    "arbol_sucio": true,
+    "built_at": "2026-10-16T00:31:56+00:00"
   },
   "perfil": {
     "Jarduan": "TIBURON",
@@ -93,7 +93,6 @@
     "AZ de A": "TIBURON",
     "bsaghv4": "PEZ",
     "Lprieto11": "PEZ",
-    "CO": "TIBURON",
     "Juancuellar987": "PEZ",
     "maestrodelbluff": "TIBURON",
     "Danielev": "TIBURON",
@@ -144,7 +143,6 @@
     "La_Gaitana": "TIBURON",
     "vidents": "PEZ",
     "BLKsoul": "PEZ",
-    "MP": "TIBURON",
     "Woons": "PEZ",
     "BigPapi.": "TIBURON",
     "Santiagoea10": "TIBURON",
@@ -5679,17 +5677,17 @@
   },
   "omega": {
     "ALKILADO": {
-      "no_raise": 0.9594,
+      "no_raise": 0.9562,
       "facing_open": 0.8125,
       "facing_3bet": 1.0
     },
     "ANJO2017": {
-      "no_raise": 0.6097,
+      "no_raise": 0.6003,
       "facing_open": 0.2702,
       "facing_3bet": 0.25
     },
     "AZ de A": {
-      "no_raise": 0.5165,
+      "no_raise": 0.5101,
       "facing_open": 0.325,
       "facing_3bet": 1.0
     },
@@ -5719,7 +5717,7 @@
       "facing_3bet": 1.0
     },
     "Arquejandro": {
-      "no_raise": 1.1525,
+      "no_raise": 1.1363,
       "facing_open": 1.9532,
       "facing_3bet": 0.325
     },
@@ -5729,7 +5727,7 @@
       "facing_3bet": 1.0
     },
     "BigPapi.": {
-      "no_raise": 0.6263,
+      "no_raise": 0.6167,
       "facing_open": 0.25,
       "facing_3bet": 1.0
     },
@@ -5739,7 +5737,7 @@
       "facing_3bet": 1.0
     },
     "Bogotano26": {
-      "no_raise": 0.9795,
+      "no_raise": 0.9644,
       "facing_open": 0.25,
       "facing_3bet": 0.25
     },
@@ -5748,13 +5746,8 @@
       "facing_open": 0.625,
       "facing_3bet": 1.0
     },
-    "CO": {
-      "no_raise": 1.0,
-      "facing_open": 1.0,
-      "facing_3bet": 1.0
-    },
     "CamiloG208": {
-      "no_raise": 0.8783,
+      "no_raise": 0.8686,
       "facing_open": 0.4375,
       "facing_3bet": 1.0
     },
@@ -5764,7 +5757,7 @@
       "facing_3bet": 1.0
     },
     "Carupoker": {
-      "no_raise": 0.7749,
+      "no_raise": 0.763,
       "facing_open": 0.25,
       "facing_3bet": 1.0
     },
@@ -5784,12 +5777,12 @@
       "facing_3bet": 1.0
     },
     "ComboHunter": {
-      "no_raise": 0.4461,
+      "no_raise": 0.4393,
       "facing_open": 0.25,
       "facing_3bet": 1.0
     },
     "CorajeRaise": {
-      "no_raise": 0.7116,
+      "no_raise": 0.7007,
       "facing_open": 1.0122,
       "facing_3bet": 1.0
     },
@@ -5799,7 +5792,7 @@
       "facing_3bet": 1.0
     },
     "Danielev": {
-      "no_raise": 0.4076,
+      "no_raise": 0.4044,
       "facing_open": 0.4,
       "facing_3bet": 0.4
     },
@@ -5809,12 +5802,12 @@
       "facing_3bet": 1.0
     },
     "Dannykill": {
-      "no_raise": 1.1225,
+      "no_raise": 1.116,
       "facing_open": 0.775,
       "facing_3bet": 1.0
     },
     "Davi-Ari": {
-      "no_raise": 0.7167,
+      "no_raise": 0.7057,
       "facing_open": 0.25,
       "facing_3bet": 0.25
     },
@@ -5829,7 +5822,7 @@
       "facing_3bet": 1.0
     },
     "Deftones": {
-      "no_raise": 0.747,
+      "no_raise": 0.7355,
       "facing_open": 1.3271,
       "facing_3bet": 1.0
     },
@@ -5839,12 +5832,12 @@
       "facing_3bet": 1.0
     },
     "Doffy707": {
-      "no_raise": 0.8883,
+      "no_raise": 0.8754,
       "facing_open": 0.2875,
       "facing_3bet": 0.2875
     },
     "DominoSaurio": {
-      "no_raise": 0.6894,
+      "no_raise": 0.6788,
       "facing_open": 0.4895,
       "facing_3bet": 0.25
     },
@@ -5879,7 +5872,7 @@
       "facing_3bet": 1.0
     },
     "Geilyn21": {
-      "no_raise": 0.9998,
+      "no_raise": 0.9844,
       "facing_open": 2.0592,
       "facing_3bet": 0.25
     },
@@ -5894,12 +5887,12 @@
       "facing_3bet": 1.0
     },
     "Hachirama": {
-      "no_raise": 1.1288,
+      "no_raise": 1.1114,
       "facing_open": 1.9263,
       "facing_3bet": 0.25
     },
     "HarryPoker18": {
-      "no_raise": 0.5476,
+      "no_raise": 0.5392,
       "facing_open": 0.25,
       "facing_3bet": 0.25
     },
@@ -5919,7 +5912,7 @@
       "facing_3bet": 1.0
     },
     "Irene_giraldo": {
-      "no_raise": 0.9023,
+      "no_raise": 0.8884,
       "facing_open": 0.8782,
       "facing_3bet": 0.25
     },
@@ -5934,22 +5927,22 @@
       "facing_3bet": 1.0
     },
     "JHONCASH": {
-      "no_raise": 0.5001,
+      "no_raise": 0.4924,
       "facing_open": 0.9405,
       "facing_3bet": 0.25
     },
     "JS99": {
-      "no_raise": 1.0874,
+      "no_raise": 1.0707,
       "facing_open": 2.2449,
       "facing_3bet": 0.25
     },
     "JaCkFlor": {
-      "no_raise": 0.5165,
+      "no_raise": 0.5101,
       "facing_open": 1.2436,
       "facing_3bet": 0.325
     },
     "Jarduan": {
-      "no_raise": 0.9602,
+      "no_raise": 0.9454,
       "facing_open": 0.6881,
       "facing_3bet": 4.0
     },
@@ -5964,12 +5957,12 @@
       "facing_3bet": 1.0
     },
     "Jhordanbtc": {
-      "no_raise": 0.6169,
+      "no_raise": 0.6104,
       "facing_open": 0.4,
       "facing_3bet": 1.0
     },
     "Johan Otero": {
-      "no_raise": 0.7848,
+      "no_raise": 0.7727,
       "facing_open": 0.9632,
       "facing_3bet": 4.0
     },
@@ -5989,12 +5982,12 @@
       "facing_3bet": 1.0
     },
     "JuaGon": {
-      "no_raise": 1.4191,
+      "no_raise": 1.3996,
       "facing_open": 0.3625,
       "facing_3bet": 0.3625
     },
     "JuanPApada": {
-      "no_raise": 1.0303,
+      "no_raise": 1.0206,
       "facing_open": 0.55,
       "facing_3bet": 1.0
     },
@@ -6024,7 +6017,7 @@
       "facing_3bet": 1.0
     },
     "Juris55": {
-      "no_raise": 0.4429,
+      "no_raise": 0.4361,
       "facing_open": 0.25,
       "facing_3bet": 0.25
     },
@@ -6039,12 +6032,12 @@
       "facing_3bet": 1.0
     },
     "Krono": {
-      "no_raise": 0.7272,
+      "no_raise": 0.7161,
       "facing_open": 1.2706,
       "facing_3bet": 1.0
     },
     "LUIS-DIAZ": {
-      "no_raise": 0.9241,
+      "no_raise": 0.9099,
       "facing_open": 1.4565,
       "facing_3bet": 0.25
     },
@@ -6059,18 +6052,13 @@
       "facing_3bet": 1.0
     },
     "LolaMora": {
-      "no_raise": 0.7081,
+      "no_raise": 0.7049,
       "facing_open": 0.625,
       "facing_3bet": 1.0
     },
     "Lprieto11": {
       "no_raise": 1.2867,
       "facing_open": 0.3625,
-      "facing_3bet": 1.0
-    },
-    "MP": {
-      "no_raise": 0.9625,
-      "facing_open": 1.0,
       "facing_3bet": 1.0
     },
     "Maicolp": {
@@ -6109,12 +6097,12 @@
       "facing_3bet": 1.0
     },
     "Mrcash": {
-      "no_raise": 0.6542,
+      "no_raise": 0.6442,
       "facing_open": 1.4051,
       "facing_3bet": 0.25
     },
     "MuckeDBoY": {
-      "no_raise": 0.8731,
+      "no_raise": 0.8597,
       "facing_open": 0.25,
       "facing_3bet": 0.25
     },
@@ -6124,12 +6112,12 @@
       "facing_3bet": 1.0
     },
     "N.E.O": {
-      "no_raise": 0.5962,
+      "no_raise": 0.587,
       "facing_open": 1.1268,
       "facing_3bet": 0.25
     },
     "NESANVAR": {
-      "no_raise": 0.538,
+      "no_raise": 0.5297,
       "facing_open": 2.3886,
       "facing_3bet": 0.25
     },
@@ -6149,7 +6137,7 @@
       "facing_3bet": 1.0
     },
     "Onix22": {
-      "no_raise": 0.6355,
+      "no_raise": 0.6257,
       "facing_open": 0.25,
       "facing_3bet": 0.25
     },
@@ -6179,7 +6167,7 @@
       "facing_3bet": 1.0
     },
     "PardoKing": {
-      "no_raise": 0.909,
+      "no_raise": 0.9058,
       "facing_open": 0.775,
       "facing_3bet": 1.0
     },
@@ -6189,7 +6177,7 @@
       "facing_3bet": 1.0
     },
     "Pipaaf182": {
-      "no_raise": 0.7272,
+      "no_raise": 0.7161,
       "facing_open": 1.5715,
       "facing_3bet": 0.25
     },
@@ -6209,7 +6197,7 @@
       "facing_3bet": 1.0
     },
     "Rio28": {
-      "no_raise": 0.8684,
+      "no_raise": 0.8619,
       "facing_open": 0.5875,
       "facing_3bet": 1.0
     },
@@ -6224,12 +6212,12 @@
       "facing_3bet": 1.0
     },
     "SAE_AAAA": {
-      "no_raise": 1.2036,
+      "no_raise": 1.1874,
       "facing_open": 1.6003,
       "facing_3bet": 1.0
     },
     "SamPachero30": {
-      "no_raise": 1.0733,
+      "no_raise": 1.0568,
       "facing_open": 0.25,
       "facing_3bet": 0.25
     },
@@ -6244,7 +6232,7 @@
       "facing_3bet": 1.0
     },
     "Santiagoea10": {
-      "no_raise": 0.944,
+      "no_raise": 0.9295,
       "facing_open": 1.2706,
       "facing_3bet": 1.0
     },
@@ -6269,7 +6257,7 @@
       "facing_3bet": 1.0
     },
     "SunGodNika": {
-      "no_raise": 1.0613,
+      "no_raise": 1.058,
       "facing_open": 0.8875,
       "facing_3bet": 1.0
     },
@@ -6279,7 +6267,7 @@
       "facing_3bet": 1.0
     },
     "Tio88": {
-      "no_raise": 0.4628,
+      "no_raise": 0.4556,
       "facing_open": 0.25,
       "facing_3bet": 1.0
     },
@@ -6309,7 +6297,7 @@
       "facing_3bet": 1.0
     },
     "baam08": {
-      "no_raise": 1.2034,
+      "no_raise": 1.1849,
       "facing_open": 3.5123,
       "facing_3bet": 0.25
     },
@@ -6334,7 +6322,7 @@
       "facing_3bet": 1.0
     },
     "kiluaak": {
-      "no_raise": 1.1328,
+      "no_raise": 1.1154,
       "facing_open": 0.9188,
       "facing_3bet": 1.0
     },
@@ -6344,12 +6332,12 @@
       "facing_3bet": 1.0
     },
     "man1": {
-      "no_raise": 1.5394,
+      "no_raise": 1.5157,
       "facing_open": 2.5962,
       "facing_3bet": 1.0
     },
     "mommya": {
-      "no_raise": 0.538,
+      "no_raise": 0.5297,
       "facing_open": 1.7062,
       "facing_3bet": 1.0
     },
@@ -6359,12 +6347,12 @@
       "facing_3bet": 1.0
     },
     "oscar123": {
-      "no_raise": 0.8273,
+      "no_raise": 0.8145,
       "facing_open": 0.671,
       "facing_3bet": 0.25
     },
     "otb_RedBaron": {
-      "no_raise": 0.5211,
+      "no_raise": 0.5131,
       "facing_open": 1.0122,
       "facing_3bet": 1.0
     },
@@ -6374,12 +6362,12 @@
       "facing_3bet": 1.0
     },
     "pardoKing": {
-      "no_raise": 0.5165,
+      "no_raise": 0.5101,
       "facing_open": 0.325,
       "facing_3bet": 1.0
     },
     "proplayer555": {
-      "no_raise": 1.471,
+      "no_raise": 1.4483,
       "facing_open": 0.25,
       "facing_3bet": 1.0
     },
@@ -6389,12 +6377,12 @@
       "facing_3bet": 1.0
     },
     "sergio39": {
-      "no_raise": 0.9474,
+      "no_raise": 0.9328,
       "facing_open": 1.5715,
       "facing_3bet": 0.25
     },
     "triki12": {
-      "no_raise": 0.513,
+      "no_raise": 0.5051,
       "facing_open": 0.371,
       "facing_3bet": 1.0
     },

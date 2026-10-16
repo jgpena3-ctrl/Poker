@@ -218,3 +218,61 @@ def test_report_and_to_dict():
     d = agg.to_dict()
     assert d['Jarduan']['stats']['vpip'] == [1, 1]
     assert d['Villian']['hero'] is False
+
+
+# --- FASE D §0.1: el TERCER sitio del patrón `or pos` ---------------------
+#
+# El patrón `x.get(pos, pos)` estaba en tres sitios, y arreglar uno no basta:
+#   motor/learn.py         preflop_events    -> PreflopEvent.player
+#   motor/observations.py  extract_hand       -> Observation.player
+#   motor/stats.py         _collect_hand     ->TransitionStats.players
+#
+# Los tres. Ahora los tres devuelven la ausencia en vez del nombre de la
+# posición. Este fichero cubre el tercero.
+
+
+POSICIONES = ('UTG', 'MP', 'CO', 'BTN', 'SB', 'BB')
+
+
+def test_una_accion_postflop_sin_jugador_no_crea_el_jugador():
+    """Este es el que quedaba vivo después de arreglar los otros dos.
+
+    `learn.preflop_events` ya no inventa, y `observations` ya no inventa. Pero
+    `stats.py` sigue teniendo su propio `name(pos)` con el mismo fallback, y lo
+    usa en el bucle POSTflop. Ahí es de donde salía el "CO" que se colaba en
+    `profiles.json` con etiqueta TIBURON: `H_0519` tiene una acción postflop de
+    la posición CO, y CO no tiene jugador en esa mano.
+    """
+    from motor.stats import TransitionStats
+    mano = {
+        'hand_id': 'T_POS',
+        'players': [
+            {'pos': 'BTN', 'name': 'X', 'stack': 100, 'cards': ''},
+            {'pos': 'BB', 'name': 'Y', 'stack': 100, 'cards': ''},
+        ],
+        'streets': {
+            'preflop': {'actions': [
+                {'pos': 'BTN', 'action': 'b', 'amount': 2.0}]},
+            'flop': {'actions': [
+                {'pos': 'CO', 'action': 'c', 'amount': 4.0},   # CO no existe
+                {'pos': 'BB', 'action': 'x', 'amount': 0.0},
+            ]},
+        },
+    }
+    agg = TransitionStats.from_hands([mano])
+    assert [p for p in agg.players if p in POSICIONES] == [], \
+        sorted(agg.players)
+    assert 'X' in agg.players and 'Y' in agg.players
+
+
+def test_transition_stats_no_tiene_ninguna_posicion_como_nombre():
+    """El invariante sobre las 877 manos de la ventana.
+
+    El test anterior demuestra el caso con una mano construida. Este
+    demuestra que no queda ninguno en el dato real, que es lo que hace que el
+    arreglo sirva."""
+    from motor.learn import load_hands
+    from motor.stats import TransitionStats
+    agg = TransitionStats.from_hands(load_hands(reliable_only=True))
+    falsos = sorted(p for p in agg.players if p in POSICIONES)
+    assert not falsos, falsos

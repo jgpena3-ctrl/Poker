@@ -163,7 +163,31 @@ def extract_hand(hand) -> List[Observation]:
             if act in RAISE_ACTS and pot_before > 0:
                 sizing = amt / pot_before
 
-            name = name_of.get(pos, pos)
+            # Una acción de una posición que NO tiene jugador no pertenece a
+            # nadie. Antes caía en `name_of.get(pos, pos)`, que devolvía la
+            # POSICIÓN como nombre del jugador: `H_0846` producía una
+            # observación de un jugador llamado "MP" y `H_0519` una de "CO".
+            #
+            # MEDIDO: 2 observaciones de 9252. Pocas, pero cada una crea un
+            # jugador que no existe, y `Profiles.from_hands` le pone
+            # etiqueta: en `profiles.json` había un "CO" con n=0, bins n/a y
+            # etiqueta TIBURON con confianza 0.0. Un perfil sin datos con
+            # etiqueta es un número inventado con forma de dato, y para en
+            # `profile_ranges.json`, que es de lo que se va a calibrar.
+            #
+            # Aquí no se inventa un jugador ni se tapa el defecto: la
+            # observación se descarta y el defecto sigue declarado por
+            # `tools/auditar_rango.py::accion_fantasma`. Corregir las dos
+            # manos es del mantenedor; esto es para que no vuelva a colarse
+            # por el otro lado.
+            #
+            # `pos not in name_of` y NO `name == pos`: un jugador con el
+            # nombre vacío también cae a la posición, y ese es OTRO defecto
+            # que no es este. Aquí solo se descarta la acción de una posición
+            # que no tiene NINGUN jugador.
+            if pos not in name_of:
+                continue
+            name = name_of[pos]
             obs.append(Observation(
                 hand_id=hand.get('hand_id', '?'),
                 street=street,

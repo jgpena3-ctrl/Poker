@@ -83,7 +83,19 @@ class TransitionStats:
                         for p in hand.get('players', [])}
 
         def name(pos):
-            return names_by_pos.get(pos, pos)
+            """El JUGADOR de `pos`, o None si no hay ninguno.
+
+            Antes devolvia `names_by_pos.get(pos, pos)`: caia en la POSICION y
+            la usaba de nombre. Con eso, una accion postflop de una posicion sin
+            jugador creaba el jugador entero —H_0519 metia un "CO" aqui— y ese
+            jugador acababa con etiqueta TIBURON y confianza 0.0 en
+            `profiles.json`.
+
+            None y no '' a proposito: '' se confunde con "no lo sé" y con "no
+            me interesa", y aqui las dos cosas significan lo mismo —no hay
+            jugador—, pero None deja claro que es una ausencia y no un dato.
+            """
+            return names_by_pos.get(pos)
 
         evs = preflop_events(hand)
         if not evs:
@@ -92,6 +104,19 @@ class TransitionStats:
         # --- preflop: primera decisión + último agresor ---------------
         last_aggressor = None
         for ev in evs:
+            # Un evento SIN jugador no se atribuye a nadie. Antes, `name()`
+            # caia en `names_by_pos.get(pos, pos)` y le ponia el nombre de la
+            # POSICION, que creaba un jugador que no existe. Ahora `ev.player`
+            # llega vacio desde `learn.preflop_events` (que es donde se
+            # corregio la causa) y lo que decide es si se cuenta.
+            #
+            # NO se cuenta, y la razon es que estas son estadisticas POR
+            # JUGADOR: una decision que no se sabe de quien es no va a las
+            # estadisticas de nadie. Prefiero un hueco declarado a un dato
+            # atribuido al que sea. El denominador global SI lo cuenta, y eso
+            # es otra cosa: ahi si ocurrio algo.
+            if not ev.player:
+                continue
             st = self._st(ev.player)
             st.opp('vpip')
             st.opp('pfr')
@@ -118,7 +143,8 @@ class TransitionStats:
         revealed = set()
         if has_sd:
             revealed = {name(pl.get('pos')) for pl in hand.get('players', [])
-                        if pl.get('cards')}
+                    if pl.get('cards')}
+            revealed.discard(None)
         winners = set()
         for v in (hand.get('showdown') or {}).values():
             m = SHOWDOWN_RE.search(str(v))
@@ -145,7 +171,12 @@ class TransitionStats:
                 continue
             first_bettor = None
             for pos, act, _amt in act_seq:
-                st = self._st(name(pos))
+                # Sin jugador en esa posicion no hay a quien atribuirle la
+                # accion. Antes caia en `self._st(pos)` y creaba el jugador.
+                _nombre = name(pos)
+                if _nombre is None:
+                    continue
+                st = self._st(_nombre)
                 if first_bettor is None:
                     # nadie ha apostado aún en la calle: ¿oportunidad con iniciativa?
                     if street == 'flop' and pos == initiator:

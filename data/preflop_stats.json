@@ -577,7 +577,7 @@
       "no_raise": 11,
       "facing_3bet": 1
     },
-    "MP": {
+    "": {
       "no_raise": 1
     },
     "Woons": {
@@ -1661,7 +1661,7 @@
       "call_limp": 1,
       "fold_vs_3bet": 1
     },
-    "MP": {
+    "": {
       "fold": 1
     },
     "Woons": {
@@ -4553,7 +4553,7 @@
       "no_raise": 1,
       "facing_open": 1
     },
-    "MP|MP": {
+    "|MP": {
       "no_raise": 1
     },
     "BLKsoul|CO": {
@@ -7792,7 +7792,7 @@
       "bb_check": 1,
       "fold_vs_open": 1
     },
-    "MP|MP": {
+    "|MP": {
       "fold": 1
     },
     "BLKsoul|CO": {

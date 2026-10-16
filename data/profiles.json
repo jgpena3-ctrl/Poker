@@ -388,26 +388,6 @@
     "confidence": 0.657,
     "reliability": "probable"
   },
-  "CO": {
-    "player": "CO",
-    "hero": false,
-    "n": 0,
-    "stats": {
-      "f2bar": 1.0
-    },
-    "bins": {
-      "vpip": "n/a",
-      "pfr": "n/a",
-      "b3": "n/a",
-      "cbet": "n/a",
-      "wtsd": "n/a"
-    },
-    "label": "TIBURON",
-    "subtype": "unknown",
-    "stack_mean": null,
-    "confidence": 0.0,
-    "reliability": "probable"
-  },
   "CamiloG208": {
     "player": "CamiloG208",
     "hero": false,
@@ -2151,27 +2131,6 @@
     "subtype": "Loose-passive",
     "stack_mean": 23.92,
     "confidence": 0.543,
-    "reliability": "probable"
-  },
-  "MP": {
-    "player": "MP",
-    "hero": false,
-    "n": 1,
-    "stats": {
-      "vpip": 0.0,
-      "pfr": 0.0
-    },
-    "bins": {
-      "vpip": "mid",
-      "pfr": "mid",
-      "b3": "n/a",
-      "cbet": "n/a",
-      "wtsd": "n/a"
-    },
-    "label": "TIBURON",
-    "subtype": "Regular",
-    "stack_mean": null,
-    "confidence": 0.558,
     "reliability": "probable"
   },
   "Maicolp": {

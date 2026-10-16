@@ -449,7 +449,21 @@ def preflop_events(hand, bb=BB):
         cards = cards_of_pos(hand, pos)
         events.append(PreflopEvent(
             hand_id=hand.get('hand_id', '?'),
-            player=player_of_pos(hand, pos) or pos,
+            # `player_of_pos(...) or pos` ERA `... or pos`: cuando la posicion
+            # no tiene jugador, devolvia la POSICION como nombre. Con eso, una
+            # accion fantasma creaba un jugador entero: H_0846 producia un
+            # `PreflopEvent` con player='MP', y de ahi salia un "MP" y un "CO"
+            # en player_stats.json y profiles.json, con etiqueta TIBURON y
+            # confianza 0.0. Medido: 2 observaciones y 2 eventos sobre 1258
+            # manos.
+            #
+            # Aqui NO se inventa un nombre. La decision SIGUE contando en el
+            # denominador —algo ocurrio, y el denominador es lo que hay que
+            # medir—, pero `player` queda vacio, que es la verdad: no se sabe
+            # quien la hizo. Quien necesite atribuirlo lo descarta explicito
+            # (`stats.py`), en vez de heredarlo bajo el nombre de una
+            # posicion.
+            player=player_of_pos(hand, pos),
             pos=pos,
             category=category,
             denom=denom,

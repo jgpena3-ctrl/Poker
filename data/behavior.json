@@ -1,6 +1,6 @@
 {
   "hands": 877,
-  "observaciones": 9252,
+  "observaciones": 9250,
   "profiles": {
     "Jarduan": "TIBURON",
     "NESANVAR": "TIBURON",
@@ -85,7 +85,6 @@
     "AZ de A": "TIBURON",
     "bsaghv4": "PEZ",
     "Lprieto11": "PEZ",
-    "CO": "TIBURON",
     "Juancuellar987": "PEZ",
     "maestrodelbluff": "TIBURON",
     "Danielev": "TIBURON",
@@ -136,7 +135,6 @@
     "La_Gaitana": "TIBURON",
     "vidents": "PEZ",
     "BLKsoul": "PEZ",
-    "MP": "TIBURON",
     "Woons": "PEZ",
     "BigPapi.": "TIBURON",
     "Santiagoea10": "TIBURON",
@@ -166,7 +164,7 @@
       "b": 0.005,
       "r": 0.218,
       "sizing_mean": 3.02,
-      "n": 1672
+      "n": 1671
     },
     "PEZ|preflop|-|bet": {
       "f": 0.412,
@@ -676,13 +674,13 @@
       "n": 61
     },
     "TIBURON|turn|rainbow|donk": {
-      "f": 0.545,
+      "f": 0.524,
       "x": 0.0,
-      "c": 0.409,
+      "c": 0.429,
       "b": 0.0,
-      "r": 0.045,
+      "r": 0.048,
       "sizing_mean": 0.585,
-      "n": 22
+      "n": 21
     },
     "PEZ|river|rainbow|none": {
       "f": 0.0,
@@ -1114,7 +1112,7 @@
       "b": 0.005,
       "r": 0.218,
       "sizing_mean": 3.02,
-      "n": 1672
+      "n": 1671
     },
     "PEZ|preflop|bet": {
       "f": 0.412,
@@ -1214,13 +1212,13 @@
       "n": 34
     },
     "TIBURON|turn|donk": {
-      "f": 0.488,
+      "f": 0.484,
       "x": 0.0,
-      "c": 0.407,
+      "c": 0.41,
       "b": 0.0,
-      "r": 0.106,
+      "r": 0.107,
       "sizing_mean": 0.791,
-      "n": 123
+      "n": 122
     },
     "PEZ|preflop|none": {
       "f": 0.243,

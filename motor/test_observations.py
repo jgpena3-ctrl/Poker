@@ -26,6 +26,67 @@ def _street(actions, board=None):
     return d
 
 
+# --- FASE D §0.1: una posicion NO es un jugador --------------------------
+POSICIONES = ('UTG', 'MP', 'CO', 'BTN', 'SB', 'BB')
+
+
+def test_una_accion_de_una_posicion_sin_jugador_no_inventa_jugador():
+    """El bug que metio un "CO" en profiles.json con etiqueta TIBURON.
+
+    `extract_hand` hacia `name_of.get(pos, pos)`: si la posicion no tenia
+    jugador, devolvia la POSICION como nombre. Con eso, una accion fantasma
+    se convertia en un jugador entero.
+
+    MEDIDO: 2 observaciones de 9252 en la ventana de 877 (`H_0846` producia
+    un jugador llamado "MP", `H_0519` uno llamado "CO"). Consecuencia: cada una
+    creaba un jugador que no existe, y `Profiles.from_hands` le ponia
+    etiqueta — "CO", n=0, bins n/a, TIBURON, confianza 0.0 — que es un numero
+    inventado con forma de dato y que va a parar a `profile_ranges.json`.
+
+    Aqui la accion se descarta: no pertenece a nadie."""
+    hand = _hand(streets={'preflop': _street([
+        {'pos': 'MP', 'action': 'f', 'amount': 0.0},      # MP no existe
+        {'pos': 'BTN', 'action': 'b', 'amount': 2.0},     # BTN si existe
+    ])})
+    obs = extract_hand(hand)
+    assert [o.pos for o in obs] == ['BTN'], [o.pos for o in obs]
+    assert all(o.player in ('X', 'Y', 'Z') for o in obs), \
+        [o.player for o in obs]
+
+
+def test_ninguna_observacion_de_la_base_tiene_una_posicion_de_jugador():
+    """El invariante sobre el dato real, no sobre un ejemplo.
+
+    El test anterior demuestra el caso. Este demuestra que no queda NINGUNO,
+    que es lo que hace que el arreglo sirve y no solo que funciona el ejemplo.
+    Corre en las 1258 manos: es la base entera, y tarda lo que tarda."""
+    from motor.learn import load_hands
+    obs = extract_hands(load_hands(reliable_only=False))
+    falsos = sorted({(o.hand_id, o.player) for o in obs
+                     if o.player in POSICIONES})
+    assert not falsos, (
+        'observaciones cuyo `player` es una POSICION y no un nombre: %s. '
+        'Vuelve a estar el `name_of.get(pos, pos)`.' % falsos[:10])
+
+
+def test_un_jugador_sin_nombre_no_se_descarta():
+    """El caso que NO hay que arreglar de paso.
+
+    Un jugador con el nombre vacio tambien acaba usando la posicion como
+    nombre, porque `name_of` se construye con `(p.get('name') or p.get('pos'))`.
+    Eso es OTRO defecto, y este guard no lo tapa: si lo tapara, estariamos
+    tapando dos cosas con un arreglo que solo explica una."""
+    hand = _hand(players=[
+        {'pos': 'BTN', 'name': '', 'stack': 100, 'cards': ''},
+        {'pos': 'BB', 'name': 'Y', 'stack': 100, 'cards': ''},
+    ], streets={'preflop': _street([
+        {'pos': 'BTN', 'action': 'b', 'amount': 2.0},
+    ])})
+    obs = extract_hand(hand)
+    assert len(obs) == 1, obs
+    assert obs[0].pos == 'BTN'
+
+
 def test_pot_before_y_facing_preflop():
     hand = _hand(streets={'preflop': _street([
         {'pos': 'BTN', 'action': 'b', 'amount': 2.0},
