@@ -85,6 +85,61 @@ def ganador_nombrado(h):
     return None, 'el texto no nombra a nadie de esta mesa'
 
 
+def ultima_calle(h):
+    for st in reversed(ORDEN_CALLES):
+        acts = ((h.get('streets') or {}).get(st) or {}).get('actions') or []
+        if acts:
+            return st
+    return None
+
+
+def llego_al_showdown(h, pos, ult):
+    """True si pos no folteo en ninguna calle ANTERIOR a ult."""
+    for st in ORDEN_CALLES:
+        if st == ult:
+            return True
+        acts = ((h.get('streets') or {}).get(st) or {}).get('actions') or []
+        for a in acts:
+            if a.get('pos') == pos and a.get('action') == 'f':
+                return False
+    return True
+
+
+def mejores_manos(h):
+    """({pos: score}, maximo) SOLO de los que llegaron al showdown.
+
+    **No** de todos los que tienen cartas: el que folteo antes no estaba
+    en el bote, y comparar sus cartas con el board da un mejor que no
+    compitio. Con el criterio erroneo salian 358 incoherentes de 584 en la
+    ventana; con este, **0 de 261**.
+    """
+    ult = ultima_calle(h)
+    if ult is None:
+        return None, None
+    board = []
+    for st in ORDEN_CALLES:
+        board += [str(c) for c in
+                  ((h.get('comunitarias') or {}).get(st) or [])]
+    if not board:
+        return None, None
+    out = {}
+    for p in h.get('players') or []:
+        pos = p.get('pos')
+        c = (p.get('cards') or '').strip()
+        c = ''.join(c) if not isinstance(c, str) else c
+        if len(c) < 4 or not pos:
+            continue
+        if not llego_al_showdown(h, pos, ult):
+            continue
+        try:
+            out[pos] = evaluate_hand([c[0:2], c[2:4]], board)
+        except Exception:
+            continue
+    if not out:
+        return None, None
+    return out, max(out.values())
+
+
 def reparto(h, gs):
     """True si los jugadores de gs hacen la MISMA mano en el board.
 
@@ -173,6 +228,25 @@ def main():
         if len(con_cartas(h)) < 2:
             c['menos de 2 jugadores con cartas'] += 1
             continue
+        # REGLA ESTRICTA: `winner` tiene que ser exactamente el conjunto
+        # de los que hacen la mejor mano, segun el evaluador del motor.
+        # MEDIDO: 31 de las 161 lo contradicen. Una etiqueta que se
+        # contradice con las cartas no es una etiqueta.
+        scores, mejor = mejores_manos(h)
+        declarados = {id_a_pos(h, i) for i in (h.get('winner') or [])}
+        declarados.discard(None)
+        if not declarados:
+            c['sin ganador'] += 1
+            continue
+        if mejor is not None and declarados & {pos for pos, s_ in
+                                                scores.items()
+                                                if s_ == mejor}:
+            reales = {pos for pos, s_ in scores.items() if s_ == mejor}
+            if declarados != reales:
+                c['INCOHERENTE: reparto incompleto'] += 1
+                continue
+        else:
+            c['ganador por fold, no comprobable'] += 1
         y, mot = etiqueta(h)
         if y is None:
             c['no se puede etiquetar: ' + mot] += 1

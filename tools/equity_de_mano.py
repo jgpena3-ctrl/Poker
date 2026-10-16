@@ -39,6 +39,7 @@ import numpy as np                                       # noqa: E402
 
 from motor import learn                                  # noqa: E402
 from motor import situation as S                         # noqa: E402
+
 from motor.asistente_live import (                       # noqa: E402
     RangeState, _preflop_spot, _pf_rival_pos,
     _villain_postflop_actions, situation)
@@ -252,10 +253,20 @@ def equity_contra(h, villain_pos, labels, modelo, postflop_model=None):
         return None, 'el hero no tiene cartas'
     if not board and calle != 'preflop':
         return None, 'no hay board en la calle del punto de decision'
-    # PREFLOP: el camino es OTRO. `situation` necesita un board de 3 a 5
-    # cartas, y preflop no tiene board. Ademas en una mano historica las
-    # cartas del rival SI estan registradas, asi que no hace falta un
-    # rango: se enumeran los 1 712 304 sorteos de 5 comunitarias.
+    # PREFLOP: HAY UN HUECO EN EL MOTOR, y es declarado.
+    #
+    # `situation` no tiene camino porque `evaluate_batch` declara board de 3
+    # a 5 cartas. Y `decision.runout_equity` con board vacio falla por LA
+    # MISMA causa: `_villain_arrays` llama a `evaluate_batch` y con 0 cartas
+    # de board pide `_SUBSETS[2]`, que no existe. `_SUBSETS` tiene 5, 6, 7.
+    #
+    # O sea: **el motor no tiene ningun camino de equity preflop.** Ni por
+    # situacion ni por runout. Anadirlo es un bloque aparte, en `motor/`.
+    #
+    # Mientras tanto lo unico que hay es la enumeracion contra las cartas
+    # REALES del rival, que es RETROSPECTIVA: en una decision preflop
+    # historica esas cartas no eran observables. Sirve para auditar el
+    # evaluador y para estudiar manos. NO es la equity de una decision.
     if calle == 'preflop':
         vc = cartas_de(h, villain_pos)
         if len(vc) < 2:
@@ -264,8 +275,8 @@ def equity_contra(h, villain_pos, labels, modelo, postflop_model=None):
             from equity_preflop import equity_preflop
             eq, det = equity_preflop(hero[0] + hero[1], vc[0] + vc[1])
         except Exception as e:
-            return None, 'equity_preflop fallo: %s: %s' % (type(e).__name__,
-                                                           e)
+            return None, ('equity_preflop fallo: %s: %s'
+                          % (type(e).__name__, e))
         return float(eq), {
             'calle': calle,
             'hero': ''.join(hero),
@@ -273,7 +284,11 @@ def equity_contra(h, villain_pos, labels, modelo, postflop_model=None):
             'rival': villain_pos,
             'perfil': None,
             'combos': det['boards'],
-            'via': 'enumeracion preflop',
+            'via': 'enumeracion contra la MANO REAL del rival',
+            'observable': False,
+            'por_que_no_observable':
+                'usa las cartas del rival, que al decidir no se '
+                'conocian; y no hay camino preflop en el motor',
         }
 
     rs, perfil = rango_del_rival(h, villain_pos, hero, board, labels, modelo,
@@ -286,6 +301,7 @@ def equity_contra(h, villain_pos, labels, modelo, postflop_model=None):
         return None, 'situation fallo: %s: %s' % (type(e).__name__, e)
     return float(sit.equity), {
         'calle': calle,
+        'observable': True,
         'hero': hero,
         'board': board,
         'rival': villain_pos,
@@ -328,6 +344,7 @@ def equity_de_mano(hand, labels, modelos, rival_unico=None):
         return None, 'no queda ningun rival en el bote en esa calle'
     salida = {}
     motivos = []
+    detalle = None
     for r in rivales:
         eq, det = equity_contra(hand, r, labels, modelos['preflop'],
                                 modelos.get('postflop'))
@@ -335,8 +352,12 @@ def equity_de_mano(hand, labels, modelos, rival_unico=None):
             # el motivo SE CUENTA. Tragaselo y todos los fallos se parecen,
             # que es como uno acaba creyendo que son la misma cosa.
             motivos.append('%s: %s' % (r, det))
-        else:
-            salida[r] = eq
+            continue
+        salida[r] = eq
+        # El detalle se queda con el ULTIMO QUE SALIO BIEN. Antes era la
+        # variable de la ultima iteracion, que podia ser el motivo de un
+        # fallo, y el que leia recibia una cadena donde esperaba un dict.
+        detalle = det
     if not salida:
         return None, '; '.join(motivos) or 'sin motivos'
     return salida, {
@@ -345,7 +366,7 @@ def equity_de_mano(hand, labels, modelos, rival_unico=None):
         'dispersion': (max(salida.values()) - min(salida.values())
                        if len(salida) > 1 else 0.0),
         'mediana': float(np.median(list(salida.values()))),
-    }, det
+    }, detalle
 
 
 def main():

@@ -409,8 +409,11 @@ def test_equity_de_mano_usa_el_enumerador_en_preflop(eq, labels, modelos,
         if eqv is None:
             fallos.append((hid, detalle))
             continue
-        assert detalle.get('via') == 'enumeracion preflop', (
+        assert 'MANO REAL' in (detalle.get('via') or ''), (
             '%s: calle %s sin pasar por el enumerador' % (hid, calle))
+        assert detalle['observable'] is False, (
+            'la preflop usa las cartas del rival, que al decidir no se '
+            'conocian: no es observable y no se puede mezclar con la otra')
         assert detalle['combos'] > 1000000, 'no enumero los sorteos'
         assert 0.0 <= eqv <= 1.0
         probadas += 1

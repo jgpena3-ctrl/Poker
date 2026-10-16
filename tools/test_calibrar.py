@@ -184,6 +184,65 @@ def test_sin_jugador_heroname_no_hay_etiqueta(cal):
     assert cal.etiqueta(h) == (None, False)
 
 
+def test_el_criterio_de_etiqueta_solo_usa_quien_llego_al_bote(cal):
+    """Un jugador que folteo antes NO compite. Este test es el mio.
+
+    Comparar las cartas de todos con el board da un mejor que no estuvo
+    en el bote. MEDIDO: con ese criterio, 358 incoherentes de 584 en la
+    ventana. Con el correcto, **0 de 261**.
+
+    H_0002 es el caso: winner es UTG, que NO tiene cartas porque gano
+    por fold en el flop, y MP (que si las tiene) habia folderado preflop.
+    """
+    # UTG tiene cartas y GANO. MP tiene cartas y FOLTEO preflop.
+    # Sin el filtro, MP se compararia con el board y 'ganaria' con
+    # 6c4s, que es peor que Tc9s.
+    h = _mano(['BB', 'MP', 'UTG'], ['V', 'Jarduan', 'W'],
+              ['', '6c4s', 'Tc9s'], ['p2'],
+              showdown={'winner1': 'UTG (W)'})
+    h['streets'] = {
+        'preflop': {'actions': [
+            {'pos': 'BB', 'action': 'x', 'amount': 0.0},
+            {'pos': 'UTG', 'action': 'c', 'amount': 1.0},
+            {'pos': 'MP', 'action': 'f', 'amount': 0.0}]},
+        'flop': {'actions': [
+            {'pos': 'BB', 'action': 'x', 'amount': 1.0},
+            {'pos': 'UTG', 'action': 'b', 'amount': 6.0},
+            {'pos': 'BB', 'action': 'f', 'amount': 0.0}],
+            'board': ['Ah', '8c', 'Qc']},
+    }
+    h['comunitarias'] = {'flop': ['Ah', '8c', 'Qc']}
+    scores, mejor = cal.mejores_manos(h)
+    assert mejor is not None
+    assert 'MP' not in scores, 'MP folteo preflop: no compite'
+    assert 'UTG' in scores
+    y, ok = cal.etiqueta(h)
+    assert ok is True and y == 0.0, 'UTG gano el bote y el hero no'
+
+
+def test_las_verificables_de_la_ventana_son_coherentes(cal, ventana):
+    """Cero incoherentes. Es el numero que hace fiable a winner."""
+    verificadas = coherentes = 0
+    for h in ventana:
+        scores, mejor = cal.mejores_manos(h)
+        if mejor is None:
+            continue
+        dec = {cal.id_a_pos(h, i) for i in (h.get('winner') or [])}
+        dec.discard(None)
+        if not dec:
+            continue
+        reales = {p for p, s in scores.items() if s == mejor}
+        if not (dec & reales):
+            continue          # gano por fold: no comprobable
+        verificadas += 1
+        if dec == reales:
+            coherentes += 1
+    assert verificadas > 200, ('esperadas muchas: %d' % verificadas)
+    assert coherentes == verificadas, (
+        '%d incoherentes. Antes salia 1 y era mi comprobacion la que '
+        'fallaba' % (verificadas - coherentes))
+
+
 # ------------------------------------- 3. hero y butaca: las dos cosas bien
 def test_hero_es_el_jugador_nombrado_no_el_de_la_butaca_0(cal):
     """El hero puede estar en cualquier butaca.

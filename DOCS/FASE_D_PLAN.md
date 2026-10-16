@@ -520,6 +520,51 @@ empeora(L0, L1) = (L1 - L0) / L0
 # `mejora > 0` es "ha mejorado", `mejora < 0` es "ha empeorado".
 ```
 
+### 2.3.1 Estado de `L_sec`: no aplicable
+
+**`L_sec` no es utilizable como criterio de aceptación**, y P1/P4/P5 —que
+dependen de ella— **no son evaluables**.
+
+| | n | Brier de la equity | constante óptima | |
+|---|---:|---:|---:|---|
+| observable (postflop, contra el rango) | 60 | **0,1962** | 0,2124 | **gana** |
+| retrospectiva (preflop, contra la mano real) | 99 | 0,1674 | **0,0000** | pierde |
+
+La retrospectiva tiene **0 victorias en 99 manos**, así que la constante
+sale 0 por construcción y "gana" siempre. **Esa mitad no es la equity de
+una decisión**: usa las cartas que el rival escondía al decidir.
+
+Y el motor no tiene ningún camino de equity preflop: `situation` y
+`runout_equity` fallan los dos porque `evaluate_batch` pide `_SUBSETS[2]`,
+que no existe. Detalle en
+[`L_SEC_INVALIDA.md`](L_SEC_INVALIDA.md).
+
+**Consecuencia: sin secundaria, no hay criterio admisible para aceptar un
+valor**, y el plan no admite aceptar sin las dos.
+
+### 2.3.2 P0 — el criterio que se añadió
+
+> **P0 — si la métrica secundaria pierde contra el predictor constante de la
+> misma muestra, Fase D se para.**
+
+Es una **adición**, no un cambio: P1–P7 se quedan como están, y P0 va
+antes que ellos.
+
+Se añadió después de medir. Lo que pasó fue peor que lo que el criterio
+buscaba: la secundaria «perdía», pero al separarla se vio que la mitad que
+perdía era un subconjunto **sin ninguna victoria que predecir**. Así que P0
+tiene que llevar la separación dentro, o repetiría el error:
+
+| si | entonces |
+|---|---|
+| `L_sec` **conjunto** gana al constante | vale |
+| `L_sec` **conjunto** pierde | medir por separado: observable y retrospectiva |
+| la **observable** pierde | parar: es un fallo real |
+| la **retrospectiva** pierde con 0 victorias | no cuenta: el subconjunto no tiene nada que predecir |
+
+Que P0 haya nacido de un hallazgo equivocado es justo lo que lo hace
+interesante: la primera versión habría parado Fase D por un agrupamiento.
+
 **Se aplica en este orden. El primero que se cumple decide:**
 
 | | regla | acción |

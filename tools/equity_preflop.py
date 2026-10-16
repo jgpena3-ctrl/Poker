@@ -20,6 +20,7 @@ wins + 0.5 * ties`.
     python tools/equity_preflop.py --comprobar
 """
 import argparse
+import json
 import itertools
 import os
 import sys
@@ -40,10 +41,47 @@ TROZO = 200_000
 #: corrida de cobertura.
 _CACHE = {}
 
+#: Cache en disco. La de memoria se pierde en cada proceso; esta no. Vive
+#: en `data/`, que esta en `.gitignore` porque se regenera sola.
+RUTA_CACHE = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    'data', '_cache_equity_preflop.json')
+_CACHE_DISCO = None
+
+
+def _cargar_disco():
+    global _CACHE_DISCO
+    if _CACHE_DISCO is None:
+        try:
+            with open(RUTA_CACHE, encoding='utf-8') as fh:
+                _CACHE_DISCO = json.load(fh)
+        except Exception:
+            _CACHE_DISCO = {}
+    return _CACHE_DISCO
+
+
+def _guardar_disco():
+    if _CACHE_DISCO is None:
+        return
+    try:
+        os.makedirs(os.path.dirname(RUTA_CACHE), exist_ok=True)
+        tmp = RUTA_CACHE + '.tmp'
+        with open(tmp, 'w', encoding='utf-8') as fh:
+            json.dump(_CACHE_DISCO, fh)
+        os.replace(tmp, RUTA_CACHE)
+    except Exception:
+        pass          # la cache es una comodidad, no un requisito
+
 
 def limpiar_cache():
-    """Para medir de verdad, sin el atajo."""
+    """Para medir de verdad, sin el atajo. Tambien borra la de disco."""
+    global _CACHE_DISCO
     _CACHE.clear()
+    _CACHE_DISCO = None
+    try:
+        os.remove(RUTA_CACHE)
+    except OSError:
+        pass
 
 
 def a_combos(hero, villain):
@@ -64,12 +102,16 @@ def boards_completos(resto):
 
 def equity_preflop(hero, villain, verbose=False):
     """(equity, detalle). `equity` en [0,1], con 0,5 para repartos."""
-    clave = (hero, villain)
-    if clave in _CACHE:
-        eq, det = _CACHE[clave]
+    clave = '%s|%s' % (hero, villain)
+    eq = _CACHE.get(clave)
+    if eq is None:
+        eq = _cargar_disco().get(clave)
+        if eq is not None:
+            _CACHE[clave] = eq
+    if eq is not None:
         if verbose:
-            _reportar(det)
-        return eq, det
+            _reportar(eq[1])
+        return eq[0], eq[1]
     h, v, resto = a_combos(hero, villain)
     boards = boards_completos(resto)
     n = boards.shape[0]
@@ -105,6 +147,8 @@ def equity_preflop(hero, villain, verbose=False):
     det = {'boards': n, 'gana': gana, 'empata': empata,
             'pierde': pierde}
     _CACHE[clave] = (equity, det)
+    _cargar_disco()[clave] = [equity, det]
+    _guardar_disco()
     if verbose:
         _reportar(det)
     return equity, det

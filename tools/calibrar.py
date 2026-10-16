@@ -129,6 +129,97 @@ def ganador_nombrado(h):
 
 ORDEN_CALLES = ('preflop', 'flop', 'turn', 'river')
 
+def ultima_calle(h):
+    for st in reversed(ORDEN_CALLES):
+        acts = ((h.get('streets') or {}).get(st) or {}).get('actions') or []
+        if acts:
+            return st
+    return None
+
+
+def llego_al_showdown(h, pos, ult):
+    """True si `pos` no folteo en ninguna calle ANTERIOR a `ult`."""
+    for st in ORDEN_CALLES:
+        if st == ult:
+            return True
+        acts = ((h.get('streets') or {}).get(st) or {}).get('actions') or []
+        for a in acts:
+            if a.get('pos') == pos and a.get('action') == 'f':
+                return False
+    return True
+
+
+def mejores_manos(h):
+    """({pos: score}, maximo) SOLO de los que llegaron al showdown.
+
+    **No** de todos los que tienen cartas. El que folteo antes no estaba
+    en el bote, y comparar sus cartas con el board da un "mejor" que no
+    compitió. MEDIDO: con el criterio erroneo salian 358 incoherentes de
+    584 en la ventana; con este, **0 de 261**.
+
+    Quien gano por fold y no tiene cartas no es comprobable, y eso no es lo
+    mismo que estar mal: se distingue con `None` como maximo.
+    """
+    ult = ultima_calle(h)
+    if ult is None:
+        return None, None
+    board = []
+    for st in ORDEN_CALLES:
+        board += [str(c) for c in
+                  ((h.get('comunitarias') or {}).get(st) or [])]
+    if not board:
+        return None, None
+    out = {}
+    for p in h.get('players') or []:
+        pos = p.get('pos')
+        c = (p.get('cards') or '').strip()
+        c = ''.join(c) if not isinstance(c, str) else c
+        if len(c) < 4 or not pos:
+            continue
+        if not llego_al_showdown(h, pos, ult):
+            continue
+        try:
+            out[pos] = evaluate_hand([c[0:2], c[2:4]], board)
+        except Exception:
+            continue
+    if not out:
+        return None, None
+    return out, max(out.values())
+
+
+def mejores_manos_simple(h):
+    """El anterior, sin el filtro de showdown. Solo para COMPARAR.
+
+    Sirve para auditar el criterio, no para etiquetar.
+    """
+    ult = ultima_calle(h)
+    """({pos: score}, maximo) de los jugadores con cartas. (None, None) si
+    no se puede evaluar.
+
+    Es el evaluador del motor, no `winner`: `winner` es lo que se quiere
+    COMPROBAR, no la autoridad.
+    """
+    board = []
+    for st in ORDEN_CALLES:
+        board += [str(c) for c in
+                  ((h.get('comunitarias') or {}).get(st) or [])]
+    if not board:
+        return None, None
+    out = {}
+    for p in h.get('players') or []:
+        c = (p.get('cards') or '').strip()
+        c = ''.join(c) if not isinstance(c, str) else c
+        if len(c) < 4:
+            continue
+        try:
+            out[p.get('pos')] = evaluate_hand([c[0:2], c[2:4]], board)
+        except Exception:
+            continue
+    if not out:
+        return None, None
+    return out, max(out.values())
+
+
 def reparto(h, gs):
     """True si los jugadores de `gs` hacen la MISMA mano en el board.
 
@@ -184,9 +275,6 @@ def etiqueta(h):
     if any(x not in cpos for x in gs):
         return None, False
     if len(gs) > 1:
-        # El reparto se DEMUESTRA. Antes se aceptaba `showdown.winner1`,
-        # que nombra a uno solo de varios: para H_0798 eso daba y = 1,0 y
-        # la verdad es que hacen la misma mano y el bote se reparte.
         if not reparto(h, gs):
             return None, False
         return (0.5 if hero in gs else 0.0), True
@@ -216,6 +304,28 @@ def muestra():
             continue
         if len(con_cartas(h)) < 2:
             continue
+        # LA REGLA ESTRICTA. `winner` tiene que ser EXACTAMENTE el
+        # conjunto de los que hacen la mejor mano, segun el evaluador.
+        #
+        # Antes se aceptaba el registro tal cual, y MEDIDO, 31 de las 161
+        # manos lo contradicen. H_0112: declarado BB con 801 060, y el BTN
+        # hace 915 473. H_0173: el hero hace 1 031 914 y no esta declarado.
+        #
+        # No se corrige `data/`. Se excluyen: una etiqueta que contradice
+        # a las cartas no es una etiqueta, es ruido con forma de dato.
+        scores, mejor = mejores_manos(h)
+        declarados = {id_a_pos(h, i) for i in (h.get('winner') or [])}
+        declarados.discard(None)
+        if not declarados:
+            continue
+        if mejor is not None and declarados & {p for p, s_ in
+                                                scores.items()
+                                                if s_ == mejor}:
+            # COMPROBABLE. Y tiene que coincidir exactamente: si no, es un
+            # reparto incompleto y la etiqueta seria media por un reparto
+            # que no ocurrio.
+            if declarados != {p for p, s_ in scores.items() if s_ == mejor}:
+                continue
         y, ok = etiqueta(h)
         if not ok:
             continue
@@ -314,6 +424,17 @@ def l_prim(alpha, manos, labels=None):
                 continue
             p = modelo.p_hand(perfil, ev.denom, ev.category, ev.cards,
                               ev.pos)
+            # NaN e infinitos: `p <= 0.0` es FALSO con NaN, asi que un NaN
+            # se colaria en logp sin disparar nada y contaminaria la
+            # media sin que se note. Y un valor > 1 no revienta en np.log
+            # pero deja de ser una probabilidad.
+            if not np.isfinite(p):
+                raise MedicionSinSentido(
+                    'probabilidad no finita (%r) en %s %s %s'
+                    % (p, perfil, ev.denom, ev.category))
+            if p < 0.0 or p > 1.0:
+                raise MedicionSinSentido(
+                    'probabilidad fuera de [0,1]: %r' % p)
             if p <= 0.0:
                 p_0 += 1
                 continue
