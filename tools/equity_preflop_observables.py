@@ -124,18 +124,49 @@ def cartas_de(h, pos):
 
 
 def villano_del_corte(h, hero, calle, idx):
-    """(nombre, puesto) del ultimo que subio ANTES de la accion del hero.
+    """(nombre, puesto) del rival cuya conducta se evalua en el corte.
 
-    Se busca en el recorrido, no por puesto fijo: el puesto del villano
-    cambia de mano a mano. Usar uno fijo fue el error de
-    `prob_vec_player('BB')`, y costo 6 de 41 manos.
+    SON DOS DECISIONES DISTINTAS, y aqui solo la primera:
+
+      1. QUIEN es el rival. Eso es lo que decide esta funcion.
+      2. COMO se construye su rango a partir de las alternativas del spot.
+         Eso es `rango_del_villano`, y es otra funcion.
+
+    Con subida previa al corte, el rival es el ultimo que subio: es quien
+    obliga al hero a responder. No se busca por puesto fijo, porque el
+    puesto del villano cambia de mano a mano; usar uno fijo fue el error de
+    `prob_vec_player('BB')`.
+
+    SIN subida previa (spot `no_raise`), el ultimo que subio no existe, y
+    antes esta funcion devolvia `None`, lo que descartaba la mano entera.
+    Medido: 6 de 23 cortes preflop de validacion. Su decision SI tiene
+    rival, y quedarse sin nombrarlo es una ausencia que no dice por que.
+
+    Aqui el rival es **el primer jugador que actua DESPUES del hero**: es a
+    quien tiene que decidir la subida del hero. Hay mas de una respuesta
+    legitima (el mas tight, el agregado de todos los que quedan) y las tres
+    dan numeros distintos. Se elige esta porque es la unica que nombra a un
+    rival concreto, y se escribe para que se pueda cambiar.
+
+    Que el rango del spot sea la union de `open` y `limp` NO resuelve quien
+    es el rival. Son dos preguntas y aqui solo se contesta la primera.
     """
     acts = ((h.get('streets') or {}).get(calle) or {}).get('actions') or []
+    posteriores = acts[idx + 1:] if idx is not None else []
+
     previas = acts[:idx] if idx is not None else acts
     vpos = None
     for a in previas:
         if a.get('pos') != hero and a.get('action') in ('b', 'r'):
             vpos = a.get('pos')
+
+    if vpos is None:
+        # sin subida previa: el primer rival que actua despues del hero
+        for a in posteriores:
+            if a.get('pos') != hero:
+                vpos = a.get('pos')
+                break
+
     if vpos is None:
         return None, None
     for p in h.get('players') or []:
@@ -163,6 +194,26 @@ def mano_del_spot(h, calle, hero, idx):
     return 'facing_3bet'
 
 
+def exige_pesos_validos(w, donde):
+    """Falla si algun peso no es finito o es negativo.
+
+    `revision_2` §4: validar solo la suma POSITIVA no basta. `rng.choice`
+    con `p=` exige que la suma sea positiva Y que cada peso sea finito y no
+    negativo; un `-0.0` o un `inf` pasan la suma y revientan dentro.
+    """
+    a = np.asarray(w, dtype=float)
+    malos = np.where(~np.isfinite(a) | (a < 0.0))[0]
+    if malos.size:
+        raise ValueError(
+            '%d peso(s) no valido(s) en %s, en los indices %s: finitos y no '
+            'negativos, por favor.'
+            % (malos.size, donde, list(malos[:8])))
+    if float(a.sum()) <= 0.0:
+        raise ValueError('%s no tiene masa: la suma de pesos es %.3g'
+                         % (donde, float(a.sum())))
+    return a
+
+
 def rango_del_villano(modelo, nombre, spot):
     """(1326,) con la union de las alternativas del spot, renormalizada.
 
@@ -174,7 +225,9 @@ def rango_del_villano(modelo, nombre, spot):
         raise ValueError('spot sin alternativas declaradas: %r' % (spot,))
     total = np.zeros(1326)
     for a in alternativas:
-        g = np.asarray(modelo.prob_vec_player(nombre, spot, a), dtype=float)
+        g = exige_pesos_validos(
+            modelo.prob_vec_player(nombre, spot, a),
+            'el rango de %s para %s en %s' % (nombre, a, spot))
         s = float(g.sum())
         if s <= 0 or not np.isfinite(s):
             continue
@@ -202,6 +255,10 @@ def main():
                     help='cuantas manos calcular (0 = todas)')
     ap.add_argument('--todo', action='store_true',
                     help='calibracion y validacion (por defecto: validacion)')
+    ap.add_argument('--solo-recaudo', action='store_true',
+                    help='imprimir la poblacion etapa a etapa y salir sin '
+                         'calcular ninguna equity. Para auditar quien entra '
+                         'y quien se cae, sin 3 h de calculo')
     args = ap.parse_args()
 
     ventana = learn.load_hands(reliable_only=True)
@@ -217,6 +274,7 @@ def main():
 
     trabajo = []
     sin_rango = collections.Counter()
+    sp_cortes = collections.Counter()
     for hid, y in sorted(etiqueta.items()):
         h = por_id[hid]
         hero = eqm.hero_pos_de(h)
@@ -225,13 +283,15 @@ def main():
         calle, idx = eqm.corte_de_decision(h, hero)
         if calle != 'preflop':
             continue
+        # el spot se cuenta ANTES de cualquier filtro: es el denominador
+        sp_cortes[mano_del_spot(h, calle, hero, idx)] += 1
         mc = cartas_de(h, hero)
         if not mc:
             sin_rango['sin cartas del hero'] += 1
             continue
         nombre, vpos = villano_del_corte(h, hero, calle, idx)
         if not nombre:
-            sin_rango['sin villano identificado antes del corte'] += 1
+            sin_rango['sin villano identificado en el corte'] += 1
             continue
         spot = mano_del_spot(h, calle, hero, idx)
         if spot is None or spot not in ACCIONES_SPOT:
@@ -255,9 +315,20 @@ def main():
     for k, n in sin_rango.most_common():
         print('      sin computo: %-44s %3d' % (k, n))
     print()
-    print('   por spot:')
-    for k, n in collections.Counter(t['spot'] for t in trabajo).items():
-        print('      %-14s %3d' % (k, n))
+    print('   por spot, DESPUES de cada filtro:')
+    print('      %-24s %6s %8s %8s'
+          % ('spot', 'cortes', 'con mano', 'con rival'))
+    print('      ' + '-' * 52)
+    for spot in sorted(ACCIONES_SPOT):
+        c0 = sp_cortes.get(spot, 0)
+        c1 = sum(1 for t in trabajo if t['spot'] == spot)
+        print('      %-24s %6d %8d %8d'
+              % (spot, c0, c1, c1))
+    print()
+    print('   Y el detalle de lo que se cae, para que la poblacion sea')
+    print('   auditable y no una cifra de las que se pierde el origen:')
+    for k, n in sin_rango.most_common():
+        print('      %-44s %3d' % (k, n))
     print()
     print('   `cartas_villano` se imprime pero NO se usa para nada. Esta ahi')
     print('   para que se vea que el rango no sale de ahi.')
@@ -265,6 +336,10 @@ def main():
 
     if args.manos:
         trabajo = trabajo[:args.manos]
+
+    if args.solo_recaudo:
+        print('   --solo-recaudo: no se calcula ninguna equity.')
+        return
 
     cache = cache_abrir()
     hechos = 0
@@ -288,7 +363,11 @@ def main():
         for k in (0, 2):
             mask |= (1 << card_id(t['hero'][k:k + 2]))
         ids = np.where((HAND_MASKS & mask) == 0)[0]
-        wl = w[ids]
+        try:
+            wl = exige_pesos_validos(w[ids], 'el rango legal de %s' % hid)
+        except ValueError as exc:
+            print('   %s: %s' % (hid, exc))
+            continue
         tot = float(wl.sum())
         if not np.isfinite(tot) or tot <= 0:
             print('   %s: el rango no tiene masa legal' % hid)

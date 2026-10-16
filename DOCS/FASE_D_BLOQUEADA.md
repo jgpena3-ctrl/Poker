@@ -2,9 +2,10 @@
 
 > **Estado: el bloque 3 está REABIERTO.** Los otros tres siguen cerrados.
 >
-> `DEFAULT_ALPHA` sigue en 2,0 y no se calibra, pero por una razón corregida:
-> las métricas disponibles no lo distinguirían. Y **no tiene cota inferior**:
-> la coherencia por celda se cumple para todo α ≥ 0. Ver el final.
+> `DEFAULT_ALPHA` sigue en 2,0 y **no tiene cota inferior**: la coherencia
+> por celda se cumple para todo α ≥ 0. Lo que lo sostiene es solo que es el
+> incumbent y no hay evidencia admisible que lo sustituya. No se calibra
+> porque las métricas no lo distinguirían. Ver el final.
 
 ## El estado
 
@@ -90,7 +91,7 @@ escribió. Ya no.
 | **0** | definir el objetivo de `L_sec` | **CERRADO.** Objetivo: **ranking**, no probabilidad. Población: hero continúa o checkea, en validación. [`CONTRATO_L_SEC.md`](CONTRATO_L_SEC.md) §8, [`AUC_INTERVALO.md`](AUC_INTERVALO.md) |
 | **1** | camino de equity preflop | **DESBLOQUEADO.** El objetivo ya está, así que se puede implementar. Y sus dos decisiones abiertas —exacto o muestreado, y qué pasa con la varianza— están medidas: muestreado a 40 combos, varianza admisible. [`CONTRATO_PREFLOP.md`](CONTRATO_PREFLOP.md) |
 | **2** | una métrica que sobreviva al 86 % de derrotas | **CERRADO como ELECCIÓN:** equity como *ranking*, que es la opción que el propio bloque 2 enumeraba, y el AUC **no** depende de la base rate. Que **ordene bien** es otra pregunta, y con 11 manos de validación **no se puede afirmar** |
-| **3** | qué significa `matrix` | **REABIERTO.** La prueba que lo cerraba estaba mal planteada: la exclusión mutua es **por mano**, no sobre las 169 manos ([`QUE_ES_MATRIX.md`](QUE_ES_MATRIX.md)). **No hay cota inferior**: la coherencia se cumple para todo α ≥ 0 |
+| **3** | qué significa `matrix` | **REABIERTO, y por una razón mejor.** Dos veces se ha cerrado con pruebas que no se sostenían. Lo que **sí** está medido: las 117 tablas no suman 1 (solo 1 lo hace) y sus celdas **sí** están en `[0,1]`; `sum(matrix)` es 0,3× `sum(cnt)`; y la **coherencia por celda se cumple para todo α ≥ 0**, sin cota inferior. Lo que **no**: qué clase de cosa es, que no se deduce de datos ([`QUE_ES_MATRIX.md`](QUE_ES_MATRIX.md)) |
 
 ### Lo que queda bloqueando Fase D
 
@@ -270,7 +271,7 @@ Barriendo `alpha`, la suma por celda **se pasa de 1 por debajo**:
 | 0 · objetivo de `L_sec` | cerrado |
 | 1 · camino preflop | desbloqueado, decisiones medidas |
 | 2 · métrica que sobreviva | cerrado como **elección** |
-| **3 · qué significa `matrix`** | **REABIERTO**. Lo que se sabe es la forma; el significado sigue sin saberse |
+| **3 · qué significa `matrix`** | **REABIERTO, y por una razón mejor**. Las dos veces que se cerró fue con una prueba que no se sostenía. Ahora sí hay cosas medidas —la forma de las tablas, la coherencia por celda para todo α ≥ 0— y sigue sin saberse qué clase de cosa es `matrix`, que no se deduce de datos |
 
 > **«No se calibra» se sostiene, pero por una razón mucho más débil:** las
 > métricas disponibles **no distinguirían**, porque `L_prim` es monótona y no

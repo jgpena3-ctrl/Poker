@@ -119,45 +119,45 @@ Barriendo `alpha` y mirando si la suma por celda se pasa de 1:
 
 > **Ni un solo `α` la rompe.** El «1,3636» era un artefacto del bug.
 
-La propiedad que **sí** se sostiene, y es independiente:
+**Y lo que se sostiene, y lo que es medida y qué es deducida.** La
+diferencia importa: si alguien cambia `preflop_matrices.json`, la coherencia
+puede romperse y no habría nada que lo avisara.
+
+| | | |
+|---|---|---|
+| `N(c) ≤ opp(c)` | por construcción: una mano no hace una acción más veces de las que tuvo oportunidades | **deducida** |
+| la coherencia por celda se cumple para todo `α ≥ 0` | malla de 99 puntos de 0,05 a 5,00 | **medida** |
+| la coherencia es monótona **decreciente** | 98 de 98 pasos no crecientes | **medida**, y la derivada dice por qué |
+
+### Por qué la suma decrece
+
+```
+d/dα [ (N + α·S) / (opp + α) ] = [ S·opp − N ] / (opp + α)²
+```
+
+La suma decrece **si y solo si** `S·opp < N`: el ritmo agregado del prior
+por debajo del empírico. Eso **no** se deduce de `N ≤ opp`; se cumple en
+estos datos, y por eso la malla lo ve.
+
+### Una corrección
+
+El texto de este bloque decía *«más α es menos probabilidad de cualquier
+acción, porque el prior pesa menos»*. **Es al revés.** En
+`p_k = (N_k + α·S_k)/(opp + α)` el prior pesa **más** al subir α, y la
+probabilidad de cada acción sube o baja según cómo quede su frecuencia
+empírica frente a su prior. **No hay regla general para el signo.** Lo que
+es cierto, y se acaba de derivar, es que la SUMA decrece.
+
+### Y la coherencia necesita DOS cosas, no una
 
 | | |
 |---|---|
-| la coherencia por celda | se cumple para **todo** `α ≥ 0` |
-| la coherencia es **monótona decreciente** en `α` | malla de 99 puntos de 0,05 a 5,00, **98 de 98 pasos no crecientes** |
+| `N(c) ≤ opp(c)` | **sí**, por construcción |
+| `S(c) ≤ 1` | **no**: las tablas de `preflop_matrices.json` no suman 1, van de 0,91 a 89,75 |
 
-Más `α` es menos probabilidad de cualquier acción, porque el prior pesa
-menos. Eso es una afirmación sobre el motor y no depende del estimador.
-
-Y con la comprobación que hace falta para que una bisección valga:
-
-| `alpha` | suma por celda |
-|---:|---:|
-| 0,20 | 1,1231 |
-| 0,50 | 1,0864 |
-| 0,80 | 1,0534 |
-| 1,00 | 1,0333 |
-| 1,20 | 1,0145 |
-| 1,40 | 0,9969 |
-| 2,00 | 0,9500 |
-| 5,00 | 0,8000 |
-| 10,00 | 0,6833 |
-
-**11 de 11 pasos no crecientes: la función es monótona en el rango
-explorado.** Sin eso, una bisección no demuestra nada.
-
-> ### No hay ningún `alpha` que produzca probabilidades incoherentes
->
-> Para una mano dada, la suma de las probabilidades de acciones mutuamente
-> excluyentes está siempre por debajo de 1. Y no es caso: `N(c) ≤ opp(c)`
-> por construcción, una mano no hace una acción más veces de las que tuvo
-> oportunidades.
->
-> **El «1,3636» queda RETIRADO.** Era un artefacto de sumar el prior crudo
-> del fold (0,15 por celda) fuera de la fracción suavizada.
-
-**Y `DEFAULT_ALPHA = 2,0` no tiene ahora ninguna razón medida debajo.** No
-está pegado a un límite porque no hay límite: se queda por ser el incumbent.
+Así que *«coherente para todo α»* es una **medición sobre estos datos**, no
+una consecuencia de la fórmula. En el bloque anterior se presentó como
+deducción, y no lo es.
 
 ## Lo que se sabe y lo que no, con la prueba buena
 
@@ -195,11 +195,15 @@ Y `preflop_matrices.json` **no lleva metadatos**: no hay campo `origen`,
 distintas y confundirlas es lo que hace que una decisión de ingeniería parezca
 una demostración.
 
-### (1) Coherencia — **medida**
+### (1) Coherencia — **medida**, no deducida
 
 Los valores probados respetan la invariante por celda. Con α = 2 el máximo es
 **0,7571** y la suma por celda **0,8625**. Y **no hay ningún `α` que la
 viole**: se cumple para todo `α ≥ 0`.
+
+Que se cumpla para todo `α` es una **medición sobre estos datos**, no una
+consecuencia de la fórmula: haría falta también `S(c) ≤ 1`, y las tablas
+no lo cumplen.
 
 ### (2) Discriminación — **medida sobre la función agregada**
 

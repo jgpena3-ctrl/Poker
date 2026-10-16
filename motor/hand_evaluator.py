@@ -420,10 +420,16 @@ def equity_preflop_rango(hero_codes, villain_reach=None,
     es el parametro que habria que usar, y no antes.
 
     Muestreado, y es por FUERZA: contra 1326 combos serian 1326 x C(48,5)
-    = 2,3 x 10^9 evaluaciones. La varianza de este estimador esta MEDIDA y
-    escrita en `CONTRATO_PREFLOP.md`: con 40 combos, sigma ~ 0,09 y mueve
-    el AUC 0,18x el semiancho de su propio intervalo. El estimador no es lo
-    que limita la conclusion; las manos son muy pocas.
+    = 2,3 x 10^9 evaluaciones.
+
+    La varianza de ESTE estimador esta medida: con 40 combos,
+    **sigma ~ 0,0099**, medido sobre 47 equities exactas del rango real.
+    Mueve el AUC 0,0004, que es 0,00x el semiancho de su propio intervalo.
+
+    El 0,09 que aparecia antes en este docstring era de otro ESQUEMA
+    (muestrear de un conjunto fijo y volver a ponderar), no del que corre
+    aqui. `revision_2` §1.C y §4. Queda en `CONTRATO_PREFLOP.md` como
+    comparacion, identificado como del esquema anterior.
 
     Y no usa las cartas del rival: solo `villain_reach`, que es lo unico
     que se sabia al decidir. Por eso la equity que devuelve es OBSERVABLE.
@@ -447,6 +453,12 @@ def equity_preflop_rango(hero_codes, villain_reach=None,
                          % hero.shape[0])
 
     w = _pesos_del_rango(villain_reach)
+    malos = np.where(~np.isfinite(w) | (w < 0.0))[0]
+    if malos.size:
+        raise ValueError(
+            '%d peso(s) de `villain_reach` no finito(s) o negativo(s), en '
+            'los indices %s. Una suma positiva NO garantiza eso.'
+            % (malos.size, list(malos[:8])))
 
     # combos legales: los que no contienen ninguna carta del hero
     mask_hero = 0
