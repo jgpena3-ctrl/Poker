@@ -22,11 +22,23 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
 from motor import learn                                # noqa: E402
+from motor.multiway import PLAYER_IDS                  # noqa: E402
 
 
-def posiciones_de(h):
-    return {('hero' if i == 0 else 'p%d' % i): p.get('pos')
-            for i, p in enumerate(h.get('players') or [])}
+def id_a_pos(h, ident):
+    """`_id` de `winner` -> posicion, por PLAYER_IDS.
+
+    `recorder_live` escribe `p['_id']` y `PLAYER_IDS` es
+    `['hero', 'p1' ... 'p5']`. `'hero'` es **la butaca 0**: no dice quien
+    es el hero. En 232 de las 877 manos de la ventana el hero real esta en
+    otra butaca.
+    """
+    if ident not in PLAYER_IDS:
+        return None
+    i = PLAYER_IDS.index(ident)
+    if i >= len(h.get('players') or []):
+        return None
+    return h['players'][i].get('pos')
 
 
 def con_cartas(h):
@@ -34,54 +46,70 @@ def con_cartas(h):
 
 
 def hero_de(h):
-    """El hero es el PRIMER jugador con cartas conocidas.
+    """El hero: el jugador nombrado en `learn.HERO_NAMES` (`'Jarduan'`).
 
-    No hay marca de hero en el JSON: el proyecto lo reconoce por tener
-    cartas, no por el nombre. Es la misma convencion que `multiway`.
+    NO es el primero con cartas. Se parece en 845 de 877 manos de la
+    ventana y falla en 32; y en esas la etiqueta de `L_sec` era la de otro
+    jugador. La autoridad es `learn.py`, no una convencion de este modulo.
     """
-    cc = con_cartas(h)
-    return cc[0].get('pos') if cc else None
+    for p in h.get('players') or []:
+        if (p.get('name') or '').strip() in learn.HERO_NAMES:
+            return p.get('pos')
+    return None
+
+
+def ganador_nombrado(h):
+    """Posicion que nombra `showdown.winner1`, o (None, motivo).
+
+    Se RESUELVE contra la mesa, no se acepta por existir. El recorder solo
+    escribe `showdown` cuando hay **un** ganador, asi que un `showdown` con
+    varios ganadores es una mano editada a mano y su texto tiene que
+    demostrar a quien nombra.
+    """
+    w1 = (h.get('showdown') or {}).get('winner1')
+    if not (isinstance(w1, str) and w1.strip()):
+        return None, 'sin texto de showdown'
+    if any(x in w1 for x in ('/', ',', ' y ', '&')):
+        return None, 'el texto nombra a varios'
+    for p in h.get('players') or []:
+        if p.get('pos') and p['pos'] in w1:
+            return p['pos'], 'la posicion esta en el texto'
+    for p in h.get('players') or []:
+        nom = (p.get('name') or '').strip()
+        if nom and nom in w1:
+            return p.get('pos'), 'el nombre esta en el texto'
+    return None, 'el texto no nombra a nadie de esta mesa'
 
 
 def etiqueta(h):
     """(y del hero, motivo) o (None, motivo) si la mano no es utilizable.
 
-    REGLA, y lo que se decide en cada rama:
-
-      - ganador unico                       -> y = 1.0 si es el hero, 0.0 si no
-      - varios, `showdown.winner1` NOMBRA a uno solo
-                                           -> ese es el ganador: y = 1.0/0.0
-        (no es un empate: el texto lo dice)
-      - varios, sin texto de showdown      -> NO utilizable. Poner y = 0.5
-        seria INVENTAR la etiqueta: sin texto no se distingue "dos ganan"
-        de "el registro se equivoco".
-      - el ganador no tiene cartas         -> NO utilizable
+      - ganador unico, resuelto por `id_a_pos`   -> y = 1,0 si es el hero
+      - varios, `winner1` RESUELVE a alguien de la mesa -> ese gana
+      - varios, `winner1` no resuelve           -> NO utilizable. Poner
+        `y = 0,5` seria inventar la etiqueta: sin texto no se distingue
+        "dos ganan" de "el registro se equivoco".
+      - el ganador no tiene cartas, o no hay jugador `HERO_NAMES` -> no
     """
-    m = posiciones_de(h)
-    g = [m.get(i) for i in (h.get('winner') or [])]
-    g = [x for x in g if x]
-    if not g:
-        return None, 'sin ganador'
-
-    cc = con_cartas(h)
-    con_cartas_pos = [p.get('pos') for p in cc]
-    if any(x not in con_cartas_pos for x in g):
-        return None, 'el ganador no tiene cartas'
-
     hero = hero_de(h)
     if hero is None:
-        return None, 'el hero no tiene cartas'
-
-    if len(g) > 1:
-        w1 = (h.get('showdown') or {}).get('winner1')
-        if not (isinstance(w1, str) and w1.strip()):
-            return None, 'varios ganadores y sin showdown'
-        if any(s in w1 for s in ('/', ',', ' y ', '&')):
-            return None, 'showdown nombra varios: empate no resoluble'
-        # el texto nombra a uno solo: se usa ese, y el motivo se declara
-        # por si alguien quiere separarlas despues
-
-    return (1.0 if hero in g else 0.0), 'etiqueta unica'
+        return None, 'no hay jugador con el nombre del hero'
+    gs = set()
+    for ident in (h.get('winner') or []):
+        pos = id_a_pos(h, ident)
+        if pos:
+            gs.add(pos)
+    if not gs:
+        return None, 'sin ganador'
+    cpos = [p.get('pos') for p in con_cartas(h)]
+    if any(x not in cpos for x in gs):
+        return None, 'el ganador no tiene cartas'
+    if len(gs) > 1:
+        nom, mot = ganador_nombrado(h)
+        if nom is None:
+            return None, 'varios ganadores: ' + mot
+        return (1.0 if nom == hero else 0.0), 'resuelto por showdown'
+    return (1.0 if hero in gs else 0.0), 'ganador unico'
 
 
 def brier(ps, ys):

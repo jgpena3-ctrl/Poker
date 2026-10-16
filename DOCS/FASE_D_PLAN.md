@@ -269,19 +269,50 @@ mejora relativa es `(L0 - L1) / L0` y siempre está en `[0, 1]`.
 
 ### 2.1.1 Qué manos hay, medido
 
-**Remedido** con `python tools/auditar_muestra_lsec.py`, porque la regla de
-la etiqueta tenía un hueco que `revision_2` señaló: *«excluir ganadores
-múltiples solo porque no hay un ganador único puede ser innecesario si el
-registro permite identificar un empate y asignarle y = 0.5»*.
+**Remedido dos veces**, y la segunda lo movió. La primera contaba 156
+utilizables y dio por buena una definición del hero que era la equivocada:
+el reparto de victorias salió mal y el suelo de la métrica también.
 
-Se comprueba si el registro lo permite. **No lo permite para 6 de las 7.**
-Esas 7 tienen dos elementos en `winner`, y solo una (`H_0798`) tiene
-`showdown.winner1` con un nombre: ahí el texto dice **un** ganador, así que
-no es un empate, es `winner` equivocado, y la mano es usable.
+Las dos cosas se corrigen aquí, antes de elegir métrica.
 
-Las otras 6 no tienen texto de showdown, y sin él no se distingue *«dos
-ganan»* de *«el registro se equivocó»*. Ponerles `y = 0.5` sería **inventar
-la etiqueta**, que es justo lo que este proyecto no hace.
+#### Lo primero: quién es el hero
+
+Había dos convenciones cruzadas en el mismo fichero, y no se parecían:
+
+| | en cuántas de las 877 manos coincide con el hero |
+|---|---:|
+| `'hero'` = `players[0]` (el id que usa `winner`) | 644 |
+| «el primer jugador con cartas» | 845 |
+| el jugador nombrado en `learn.HERO_NAMES` | **877** |
+
+La autoridad es `learn.HERO_NAMES = ('Jarduan',)`, y no una convención
+derivada de los datos. **`'hero'` es la butaca 0**, no una persona: en 232
+de las 877 manos el hero real está sentado en otra butaca.
+
+Y «el primer jugador con cartas» falla en 32, porque hay manos donde el hero
+no tiene cartas y otro jugador sí. Ahí la etiqueta `y` era de otro.
+
+#### Lo segundo: `showdown.winner1` tiene que resolver
+
+De las 7 manos con dos ganadores distintos en la ventana, solo una
+(`H_0798`) trae `showdown.winner1`. **Se resuelve**: el texto es
+`'BB (Jarduan)'`, `BB` está en la mesa de esa mano, y ese jugador es el
+hero — o sea que la etiqueta sale de una identidad comprobada.
+
+Las otras 6 no tienen texto. Sin él no se distingue *«dos ganan»* de *«el
+registro se equivocó»*, y ponerles `y = 0,5` sería **inventar la
+etiqueta**.
+
+> `recorder_live` solo escribe `showdown` cuando hay **un** ganador
+> (`len(all_still_in) == 1`). Un `showdown` junto a varios ganadores es una
+> mano editada a mano, así que su texto tiene que demostrar a quién nombra.
+> Antes se aceptaba por *existir y no parecer plural*; eso no es resolver.
+
+Como comprobación de que el instrumento sirve: cuenta **147** manos con dos
+ganadores distintos en la base entera, que es exactamente lo que declara
+`learn.py` (`winner con 2+ en la base entera: 179 -> 147`).
+
+#### El desglose
 
 | manos de la ventana de 877 | |
 |---:|---|
@@ -292,40 +323,38 @@ la etiqueta**, que es justo lo que este proyecto no hace.
 | 1 | el ganador no tiene cartas |
 | **156** | **utilizables (17,8 %)** |
 
-> El número del plan era **147**. La diferencia son las manos que el hueco
-> de la etiqueta dejaba fuera sin motivo, más las que el filtro de
-> «ganador sin cartas» excluía de más. Se corrige **antes** de elegir la
-> métrica, no después de ver qué salía.
-
 **Reparto 70/30 sobre las 156 utilizables:** **117 de calibración y 39 de
 validación**, disjuntas por construcción (§2.2). La lista exacta está
-versionada en [`PARTICION_FASE_D.md`](PARTICION_FASE_D.md).
+versionada en [`PARTICION_FASE_D.md`](PARTICION_FASE_D.md), y **no cambia**
+con la corrección del hero: los ids son los mismos, lo que cambia es la
+etiqueta de dentro.
 
 ### 2.1.1.b La etiqueta, y la referencia que tiene que ganarse
 
-`y` para el hero: **1,0** si el ganador es el hero, **0,0** si no. El hero
-es el primer jugador con cartas conocidas — el JSON no tiene marca de hero.
-
-Y antes de usar `L_sec` hay una pregunta que no es de tamaño, es de
-**discriminación**:
+`y` para el hero: **1,0** si el ganador es el hero, **0,0** si no. Con las
+dos definiciones de arriba ya corregidas:
 
 | | |
 |---|---|
-| reparto | el hero **gana 31 de 156** y pierde 125 |
-| Brier de un predictor **constante** `p = 0,199` | **0,1592** |
+| reparto | el hero **gana 21 de 156** y pierde 135 |
+| Brier de un predictor **constante** `p = 0,135` | **0,1165** |
 
-**El motor tiene que estar por debajo de 0,1592.** Si no, `L_sec` no mide
+> La cuenta anterior decía *31 victorias y 0,1592*. Era comparar contra el
+> jugador equivocado en 232 manos. **El error más caro no es medir mal, es
+> medir la cosa equivocada con confianza.**
+
+**El motor tiene que estar por debajo de 0,1165.** Si no, `L_sec` no mide
 calidad: mide la base rate, y el mejor modelo es decir *«el hero va a
 perder»*. Es la misma trampa que el plan ya rechazó para la métrica de
 acuerdo, vista por el otro lado.
 
 Por eso la comparación contra esa referencia se **reporta en cada
 iteración**, al lado de `L_sec` y no en una nota al pie. Un `L_sec` de
-0,16 no es un resultado: es perder.
+0,12 no es un resultado: es perder.
 
-> **39 manos de validación, con un 82 % de derrotas.** Un cambio del 2 %
+> **39 manos de validación, con un 87 % de derrotas.** Un cambio del 2 %
 > en `L_sec` no es distinguible del ruido. Está escrito aquí antes de
-> medir, no después de ver que no salía nada: si el resultado no se
+> medir, no después de ver qué salía: si el resultado no se
 > distingue, **se dice que no se distingue**.
 
 ### 2.1.2 Lo que no se mide
@@ -335,49 +364,86 @@ iteración**, al lado de `L_sec` y no en una nota al pie. Un `L_sec` de
 | **calidad de la acción** | no medible: la base no tiene etiqueta de optimalidad (§2.1) |
 | **win rate global** | descartado: depende del rival, del stack y de cuánto se juega. Un cambio de `DEFAULT_ALPHA` la mueve por casualidad |
 | **equity de spots multiway** | no comparable: `CONTRATO_F72A.md` §6 — la equity del motor es HU contra **un** rival |
+| **equity preflop histórica** | no medible: `hand_evaluator.evaluate_batch` declara board de 3 a 5 cartas y sus subsets son de 5, 6 y 7. **No hay camino preflop**, y preflop son 96 de las 156 manos. `equity_de_mano.py` funciona postflop; cubre el 37 % y sesgada |
 
 ### 2.1.3 Lo que `L_prim` no puede hacer, medido
 
-> Se descubrio al intentar usar la metrica, no antes. Esta escrito aqui
-> porque cambia **que se puede pedir** a la fase, no solo como se mide.
+> Se descubrió al intentar usar la métrica, no antes. Y hubo que
+> corregirla dos veces para poder decir esto.
+
+#### La avería que la tapaba
+
+La primera versión de `l_prim` indexaba el grid con `g[ev.category,
+ev.pos]`, que son dos cadenas. Eso es `IndexError` en las **295** de 295,
+y el `except` caía a `np.nanmax(g)`: el **máximo** del grid, no la
+probabilidad de la acción observada.
+
+El grid de `p_matrix` no está indexado por acción ni por posición: está
+indexado por **rango de carta** (`player_ranges.GRID_RANKS`). La
+probabilidad de lo observado la da `p_hand(perfil, spot, action, cartas)`.
+
+Un máximo del grid es ≥ la probabilidad de cualquier celda, así que
+**mejoraba la pérdida por construcción**. No era un error pequeño: era una
+métrica que siempre favorecía al candidato, y que además reaccionó a `alpha`
+por el motivo equivocado.
+
+Ahora no hay fallback: si el índice no es válido, `l_prim` lanza
+`MedicionSinSentido` y el comando sale con código 3 sin publicar nada. Y un
+test recorre el árbol de `l_prim` y falla si aparece un `nanmax`, un `max` o
+cualquier otro sustituto — el docstring sí lo nombra, a propósito, para
+explicar el bug.
+
+#### La avería que queda
 
 `L_prim` suma `log p` **solo sobre celdas observadas**, y toda celda
-observada tiene `cnt >= 1`. Sobre esas celdas el termino del prior es pura
-dilucion:
+observada tiene `cnt >= 1`. Sobre esas celdas el término del prior es pura
+dilución:
 
 ```
 p(alpha) = (cnt + alpha*prior) / (opp + alpha)
 ```
 
-Medido celda a celda sobre las 262 celdas observadas de la particion de
-calibracion:
+Medido celda a celda sobre las **256** celdas observadas de la partición de
+calibración:
 
 | | celdas |
 |---|---:|
-| subir `alpha` **baja** `p` (empuja la perdida arriba) | **229** |
-| empujan al reves | **33** |
+| subir `alpha` **baja** `p` (empuja la pérdida arriba) | **224** |
+| empujan al revés | **32** |
 
-La monotonia **no es una garantia matematica** —33 celdas la resisten— pero
+La monotonía **no es una garantía matemática** —32 celdas la resisten— pero
 sobre los valores medidos de `0,1` a `100` la curva no da una sola
-excepcion. Y eso basta para lo que importa:
+excepción. Y eso basta para lo que importa:
 
-> **La metrica primaria no puede elegir un parametro de regularizacion.**
-> Ordena `alpha` por cuanto se diluyo el prior, que no es una respuesta
+> **La métrica primaria no puede elegir un parámetro de regularización.**
+> Ordena `alpha` por cuánto se diluyó el prior, que no es una respuesta
 > sobre el poker. Su "ganador" es siempre el candidato con menos
-> regularizacion, que es el mismo decir que el mas pequeno.
+> regularización, que es el mismo decir que el más pequeño.
 
-Por eso `tools/calibrar.py` tiene un **guardian de monotonia** que se niega
-a nombrar ganador y sale con codigo 2. Es codigo, no una nota: un
-comentario se puede saltar sin que nada se entere.
+Por eso `tools/calibrar.py` tiene un **guardián de monotonía** que se niega
+a nombrar ganador y sale con código 2. Es código, no una nota: un comentario
+se puede saltar sin que nadie se entere.
 
-Para recalibrar `alpha` haria falta una metrica que scoree tambien las
-celdas **no observadas**, o que mida sobre validacion. Las dos cosas estan
+Y hay un segundo bloqueo, independiente: **`L_sec` no se puede calcular**
+(§2.1), así que aunque la curva no fuera monótona, el plan no admite aceptar
+un valor sin las dos métricas. `--aplicar` comprueba las dos.
+
+Para recalibrar `alpha` haría falta una métrica que scoree también las
+celdas **no observadas**, o que mida sobre validación. Las dos cosas están
 en [CALIBRACION_DEFAULT_ALPHA.md §7](CALIBRACION_DEFAULT_ALPHA.md).
 
-Y un hallazgo lateral, que **no** es de `alpha`: `p = 0` en 1 991 de 22 308
-celdas del grid, **tambien con `alpha = 20`**. La tabla de priors tiene 127
-ceros de 169 celdas; donde el prior es 0 y no hay conteo, `p = 0` para
-todos los valores. `alpha` no es la palanca que arregla los ceros.
+#### Un hallazgo lateral que no es de `alpha`
+
+`p = 0` en **1 991 de 22 308** celdas del grid (8,9 %), **también con
+`alpha = 20`**. La tabla de priors tiene 127 ceros de 169; donde el prior
+es 0 y no hay conteo, `p = 0` para todos los valores. `alpha` no es la
+palanca que los arregla.
+
+Medido también lo contrario: en los 295 eventos de la partición de
+calibración **ninguno cae en un cero**, ni tiene celda ausente, ni cae al
+prior. O sea que los ceros **no contaminan `L_prim` aquí**. Se mediría en
+una ventana más ancha. Está en
+[CALIBRACION_DEFAULT_ALPHA.md §6](CALIBRACION_DEFAULT_ALPHA.md).
 
 ### 2.2 Cómo se mide
 

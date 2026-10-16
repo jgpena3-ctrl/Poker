@@ -1,21 +1,29 @@
-# CALIBRACION DE `DEFAULT_ALPHA` — NO SE CALIBRA
+# CALIBRACION DE `DEFAULT_ALPHA` — NO CALIBRABLE CON LOS INSTRUMENTOS ACTUALES
 
 ## Veredicto
 
 **`DEFAULT_ALPHA` se queda en `2.0`. No se calibra.**
 
-No porque el parametro no tenga recorrido, sino porque **no queda ningun
-criterio admisible para cambiarlo**: la metrica primaria no puede
+> La conclusión correcta **no** es «2,0 es óptimo». Es **«con las métricas
+> y la API disponibles no hay evidencia admisible para cambiar el 2,0
+> actual»**. Lo segundo es una afirmación sobre los instrumentos; lo
+> primero sería una afirmación sobre el poker que nadie ha medido.
+
+No porque el parámetro no tenga recorrido, sino porque **no queda ningún
+criterio admisible para cambiarlo**: la métrica primaria no puede
 distinguir candidatos, y la secundaria no se puede calcular.
 
-Eso se decidio midiendo, no suponiendo. Se cayo en el guardian que wrote
-`tools/calibrar.py` precisamente para esto, y el guardian fired.
+Eso se decidió midiendo, y hubo que **corregir dos veces el instrumento**
+antes de poder decirlo. Las dos correcciones están abajo, y son la parte
+importante de este bloque.
 
 ---
 
-## 1. Lo que se ejecuto
+## 1. Lo que se ejecutó
 
 ```
+python tools/auditar_importe_subida.py
+python tools/auditar_muestra_lsec.py
 python tools/calibrar.py particion --escribir
 python tools/calibrar.py --param DEFAULT_ALPHA --valores 0.5 1.0 1.5 2.0 2.5 3.0 5.0
 ```
@@ -23,7 +31,7 @@ python tools/calibrar.py --param DEFAULT_ALPHA --valores 0.5 1.0 1.5 2.0 2.5 3.0
 | | |
 |---|---|
 | ventana | 877 manos (`load_hands(reliable_only=True)`) |
-| particion | versionada en [`PARTICION_FASE_D.md`](PARTICION_FASE_D.md) |
+| particion | versionada en [`PARTICION_FASE_D.md`](PARTICION_FASE_D.md), **sin cambios** |
 | calibracion | 117 manos |
 | validacion | 39 manos |
 | eventos con cartas conocidas | 295 |
@@ -31,123 +39,231 @@ python tools/calibrar.py --param DEFAULT_ALPHA --valores 0.5 1.0 1.5 2.0 2.5 3.0
 > `limp` esta sobreestimada en 25 eventos de 4561 (0,55 %). Las cifras de
 > abajo **no son cifras limpias** (§5 de `FASE_D_PLAN.md`).
 
-## 2. Lo que dio
+## 2. Las dos razones
 
-| `alpha` | `L_prim` | mejora sobre 2.0 |
-|---:|---:|---:|
-| 0,5 | 0,176407 | +64,03 % |
-| 1,0 | 0,305947 | +37,62 % |
-| 1,5 | 0,407947 | +16,83 % |
-| **2,0** | **0,490495** | — (referencia) |
-| 2,5 | 0,559902 | −14,15 % |
-| 3,0 | 0,619347 | −26,27 % |
-| 5,0 | 0,792813 | −61,64 % |
+### 2.1 `L_prim` no puede elegir una regularización
 
-Y en los extremos, para ver que la metrica no esta ciega:
+`L_prim` suma `log p` **solo sobre celdas observadas**, y ahí el prior es
+pura dilución: `p = (cnt + alpha*prior) / (opp + alpha)`.
 
-```
-L_prim(1.0) = 0.305947      L_prim(9.0) = 0.987361
-```
-
-La metrica **si** cambia cuando el parametro cambia. Ese era el primer
-riesgo —una metrica que no ve su parametro produce un numero sin
-origen— y esta descartado.
-
-## 3. Por eso el resultado no es un resultado
-
-La curva es **estrictamente monotonica**: `L_prim` sube con `alpha` sin una
-sola excepcion entre 0,5 y 5,0, y tambien entre 0,1 y 100.
-
-Una metrica que crece siempre hacia el mismo lado **no esta eligiendo**. Y
-la razon se puede escribir:
-
-```
-p(alpha) = (cnt + alpha*prior) / (opp + alpha)
-```
-
-`L_prim` suma `log p` **solo sobre celdas observadas**, y toda celda
-observada tiene `cnt >= 1`. Sobre esas celdas, el termino del prior es
-**pura dilucion**: subir `alpha` baja `p`, baja `log p`, sube la perdida.
-
-Medido celda a celda sobre las 262 celdas observadas de la particion:
+Medido celda a celda sobre las **256** celdas observadas:
 
 | | celdas |
 |---|---:|
-| `dp/dalpha < 0` — subir `alpha` **baja** `p`, empuja la perdida **arriba** | **229** |
-| `dp/dalpha >= 0` — empujan al reves | **33** |
+| subir `alpha` **baja** `p` (empuja la pérdida arriba) | **224** |
+| empujan al revés | **32** |
 
-Asi que la monotonia **no es una garantia matematica**, y conviene decirlo
-con precision: 33 celdas la resistsen y no llegan a dar la vuelta al
-agregado. Lo que si es cierto es que lo que `L_prim` mide, en esta muestra
-y con esta formula, es **cuanto se diluyo el prior**, no que modelo
-reparte mejor.
+La curva no da una sola excepción entre `0,1` y `100`:
 
-Y el "ganador" que sale de esa tabla, `alpha = 0,5`, dice exactamente una
-cosa: *mezcla menos*. No dice nada sobre el poker. Elegirlo seria reportar
-la respuesta trivial como si fuera un hallazgo.
+| `alpha` | `L_prim` |
+|---:|---:|
+| 0,1 | 0,232648 |
+| 0,5 | 0,386909 |
+| 1,0 | 0,528017 |
+| **2,0** | **0,719521** |
+| 3,0 | 0,847119 |
+| 10,0 | 1,213548 |
+| 100,0 | 1,568412 |
 
-## 4. La secundaria no se puede calcular
+Ordena `alpha` por cuánto se diluyó el prior. Su «ganador» es el candidato
+con menos regularización, que es el mismo decir que el más pequeño. **No
+está eligiendo: está sumando.**
 
-`L_sec` es el Brier de `sit.equity` sobre las 39 manos de validacion.
-Devuelve `None`, y el motivo esta escrito en el codigo: **no hay API que
-devuelva la equity del motor en un punto de decision historico**.
-`asistente_live` construye la situacion completa; no expone la equity
-suelta.
+### 2.2 `L_sec` no se puede calcular
 
-Sin secundaria no hay forma de distinguir *mejor ajuste* de *sobreajuste*,
-que es justo lo que §2.1 declara que `L_prim` no puede hacer.
+No hay API que devuelva la equity del motor en un punto de decisión
+histórico. `asistente_live` construye la situación completa; no expone la
+equity suelta.
 
-Y aunque se pudiera, ya se medirio que tiene que ganarle a un predictor
-constante: `p = 0,199` saca **0,1592**, y el reparto es de **31 victorias
-sobre 156 manos** (§2.1.1.b). Con 39 manos de validacion, un cambio del 2 %
-no es distinguible del ruido.
+Y aunque se pudiera, ya se midió que tiene que ganarle a un predictor
+constante:
 
-## 5. El guardián, y por que es codigo
+| | |
+|---|---|
+| reparto | el hero **gana 21 de 156** y pierde 135 (87 %) |
+| Brier de un predictor constante `p = 0,135` | **0,1165** |
 
-`tools/calibrar.py` no devuelve un ganador cuando la curva es monotonica.
-Sale con codigo **2** y escribe el motivo:
+Un `L_sec` de 0,12 no es un resultado: es perder.
 
-```
-GUARDIAN DE MONOTONIA: LA CURVA ES MONOTONA.
-...
-VEREDICTO: DEFAULT_ALPHA NO SE CALIBRA.
-```
+## 3. Las dos correcciones, que es lo importante
 
-Es una condicion de salida, no un comentario. Un comentario se puede
-saltar sin que nada se entere; una condicion de salida rompe el comando.
+`revision_2` encontró dos P0 en el código de este bloque. Los dos eran
+ciertos, y ninguno se habría visto sin medir.
 
-## 6. Un hallazgo lateral que no es de `alpha`
+### 3.1 La métrica estaba ciega de una forma que daba números
 
-`p = 0` en **1 991 de 22 308 celdas** del grid (8,9 %) — y **tambien con
-`alpha = 20`**. No es falta de regularizacion: la tabla de priors tiene
-**127 ceros de 169 celdas**, y donde el prior es 0 y no hay conteo,
-`p = 0` para todos los valores de `alpha`.
+El grid de `p_matrix` no está indexado por acción ni por posición: está
+indexado por **rango de carta** (`GRID_RANKS`). El código indexaba con
+`g[ev.category, ev.pos]` — dos cadenas — y eso falla con `IndexError` en
+las **295 de 295**. El `except` caía a `np.nanmax(g)`: el **máximo** del
+grid.
 
-O sea: **`alpha` no es la palanca que arregla los ceros.** Son dos cosas
-distintas y este bloque no las mezcla. Queda anotado para cuando toque, y
-no se toca ahora.
+Un máximo del grid es ≥ la probabilidad de cualquier celda, así que
+**mejoraba la pérdida por construcción**. No era una métrica sesgada: era
+una métrica que favorecía al candidato siempre, y que reaccionó a `alpha`
+por el motivo equivocado.
 
-## 7. Que reabriria esto
+Ahora usa `p_hand(...)` y **no hay fallback**: si el índice no vale,
+`MedicionSinSentido` y código de salida 3. Un test recorre el árbol de
+`l_prim` y falla si aparece un `nanmax` o un `max`.
+
+### 3.2 La etiqueta no era la del hero
+
+Había **dos definiciones cruzadas** de hero en el mismo fichero:
+
+| | coincide con el hero en |
+|---|---:|
+| `'hero'` = `players[0]` (el id que usa `winner`) | 644 de 877 |
+| «el primer jugador con cartas» | 845 de 877 |
+| **el jugador nombrado en `learn.HERO_NAMES`** | **877 de 877** |
+
+`'hero'` es **la butaca 0**, no una persona: en 232 de las 877 manos el hero
+real está en otra butaca. Y «el primero con cartas» falla en 32, porque hay
+manos donde el hero no tiene cartas.
+
+Además, `showdown.winner1` se aceptaba por *existir y no parecer plural*,
+sin comprobar a quién nombra. Ahora **se resuelve** contra la mesa: la
+posición o el nombre tienen que estar.
+
+| | antes | ahora |
+|---|---:|---:|
+| victorias del hero | 31 | **21** |
+| Brier trivial | 0,1592 | **0,1165** |
+
+El **recuento de la muestra no cambió**: 156 / 117 / 39, y la partición
+versionada tampoco. Lo que cambió fue *de quién es la etiqueta*.
+
+Como comprobación de que el instrumento sirve: cuenta **147** manos con dos
+ganadores distintos en la base entera, que es exactamente lo que declara
+`learn.py` (`winner con 2+ en la base entera: 179 -> 147`).
+
+## 4. La premisa que resultó falsa
+
+> *Afirmé que la monotonía era matemática. No lo es.*
+
+32 de 256 celdas la resisten. Lo que se observa es que no llegan a dar la
+vuelta al agregado en el rango medido. Un guardián que razona con una
+premisa falsa es peor que ninguno, y por eso el §2.1.3 del plan lo dice
+con su contraparte al lado.
+
+La segunda premisa falsa era más grave y estaba en el código: *«el
+índice es `g[category, pos]`»*. También es falsa, y esa sí salía en
+números.
+
+## 5. El sesgo de la muestra
+
+| | |
+|---|---|
+| utilizables | **156** de 877 (17,8 %) |
+| calibracion | 117 |
+| validacion | 39 |
+| exclusiones | 580 sin board · 134 con menos de 2 cartas · 5 sin texto de showdown · 1 sin ganador · 1 con el ganador sin cartas |
+
+De las 7 manos con dos ganadores en la ventana, solo `H_0798` trae
+`showdown.winner1`, y resuelve: `'BB (Jarduan)'`, `BB` está en esa mesa, y
+ese jugador es el hero. Las otras 6 se quedan sin etiqueta, porque sin texto
+no se distingue *«dos ganan»* de *«el registro se equivocó»*.
+
+## 6. Hallazgo lateral: los ceros del grid
+
+`p = 0` en **1 991 de 22 308** celdas, **también con `alpha = 20`**. La
+causa no es la regularización: `data/preflop_matrices.json` tiene matrices
+que **no son priors normalizados** — 86,7 % de sus celdas son 0 y cada
+matriz suma entre 0,91 y 89,75, cuando una frecuencia sobre 1 326 manos
+debería sumar 1.
+
+Además **no contamina `L_prim` hoy**: de los 295 eventos de calibración,
+**ninguno** cae en un cero, porque `L_prim` solo lee celdas observadas y
+ahí `cnt >= 1`.
+
+Diagnóstico en [`CEROS_PREFLOP_MATRICES.md`](CEROS_PREFLOP_MATRICES.md). No
+se toca nada: cambiar cómo se interpretan esas matrices cambia el rango que
+el motor da **en vivo**.
+
+## 6.b La secundaria existe, y aun así `L_sec` no sale
+
+[`tools/equity_de_mano.py`](../../tools/equity_de_mano.py) es lo que faltaba
+para la §8. Reconstruye la situación desde la mano histórica y devuelve
+`sit.equity`, **sin partida y sin captura**, siguiendo la misma cadena que
+`asistente_live`: rango preflop → blockers → refinado postflop →
+`situation`.
+
+Que exista la equity del motor **no** depende del bote: en `situation()`,
+`equity = wins + 0.5*ties` sale de las cartas y del rango, y el bote solo
+alimenta `pot_odds` y `spr`. Eso es lo que permite que la herramienta exista
+sin reconstruir las apuestas — una aritmética que, medida, **no converge**
+(26 de 877 coinciden con `final_pot`).
+
+Y funciona, comprobado por fuera:
+
+| | |
+|---|---:|
+| equity mediana donde el hero **gana** | **0,7680** (n = 20) |
+| equity mediana donde el hero **pierde** | **0,4309** (n = 38) |
+
+La equity ordena. Un instrumento que devuelve números sin que nadie mire si
+significan algo no vale nada; este sí significa algo.
+
+**Y aun así `L_sec` no es usable, por dos razones medidas:**
+
+1. **Cobertura del 37 %.** 58 de las 156 manos. Las 96 que faltan son
+   **todas preflop**, y la causa es declarada en el propio motor:
+   `hand_evaluator.evaluate_batch` dice *«board (b ids, 3..5)»* y sus subsets
+   son de 5, 6 y 7 cartas. **No hay camino preflop.**
+2. **La cobertura está sesgada.** Cubre **20 de las 21 victorias (95 %)** y
+   solo **38 de las 135 derrotas (28 %)**. La tasa de victoria de lo
+   cubierto es 34,5 %; la de la muestra, 13,5 %.
+
+Medir `L_sec` sobre las 58 sería medir contra la base rate equivocada — que
+es exactamente el error que §2.1.1.b dice que no se va a cometer otra vez.
+
+> Dos tests escritos sobre esto: que la equity ordena, y que el sesgo de
+> cobertura sigue ahí. Si el sesgo desaparece, hay que reescribir esta
+> conclusión.
+
+## 7. Las barreras, que son código
+
+`tools/calibrar.py` no publica cuando no puede:
+
+| situación | salida | qué hace |
+|---|---:|---|
+| `L_prim` no cambia con `alpha` | 3 | aborta, **no imprime la tabla** |
+| `L_prim` no se puede medir | 3 | aborta |
+| curva monótona | 2 | `NO SE CALIBRA` |
+| `L_sec` no evaluable, aunque no sea monótona | 2 | `NO SE CALIBRA` |
+| todo evaluable, sin `--aplicar` | 0 | dry-run |
+
+Las dos primeras y la cuarta se las pidió `revision_2`. Antes, una curva no
+monótona pasaba el control de la autovalidación y podía llegar a `--aplicar`
+a elegir el mínimo de `L_prim` **sin ninguna métrica secundaria**.
+
+Y `--aplicar` ahora **escribe de verdad**: `DEFAULT_ALPHA` es la única línea
+que toca, en `motor/player_ranges.py`, y avisa de qué línea a qué línea.
+
+## 8. Qué reabriría esto
 
 `DEFAULT_ALPHA` se puede recalibrar cuando **una** de estas sea cierta:
 
-1. **Existe API para la equity en un punto de decision historico.** Con eso
-   `L_sec` sale, y P1/P4/P5 dejan de ser "no evaluable".
-2. **La metrica primaria cambia de forma.** Hace falta una que scoree tambien
-   las celdas **no observadas** —las que hoy son invisibles para `L_prim`— o
-   una que mida en particion de validacion.
+1. **La equity histórica cubre la muestra.** Ya existe
+   ([`equity_de_mano.py`](../../tools/equity_de_mano.py)) y funciona, pero
+   cubre el 37 % y sesgada hacia las victorias. Hacen falta **las dos**:
+   que no sesgue, y que sea utilizable.
+2. **La métrica primaria cambia de forma**: que scoree también las celdas
+   **no observadas** —las que hoy son invisibles para `L_prim`— o que mida
+   en partición de validación.
 
-Mientras no: `2.0`, que es el valor que lleva desde el principio y el unico
-que tiene una justificacion escrita (§1.2).
+Mientras no: `2.0`, el valor que lleva desde el principio y el único con
+justificación escrita (§1.2 del plan). Con un test que falla si alguien lo
+mueve sin pasar por aquí.
 
-## 8. Reproducir
+## 9. Reproducir
 
 ```
-python tools/auditar_importe_subida.py      # la decision A/B de §5
-python tools/auditar_muestra_lsec.py        # la muestra y la referencia trivial
-python tools/calibrar.py particion          # la particion, sin escribir
+python tools/auditar_importe_subida.py
+python tools/auditar_muestra_lsec.py
+python tools/calibrar.py particion
 python tools/calibrar.py --param DEFAULT_ALPHA --valores 0.5 1.0 1.5 2.0 2.5 3.0 5.0
 ```
 
-Ninguno de los dos ultimos escribe nada. `particion --escribir` es lo
-unico que toca disco, y escribe un documento, no datos.
+Ninguno escribe nada en `data/` ni en el motor. `particion --escribir` es lo
+único que toca disco, y escribe un documento, no datos.

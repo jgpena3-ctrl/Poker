@@ -26,6 +26,7 @@ LAS REGLAS QUE NO SE TOCAN, y por que estan en el plan y no aqui
 import argparse
 import collections
 import hashlib
+import io
 import json
 import os
 import sys
@@ -37,6 +38,7 @@ import numpy as np                                       # noqa: E402
 
 from motor import learn                                  # noqa: E402
 from motor import player_ranges as PR                    # noqa: E402
+from motor.multiway import PLAYER_IDS                  # noqa: E402
 
 DOCS = os.path.join(ROOT, 'DOCS')
 PARTICION_MD = os.path.join(DOCS, 'PARTICION_FASE_D.md')
@@ -66,29 +68,89 @@ def con_cartas(h):
     return [p for p in h.get('players') or [] if (p.get('cards') or '').strip()]
 
 
+def id_a_pos(h, ident):
+    """`_id` de `winner` -> posicion. Por PLAYER_IDS, no por indice.
+
+    `recorder_live` escribe `p['_id']` y `PLAYER_IDS` es
+    `['hero', 'p1' ... 'p5']`: `'hero'` es **la butaca 0**, no una persona.
+    """
+    if ident not in PLAYER_IDS:
+        return None
+    i = PLAYER_IDS.index(ident)
+    if i >= len(h.get('players') or []):
+        return None
+    return h['players'][i].get('pos')
+
+
 def hero_de(h):
-    cc = con_cartas(h)
-    return cc[0].get('pos') if cc else None
+    """El hero: el jugador cuyo `name` esta en `learn.HERO_NAMES`.
+
+    NO es el primero con cartas. Se parece en 845 de 877 manos de la
+    ventana y **falla en 32**, y en esas la etiqueta de L_sec era la de
+    otro jugador.
+
+    `HERO_NAMES` lo declara `learn.py`. No se deduce de los datos: se
+    busca en el codigo que los produce.
+    """
+    for p in h.get('players') or []:
+        if (p.get('name') or '').strip() in learn.HERO_NAMES:
+            return p.get('pos')
+    return None
+
+
+def ganador_nombrado(h):
+    """Posicion que nombra `showdown.winner1`, o (None, motivo).
+
+    Se RESUELVE contra la mesa: primero por posicion, luego por nombre.
+    Un texto que no nombra a nadie de esta mesa NO se resuelve, y la mano
+    se queda sin etiqueta.
+
+    El recorder solo escribe `showdown` cuando hay **un** ganador
+    (`recorder_live`, rama `len(all_still_in) == 1`), asi que un
+    `showdown` junto a varios ganadores es una mano editada a mano. Por eso
+    el texto tiene que demonstrationamente resolver.
+    """
+    w1 = (h.get('showdown') or {}).get('winner1')
+    if not (isinstance(w1, str) and w1.strip()):
+        return None, 'sin texto de showdown'
+    if any(x in w1 for x in ('/', ',', ' y ', '&')):
+        return None, 'el texto nombra a varios'
+    for p in h.get('players') or []:
+        if p.get('pos') and p['pos'] in w1:
+            return p['pos'], 'la posicion esta en el texto'
+    for p in h.get('players') or []:
+        nom = (p.get('name') or '').strip()
+        if nom and nom in w1:
+            return p.get('pos'), 'el nombre esta en el texto'
+    return None, 'el texto no nombra a nadie de esta mesa'
 
 
 def etiqueta(h):
-    """(y del hero, ok) — misma regla que §2.1.1, y el script la manda."""
-    m = {('hero' if i == 0 else 'p%d' % i): p.get('pos')
-         for i, p in enumerate(h.get('players') or [])}
-    g = [m.get(i) for i in (h.get('winner') or [])]
-    g = [x for x in g if x]
-    if not g:
+    """(y del hero, ok). Regla de FASE_D_PLAN §2.1.1.
+
+    `y = 1,0` si el HERO esta entre los ganadores. Los ids de `winner` se
+    resuelven con `id_a_pos` y el hero con `hero_de`: las dos cosas por su
+    nombre, no por su sitio en la lista.
+    """
+    hero = hero_de(h)
+    if hero is None:
         return None, False
-    con_cartas_pos = [p.get('pos') for p in con_cartas(h)]
-    if any(x not in con_cartas_pos for x in g):
+    gs = set()
+    for ident in (h.get('winner') or []):
+        pos = id_a_pos(h, ident)
+        if pos:
+            gs.add(pos)
+    if not gs:
         return None, False
-    if len(g) > 1:
-        w1 = (h.get('showdown') or {}).get('winner1')
-        if not (isinstance(w1, str) and w1.strip()):
+    cpos = [p.get('pos') for p in con_cartas(h)]
+    if any(x not in cpos for x in gs):
+        return None, False
+    if len(gs) > 1:
+        nom, _mot = ganador_nombrado(h)
+        if nom is None:
             return None, False
-        if any(s in w1 for s in ('/', ',', ' y ', '&')):
-            return None, False
-    return (1.0 if hero_de(h) in g else 0.0), True
+        gs = {nom}
+    return (1.0 if hero in gs else 0.0), True
 
 
 def ventana():
@@ -140,83 +202,103 @@ def manos_de(manos):
     return [h for h in ventana() if h['hand_id'] in ids]
 
 
-def etiquetas():
-    """nombre de jugador -> etiqueta de perfil.
+def etiquetas(manos):
+    """nombre de jugador -> etiqueta de perfil, **solo de esas manos**.
 
-    `p_matrix` esta indexado por (ETIQUETA, spot), no por nombre. Solo hay
-    6 claves: TIBURON y PEZ por no_raise, facing_open y facing_3bet.
+    `Profiles.from_hands` deriva la etiqueta de `TransitionStats` y del
+    stack medio, es decir de las manos que recibe. Calcularla sobre la
+    ventana entera mientras el modelo se ajusta sobre 117 manos mete las
+    39 de validacion dentro del ajuste: medido, **46 de 144 jugadores
+    cambian de etiqueta** según con que manos se calcule.
 
-    Pasar el NOMBRE es lo que hacia que `opp` fuera None en los 295
-    eventos, y con ello que `L_prim` saliera IGUAL para cinco valores de
-    alpha: una metrica ciega al parametro que dice calibrar.
+    Por eso esta funcion RECIBE las manos, y el que llama decide cuales.
     """
     from motor.profile import Profiles
-    profs = Profiles.from_hands(ventana())
+    profs = Profiles.from_hands(manos)
     return {nombre: p.label for nombre, p in profs.profiles.items()}
+
+
+class MedicionSinSentido(Exception):
+    """La medicion no se puede publicar. No es un cero: es un no."""
 
 
 def l_prim(alpha, manos, labels=None):
     """Log-verosimilitud del modelo de frecuencias sobre la calibracion.
 
     MEDIDA DE AJUSTE (FASE_D_PLAN §2.1): el modelo se ajusta aqui y se
-    evalua aqui, por construccion. Una mejora puede ser sobreajuste, y por
-    eso la secundaria va sobre validacion.
+    evalua aqui, por construccion.
 
-    `p_matrix` devuelve un GRID 13x13 de P(accion | r, spot, perfil). El
-    likelihood de un evento es la probabilidad de SU celda, no la mayor
-    del grid: quedarse con el maximo cambia lo que se mide.
+    EL GRID ES POR RANGO DE CARTA. `p_matrix(perfil, spot, action, pos)`
+    devuelve un 13x13 de P(par de rangos | accion, spot, perfil), con los
+    ejes en `player_ranges.GRID_RANKS`. La probabilidad de lo OBSERVADO
+    la da `p_hand(perfil, spot, action, cartas)`, que es esa celda.
+
+    Aqui estaba el bug: se indexaba con `g[ev.category, ev.pos]`, que son
+    cadenas, y eso falla con IndexError en los 295 eventos. El `except`
+    caia a `np.nanmax(g)`: el MAXIMO del grid, que no es la probabilidad de
+    la accion observada y puede mejorar la perdida sola. Las cifras de la
+    primera calibracion salieron de ahi. Ahora no hay fallback: si el
+    indice no es valido, se para.
     """
-    labels = etiquetas() if labels is None else labels
     manos = manos_de(manos)
+    labels = etiquetas(manos) if labels is None else labels
     try:
         modelo = PR.ProfileRangeModel.from_hands(manos, labels=labels,
                                                  alpha=alpha)
     except Exception as e:
-        return None, 'from_hands fallo: %s: %s' % (type(e).__name__, e)
+        raise MedicionSinSentido('from_hands fallo: %s: %s'
+                                 % (type(e).__name__, e))
 
-    logp, n, con_opp = 0.0, 0, 0
+    logp, n = 0.0, 0
+    ceros = 0
+    sin_celda = 0
+    sin_opp = 0
     for h in manos:
         for ev in learn.preflop_events(h):
             if not ev.hand_known:
                 continue
+            if PR._cell_(ev.cards) is None:
+                sin_celda += 1
+                continue
             perfil = labels.get(ev.player, ev.player)
-            if modelo.opp.get((perfil, ev.denom)) is not None:
-                con_opp += 1
-            try:
-                g = np.asarray(modelo.p_matrix(perfil, ev.denom, ev.category,
-                                                ev.pos))
-            except Exception as e:
-                return None, 'p_matrix fallo: %s' % e
-            # los ejes del grid: filas = r (accion), columnas = spot (pos)
-            try:
-                p = float(g[ev.category, ev.pos])
-            except Exception:
-                p = float(np.nanmax(g))
-            p = float(min(max(p, 1e-12), 1.0))
-            logp += np.log(p)
+            if modelo.opp.get((perfil, ev.denom)) is None:
+                sin_opp += 1
+                continue
+            p = modelo.p_hand(perfil, ev.denom, ev.category, ev.cards,
+                              ev.pos)
+            if p <= 0.0:
+                ceros += 1
+                continue
+            logp += float(np.log(p))
             n += 1
+
+    if sin_opp == n + ceros + sin_celda:
+        raise MedicionSinSentido(
+            'NINGUN evento cae en una celda con `opp`: la metrica seria el '
+            'prior y no responderia a alpha')
     if not n:
-        return None, 'sin eventos con cartas conocidas'
-    if con_opp == 0:
-        return None, ('NINGUN evento cae en una celda con `opp`: la metrica '
-                      'seria el prior y no responderia a alpha')
-    return -logp / n, n
+        raise MedicionSinSentido('sin eventos utilizables')
+    return -logp / n, {'eventos': n, 'p_0': ceros, 'sin_celda': sin_celda,
+                       'sin_opp': sin_opp}
 
 
 def la_metrica_ve_a_alpha(manos, labels=None):
-    """AUTOVALIDACION: si dos alphas dan la misma L_prim, la metrica esta
-    ciega y no se puede publicar.
+    """AUTOVALIDACION. Devuelve (ok, texto), y `ok` puede ser False.
 
-    No es una prueba de unittest: es una condicion de EXIT. Una metrica que
-    no cambia al cambiar su parametro no esta midiendo el parametro, y el
-    numero que produzca es un numero sin origen.
+    Si dos alphas dan la misma `L_prim`, la metrica esta ciega y su numero
+    no tiene origen. Si la medicion ni siquiera se puede hacer, tambien es
+    False: no hay nada que publicar.
+
+    No es una prueba de unittest: es una condicion de EXIT.
     """
-    labels = etiquetas() if labels is None else labels
-    a1, _ = l_prim(1.0, manos, labels)
-    a2, _ = l_prim(9.0, manos, labels)
-    if a1 is None or a2 is None:
-        return None, 'no se pudo medir en los dos extremos'
-    return a1 != a2, 'L_prim(1.0)=%.6f  L_prim(9.0)=%.6f' % (a1, a2)
+    try:
+        a1, d1 = l_prim(1.0, manos, labels)
+        a2, _d2 = l_prim(9.0, manos, labels)
+    except MedicionSinSentido as e:
+        return False, 'NO SE PUDO MEDIR: %s' % e
+    return (a1 != a2,
+            'L_prim(1.0)=%.6f  L_prim(9.0)=%.6f  sobre %d eventos'
+            % (a1, a2, d1['eventos']))
 
 
 def es_monotona(vals, meds):
@@ -320,33 +402,50 @@ def cmd_medir(args):
     print('   calibracion : %d manos' % len(cal))
     print('   validacion  : %d manos' % len(val))
     print()
-    base_lp, n_ev = l_prim(getattr(PR, args.param), cal)
-    if base_lp is None:
-        print('   L_prim no se pudo medir: %s' % n_ev)
-        return 1
-    print()
-    _ve, _txt = la_metrica_ve_a_alpha(cal)
-    _autov = ('LA METRICA NO VE alpha -> no se publica: ' + _txt
-             if _ve is False else _txt)
+
+    # --- 1) autovalidacion: ABORTA, no avisa ----------------------------
+    ok, txt = la_metrica_ve_a_alpha(cal)
+    print('   AUTOVALIDACION: %s' % txt)
+    if not ok:
+        print()
+        print('   LA METRICA NO VE alpha. NO SE PUBLICA NADA.')
+        print('   Sale con codigo 3 y no llega a la tabla, porque una tabla')
+        print('   con numeros de una metrica ciega es peor que no tener tabla.')
+        return 3
+
+    try:
+        base_lp, det = l_prim(getattr(PR, args.param), cal)
+    except MedicionSinSentido as e:
+        print()
+        print('   L_prim NO SE PUDO MEDIR: %s' % e)
+        print('   Sale con codigo 3 y no publica.')
+        return 3
+
     print()
     print('   %-10s %12s %12s %10s %s'
           % (args.param, 'L_prim', 'mejora', 'L_sec', 'veredicto'))
     print('   ' + '-' * 68)
     filas = []
     for v in args.valores:
-        lp, _n = l_prim(v, cal)
-        ls, _m = l_sec(v, val)
-        mejora = (base_lp - lp) / base_lp if base_lp else 0.0
+        try:
+            lp, _d = l_prim(v, cal)
+        except MedicionSinSentido as e:
+            lp = None
+        ls, motivo_sec = l_sec(v, val)
+        mejora = ((base_lp - lp) / base_lp) if (lp is not None and base_lp) \
+            else 0.0
         filas.append((v, lp, mejora, ls))
-        print('   %-10s %12.6f %+11.2f%% %12s %s'
-              % (v, lp, mejora * 100, 'n/d', ''))
+        print('   %-10s %12s %12s %10s %s'
+              % (v, ('%.6f' % lp) if lp is not None else 'n/d',
+                 ('%+.2f%%' % (mejora * 100)) if lp is not None else 'n/d',
+                 'n/d', ''))
     print()
-    print('   AUTOVALIDACION:', _autov)
+    print('   referencia (valor actual %.1f): %.6f sobre %d eventos'
+          % (getattr(PR, args.param), base_lp, det['eventos']))
+    print('   celdas con p = 0 en los eventos medidos: %d   sin celda: %d'
+          % (det['p_0'], det['sin_celda']))
     print()
-    print('   L_prim de referencia (valor actual %.1f): %.6f sobre %d eventos'
-          % (getattr(PR, args.param), base_lp, n_ev))
-    print()
-    print('   P1  empeora(L_sec) > TOL_SEC ......... no evaluable: L_sec n/d')
+    print('   P1  empeora(L_sec) > TOL_SEC ......... no evaluable')
     print('   P2  dos seguidas con mejora < 0,5% ..... primera iteracion')
     print('   P3  20 iteraciones ................... 1 de 20')
     print('   P4  empeora(L_sec) > 0 y mejora < UMBRAL  no evaluable')
@@ -354,29 +453,81 @@ def cmd_medir(args):
     print('   P6  parametro sin justificacion escrita  DEFAULT_ALPHA si la tiene')
     print('   P7  mejora(L_prim) < 0 en una iteracion  se vera en la tabla')
     print()
+
+    # --- 2) la secundaria tiene que existir para ACEPTAR ------------------
+    # Por el contrato (§2.3) P4/P5Needs L_sec. Sin L_sec no hay criterio
+    # de aceptacion, y --aplicar sin criterio de aceptacion es escribir a
+    # ciegas. Se dice ANTES de la monotonia, porque es un bloqueo mas
+    # fuerte: aunque la curva no fuera monotonica, aqui tampoco se acepta.
+    sec_ok = filas[0][3] is not None
+    if not sec_ok:
+        print('   L_SEC NO EVALUABLE: %s' % motivo_sec)
+        print()
+
     vals = [f[0] for f in filas]
     meds = [f[1] for f in filas]
     mono = es_monotona(vals, meds)
+
     if mono:
-        print()
         print('   GUARDIAN DE MONOTONIA: LA CURVA ES MONOTONA.')
         print('   L_prim esta ordenando alpha por cuanto se diluyo el prior,')
         print('   no por calidad. Elegir el extremo menor NO es un hallazgo:')
-        print('   es el mismo decir que el candidato mas pequeno.')
+        print('   es el mismo decir que el candidato mas pequeño.')
         print()
-        print('   Con la secundaria no evaluable (§2.1: no hay API para la')
-        print('   equity de un punto de decision historico), NO QUEDA NINGUN')
-        print('   criterio admisible para aceptar un valor.')
+        print('   VEREDICTO: %s NO SE CALIBRA.' % args.param)
+        print('   Se deja como esta y se escribe por que.')
+        return 2
+
+    if not sec_ok:
+        print('   La curva no es monotonica, pero L_sec no se puede calcular.')
+        print('   Quedaria una metrica sin ninguna contra, y el plan no')
+        print('   admite aceptar un valor sin las dos.')
         print()
-        print('   VEREDICTO: DEFAULT_ALPHA NO SE CALIBRA.')
-        print('   Se deja en 2.0 y se escribe por que.')
+        print('   VEREDICTO: %s NO SE CALIBRA.' % args.param)
         return 2
 
     if not args.aplicar:
         print('DRY-RUN: nada aplicado. Con --aplicar se escribe el valor.')
         return 0
+
+    # --- 3) aqui si se escribe, y se escribe de verdad -------------------
     mejor = min(filas, key=lambda f: f[1])
     print('   mejor L_prim: %s (%.6f)' % (mejor[0], mejor[1]))
+    return escribir_valor(args.param, mejor[0])
+
+
+def escribir_valor(param, valor):
+    """Cambia el valor en `motor/player_ranges.py` y lo dice.
+
+    Se llego aqui solo con las dos metricas evaluables. Es lo unico que
+    escribe en el motor, y lo announce antes de hacerlo.
+    """
+    ruta = os.path.join(ROOT, 'motor', 'player_ranges.py')
+    with io.open(ruta, encoding='utf-8') as fh:
+        texto = fh.read()
+    viejo = None
+    for linea in texto.split(NL):
+        if linea.startswith(param):
+            viejo = linea
+            break
+    if viejo is None:
+        print('   NO SE ESCRIBE: %s no esta en player_ranges.py' % param)
+        return 4
+    nuevo = '%s = %r' % (param, valor)
+    if len(nuevo) > len(viejo):
+        nuevo = nuevo + ' ' * (len(viejo) - len(nuevo))
+    else:
+        nuevo = nuevo + (' ' * (len(viejo) - len(nuevo))) +             viejo[len(nuevo):]
+    texto = texto.replace(viejo, nuevo, 1)
+    with io.open(ruta, 'w', encoding='utf-8', newline='') as fh:
+        fh.write(texto)
+    print()
+    print('   ESCRITO en motor/player_ranges.py:')
+    print('      antes : %s' % viejo.strip())
+    print('      ahora : %s' % nuevo.strip())
+    print()
+    print('   FALTA: el commit con el .md de justificacion. El test')
+    print('   test_default_alpha_sigue_en_dos falla hasta entonces.')
     return 0
 
 
