@@ -211,12 +211,11 @@ sin llamadores en producción.
 |---|---|---|---|
 | **0** | cerrar §0.1 | el jugador inventado va a `profile_ranges` | 2 manos, del mantenedor |
 | **1** | verificar que las 42 no mueven los denominadores | es lo que convierte «no bloquean» en un hecho | una medición |
-| **2** | **sí o sí** `BASE_WEIGHT_MAP` — pero como **prior** del rango, no como reach inicial | el mapa es una priori sobre la fuerza de cada clase; el modelo actual (`player_ranges`) hereda de las matrices preflop y de un prior plano `0.15` | acotado |
-| **3** | `DEFAULT_ALPHA` (hoy 2.0, sin tocar desde el principio) | `alpha = 2.0` con `opp` de 15 en `PEZ facing_3bet` significa que el 11,8 % del peso viene de un prior que describe otro spot. **Es el número con más recorrido medido, y sigue sin tocar** | un parámetro |
-| **4** | ω individual | `Pipaaf182` tiene ω=0.537 y se queda con la mitad de la masa sin renormalizar por celda | una fórmula |
+| **2** | `DEFAULT_ALPHA` (hoy 2.0, sin tocar desde el principio) | `alpha = 2.0` con `opp` de 15 en `PEZ facing_3bet` significa que el 11,8 % del peso viene de un prior que describe otro spot. **Es el número con más recorrido medido, y sigue sin tocar** | un parámetro |
+| **3** | **sí o sí** `BASE_WEIGHT_MAP` — pero como **prior** del rango, no como reach inicial | el mapa es una priori sobre la fuerza de cada clase; el modelo actual (`player_ranges`) hereda de las matrices preflop y de un prior plano `0.15` | acotado |
 
-El **3** va antes del **2** por una razón concreta y medida: es **un número**,
-se puede cambiar y medir en minutos, y es reversible en un segundo. El 2 es
+El **2** va antes del **3** por una razón concreta y medida: es **un número**,
+se puede cambiar y medir en minutos, y es reversible en un segundo. El 3 es
 código. Empezar por código cuando hay un parámetro con recorrido medido es
 empezar por lo difícil.
 
@@ -238,7 +237,10 @@ mejora relativa es `(L0 - L1) / L0` y siempre está en `[0, 1]`.
 | fórmula | `L_prim = -Σ log p(observado) / nº de eventos` |
 | dato | `player_ranges.cnt` contra `preflop_events`, en la partición de calibración |
 | por qué | mide el ajuste del modelo al dato y es comparable entre valores de `alpha` sin depender de una mano concreta |
-| unidades | nats por evento. Con 4561 eventos en la ventana, y 147 utilizables (§2.1.1) |
+| unidades | nats por evento. Con 4561 eventos en la ventana y 156 manos utilizables |
+| donde | **particion de calibracion**: el modelo se ajusta allí y se evalua allí, por construccion |
+| que NO es | `L_prim` mide **AJUSTE**, no generalizacion. Una mejora de `L_prim` puede ser sobreajuste y no extrapola nada. |
+| para que sirve | es la metrica de la derivada rapida, la que cambia en minutos. La de generalizacion es `L_sec` sobre validacion. Si un candidato mejora `L_prim` y empeora `L_sec`, es sobreajuste. |
 
 **Secundaria — `L_sec`: score de Brier de `sit.equity`.**
 
@@ -246,10 +248,12 @@ mejora relativa es `(L0 - L1) / L0` y siempre está en `[0, 1]`.
 |---|---|
 | fórmula | `L_sec = mean((p - y)²)` |
 | `p` | `sit.equity` del motor en el punto de decisión |
-| `y` | 1 si el hero ganó el bote, 0 si lo perdió, **0,5 si hubo empate** |
-| referencia | `hand['winner'][0]` — un resultado **grabado**, no derivado |
-| manos | las **147** de §2.1.1 |
-| por qué | Brier es una regla de puntuación *proper*: premia acertar y penaliza el exceso de confianza, y se descompone en calibracion y nitidez |
+| `y` | **1,0** si el ganador es el hero, **0,0** si no. **No hay `y = 0,5`**: §2.1.1 |
+| referencia | `winner` es una LISTA. Se compara el hero contra **todos** sus elementos, no contra el primero. Si hay varios, §2.1.1 decide si la mano es usable |
+| manos | las **39 de validacion** de §2.1.1, NO las 156 |
+| por que validacion | los umbrales de §2.3 se justifican con las manos de validacion. Medir sobre las 156 seria usar las mismas manos para ajustar y para decidir |
+| referencia trivial | un predictor constante `p = 0,199` saca **0,1592**. Hay que ganarle: §2.1.1.b |
+| por que | Brier es una regla de puntuacion *proper*: premia acertar y penaliza el exceso de confianza |
 
 > ⚠️ Por qué **no** se mide el error de la acción recomendada, que era la
 > propuesta original de este plan. `revision_2` la declaró no operacional y
@@ -265,22 +269,63 @@ mejora relativa es `(L0 - L1) / L0` y siempre está en `[0, 1]`.
 
 ### 2.1.1 Qué manos hay, medido
 
-No se supone: se cuenta.
+**Remedido** con `python tools/auditar_muestra_lsec.py`, porque la regla de
+la etiqueta tenía un hueco que `revision_2` señaló: *«excluir ganadores
+múltiples solo porque no hay un ganador único puede ser innecesario si el
+registro permite identificar un empate y asignarle y = 0.5»*.
+
+Se comprueba si el registro lo permite. **No lo permite para 6 de las 7.**
+Esas 7 tienen dos elementos en `winner`, y solo una (`H_0798`) tiene
+`showdown.winner1` con un nombre: ahí el texto dice **un** ganador, así que
+no es un empate, es `winner` equivocado, y la mano es usable.
+
+Las otras 6 no tienen texto de showdown, y sin él no se distingue *«dos
+ganan»* de *«el registro se equivocó»*. Ponerles `y = 0.5` sería **inventar
+la etiqueta**, que es justo lo que este proyecto no hace.
 
 | manos de la ventana de 877 | |
 |---:|---|
 | 580 | board incompleto (no hay showdown) |
 | 134 | menos de 2 jugadores con cartas |
-| 10 | el ganador no tiene cartas |
-| 6 | ganadores múltiples — no se puede etiquetar un único `y` |
-| **147** | **utilizables (16,8 %)** |
+| 5 | varios ganadores y **sin** texto de showdown |
+| 1 | sin ganador |
+| 1 | el ganador no tiene cartas |
+| **156** | **utilizables (17,8 %)** |
 
-De las 147, **el 100 % tiene las cartas del hero**. Repartidas 70/30 salen
-**103 de calibración y 44 de validación**.
+> El número del plan era **147**. La diferencia son las manos que el hueco
+> de la etiqueta dejaba fuera sin motivo, más las que el filtro de
+> «ganador sin cartas» excluía de más. Se corrige **antes** de elegir la
+> métrica, no después de ver qué salía.
 
-> 44 manos de validación es **poco**. Con ese número, un cambio del 2 % en
-> `L_sec` no es distinguible del ruido. Está escrito aquí antes de elegir la
-> métrica, no después de ver que no salía nada: si el resultado no se
+**Reparto 70/30 sobre las 156 utilizables:** **117 de calibración y 39 de
+validación**, disjuntas por construcción (§2.2). La lista exacta está
+versionada en [`PARTICION_FASE_D.md`](PARTICION_FASE_D.md).
+
+### 2.1.1.b La etiqueta, y la referencia que tiene que ganarse
+
+`y` para el hero: **1,0** si el ganador es el hero, **0,0** si no. El hero
+es el primer jugador con cartas conocidas — el JSON no tiene marca de hero.
+
+Y antes de usar `L_sec` hay una pregunta que no es de tamaño, es de
+**discriminación**:
+
+| | |
+|---|---|
+| reparto | el hero **gana 31 de 156** y pierde 125 |
+| Brier de un predictor **constante** `p = 0,199` | **0,1592** |
+
+**El motor tiene que estar por debajo de 0,1592.** Si no, `L_sec` no mide
+calidad: mide la base rate, y el mejor modelo es decir *«el hero va a
+perder»*. Es la misma trampa que el plan ya rechazó para la métrica de
+acuerdo, vista por el otro lado.
+
+Por eso la comparación contra esa referencia se **reporta en cada
+iteración**, al lado de `L_sec` y no en una nota al pie. Un `L_sec` de
+0,16 no es un resultado: es perder.
+
+> **39 manos de validación, con un 82 % de derrotas.** Un cambio del 2 %
+> en `L_sec` no es distinguible del ruido. Está escrito aquí antes de
+> medir, no después de ver que no salía nada: si el resultado no se
 > distingue, **se dice que no se distingue**.
 
 ### 2.1.2 Lo que no se mide
@@ -291,6 +336,49 @@ De las 147, **el 100 % tiene las cartas del hero**. Repartidas 70/30 salen
 | **win rate global** | descartado: depende del rival, del stack y de cuánto se juega. Un cambio de `DEFAULT_ALPHA` la mueve por casualidad |
 | **equity de spots multiway** | no comparable: `CONTRATO_F72A.md` §6 — la equity del motor es HU contra **un** rival |
 
+### 2.1.3 Lo que `L_prim` no puede hacer, medido
+
+> Se descubrio al intentar usar la metrica, no antes. Esta escrito aqui
+> porque cambia **que se puede pedir** a la fase, no solo como se mide.
+
+`L_prim` suma `log p` **solo sobre celdas observadas**, y toda celda
+observada tiene `cnt >= 1`. Sobre esas celdas el termino del prior es pura
+dilucion:
+
+```
+p(alpha) = (cnt + alpha*prior) / (opp + alpha)
+```
+
+Medido celda a celda sobre las 262 celdas observadas de la particion de
+calibracion:
+
+| | celdas |
+|---|---:|
+| subir `alpha` **baja** `p` (empuja la perdida arriba) | **229** |
+| empujan al reves | **33** |
+
+La monotonia **no es una garantia matematica** —33 celdas la resisten— pero
+sobre los valores medidos de `0,1` a `100` la curva no da una sola
+excepcion. Y eso basta para lo que importa:
+
+> **La metrica primaria no puede elegir un parametro de regularizacion.**
+> Ordena `alpha` por cuanto se diluyo el prior, que no es una respuesta
+> sobre el poker. Su "ganador" es siempre el candidato con menos
+> regularizacion, que es el mismo decir que el mas pequeno.
+
+Por eso `tools/calibrar.py` tiene un **guardian de monotonia** que se niega
+a nombrar ganador y sale con codigo 2. Es codigo, no una nota: un
+comentario se puede saltar sin que nada se entere.
+
+Para recalibrar `alpha` haria falta una metrica que scoree tambien las
+celdas **no observadas**, o que mida sobre validacion. Las dos cosas estan
+en [CALIBRACION_DEFAULT_ALPHA.md §7](CALIBRACION_DEFAULT_ALPHA.md).
+
+Y un hallazgo lateral, que **no** es de `alpha`: `p = 0` en 1 991 de 22 308
+celdas del grid, **tambien con `alpha = 20`**. La tabla de priors tiene 127
+ceros de 169 celdas; donde el prior es 0 y no hay conteo, `p = 0` para
+todos los valores. `alpha` no es la palanca que arregla los ceros.
+
 ### 2.2 Cómo se mide
 
 `revision_2` pidió concretar cinco cosas de la partición. Las cinco están:
@@ -300,7 +388,7 @@ De las 147, **el 100 % tiene las cartas del hero**. Repartidas 70/30 salen
 | **regla** | `particion(hand_id) = 'validacion' if sha256(hand_id) % 10 < 3 else 'calibracion'` |
 | **proporción** | 70 % calibración / 30 % validación, por construcción del módulo |
 | **disjuntos** | **garantizado por construcción**: una función de `hand_id` no puede devolver dos valores. Hay un test que lo comprueba sobre las 877 manos |
-| **lista exacta** | `tools/calibrar.py particion` la imprime y la **versiona** en `data/` — no, en `DOCS/` — como `DOCS/PARTICION_FASE_D.md`. Si la ventana cambia, ese fichero cambia, y el diff se ve |
+| **lista exacta** | `tools/calibrar.py particion --escribir` la **versiona** en `DOCS/PARTICION_FASE_D.md`. Si la ventana cambia, ese fichero cambia, y el diff se ve |
 | **comparar candidatos** | **siempre sobre las mismas manos**: un candidato y el baseline se evalúan en la partición indicada, sobre los mismos `hand_id`, en la misma ejecución |
 
 Lo demás:
@@ -331,6 +419,12 @@ los umbrales son **números escritos antes de empezar**, no fracciones informale
 ```
 mejora(L0, L1) = (L0 - L1) / L0        # ambas perdidas, L0 > 0
 empeora(L0, L1) = (L1 - L0) / L0
+
+# `mejora` NO esta acotada a [0, 1]: es NEGATIVA cuando L1 > L0, es decir
+# cuando la perdida empeora. `empeora` es negativa cuando la perdida
+# mejora. Decir que estan en [0, 1] era incorrecto (`revision_2` §3.1) y
+# habia llevado a una regla de parada mal leida. Aqui se comparan con 0:
+# `mejora > 0` es "ha mejorado", `mejora < 0` es "ha empeorado".
 ```
 
 **Se aplica en este orden. El primero que se cumple decide:**
@@ -343,6 +437,13 @@ empeora(L0, L1) = (L1 - L0) / L0
 | **P4** | `empeora(L_sec) > 0` **y** `mejora(L_prim) < UMBRAL` | **revertir y parar** |
 | **P5** | `empeora(L_sec) > 0` **y** `mejora(L_prim) ≥ UMBRAL` | **se acepta, y se escribe por qué** |
 | **P6** | se toca un parámetro sin justificación escrita | parar y volver al inventario |
+| **P7** | `mejora(L_prim) < 0` en una iteracion suelta | **revertir y parar** |
+
+**P7 no estaba escrito, y era un efecto accidental.** `revision_2` lo señaló:
+P2 solo paraba
+tras dos iteraciones *seguidas* con mejora primaria pequeña, asi que una
+iteracion que **empeora** `L_prim` no activaba nada. Eso es una
+decision —revertir la iteracion que empeora— y por eso se escribe.
 
 **Los umbrales, declarados aquí para que no se ajusten a posteriori:**
 
@@ -416,26 +517,97 @@ empeora(L0, L1) = (L1 - L0) / L0
 | [`DEFECTOS_VS_DENOMINADORES.md`](DEFECTOS_VS_DENOMINADORES.md) | los 42 defectos de la ventana, clasificados, con el instrumento |
 | [`APARCADO_DB.md`](APARCADO_DB.md) | lo que sigue aparcado |
 
-## 5. Una decisión pendiente, escrita antes de empezar
+## 5. DECIDIÓ: B — congelar y declarar
 
-> No es una tarea: es una cosa que hay que **decidir antes** de mover nada, y
-> que si se decide mal invalida la calibración entera.
+> Esta seccio estaba escrita como "una decision pendiente". **Ya esta
+> decidida**, y no por preferencia: por medicion.
 
-Las 25 manos con `IMPORTE_SUBIDA` mueven la categoría `limp` a `open`/`rol`
-(§0.2.1). Hay dos caminos y son excluyentes:
+### 5.1 La pregunta que la decidia, y la respuesta
+
+`revision_2` condiciono la opcion A a algo comprobable: que **los importes
+correctos se puedan demostrar con evidencia disponible, y no
+reconstruirlos por conjetura**. Eso es medible, y se midio.
+
+```
+python tools/auditar_importe_subida.py
+```
 
 | | |
-|---|---|
-| **A — limpiar antes** | el mantenedor corrige el importe de esas 25 manos. Los derivados se regeneran, el baseline cambia, y la calibración mide contra una ventana sin el sesgo. Es lo correcto, y **cuesta una migración** |
-| **B — declarar el sesgo** | se calibra con la ventana tal como está y se escribe que `limp` está sobreestimada en 25 eventos sobre 4561. Más barato, y la comparación de iteraciones sigue siendo válida **mientras nadie limpie a mitad** |
+|---|---:|
+| casos de `IMPORTE_SUBIDA` en la ventana de 877 | **33** en 25 manos |
+| importes **demostrables** | **0** |
 
-> **El riesgo de B no es teórico, es de procedimiento:** si a la iteración 7
-> alguien limpia las 25 manos «porque sí», el baseline cambia y las métricas de
-> la 1 a la 6 dejan de ser comparables con las de la 7 en adelante. No se
-> rompe el motor: se rompe la lectura de los resultados, que es peor porque no
-> se nota.
->
-> **B es lo que el plan asume por defecto**, y por eso está escrito. Si se
-> elige A, es una migración con su commit, su hash y su backup, y este
-> documento se actualiza con el nuevo baseline **antes** de la primera
-> iteración.
+**Ninguno.** El registro guarda, por evento, el importe grabado, el stack
+del jugador al inicio y la secuencia. No hay un segundo importe para el
+mismo evento, ni medida del pantallazo, ni nada. La unica magnitud que
+podria deducir un importe es el stack —para reconocer un all-in— y
+**ninguno de los 33 coincide con el stack**: los stacks van de 9,5 a 166,9 y
+los importes sospechosos son siempre 1,0 o 0,5, que es la ciega.
+
+Asi que **A no es posible** en el sentido en que se pidio. Corregir los
+importes seria inventarlos.
+
+### 5.2 Lo que SI seria posible, y por que no es A
+
+El proyecto ya tiene una regla exacta y validada para un caso casi identico
+(`verificar_cm004.py`): *una subida a un importe menor o igual que la ciega
+nominal, sin que nadie haya subido antes, no es una apertura.*
+
+| | casos |
+|---|---:|
+| sin subida antes — la regla aplica | **25** |
+| con una subida antes — la regla no aplica | 8 |
+
+Esos 25 se podrian **reetiquetar** `r` → `c` **sin tocar el importe**. Pero
+un reetiquetado **no es la opcion A**: A es migrar la base, y un
+reetiquetado parcial deja la base en un estado que no es el de antes ni el
+de A. Es trabajo con su backup y su hash, y se hace **despues**, no
+durante.
+
+### 5.3 Decision
+
+**B — se calibra con la ventana tal como esta, y se declara el sesgo.**
+
+No porque sea mas barata. Porque es la unica que no requiere inventar.
+
+### 5.4 Regla de bloqueo
+
+> **Mientras la calibracion este en curso, `IMPORTE_SUBIDA` no se toca.**
+> Ni por el mantenedor, ni por un script, ni por nadie.
+
+Si algun momento se decide limpiar los 33 casos:
+
+1. **se para la calibracion**;
+2. se regeneran los derivados;
+3. se actualizan los hashes declarados (`HANDS_DB_SHA256`, `HANDS_DB_COMMIT`);
+4. se **regenera la particion** (`DOCS/PARTICION_FASE_D.md`);
+5. se **reinicia desde la iteracion 1**.
+
+No se mezclan. Un cambio de datos a mitad de fase no rompe el motor:
+rompe la lectura de los resultados, que es peor porque no se nota.
+
+### 5.5 El sesgo, en la cabecera de la tabla y no en una nota al pie
+
+Cada iteracion reporta `L_prim` y `L_sec` con esta cabecera pegada:
+
+> **`limp` esta sobreestimada en 25 eventos de 4561 (0,55 %).** Las 25
+> manos de `IMPORTE_SUBIDA` desplazan 24 eventos de `limp` a `open` y 1 a
+> `rol`; 8 de ellas cambian celdas de `cnt`, que es lo que `DEFAULT_ALPHA`
+> pondera. Los numeros de abajo **no son cifras limpias** y no se comparan
+> con ninguna otra corrida de esta fase.
+
+Si no esta en la cabecera, el primer consumidor de las tablas las lee como
+si fueran limpias. Y las metricas que salen de `limp` no se tocan: se
+declaran.
+
+### 5.6 Lo que esta decision NO dice
+
+No dice que el sesgo sea pequeno. Dice que es **conocido y uniforme**: las
+33 ocurrencias son el mismo defecto, con el mismo sintoma, en 25 manos de
+una sola sesion. Eso es lo que lo hace declarable en vez de ruido.
+
+No dice que `limp` sea correcta. Dice que se sabe **en que direccion** y
+**cuanto** se equivoca.
+
+No dice que el reetiquetado sea una mala idea. Dice que es otro trabajo,
+con otro riesgo, y que se hace cuando la calibracion este parada.
