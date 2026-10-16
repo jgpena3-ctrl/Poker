@@ -6,8 +6,8 @@ cambiar de fase, y eso es un commit con su motivo.
 | | |
 |---|---:|
 | ventana | 877 |
-| utilizables | 161 |
-| calibracion | 120 |
+| utilizables | 160 |
+| calibracion | 119 |
 | validacion | 41 |
 
 Regla: `validacion` si `sha256(hand_id) % 10 < 3`.
@@ -63,7 +63,6 @@ Regla: `validacion` si `sha256(hand_id) % 10 < 3`.
 - `H_0046`
 - `H_0053`
 - `H_0074`
-- `H_0093`
 - `H_0095`
 - `H_0105`
 - `H_0112`

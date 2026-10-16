@@ -156,6 +156,38 @@ def llego_al_showdown(h, pos, ult=None):
     return True
 
 
+def no_folteo_ever(h, pos):
+    """True si `pos` no tiene un 'f' en NINGUNA calle de la mano."""
+    for st in ORDEN_CALLES:
+        acts = ((h.get('streets') or {}).get(st) or {}).get('actions') or []
+        for a in acts:
+            if a.get('pos') == pos and a.get('action') == 'f':
+                return False
+    return True
+
+
+def gano_por_fold(h, declarados):
+    """EVIDENCIA POSITIVA de que el bote se gano sin showdown.
+
+    La regla del recorder: es victoria por fold cuando queda **un solo**
+    jugador que no ha folteado, y ese es el declarado. Si quedan dos, no
+    hay ganador por fold: hubo showdown (o la mano esta incompleta), y sin
+    las cartas no se puede saber cual.
+
+    Devuelve (True, '') si hay evidencia, (False, motivo) si no la hay.
+    """
+    vivos = {p.get('pos') for p in h.get('players') or []
+             if p.get('pos') and no_folteo_ever(h, p.get('pos'))}
+    if len(vivos) != 1:
+        return False, ('%d jugadores sin foldear: no es una victoria por '
+                       'fold' % len(vivos))
+    unico = next(iter(vivos))
+    if declarados and declarados != {unico}:
+        return False, ('el unico sin foldear es %s y el ganador declarado '
+                       'es %s' % (unico, sorted(declarados)))
+    return True, ''
+
+
 def mejores_manos(h):
     """({pos: score}, maximo) SOLO de los que llegaron al showdown.
 
@@ -335,7 +367,13 @@ def muestra():
         llegan = {p for p in declarados
                   if llego_al_showdown(h, p) and scores and p in scores}
         if not llegan:
-            pass                      # 2. VICTORIA POR FOLD: no se comprueba
+            # 2. VICTORIA POR FOLD, pero SOLO con evidencia positiva: que
+            # quede un unico jugador sin foldear y que sea el declarado.
+            # `revision_2`: antes bastaba con que ninguno llegara, y eso
+            # tambien pasa con acciones incompletas o cartas ausentes.
+            ok_fold, _mot = gano_por_fold(h, declarados)
+            if not ok_fold:
+                continue
         elif llegan == mejores:
             pass                      # 1. SHOWDOWN VERIFICABLE
         else:

@@ -350,9 +350,9 @@ mire aparte.
 | 134 | menos de 2 jugadores con cartas |
 | 1 | sin ganador |
 | 1 | el ganador no tiene cartas |
-| **161** | **utilizables (18,4 %)** |
+| **160** | **utilizables (18,3 %)** |
 
-**Reparto 70/30 sobre las 161 utilizables:** **120 de calibración y 41 de
+**Reparto 70/30 sobre las 160 utilizables:** **119 de calibración y 41 de
 validación**, disjuntas por construcción (§2.2). La lista exacta está
 versionada en [`PARTICION_FASE_D.md`](PARTICION_FASE_D.md).
 
@@ -364,7 +364,7 @@ tres definiciones ya corregidas:
 
 | | |
 |---|---|
-| reparto | el hero **gana 20 de 161**, **reparte 3** y pierde 138 |
+| reparto | el hero **gana 20 de 160**, **reparte 3** y pierde 137 |
 | Brier de un predictor **constante** `p = 0,124` | **0,1111** |
 
 > Las cuentas anteriores decían 21 victorias y 0,1165. Cambiaron al poder

@@ -224,7 +224,7 @@ es exactamente el error que §2.1.1.b dice que no se va a cometer otra vez.
 ## 6.c Con el camino preflop, `L_sec` ya se calcula. Y **pierde**
 
 `tools/equity_preflop.py` llena el hueco y las tres fugas quedan cerradas.
-La cobertura sube a **159 de 161 (98,8 %)** y el sesgo **desaparece**:
+La cobertura sube a **158 de 160 (98,8 %)** y el sesgo **desaparece**:
 cubre el 95 % de las victorias, el 100 % de los repartos y el 99 % de las
 derrotas. Antes eran 95 % contra 28 %.
 

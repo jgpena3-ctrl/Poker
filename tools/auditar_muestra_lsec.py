@@ -93,16 +93,50 @@ def ultima_calle(h):
     return None
 
 
-def llego_al_showdown(h, pos, ult):
-    """True si pos no folteo en ninguna calle ANTERIOR a ult."""
+def llego_al_showdown(h, pos, ult=None):
+    """True si `pos` NO folteo en NINGUNA calle de la mano.
+
+    Misma regla que `calibrar.py`: **cualquier** calle, incluida la
+    ultima. Antes retornaba True al LLEGAR a la ultima calle sin
+    inspeccionar sus acciones, y un fold en el river entraba como si
+    hubiera llegado al showdown.
+
+    Un fold es definitivo: el que folio salio del bote.
+    """
     for st in ORDEN_CALLES:
-        if st == ult:
-            return True
         acts = ((h.get('streets') or {}).get(st) or {}).get('actions') or []
         for a in acts:
             if a.get('pos') == pos and a.get('action') == 'f':
                 return False
     return True
+
+
+def no_folteo_ever(h, pos):
+    for st in ORDEN_CALLES:
+        acts = ((h.get('streets') or {}).get(st) or {}).get('actions') or []
+        for a in acts:
+            if a.get('pos') == pos and a.get('action') == 'f':
+                return False
+    return True
+
+
+def gano_por_fold(h, declarados):
+    """EVIDENCIA POSITIVA de victoria por fold.
+
+    No basta con que ningun ganador declarado llegue al showdown: eso
+    tambien pasa con acciones incompletas o cartas ausentes. La regla del
+    recorder es que es fold cuando queda UN SOLO jugador sin foldear, y
+    ese es el declarado.
+    """
+    vivos = {p.get('pos') for p in h.get('players') or []
+             if p.get('pos') and no_folteo_ever(h, p.get('pos'))}
+    if len(vivos) != 1:
+        return False, '%d jugadores sin foldear' % len(vivos)
+    unico = next(iter(vivos))
+    if declarados and declarados != {unico}:
+        return False, ('el unico sin foldear es %s y el declarado es %s'
+                       % (unico, sorted(declarados)))
+    return True, ''
 
 
 def mejores_manos(h):
@@ -210,6 +244,56 @@ def brier(ps, ys):
     return sum((p - y) ** 2 for p, y in zip(ps, ys)) / len(ps)
 
 
+def manos_utilizables():
+    """(etiquetas, ids, conteo) de la muestra, con TODOS los filtros.
+
+    Vive aqui y no dentro de `main` para que un test pueda llamarla y
+    comparar con `calibrar.muestra()`. Dos instrumentos que cuentan distinto
+    es como se descubre que los dos estan mal, asi que tienen que poder
+    contarse igual.
+    """
+    manos = learn.load_hands(reliable_only=True)
+    c = collections.Counter()
+    ys, ids = [], []
+    for h in manos:
+        if not (h.get('comunitarias') or {}).get('river'):
+            c['board incompleto'] += 1
+            continue
+        if len(con_cartas(h)) < 2:
+            c['menos de 2 jugadores con cartas'] += 1
+            continue
+        scores, mejor = mejores_manos(h)
+        declarados = {id_a_pos(h, i) for i in (h.get('winner') or [])}
+        declarados.discard(None)
+        if not declarados:
+            c['sin ganador'] += 1
+            continue
+        mejores = ({p for p, s_ in scores.items() if s_ == mejor}
+                   if mejor is not None else set())
+        llegan = {p for p in declarados
+                  if llego_al_showdown(h, p) and scores and p in scores}
+        if not llegan:
+            ok_fold, _mot = gano_por_fold(h, declarados)
+            if ok_fold:
+                c['ganador por fold, con evidencia'] += 1
+            else:
+                c['SIN evidencia de victoria por fold'] += 1
+                continue
+        elif llegan == mejores:
+            c['showdown verificable'] += 1
+        else:
+            c['INCOHERENTE con las cartas'] += 1
+            continue
+        y, mot = etiqueta(h)
+        if y is None:
+            c['no se puede etiquetar: ' + mot] += 1
+            continue
+        c['utilizable'] += 1
+        ys.append(y)
+        ids.append(h['hand_id'])
+    return ys, ids, c
+
+
 def main():
     manos = learn.load_hands(reliable_only=True)
     print('=' * 78)
@@ -218,42 +302,7 @@ def main():
     print('   ventana: %d manos' % len(manos))
     print()
 
-    c = collections.Counter()
-    ys = []
-    ids = []
-    for h in manos:
-        if len((h.get('comunitarias') or {}).get('river') or []) < 1:
-            c['board incompleto'] += 1
-            continue
-        if len(con_cartas(h)) < 2:
-            c['menos de 2 jugadores con cartas'] += 1
-            continue
-        # REGLA ESTRICTA: `winner` tiene que ser exactamente el conjunto
-        # de los que hacen la mejor mano, segun el evaluador del motor.
-        # MEDIDO: 31 de las 161 lo contradicen. Una etiqueta que se
-        # contradice con las cartas no es una etiqueta.
-        scores, mejor = mejores_manos(h)
-        declarados = {id_a_pos(h, i) for i in (h.get('winner') or [])}
-        declarados.discard(None)
-        if not declarados:
-            c['sin ganador'] += 1
-            continue
-        if mejor is not None and declarados & {pos for pos, s_ in
-                                                scores.items()
-                                                if s_ == mejor}:
-            reales = {pos for pos, s_ in scores.items() if s_ == mejor}
-            if declarados != reales:
-                c['INCOHERENTE: reparto incompleto'] += 1
-                continue
-        else:
-            c['ganador por fold, no comprobable'] += 1
-        y, mot = etiqueta(h)
-        if y is None:
-            c['no se puede etiquetar: ' + mot] += 1
-            continue
-        c['utilizable'] += 1
-        ys.append(y)
-        ids.append(h['hand_id'])
+    ys, ids, c = manos_utilizables()
 
     print('1) DESGLOSE')
     print('-' * 78)

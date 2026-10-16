@@ -65,16 +65,26 @@ def _mano(posiciones, nombres, cartas, winner, showdown=None):
 
 # ---------------------------------------------------------------- 1. muestra
 def test_la_muestra_son_los_numeros_del_contrato(cal):
-    """161 utilizables, 120 de calibracion, 41 de validacion.
+    """160 utilizables, 119 de calibracion, 41 de validacion.
 
-    Los numeros bajan de 156 a 161 al poder ETIQUETAR los repartos: las 7
-    manos con dos ganadores hacen todas la misma mano en el board, y eso
-    se demuestra con el evaluador del motor.
+    Tres filtros han movido este numero, y en los dos ultimos el filtro
+    ANTERIOR estaba mal:
+
+      - 156 -> 161  al poder etiquetar los repartos con el evaluador del
+        motor, en vez de fiarse de un texto.
+      - 161 -> 160  al exigir EVIDENCIA POSITIVA de victoria por fold.
+        Dos manos tienen dos jugadores sin foldear y no se puede demostrar
+        que se ganaran asi. Cuesta una mano, y el precio es correcto.
+      - y antes, 129, con un criterio que comparaba las cartas de todo el
+        mundo con el board y reportaba 32 incoherencias INEXISTENTES.
+
+    Este test es el que impide que la siguiente version del filtro se
+    cuele sin que nadie mire por que se movio.
     """
     c, v = cal.muestra()
-    assert len(c) == 120
+    assert len(c) == 119
     assert len(v) == 41
-    assert len(c) + len(v) == 161
+    assert len(c) + len(v) == 160
 
 
 def test_la_ventana_es_la_declarada(cal):
@@ -88,8 +98,8 @@ def test_la_particion_versionada_coincide_con_la_calculada(cal):
     c, v = cal.muestra()
     for hid, _y in v[:5]:
         assert '`%s`' % hid in texto
-    for marca in ('| validacion | 41 |', '| calibracion | 120 |',
-                  '| utilizables | 161 |'):
+    for marca in ('| validacion | 41 |', '| calibracion | 119 |',
+                  '| utilizables | 160 |'):
         assert marca in texto
 
 
@@ -100,17 +110,12 @@ def test_el_auditor_independiente_coincide(cal, aud):
     estan mal, asi que se comparan en un test y no a ojo.
     """
     ys = [y for _i, y in sum(cal.muestra(), [])]
-    ys_aud = []
-    for h in aud.learn.load_hands(reliable_only=True):
-        if not (h.get('comunitarias') or {}).get('river'):
-            continue
-        if len(aud.con_cartas(h)) < 2:
-            continue
-        y, _m = aud.etiqueta(h)
-        if y is not None:
-            ys_aud.append(y)
-    assert len(ys) == len(ys_aud) == 161
+    ys_aud, _ids, _c = aud.manos_utilizables()
+    assert len(ys) == len(ys_aud) == 160
     assert sorted(ys) == sorted(ys_aud)
+    # y el reparto de etiquetas, no solo el total
+    assert ys.count(1.0) == ys_aud.count(1.0)
+    assert ys.count(0.5) == ys_aud.count(0.5)
 
 
 # -------------------------------------------------------------- 2. etiqueta
@@ -306,6 +311,63 @@ def test_las_verificables_de_la_ventana_son_coherentes(cal, ventana):
     assert verificadas > 200, ('esperadas muchas: %d' % verificadas)
     assert incoherentes == ['H_0909'], (
         'cambió el conjunto de incoherentes: %s. Antes era 1' % incoherentes)
+
+
+def test_victoria_por_fold_necesita_evidencia_positiva(cal):
+    """No basta con que ningun ganador llegue al showdown.
+
+    `revision_2`: eso tambien pasa con acciones incompletas, posiciones sin
+    resolver o cartas ausentes. La prueba positiva la da la regla del
+    recorder: es victoria por fold cuando queda **un solo** jugador sin
+    foldear, y ese es el declarado.
+
+    MEDIDO: con esta exigencia la muestra baja de 161 a **160**. Dos manos
+    tienen DOS jugadores sin foldear y ganaban por el registro sin que eso
+    se pueda demostrar, y salen en vez de aceptarse en silencio.
+    """
+    # 1) evidencia POSITIVA: un solo jugador sin foldear
+    # UTG apuesta y los otros dos foltean: el unico sin foldear es UTG,
+    # y ese tiene que ser el declarado.
+    h1 = _mano(['BB', 'CO', 'UTG'], ['V', 'W', 'Jarduan'],
+               ['AcAs', '7h5s', '2c3d'], ['p2'])
+    h1['streets'] = {'preflop': {'actions': [
+        {'pos': 'UTG', 'action': 'b', 'amount': 3.0},
+        {'pos': 'CO', 'action': 'f', 'amount': 0.0},
+        {'pos': 'BB', 'action': 'f', 'amount': 0.0}]}}
+    ok, mot = cal.gano_por_fold(h1, {'UTG'})
+    assert ok is True, 'unico sin foldear y declarado: %s' % mot
+
+    # 2) sin evidencia: DOS jugadores sin foldear
+    h2 = _mano(['BB', 'CO', 'UTG'], ['V', 'W', 'Jarduan'],
+               ['AcAs', '7h5s', '2c3d'], ['p0'])
+    h2['streets'] = {'preflop': {'actions': [
+        {'pos': 'UTG', 'action': 'b', 'amount': 3.0},
+        {'pos': 'CO', 'action': 'c', 'amount': 3.0},
+        {'pos': 'BB', 'action': 'f', 'amount': 0.0}]}}
+    ok, mot = cal.gano_por_fold(h2, {'BB'})
+    assert ok is False, 'dos sin foldear no es victoria por fold'
+    assert 'sin foldear' in mot
+
+    # 3) el unico sin foldear NO es el declarado
+    h3 = _mano(['BB', 'CO', 'UTG'], ['V', 'W', 'Jarduan'],
+               ['AcAs', '7h5s', '2c3d'], ['p1'])
+    h3['streets'] = {'preflop': {'actions': [
+        {'pos': 'UTG', 'action': 'b', 'amount': 3.0},
+        {'pos': 'CO', 'action': 'c', 'amount': 3.0},
+        {'pos': 'BB', 'action': 'c', 'amount': 3.0}]}}
+    ok, mot = cal.gano_por_fold(h3, {'CO'})
+    assert ok is False, 'el declarado no es el unico sin foldear'
+
+
+
+
+def test_default_alpha_sigue_en_dos():
+    """La razon de todo lo de arriba, convertida en condicion."""
+    src = io.open(os.path.join(ROOT, 'motor', 'player_ranges.py'),
+                  encoding='utf-8').read()
+    linea = next(l for l in src.split(chr(10))
+                 if l.startswith('DEFAULT_ALPHA'))
+    assert '2.0' in linea, ('DEFAULT_ALPHA movido: %s' % linea.strip())
 
 
 # ------------------------------------- 3. hero y butaca: las dos cosas bien

@@ -52,7 +52,7 @@ también eran de este mismo bug.
 **682 097** con el mismo board. El ganador declarado pierde la comparación.
 No es un reparto incompleto: es un ganador que no ganó.
 
-Una mano en 877. **No afecta a la muestra de `L_sec`**, que se queda en 161
+Una mano en 877. **No afecta a la muestra de `L_sec`**, que se queda en 160
 utilizables.
 
 ## Lo que queda

@@ -49,11 +49,14 @@ RUTA_CACHE = os.path.join(
 _CACHE_DISCO = None
 
 #: Version del algoritmo. Si cambia `evaluate_n_batch`, `_cell_`, el
-#: reparto del bote o la comparacion de scores, hay que subirla: si no, la
-#: cache devuelve numeros de la version anterior sin avisar.
+#: reparto del bote o la comparacion de scores, hay que subirla.
 #:
-#: Va DENTRO de la clave y del fichero, no solo en el nombre. Un fichero
-#: cacheado con otra version se descarta entero.
+#: UNA SOLA REGLA DE INVALIDACION, y es de FICHERO: el nombre lleva la
+#: version y dentro el JSON la repite. Cualquier otra se descarta entero.
+#: `revision_2`: el comentario de antes decia que la version iba tambien en
+#: cada clave, y no era cierto. Meterla en la clave es redundante con el
+#: nombre, y dos reglas que hay que mantener juntas son dos reglas que
+#: un dia no coinciden.
 VERSION = 2
 
 
@@ -62,17 +65,32 @@ def _ruta_de(version):
 
 
 def _cargar_disco():
-    """Solo lee la cache de ESTA version. La de otra se ignora."""
+    """Solo lee la cache de ESTA version. La de otra se ignora.
+
+    `revision_2`: el `crudo.get(...)` estaba FUERA del try, asi que un JSON
+    valido sintacticamente pero con otra estructura —una lista en vez de un
+    objeto— reventaba con `AttributeError`. La cache es una comodidad: si
+    esta mal, se ignora, y punto.
+    """
     global _CACHE_DISCO
     if _CACHE_DISCO is None:
         _CACHE_DISCO = {}
         try:
             with open(_ruta_de(VERSION), encoding='utf-8') as fh:
                 crudo = json.load(fh)
+            if not isinstance(crudo, dict):
+                return _CACHE_DISCO
+            if crudo.get('version') != VERSION:
+                return _CACHE_DISCO
+            entradas = crudo.get('entradas')
+            if not isinstance(entradas, dict):
+                return _CACHE_DISCO
+            _CACHE_DISCO = {k: v for k, v in entradas.items()
+                            if isinstance(k, str) and isinstance(v, list)
+                            and len(v) == 2}
         except Exception:
-            return _CACHE_DISCO
-        if crudo.get('version') == VERSION:
-            _CACHE_DISCO = crudo.get('entradas') or {}
+            # cache ausente, ilegible o corrupta: se recalcula
+            _CACHE_DISCO = {}
     return _CACHE_DISCO
 
 
