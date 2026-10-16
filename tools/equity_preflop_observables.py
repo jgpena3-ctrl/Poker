@@ -275,6 +275,16 @@ def main():
     trabajo = []
     sin_rango = collections.Counter()
     sp_cortes = collections.Counter()
+    # Un contador POR ETAPA y por spot. `revision_2` §1: antes la
+    # columna "con mano" y la columna "con rival" salian de `trabajo`,
+    # que solo contiene manos que YA pasaron TODOS los filtros. Las dos
+    # decian lo mismo y el encabezado prometia mas de lo que se media.
+    etapas = collections.defaultdict(collections.Counter)
+
+    def _pasa(spot, etapa):
+        etapas[etapa][spot] += 1
+        etapas[etapa]["__total__"] += 1
+
     for hid, y in sorted(etiqueta.items()):
         h = por_id[hid]
         hero = eqm.hero_pos_de(h)
@@ -283,23 +293,33 @@ def main():
         calle, idx = eqm.corte_de_decision(h, hero)
         if calle != 'preflop':
             continue
-        # el spot se cuenta ANTES de cualquier filtro: es el denominador
-        sp_cortes[mano_del_spot(h, calle, hero, idx)] += 1
+        # ETAPA 1: el corte es preflop y el spot es uno de los tres.
+        spot = mano_del_spot(h, calle, hero, idx)
+        sp_cortes[spot] += 1
+        if spot is None or spot not in ACCIONES_SPOT:
+            sin_rango['spot sin alternativas declaradas'] += 1
+            continue
+        _pasa(spot, '1_corte_preflop')
+
+        # ETAPA 2: las dos cartas del hero son legibles.
         mc = cartas_de(h, hero)
         if not mc:
             sin_rango['sin cartas del hero'] += 1
             continue
+        _pasa(spot, '2_cartas_hero')
+
+        # ETAPA 3: hay un rival identificable en el corte.
         nombre, vpos = villano_del_corte(h, hero, calle, idx)
         if not nombre:
             sin_rango['sin villano identificado en el corte'] += 1
             continue
-        spot = mano_del_spot(h, calle, hero, idx)
-        if spot is None or spot not in ACCIONES_SPOT:
-            sin_rango['spot sin alternativas declaradas'] += 1
-            continue
+        _pasa(spot, '3_rival')
+
+        # ETAPA 4: el villano tiene perfil en el modelo.
         if nombre not in model.perfil:
             sin_rango['villano sin perfil: cae al prior plano'] += 1
             continue
+        _pasa(spot, '4_perfil')
         trabajo.append({'id': hid, 'y': y, 'hero': mc, 'villano': nombre,
                         'vpos': vpos, 'spot': spot,
                         'semilla': semilla_de(hid),
@@ -315,21 +335,37 @@ def main():
     for k, n in sin_rango.most_common():
         print('      sin computo: %-44s %3d' % (k, n))
     print()
-    print('   por spot, DESPUES de cada filtro:')
-    print('      %-24s %6s %8s %8s'
-          % ('spot', 'cortes', 'con mano', 'con rival'))
-    print('      ' + '-' * 52)
-    for spot in sorted(ACCIONES_SPOT):
-        c0 = sp_cortes.get(spot, 0)
-        c1 = sum(1 for t in trabajo if t['spot'] == spot)
-        print('      %-24s %6d %8d %8d'
-              % (spot, c0, c1, c1))
+    print('   POR SPOT Y POR ETAPA. Cada etapa es un filtro DISTINTO y')
+    print('   acumulado, asi que las columnas pueden bajarse: ahi se ve')
+    print('   donde se pierde la poblacion.')
     print()
-    print('   Y el detalle de lo que se cae, para que la poblacion sea')
-    print('   auditable y no una cifra de las que se pierde el origen:')
+    print('      %-14s %6s %7s %7s %7s %8s %9s'
+          % ('spot', 'corte', 'cartas', 'rival', 'perfil', 'ADMIT.',
+             'calculada'))
+    print('      ' + '-' * 66)
+    hechos = cache_abrir()
+    for spot in sorted(ACCIONES_SPOT):
+        adm = sum(1 for x in trabajo if x['spot'] == spot)
+        n_calc = sum(1 for v in hechos.values()
+                     if isinstance(v, dict) and v.get('spot') == spot)
+        print('      %-14s %6d %7d %7d %7d %8d %9d'
+              % (spot, sp_cortes.get(spot, 0),
+                 etapas['2_cartas_hero'][spot], etapas['3_rival'][spot],
+                 etapas['4_perfil'][spot], adm, n_calc))
+    print('      %-14s %6d %7d %7d %7d %8d %9d'
+          % ('TOTAL', sum(sp_cortes.values()),
+             etapas['2_cartas_hero']['__total__'],
+             etapas['3_rival']['__total__'],
+             etapas['4_perfil']['__total__'], len(trabajo),
+             sum(1 for v in hechos.values()
+                 if isinstance(v, dict) and 'equity' in v)))
+    print()
+    print('   ADMIT. son las que pasan las CUATRO etapas. calculada es lo')
+    print('   que ya esta en la cache de esta VERSION.')
+    print()
+    print('   Motivos de descarte:')
     for k, n in sin_rango.most_common():
         print('      %-44s %3d' % (k, n))
-    print()
     print('   `cartas_villano` se imprime pero NO se usa para nada. Esta ahi')
     print('   para que se vea que el rango no sale de ahi.')
     print()

@@ -96,7 +96,7 @@ def test_la_poblacion_es_auditable(ins):
     # y el recuento es ANTES de exigir villano
     # dentro del CUERPO de main(), no en los docstrings
     cuerpo = src[src.index('def main():'):]
-    i = cuerpo.index('sp_cortes[mano_del_spot')
+    i = cuerpo.index('sp_cortes[spot] += 1')
     j = cuerpo.index('villano_del_corte(h, hero, calle, idx)')
     assert i < j, 'el recuento por spot tiene que ir antes del filtro'
 
@@ -106,13 +106,18 @@ def test_la_afirmacion_de_monotonia_esta_corregida():
     """Dice al reves: en p_k = (N_k + a*S_k)/(opp+a) el prior pesa MAS."""
     d = io.open(os.path.join(ROOT, 'DOCS', 'QUE_ES_MATRIX.md'),
                 encoding='utf-8').read()
-    assert 'Es al revés' in d or '**es al revés**' in d.lower(), (
-        'la correccion de la monotonia tiene que estar en el documento')
-    assert 'S·opp − N' in d, (
-        'la derivada es lo que sostiene la monotonia de la SUMA: sin ella '
-        'la afirmacion es una conjetura')
+    # la condicion analitica, que es lo que hace falta para deducir
+    assert 'α·(S − 1) ≤ opp − N' in d or \
+        'S(c) ≤ 1' in d, (
+        'la condicion celda a celda es lo que sostiene la afirmacion')
+    assert 'Deducida' in d and 'Medida, no deducida' in d, (
+        'las dos tiene que quedar separadas: confundir eso es el error')
     assert 'No hay regla general' in d, (
         'para cada accion no hay regla general, y hay que decirlo')
+    assert '1,30' in d, (
+        'con las tablas de posicion no_raise llega a S = 1,30, y eso es lo '
+        'que hace que la afirmacion universal sea mas fuerte que la '
+        'evidencia: tiene que estar escrito')
 
 
 def test_la_coherencia_para_todo_alpha_es_medida_no_deducida():
@@ -122,6 +127,8 @@ def test_la_coherencia_para_todo_alpha_es_medida_no_deducida():
     assert 'medición sobre estos datos' in d, (
         'presentar como deducido lo que es medido es el error de este bloque')
     assert 'no suman 1' in d
+    assert 'si S(c) > 1' in d or 'solo mientras' in d, (
+        'con S > 1 la coherencia depende de alpha, y hay que decirlo')
 
 
 def test_no_queda_la_tabla_de_la_medicion_del_bug():

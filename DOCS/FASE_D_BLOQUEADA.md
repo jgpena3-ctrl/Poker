@@ -3,7 +3,8 @@
 > **Estado: el bloque 3 está REABIERTO.** Los otros tres siguen cerrados.
 >
 > `DEFAULT_ALPHA` sigue en 2,0 y **no tiene cota inferior**: la coherencia
-> por celda se cumple para todo α ≥ 0. Lo que lo sostiene es solo que es el
+> por celda se cumple para todo α ≥ 0 en la configuración que el motor
+> ejecuta de verdad, porque sus priors dan `max S(c) = 0,45 < 1`. Lo que lo sostiene es solo que es el
 > incumbent y no hay evidencia admisible que lo sustituya. No se calibra
 > porque las métricas no lo distinguirían. Ver el final.
 
@@ -91,7 +92,7 @@ escribió. Ya no.
 | **0** | definir el objetivo de `L_sec` | **CERRADO.** Objetivo: **ranking**, no probabilidad. Población: hero continúa o checkea, en validación. [`CONTRATO_L_SEC.md`](CONTRATO_L_SEC.md) §8, [`AUC_INTERVALO.md`](AUC_INTERVALO.md) |
 | **1** | camino de equity preflop | **DESBLOQUEADO.** El objetivo ya está, así que se puede implementar. Y sus dos decisiones abiertas —exacto o muestreado, y qué pasa con la varianza— están medidas: muestreado a 40 combos, varianza admisible. [`CONTRATO_PREFLOP.md`](CONTRATO_PREFLOP.md) |
 | **2** | una métrica que sobreviva al 86 % de derrotas | **CERRADO como ELECCIÓN:** equity como *ranking*, que es la opción que el propio bloque 2 enumeraba, y el AUC **no** depende de la base rate. Que **ordene bien** es otra pregunta, y con 11 manos de validación **no se puede afirmar** |
-| **3** | qué significa `matrix` | **REABIERTO, y por una razón mejor.** Dos veces se ha cerrado con pruebas que no se sostenían. Lo que **sí** está medido: las 117 tablas no suman 1 (solo 1 lo hace) y sus celdas **sí** están en `[0,1]`; `sum(matrix)` es 0,3× `sum(cnt)`; y la **coherencia por celda se cumple para todo α ≥ 0**, sin cota inferior. Lo que **no**: qué clase de cosa es, que no se deduce de datos ([`QUE_ES_MATRIX.md`](QUE_ES_MATRIX.md)) |
+| **3** | qué significa `matrix` | **REABIERTO, y por una razón mejor.** Dos veces se ha cerrado con pruebas que no se sostenían. Lo que **sí** está medido: las 117 tablas no suman 1 (solo 1 lo hace) y sus celdas **sí** están en `[0,1]`; `sum(matrix)` es 0,3× `sum(cnt)`; y la coherencia por celda **se cumple para todo α ≥ 0 en la configuración que el motor ejecuta** (0 de 1014 celdas con `S(c) > 1`, máximo 0,45), sin cota inferior. Lo que **no**: qué clase de cosa es, que no se deduce de datos ([`QUE_ES_MATRIX.md`](QUE_ES_MATRIX.md)) |
 
 ### Lo que queda bloqueando Fase D
 
@@ -247,22 +248,34 @@ Medido, con el motor en vez de con álgebra:
 > **No hay contradicción.** La afirmación «`alpha` no es un parámetro de
 > regularización» queda **retirada**: no se deduce.
 
-### Lo que sí aparece, y es nuevo
+### Lo que aparece al corregir el fold, y al revés de lo que se decía
 
-Barriendo `alpha`, la suma por celda **se pasa de 1 por debajo**:
+Antes, con el bug, la sección decía que *«la suma por celda se pasa de 1 por
+debajo»* y a continuación traía una tabla que decía *«coherente: sí»* en
+todas las filas. Las dos cosas no pueden ser verdad, y la segunda es la
+correcta: el «se pasa de 1» venía de sumar el prior crudo del fold.
 
-| `alpha` | coherencia | coherente |
-|---:|---:|:---:|
-| 0,05 | 0,9955 | sí |
-| 0,25 | 0,9780 | sí |
-| 1,00 | 0,9214 | sí |
-| 1,3636 | 0,9080 | sí |
-| 2,00 | 0,8625 | sí |
-| 5,00 | 0,7500 | sí |
+Medido, con `p_matrix(…, 'fold')` como hace el motor:
 
-> **No hay borde.** La coherencia por celda se cumple para todo α ≥ 0, porque
-> `N(c) ≤ opp(c)` por construcción. El umbral de 1,3636 del bloque anterior
-> era un artefacto de sumar el prior crudo del fold, y queda **retirado**.
+| `alpha` | coherencia por celda |
+|---:|---:|
+| 0,05 | 0,9955 |
+| 0,25 | 0,9780 |
+| 0,50 | 0,9577 |
+| 1,00 | 0,9214 |
+| **1,3636** | **0,9080** |
+| 2,00 | 0,8625 |
+| 5,00 | 0,7500 |
+
+> **No hay borde.** Ni un solo `alpha` rompe la invariante. El umbral de
+> 1,3636 del bloque anterior era un **artefacto** de sumar el prior crudo del
+> fold, y queda **retirado**.
+
+Lo que **sí** tiene una condición es la afirmación universal: se deduce si
+`S(c) ≤ 1`, y en la configuración que el motor ejecuta eso se cumple
+(0 de 1014 celdas, máximo 0,45). Con las **tablas de posición** `no_raise`
+llega a `S = 1,30` y ahí sí habría una cota superior. Ver
+[`QUE_ES_MATRIX.md`](QUE_ES_MATRIX.md).
 
 ### El estado corregido
 

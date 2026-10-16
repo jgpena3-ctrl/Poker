@@ -119,45 +119,76 @@ Barriendo `alpha` y mirando si la suma por celda se pasa de 1:
 
 > **Ni un solo `α` la rompe.** El «1,3636» era un artefacto del bug.
 
-**Y lo que se sostiene, y lo que es medida y qué es deducida.** La
-diferencia importa: si alguien cambia `preflop_matrices.json`, la coherencia
-puede romperse y no habría nada que lo avisara.
-
-| | | |
-|---|---|---|
-| `N(c) ≤ opp(c)` | por construcción: una mano no hace una acción más veces de las que tuvo oportunidades | **deducida** |
-| la coherencia por celda se cumple para todo `α ≥ 0` | malla de 99 puntos de 0,05 a 5,00 | **medida** |
-| la coherencia es monótona **decreciente** | 98 de 98 pasos no crecientes | **medida**, y la derivada dice por qué |
-
-### Por qué la suma decrece
-
-```
-d/dα [ (N + α·S) / (opp + α) ] = [ S·opp − N ] / (opp + α)²
-```
-
-La suma decrece **si y solo si** `S·opp < N`: el ritmo agregado del prior
-por debajo del empírico. Eso **no** se deduce de `N ≤ opp`; se cumple en
-estos datos, y por eso la malla lo ve.
-
-### Una corrección
-
-El texto de este bloque decía *«más α es menos probabilidad de cualquier
-acción, porque el prior pesa menos»*. **Es al revés.** En
-`p_k = (N_k + α·S_k)/(opp + α)` el prior pesa **más** al subir α, y la
-probabilidad de cada acción sube o baja según cómo quede su frecuencia
-empírica frente a su prior. **No hay regla general para el signo.** Lo que
-es cierto, y se acaba de derivar, es que la SUMA decrece.
-
-### Y la coherencia necesita DOS cosas, no una
-
-| | |
-|---|---|
-| `N(c) ≤ opp(c)` | **sí**, por construcción |
-| `S(c) ≤ 1` | **no**: las tablas de `preflop_matrices.json` no suman 1, van de 0,91 a 89,75 |
-
-Así que *«coherente para todo α»* es una **medición sobre estos datos**, no
-una consecuencia de la fórmula. En el bloque anterior se presentó como
-deducción, y no lo es.
+> **Y lo que se sostiene, y lo que es medida y qué es deducida.** La
+> diferencia importa: si alguien cambia `preflop_matrices.json`, o si
+> `p_matrix` empezara a recibir la posición, la coherencia puede romperse y
+> no habría nada que lo avisara.
+>
+> La condición analítica, celda a celda:
+>
+> ```
+> (N + α·S) / (opp + α) ≤ 1   ⟺   α·(S − 1) ≤ opp − N
+> ```
+>
+> | | |
+> |---|---|
+> | `S(c) ≤ 1` | se cumple para **todo** `α ≥ 0` |
+> | `S(c) > 1` | solo mientras `α ≤ (opp(c) − N(c)) / (S(c) − 1)` |
+>
+> ### (a) Deducida
+>
+> La coherencia por celda se cumple para todo `α ≥ 0` **si `S(c) ≤ 1`**.
+> Comprobado celda a celda, no inferido de una malla: **0 de 1014 celdas**
+> tienen `S(c) > 1`, y el máximo es **0,45**, en la configuración que el
+> motor ejecuta de hecho.
+>
+> ### (b) Medida, no deducida
+>
+> Y una correccion de este bloque: el texto decia que *mas alpha es menos
+> probabilidad de cualquier accion, porque el prior pesa menos*. **Es al
+> reves.** En p_k = (N_k + alpha*S_k)/(opp + alpha) el prior pesa **mas**
+> al subir alpha, y la probabilidad de cada accion sube o baja segun como
+> quede su frecuencia empirica frente a su prior. **No hay regla general
+> para el signo.** Lo que si es cierto, y se deriva mas abajo, es que la
+> **suma** decrece.
+>
+> Que esa configuración use el prior **plano** es un hecho del código, no una
+> propiedad del motor: `p_matrix(perfil, spot, acción)` llama a
+> `_prior_grid(acción, pos='', villain_pos='')`, y eso cae al plano para casi
+> todo.
+>
+> Y S(c) <= 1 NO esta garantizado por las tablas: de 0,91 a 89,75,
+> **no suman 1**. Por eso lo de arriba es una deduccion bajo una
+> condicion que hay que comprobar, y se comprueba celda a celda.
+>
+> Con las **tablas reales de posición** la conclusión cambia:
+>
+> | spot | `max S(c)` | celdas con `S > 1` |
+> |---|---:|---:|
+> | **`no_raise`** | **1,30** | **89 de 169** |
+> | `facing_open` | 0,45 | 0 |
+> | `facing_3bet` | 0,45 | 0 |
+>
+> ### (c) Por qué importa
+>
+> **`no_raise` es uno de los tres spots que el camino preflop acaba de meter
+> en la población.** Si `p_matrix` recibiera la posición, esas seis manos
+> entrarían en una zona donde la coherencia depende de `α`, y su equity
+> sería distinta.
+>
+> No es la configuración actual. Es lo que pasaría si alguien «arreglara» el
+> paso de la posición creyendo que es una mejora, sin mirar esto.
+>
+> ### Y la monotonía
+>
+> ```
+> d/dα [ (N + α·S) / (opp + α) ] = [ S·opp − N ] / (opp + α)²
+> ```
+>
+> La suma decrece **si y solo si** `S·opp < N`. No se deduce de
+> `N ≤ opp`; se cumple en estos datos, y por eso la malla de 99 puntos lo ve
+> (98 de 98 pasos no crecientes). Y es una afirmación sobre **estos datos**:
+> si cambiaran las tablas, dejaría de valer.
 
 ## Lo que se sabe y lo que no, con la prueba buena
 

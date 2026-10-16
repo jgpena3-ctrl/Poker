@@ -176,7 +176,7 @@ class CardReader:
 
     @staticmethod
     def _ncc_score(q, ref):
-        """Normalized cross-correlation score (higher = more similar)."""
+        """normalizado cross-correlation score (higher = more similar)."""
         qf = q.astype(float).ravel()
         rf = ref.astype(float).ravel()
         qn = (qf - qf.mean()) / max(qf.std(), 1e-8)
