@@ -1,9 +1,11 @@
 # FASE D — bloqueada, y con la razón escrita
 
-> **Estado al final de este bloque: los cuatro bloques están cerrados.**
+> **Estado: el bloque 3 está REABIERTO.** Los otros tres siguen cerrados.
 >
-> `DEFAULT_ALPHA` no se calibra porque `matrix` no es una probabilidad, y eso es un **resultado medido**, no un bloqueo.
-> Lo que queda no es «desbloquear»: es más manos y el camino preflop. Abajo está el cierre.
+> `DEFAULT_ALPHA` sigue en 2,0 y no se calibra, pero por una razón corregida:
+> las métricas disponibles no lo distinguirían. Y hay una cota inferior
+> medida: **α ≥ 1,3636**, por debajo el motor produce probabilidades que no
+> pueden existir. Ver el final del documento.
 
 ## El estado
 
@@ -89,7 +91,7 @@ escribió. Ya no.
 | **0** | definir el objetivo de `L_sec` | **CERRADO.** Objetivo: **ranking**, no probabilidad. Población: hero continúa o checkea, en validación. [`CONTRATO_L_SEC.md`](CONTRATO_L_SEC.md) §8, [`AUC_INTERVALO.md`](AUC_INTERVALO.md) |
 | **1** | camino de equity preflop | **DESBLOQUEADO.** El objetivo ya está, así que se puede implementar. Y sus dos decisiones abiertas —exacto o muestreado, y qué pasa con la varianza— están medidas: muestreado a 40 combos, varianza admisible. [`CONTRATO_PREFLOP.md`](CONTRATO_PREFLOP.md) |
 | **2** | una métrica que sobreviva al 86 % de derrotas | **CERRADO como ELECCIÓN:** equity como *ranking*, que es la opción que el propio bloque 2 enumeraba, y el AUC **no** depende de la base rate. Que **ordene bien** es otra pregunta, y con 11 manos de validación **no se puede afirmar** |
-| **3** | qué significa `matrix` | **abierto, y no se resuelve con datos** ([`QUE_ES_MATRIX.md`](QUE_ES_MATRIX.md)) |
+| **3** | qué significa `matrix` | **REABIERTO.** La prueba que lo cerraba estaba mal planteada: la exclusión mutua es **por mano**, no sobre las 169 manos ([`QUE_ES_MATRIX.md`](QUE_ES_MATRIX.md)). Sí hay una cota inferior medida: **α ≥ 1,3636** |
 
 ### Lo que queda bloqueando Fase D
 
@@ -192,13 +194,14 @@ quien lo generó, y es una pregunta, no un bloque.
 
 | | |
 |---|---|
-| el bloque 3 | **cerrado** |
+| el bloque 3 | ~~cerrado~~ → **REABIERTO**, la prueba no se sostenía |
 | la métrica | **elegida** (AUC, equity como ranking) |
-| **`DEFAULT_ALPHA`** | **cerrado como NO CALIBRABLE**, con test |
+| **`DEFAULT_ALPHA`** | **no se calibra**, pero porque las métricas no distinguirían, no porque `alpha` no sea un parámetro |
 
-> **Los cuatro bloques están cerrados. Fase D ya no está bloqueada por una
-> decisión pendiente: está parada porque no se puede calibrar `alpha`, y eso
-> es un resultado, no un bloqueo.**
+> **Los cuatro bloques estaban cerrados y el 3 se ha reabierto.** La prueba
+> que lo cerraba sumaba sobre las 169 manos cuando la exclusión mutua es
+> **por mano**. Corregida, no aparece ninguna contradicción. Abajo está el
+> cierre corregido.
 
 Lo que queda por hacer es lo otro, y es distinto de desbloquear:
 
@@ -210,3 +213,74 @@ Lo que queda por hacer es lo otro, y es distinto de desbloquear:
 
 Y con 11 manos en el AUC, el intervalo va a ser ancho **por pequeño que sea el
 error del estimador**. Ese es el límite real, y no es un problema de código.
+
+---
+
+## El bloque 3 se reabre: la prueba no se sostenía
+
+El bloque anterior cerró el bloque 3 con «`DEFAULT_ALPHA` no se calibra
+nunca», y lo hizo sobre esta prueba:
+
+> los priors de un spot tienen que sumar ≤ 1, y el prior plano del fold da
+> 25,35
+
+`revision_2` §2 tiene razón: **la exclusión mutua es por mano**, no sobre las
+169 manos. Yo salté de una cosa a otra. El contraejemplo lo dice exacto: 169
+celdas con 0,15 de fold cada una darían 25,35 **sin contradicción**, porque
+cada celda es una mano distinta.
+
+| | |
+|---|---|
+| lo que afirmaba | `sum_k S_k ≤ 1`, sumando sobre las **169 celdas** |
+| lo que es | `sum_k p_k(c) ≤ 1`, **para cada celda** `c` |
+
+### Y la prueba correcta no encuentra nada
+
+Medido, con el motor en vez de con álgebra:
+
+| | |
+|---|---|
+| celdas de `p_matrix` que pasan de 1 | **0** de 2 028 |
+| `p_matrix` máximo | **0,7571** |
+| suma por celda sobre acciones excluyentes | **0,9500**, máximo |
+
+> **No hay contradicción.** La afirmación «`alpha` no es un parámetro de
+> regularización» queda **retirada**: no se deduce.
+
+### Lo que sí aparece, y es nuevo
+
+Barriendo `alpha`, la suma por celda **se pasa de 1 por debajo**:
+
+| `alpha` | suma por celda | coherente |
+|---:|---:|:---:|
+| 1,00 | 1,0333 | **NO** |
+| 1,30 | 1,0056 | **NO** |
+| **1,3636** | **1,0000** | ← el borde, por bisección |
+| 2,00 | 0,9500 | sí |
+| 200,00 | 0,4671 | sí |
+
+> **`DEFAULT_ALPHA = 2,0` está 1,47× por encima del borde de coherencia.**
+> Abajo de 1,3636 el motor asigna a una mano más probabilidad total que 1
+> entre acciones que son mutuamente excluyentes. Eso no se calibra: es
+> imposible.
+
+### El estado corregido
+
+| bloque | estado |
+|---|---|
+| 0 · objetivo de `L_sec` | cerrado |
+| 1 · camino preflop | desbloqueado, decisiones medidas |
+| 2 · métrica que sobreviva | cerrado como **elección** |
+| **3 · qué significa `matrix`** | **REABIERTO**. Lo que se sabe es la forma; el significado sigue sin saberse |
+
+> **«No se calibra» se sostiene, pero por una razón mucho más débil:** las
+> métricas disponibles **no distinguirían**, porque `L_prim` es monótona y no
+> hay árbitro secundario. No porque `alpha` deje de ser un parámetro de
+> regularización. Y no es «nunca»: si alguien arregla `matrix` y trae una
+> métrica no monótona, la pregunta vuelve.
+
+### Lo que queda bloqueando Fase D
+
+El bloque 3, otra vez, **y ahora por una razón mejor**: no es que las tablas
+sean raras, es que **no sabemos qué son**. Eso hay que preguntárselo a quien
+las generó, y no se resuelve con datos.

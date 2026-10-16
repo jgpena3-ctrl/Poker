@@ -30,6 +30,12 @@ Lo corregido aquí:
 
 La hipótesis nula es DIRECCIONAL, declarada antes de mirar: H0 es AUC ≤ 0,5.
 Por eso el test de permutaciones cuenta una sola cola.
+
+Y `revision_2` §1 B: `auc_de`, `auc_rapido`, `p_permutaciones` e
+`ic_bootstrap` **exigen valores finitos** y lanzan `ValueError` si no. Antes
+solo el bootstrap los filtraba, y filtrar es peor que fallar: una equity
+contaminada se perdía en silencio y el intervalo salía de una muestra más
+pequeña de la que se creía.
 """
 import collections
 import importlib.util
@@ -82,10 +88,31 @@ def comprobar_solo_validacion(ids):
     return True
 
 
+def exige_finitos(valores, donde):
+    """Falla si algun valor no es finito. `revision_2` §1 B.
+
+    Sin esto, un NaN comparado con un numero da False en vez de dar error:
+    el AUC sale silenciosamente equivocado y no dice nada. Un inf es
+    todavia peor, porque contra otro inf da empate y cuenta como 0,5.
+
+    Acepta listas y arrays de numpy. Devuelve la lista, para encadenar.
+    """
+    malos = [i for i, x in enumerate(valores)
+             if not (x == x and -float('inf') < x < float('inf'))]
+    if malos:
+        raise ValueError(
+            '%d valor(es) no finito(s) en %s, en las posiciones %s. '
+            'Un NaN o un inf aqui no dan un AUC peor: dan un AUC que no '
+            'significa nada.' % (len(malos), donde, malos[:8]))
+    return list(valores)
+
+
 def auc_de(pos, neg):
     """AUC por comparaciones a pares. None si falta una clase."""
     if not pos or not neg:
         return None
+    exige_finitos(pos, 'ganadoras')
+    exige_finitos(neg, 'perdedoras')
     t = 0.0
     for p in pos:
         for n in neg:
@@ -99,6 +126,7 @@ def auc_rapido(et, v):
     n0 = len(et) - n1
     if n1 == 0 or n0 == 0:
         return None
+    exige_finitos(v, 'valores del AUC rapido')
     orden = np.argsort(v, kind='mergesort')
     v, et = v[orden], et[orden]
     rangos = np.empty(len(v), dtype=float)
@@ -122,8 +150,15 @@ def ic_bootstrap(pos, neg, n=BOOTSTRAP, semilla=SEMILLA, estratificado=True):
     sesga el intervalo hacia el lado que tiene más manos.
     """
     rng = np.random.default_rng(semilla)
-    ps = np.asarray([x for x in pos if np.isfinite(x)], dtype=float)
-    ns = np.asarray([x for x in neg if np.isfinite(x)], dtype=float)
+    # SIN FILTRAR. Antes se filtraba aqui, y eso hacia que un NaN se
+    # perdiera en silencio y el intervalo saliera de una muestra mas
+    # pequena de la que se cree. Ahora `exige_finitos` lo hace fallar, que
+    # es lo unico honesto. El numero no cambia: para datos finitos, filtrar
+    # y no filtrar dan lo mismo.
+    exige_finitos(pos, 'ganadoras')
+    exige_finitos(neg, 'perdedoras')
+    ps = np.asarray(pos, dtype=float)
+    ns = np.asarray(neg, dtype=float)
     if len(ps) < 2 or len(ns) < 2:
         return None
     if estratificado:
@@ -167,6 +202,8 @@ def p_permutaciones(pos, neg, n=PERMUTACIONES, semilla=SEMILLA):
     permutacion puede dar p = 0 exactamente, que es un valor imposible.
     """
     rng = np.random.default_rng(semilla)
+    exige_finitos(pos, 'ganadoras')
+    exige_finitos(neg, 'perdedoras')
     obs = auc_de(pos, neg)
     if obs is None:
         return None, 0, 0

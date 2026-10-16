@@ -1,167 +1,151 @@
-# QUÉ ES `matrix` — la respuesta, y la decisión
+# QUÉ ES `matrix` — sin resolver, y una cota medida
 
-> **Resuelto con una prueba, no con una opinión.** Instrumento:
-> [`tools/auditar_matrix.py`](../tools/auditar_matrix.py)
+> ## CORRECCIÓN. Este documento antes afirmaba que `DEFAULT_ALPHA` **nunca**
+> se calibra, y **retira esa afirmación.**
 >
-> La respuesta es **C**, y de las tres sub-opciones, la **tercera**:
-> **`alpha` no es un parámetro de regularización. NO SE CALIBRA NUNCA.**
+> La prueba que la sostenía estaba mal planteada. `revision_2` §2 tiene razón
+> y la objeción es de fondo.
 
-## La fórmula, y lo que obliga
+## Lo que estaba mal
 
-El motor calcula
-
-```python
-p_matrix(perfil, spot, accion) = (cnt + alpha * prior) / (opp + alpha)
-```
-
-en [`motor/player_ranges.py`](../motor/player_ranges.py). `cnt` son **cuentas**
-de manos, `opp` son las oportunidades. Sumando sobre las 169 celdas del grid:
+Yo afirmaba:
 
 ```
-sum_celdas p_matrix(spot, k) = [ N_k + alpha * S_k ] / (opp + alpha)
+sum_k S_k ≤ 1,   con S_k = la suma de las 169 celdas del prior de k
 ```
 
-donde `N_k = sum_celdas cnt[spot, k]` y `S_k` es la suma de la tabla prior de
-la acción `k`.
+Y de ahí: *«el prior plano del fold son 0,15 × 169 = 25,35, se pasa 25 veces
+por sí solo»*.
 
-Ahora bien, `p_matrix` es **P(acción | mano, spot)**, así que no puede pasar de
-1, y las acciones de un spot son **mutuamente excluyentes**. Además
-`sum_k N_k ≤ opp`, porque una mano hace **una sola** acción. La única forma de
-que todo eso se cumpla a la vez es:
+**La exclusión mutua es por mano**, no sobre las manos:
 
-> ### `sum_k S_k ≤ 1`
+```
+para cada celda c:   sum_k p_k(c) ≤ 1
+```
 
-**Los priors de todas las acciones de un spot, sumados, tienen que dar 1.**
+Yo salté de *«para cada celda»* a *«sumando las 169 celdas»*. El contraejemplo
+es exacto: si cada una de las 169 combinaciones tuviera 0,15 de hacer fold, la
+suma daría 25,35 y **no habría contradicción**, porque cada celda describe una
+mano distinta.
 
-Y medido:
+> El 25,35 era aritmética mía, no un defecto. Y `alpha · prior` no son
+> pseudo-conteos porque las tablas no sumen 1: eso no se deduce.
+>
+> **La afirmación «`alpha` no es un parámetro de regularización» queda
+> RETIRADA.** Y con ella la conclusión «no se calibra nunca».
+
+## La prueba correcta, y el resultado
+
+De la fórmula, sin discusión:
+
+```
+p_k(c) = (cnt_k(c) + α·prior_k(c)) / (opp + α)
+
+para cada celda c:  sum_k p_k(c) ≤ 1
+  ⟺  N(c) + α·sum_k prior_k(c) ≤ opp + α
+  ⟺  sum_k prior_k(c) ≤ 1        (porque N(c) ≤ opp)
+```
+
+**Por celda, sumando acciones.** Y en vez de álgebra, lo que el motor produce:
 
 | | |
 |---|---|
-| el prior **plano** del fold: 0,15 × 169 celdas | **S = 25,35** |
-| tablas de `preflop_matrices.json`: 117 | de **0,91** a **89,75**, mediana **10,00** |
-| tablas que suman ≈1 | **1 de 117** |
+| celdas de `p_matrix` evaluadas | 2 028 |
+| celdas que pasan de 1 | **0** |
+| `p_matrix` máximo | **0,7571** (`TIBURON`, `no_raise`, `open`) |
+| suma por celda sobre acciones excluyentes, máximo | **0,9500** |
 
-> El prior plano del fold **se pasa 25 veces por sí solo**, sin tocar una sola
-> de las 117 tablas. Eso no es una interpretación de los datos: es aritmética
-> de la fórmula que ya está escrita.
+> **No hay contradicción.** Con α = 2 el motor respeta el contrato de
+> probabilidades por celda.
 
-## Las celdas SÍ son probabilidades. Lo que faltó fue normalizar
+## Y esto sí es nuevo: hay una cota inferior para `alpha`
+
+Barriendo `alpha` y mirando si la suma por celda se pasa de 1:
+
+| `alpha` | `p` máximo | suma por celda | coherente |
+|---:|---:|---:|:---:|
+| 0,50 | 0,9227 | 1,0864 | **NO** |
+| 1,00 | 0,8583 | 1,0333 | **NO** |
+| 1,25 | 0,8300 | 1,0100 | **NO** |
+| 1,30 | 0,8246 | 1,0056 | **NO** |
+| **1,3636** | — | **1,0000** | ← el borde |
+| 1,50 | 0,8038 | 0,9885 | sí |
+| 2,00 | 0,7571 | 0,9500 | sí |
+| 3,00 | 0,6812 | 0,8875 | sí |
+| 200,00 | 0,1707 | 0,4671 | sí |
+
+Bisección, 22 iteraciones: el borde inferior es **α ≈ 1,3636**.
+
+> ### Por debajo de 1,3636 el motor produce probabilidades incoherentes.
+>
+> Para una mano dada, asigna más probabilidad total a acciones que son
+> mutuamente excluyentes. Eso no es una uncommon: es imposible.
+
+**Y `DEFAULT_ALPHA = 2,0 está 1,47× por encima del borde.** No está pegado al
+límite, pero tampoco es arbitrario: hay una razón medida para no bajar.
+
+## Lo que se sabe y lo que no, con la prueba buena
+
+### Se sabe
 
 | | |
 |---|---|
-| celdas totales | 19 773 |
-| celdas fuera de `[0, 1]` | **0** |
-| celdas exactamente iguales a 1 | 1 294 (6,5 %) |
-| tablas cuya celda máxima es exactamente 1 | **116 de 117** |
+| `matrix` **no es una distribución** sobre las 169 celdas | 1 de 117 tablas suma ≈1; van de **0,91 a 89,75**, mediana **10,00** |
+| las celdas **sí** son probabilidades | **0** de 19 773 fuera de `[0,1]`; 116 de 117 tablas tienen celda máxima = 1 |
+| `sum(matrix)` no es `sum(cnt)` ni un múltiplo | **0,3×** para `open` |
+| con α = 2 el motor **no viola** el contrato por celda | máximo 0,7571 y 0,9500 |
+| **α < 1,3636 sí lo viola** | borde medido |
 
-Las celdas son valores de probabilidad y el range es correcto. Lo que falló
-fue la **suma**: hay una probabilidad por celda y la tabla no está
-normalizada.
+### No se sabe, y no se puede saber con datos
 
-Eso **acota el problema**, y es lo que decide las opciones:
+> **QUÉ clase de cosa es `matrix`.**
 
-> **Normalizar NO basta.** Si cada tabla se normalizara a 1, tendríamos
-> `S_k = 1`, y dos acciones de un spot darían `S = 2 > 1`. El problema no
-> está solo en las tablas.
-
-## Y el prior plano no es hipotético: se usa para lo más frecuente
-
-| acción | prior | manos |
-|---|---|---:|
-| `fold` | **PLANO** | **221** |
-| `fold_vs_open` | **PLANO** | 145 |
-| `open` | tabla | 124 |
-| `call_open` | tabla | 94 |
-| `bb_check` | **PLANO** | 64 |
-| `rol` | tabla | 57 |
-| `limp` | tabla | 46 |
-| `call_limp` | tabla | 34 |
-| `3bet` | tabla | 17 |
-| `fold_vs_3bet` | **PLANO** | 16 |
-| `squeeze` | tabla | 8 |
-
-`fold`, `fold_vs_open`, `bb_check` y `fold_vs_3bet` no están en `CAT_TABLE`, así
-que `_prior_grid` les devuelve el plano **con un `RuntimeWarning` que el caller
-puede no ver**.
-
-> **El fold es la acción más frecuente del proyecto y es la que más se pasa de
-> la raya**: `S = 25,35` donde la fórmula admite 1.
-
-Es la misma trampa que el bloque anterior: *un fallback silencioso que produce
-un número plausible*.
-
-## Y `matrix` no viene de estos datos
-
-Si `matrix` fueran **cuentas crudas** (opción B), su suma sería el número de
-veces que se vio esa acción. Comparado contra `sum(cnt)` del mismo dataset:
-
-| acción | `sum(cnt)` | `sum(matrix)` | ratio |
-|---|---:|---:|---:|
-| `open` | 124,0 | 38,75 | **0,3×** |
-
-No es 1, ni se parece a 1, ni a ningún múltiplo limpio. **`matrix` no es una
-tabla de conteos de este dataset.** Eso descarta la opción B como lectura
-literal.
-
-## Las tres opciones, con su respuesta
-
-| | opción | veredicto |
-|---|---|---|
-| **A** | son priors normalizados; hay que normalizarlas | **NO BASTA**: normalizadas dan `S_k = 1` y dos acciones de un spot darían 2 |
-| **B** | son cuentas crudas; `player_ranges.py` está mal | **DESCARTADA**: la suma no es `sum(cnt)` ni un múltiplo de ella (0,3×) |
-| **C** | son otra cosa | **LA CORRECTA** |
-
-### Y qué hacer: la sub-opción tercera
-
-De las tres salidas de R1 para el caso C:
-
-| | | |
-|---|---|---|
-| 1 | cambiar la fórmula para que `prior` sea una probabilidad real | exige rediseñar el shrinkage: **otra decisión** |
-| 2 | cambiar la fuente de `prior` para que sea una probabilidad real | es una **decisión de poker**, no de datos |
-| **3** | **declarar que `alpha` no es un parámetro de regularización** | **la elegida** |
-
-> ## `DEFAULT_ALPHA` no se calibra. Nunca.
->
-> No porque no haya datos, sino porque **`alpha · prior` no son pseudo-conteos**
-> y comparar dos valores de `alpha` es comparar dos números sin unidad
-> conocida.
-
-### Tres razones medidas e independientes
-
-1. **`matrix` no es una probabilidad.** Las celdas están en `[0, 1]` pero las
-   tablas no suman 1. Un prior de probabilidad suma 1.
-2. **La fórmula no puede ser un shrinkage.** Los priors de un spot no pueden
-   sumar 1, y el prior plano del fold ya se pasa 25× solo.
-3. **`L_prim` es monótona en `alpha`.** 224 de 256 celdas empujan en el mismo
-   sentido: su ganador es siempre el candidato menor. Aunque la escala fuera
-   correcta, no habría un ganador que distinguir.
-
-## Lo que NO se resuelve aquí, y hay que decirlo
-
-> **QUÉ clase de cosa es `matrix` sigue sin saberse.**
-
-La medición acota la forma — celdas en `[0, 1]`, tablas sin normalizar, sin
-relación con `cnt` — pero no dice cuál era la **intención**. *Proporciones
-relativas* y *conteos con otra base* producen el mismo 89,75 y se corrigen de
-forma distinta.
+Que las tablas no sumen 1 dice que **no son una distribución**. No dice que
+sean inválidas para un shrinkage: *pesos relativos por celda* es un prior
+perfectamente utilizable en esa fórmula y daría exactamente las mismas sumas.
 
 Y `preflop_matrices.json` **no lleva metadatos**: no hay campo `origen`,
-`versión` ni `generado_por`. La respuesta a eso no está en el fichero, está en
-quien lo generó.
+`version` ni `generado_por`.
 
-Eso no bloquea Fase D. Bloqueaba que se **declarara** algo que no se puede
-declarar con honestidad, y ya está declarado: `alpha` no es calibrable, y por
-esa razón, no por falta de datos.
+### La pregunta, para quien generó el fichero
+
+> *«En `preflop_matrices.json`, ¿qué representa `matrix`? Las celdas están en
+> `[0,1]` pero las tablas suman entre 0,91 y 89,75, y solo 1 de 117 suma ≈1.
+> ¿Son una distribución que se normalizó mal, pesos relativos por celda, o
+> una magnitud distinta? Y si son pesos relativos, ¿contra qué se normalizan?»*
+
+## Y `DEFAULT_ALPHA`, con la formulación honesta
+
+La conclusión **«no se calibra» se sostiene**, pero por otra razón, y hay que
+decirla porque es **mucho más débil**:
+
+| | razón | fuerza |
+|---|---|---|
+| 1 | `L_prim` es **monótona** en α: 224 de 256 celdas empujan en el mismo sentido, así que su ganador es siempre el candidato **menor**, por definición | no **distingue** entre valores |
+| 2 | no hay métrica secundaria **admisible** para arbitrar: el Brier se pierde contra el predictor constante en la mitad retrospectiva, y el AUC no es afirmable con 11 manos | no hay **árbitro** |
+
+> **`DEFAULT_ALPHA` no se calibra porque las métricas disponibles no lo
+> distinguirían, no porque `alpha` no pueda ser un parámetro de
+> regularización.**
+>
+> Eso es un cambio grande respecto a lo que este documento afirmaba antes. Si
+> alguien arregla `matrix` **y** trae una métrica que no sea monótona, la
+> pregunta vuelve a plantearse. **No es «nunca».**
+
+Y lo que sí es permanente, y ahora está **medido**:
+
+> **No se baja de 1,3636.** Por debajo, el motor produce probabilidades que no
+> pueden existir. Eso no es una preferencia de calibración: es una
+> contradicción medible.
 
 ## Estado
 
 | | |
 |---|---|
-| `DEFAULT_ALPHA` | **2,0**, y no se calibra. Con test que falla si alguien lo mueve |
-| `data/preflop_matrices.json` | **intacto**. No se regenera nada |
-| `matrix` en la fórmula | **queda como está**, con su diagnóstico escrito |
-| opción 2 (fuente de prior) | **abierta**, y es una decisión de dominio |
+| `DEFAULT_ALPHA` | **2,0**. Se queda por estar **1,47× por encima del borde de coherencia** y por ser el incumbent. **No** porque esté calibrado |
+| cota inferior | **1,3636**, medida por bisección |
+| `data/preflop_matrices.json` | **intacto** |
+| qué es `matrix` | **abierto**. Era cerrado en el bloque anterior sobre una prueba que no se sostenía |
 
 ## Reproducir
 

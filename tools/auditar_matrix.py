@@ -1,38 +1,56 @@
 # -*- coding: utf-8 -*-
-"""QUE ES `matrix`. No es una pregunta de opinion: tiene una prueba.
+"""QUE ES `matrix`. CORREGIDO: la prueba anterior estaba mal planteada.
 
-La formula del motor es
+`revision_2` §2 tiene razon y la objecion es de fondo.
 
-    p_matrix(perfil, spot, accion) = (cnt + alpha*prior) / (opp + alpha)
+Lo que afirmaba antes:
 
-`cnt` son CUENTAS de manos. `opp` son las oportunidades. `prior` es lo que
-sale de `preflop_matrices.json`, con 117 tablas que suman entre 0,91 y 89,75.
+    sum_k S_k <= 1,   con S_k = suma de las 169 celdas del prior de k
 
-Hay una consecuencia aritmetica, y es la prueba:
+Eso NO se deduce de la exclusion mutua. La exclusion mutua es POR MANO:
 
-    sum_celdas p_matrix(spot, k) = [ N_k + alpha*S_k ] / (opp + alpha)
+    para cada celda c:   sum_k p_k(c) <= 1
 
-`p_matrix` es P(accion | mano, spot), asi que no puede pasar de 1, y las
-acciones de un spot son mutuamente excluyentes. Ademas sum_k N_k <= opp,
-porque una mano hace UNA sola accion. Luego la unica forma es
+Yo salte de "para cada celda" a "sumando las 169 celdas". El ejemplo de
+`revision_2` lo dice exacto: si cada una de las 169 combinaciones tuviera
+0,15 de hacer fold, la suma daria 25,35 y NO habria contradiccion, porque
+cada celda describe una mano distinta.
 
-    sum_k S_k  <=  1
+Asi que "el prior plano del fold se pasa 25 veces por si solo" era una
+cuenta mal planteada, y queda RETIRADO.
 
-Y medido: el prior PLANO del fold ya se pasa 25 veces por si solo, sin tocar
-una sola de las 117 tablas.
+La prueba correcta, por celda:
 
-No se toca `data/`. No se cambia la formula. Solo se mide.
+    p_k(c) = (cnt_k(c) + alpha*prior_k(c)) / (opp + alpha)
+
+    para cada celda c:  sum_k p_k(c) <= 1
+      <=> N(c) + alpha*sum_k prior_k(c) <= opp + alpha
+      <=> sum_k prior_k(c) <= 1        (porque N(c) <= opp)
+
+Y mas directo: se mide lo que el motor PRODUCE. Si `p_matrix` devolviera una
+celda > 1, o una suma por celda > 1 sobre acciones excluyentes, habria una
+contradiccion real. Medido: NO la hay.
+
+Lo que queda en pie sobre que es `matrix`:
+  - las tablas no suman 1 (1 de 117 lo hace, de 0,91 a 89,75)
+  - las celdas SI estan en [0,1]
+  - sum(matrix) no es sum(cnt) ni un multiplo (0,3x)
+Ninguna de esas tres dice que `matrix` sea semanticamente invalido. Lo que
+dicen es que no es una probabilidad sobre las 169 celdas.
+
+Lo que NO queda en pie: que `alpha` deje de ser un parametro de
+regularizacion. Eso no se deduce de ahi.
 
 Uso:
     python tools/auditar_matrix.py
 """
-import collections
 import hashlib
 import importlib.util
 import io
 import json
 import os
 import sys
+import warnings
 
 import numpy as np
 
@@ -47,9 +65,9 @@ TABLAS = json.load(io.open(os.path.join(ROOT, 'data',
                                        'preflop_matrices.json'),
                            encoding='utf-8'))['tables']
 
-# Acciones mutuamente excluyentes por spot. No sale de CAT_TABLE sino de lo
-# que significa cada spot: en `facing_open` o se hace 3bet o se hace call,
-# y las dos cosas no pueden pasar a la vez.
+# Las acciones MUTUAMENTE EXCLUYENTES de cada spot. El fold NO entra aqui:
+# no tiene tabla y su prior es el plano. Se anade aparte en la prueba, y se
+# dice que se anade.
 ACCIONES_DE = {
     'no_raise': ['open', 'limp'],
     'facing_open': ['call_open', '3bet'],
@@ -67,12 +85,37 @@ def sumas():
     return filas
 
 
+def celdas_fuera_de_rango():
+    todos = np.concatenate([np.asarray(v['matrix'], dtype=float).ravel()
+                            for v in TABLAS.values()])
+    return todos
+
+
 def main():
     filas = sumas()
     s = np.array([d['suma'] for d in filas])
 
     print('=' * 78)
-    print('1) LAS 117 TABLAS')
+    print('1) LO QUE SE RETIRA')
+    print('=' * 78)
+    print()
+    print('   La version anterior de este script afirmaba:')
+    print()
+    print('       "los priors de un spot tienen que sumar 1"')
+    print('       "el prior plano del fold se pasa 25 veces por si solo"')
+    print('       "alpha NO es un parametro de regularizacion"')
+    print()
+    print('   `revision_2` §2: la exclusion mutua es POR MANO')
+    print('   (`sum_k p_k(c) <= 1` para cada celda `c`), no sobre las 169')
+    print('   manos. Yo salte de una a otra.')
+    print()
+    print('   Contraejemplo: 169 celdas con 0,15 de fold cada una darian')
+    print('   25,35 y NO habria contradiccion, porque cada celda es una mano')
+    print('   DISTINTA. El 25,35 era aritmetica mia, no un defecto.')
+    print()
+
+    print('=' * 78)
+    print('2) LAS TABLAS: LO QUE SIGUE SI ESTANDO MEDIDO')
     print('=' * 78)
     print()
     print('   %-24s %8s %8s %9s' % ('tabla', 'suma', 'max', '% ceros'))
@@ -84,57 +127,32 @@ def main():
     for d in filas[-6:]:
         print('   %-24s %8.2f %8.2f %8.1f%%'
               % (d['clave'][:24], d['suma'], d['max'], d['ceros'] * 100))
+    todos = celdas_fuera_de_rango()
     print()
     print('   suma: min %.2f · mediana %.2f · max %.2f'
           % (s.min(), float(np.median(s)), s.max()))
-    print('   tablas que suman ~1: %d de %d'
+    print('   tablas que suman ~1 : %d de %d'
           % (int((np.abs(s - 1.0) < 0.05).sum()), len(s)))
+    print('   celdas fuera de [0,1]: %d de %d'
+          % (int(((todos < 0) | (todos > 1)).sum()), todos.size))
+    print('   tablas con celda max = 1: %d de %d'
+          % (sum(1 for d in filas if d['max'] == 1.0), len(s)))
+    print()
+    print('   Leer esto bien: las celdas SON valores de probabilidad y el')
+    print('   rango es correcto. Lo que no es correcto es que la tabla sea')
+    print('   una DISTRIBUCION sobre las 169 celdas, porque no suma 1.')
     print()
 
     print('=' * 78)
-    print('2) LA PRUEBA: LOS PRIORS DE UN SPOT TIENEN QUE SUMAR 1')
+    print('3) LA PRUEBA CORRECTA: POR CELDA')
     print('=' * 78)
     print()
-    print('   sum_celdas p_matrix = [ N_k + alpha*S_k ] / (opp + alpha)')
+    print('       p_k(c) = (cnt_k(c) + alpha*prior_k(c)) / (opp + alpha)')
+    print('       sum_k p_k(c) <= 1   para CADA celda c')
     print()
-    print('   p_matrix es P(accion|mano,spot) y las acciones de un spot son')
-    print('   mutuamente excluyentes, asi que no pasa de 1. Con sum_k N_k <=')
-    print('   opp, la unica forma es sum_k S_k <= 1.')
+    print('   Y en vez de algebra, lo que el motor produce de verdad.')
     print()
-    print('   Y el prior PLANO del fold ya lo incumple:')
-    print()
-    print('       FLAT_PRIOR = %.2f por celda  ->  S = %.2f sobre 169 celdas'
-          % (player_ranges.FLAT_PRIOR, player_ranges.FLAT_PRIOR * 169))
-    print()
-    print('   Sin tocar una sola de las 117 tablas. Es aritmetica de la')
-    print('   formula que ya esta escrita en `player_ranges.py`.')
-    print()
-
-    print('=' * 78)
-    print('3) LAS CELDAS: PROBABILIDADES SIN NORMALIZAR')
-    print('=' * 78)
-    print()
-    todos = np.concatenate([np.asarray(v['matrix'], dtype=float).ravel()
-                            for v in TABLAS.values()])
-    print('   celdas totales                 : %d' % todos.size)
-    print('   celdas fuera de [0, 1]         : %d'
-          % int(((todos < 0.0) | (todos > 1.0)).sum()))
-    print('   celdas exactamente iguales a 1 : %d  (%.1f%%)'
-          % (int((todos == 1.0).sum()), 100.0 * (todos == 1.0).mean()))
-    print('   tablas con celda maxima = 1    : %d de %d'
-          % (sum(1 for d in filas if d['max'] == 1.0), len(filas)))
-    print()
-    print('   Las celdas SI estan en [0, 1]. Lo que fallo fue NORMALIZAR, no')
-    print('   el rango. Y por eso normalizar NO basta: normalizadas darian')
-    print('   S_k = 1, y dos acciones de un spot darian S = 2 > 1.')
-    print()
-
-    print('=' * 78)
-    print('4) EL PRIOR PLANO SE USA DE VERDAD, Y PARA LO MAS FRECUENTE')
-    print('=' * 78)
-    print()
-    es_val = lambda hid: int(hashlib.sha256(
-        hid.encode('utf-8')).hexdigest(), 16) % 10 < 3
+    es_val = lambda hid: cal.es_validacion(hid)
     ventana = learn.load_hands(reliable_only=True)
     ajuste = [h for h in ventana if not es_val(h['hand_id'])]
     spec = importlib.util.spec_from_file_location(
@@ -144,54 +162,166 @@ def main():
     model = player_ranges.ProfileRangeModel.from_hands(
         ajuste, labels=eqm.perfiles_de(ajuste),
         alpha=player_ranges.DEFAULT_ALPHA)
-
-    accs = collections.Counter()
-    sumas_cnt = collections.Counter()
-    for (perfil, spot, a), c in model.cnt.items():
-        accs[a] += 1
-        sumas_cnt[a] += float(np.asarray(c, dtype=float).sum())
-
-    print('   %-14s %-14s %12s'
-          % ('accion', 'prior', 'suma cnt'))
-    print('   ' + '-' * 44)
-    for a in sorted(sumas_cnt, key=lambda k: -sumas_cnt[k]):
-        print('   %-14s %-14s %12.1f'
-              % (a, 'TABLA' if a in player_ranges.CAT_TABLE else 'PLANO',
-                 sumas_cnt[a]))
+    print('   modelo: %d perfiles, %d (perfil, spot), alpha = %.1f'
+          % (len(model.perfil), len(model.opp), model.alpha))
     print()
-    planas = [a for a in sumas_cnt if a not in player_ranges.CAT_TABLE]
-    if planas:
-        total = sum(sumas_cnt[a] for a in planas)
-        print('   Acciones que caen al prior PLANO: %s' % ', '.join(planas))
-        print('   suman %.0f manos, el %.0f%% de las observadas.'
-              % (total, 100.0 * total / sum(sumas_cnt.values())))
-        print()
-        print('   El fold es la accion MAS FRECUENTE del proyecto y es la que')
-        print('   mas se pasa de la raya: S = %.2f donde la formula admite 1.'
-              % (player_ranges.FLAT_PRIOR * 169))
-        print()
+
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        max_celda = 0.0
+        donde = None
+        n_celdas = 0
+        n_sobre = 0
+        porcelda = []
+        for (perfil, spot), opp in sorted(model.opp.items()):
+            accs = ACCIONES_DE.get(spot)
+            if not accs:
+                continue
+            grids = [np.asarray(model.p_matrix(perfil, spot, a),
+                                dtype=float) for a in accs]
+            for a, g in zip(accs, grids):
+                n_celdas += g.size
+                n_sobre += int((g > 1.0).sum())
+                if float(g.max()) > max_celda:
+                    max_celda = float(g.max())
+                    donde = (perfil, spot, a)
+            total = sum(grids)
+            total += np.asarray(model._prior_grid('fold', '', ''),
+                               dtype=float)
+            porcelda.append(float(total.max()))
+
+    print('   3a) celdas de `p_matrix` que pasan de 1')
+    print('       celdas evaluadas : %d' % n_celdas)
+    print('       celdas > 1       : %d' % n_sobre)
+    print('       maximo           : %.6f   en %s' % (max_celda, donde))
+    print()
+
+    R = np.array(porcelda)
+    print('   3b) suma por CELDA sobre las acciones excluyentes, con el')
+    print('       prior plano del fold anadido a proposito')
+    print('       %-12s %-12s %9s %9s'
+          % ('perfil', 'spot', 'mediana', 'maximo'))
+    print('       ' + '-' * 46)
+    for (perfil, spot), _opp in sorted(model.opp.items()):
+        accs = ACCIONES_DE.get(spot)
+        if not accs:
+            continue
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            t = sum(np.asarray(model.p_matrix(perfil, spot, a), dtype=float)
+                    for a in accs)
+            t = t + np.asarray(model._prior_grid('fold', '', ''),
+                               dtype=float)
+        print('       %-12s %-12s %9.4f %9.4f'
+              % (perfil[:12], str(spot)[:12], float(np.median(t)),
+                 float(t.max())))
+    print()
+    print('       la condicion es <= 1.  maximo observado: %.4f  -> %s'
+          % (R.max(), 'SE CUMPLE' if R.max() <= 1.0 else 'SE INCUMPLE'))
+    print()
+    print('   O sea: **no hay contradiccion**. El motor, con alpha = 2,')
+    print('   respeta el contrato de probabilidades por celda.')
+    print()
+
+    print('   3c) ¿y para otros alpha? Si el contrato se rompiera para valores')
+    print('       grandes, alpha tendria un rango admisible, y eso si seria')
+    print('       informacion sobre si es un parametro con sentido.')
+    print()
+    print('       %-8s %11s %11s %11s'
+          % ('alpha', 'max p', 'max suma', 'veredicto'))
+    print('       ' + '-' * 46)
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        for a in (0.5, 1.0, 2.0, 5.0, 10.0, 50.0, 200.0):
+            model.alpha = a
+            mp = 0.0
+            ms = 0.0
+            for (perfil, spot), _opp in sorted(model.opp.items()):
+                accs = ACCIONES_DE.get(spot)
+                if not accs:
+                    continue
+                t = np.zeros((13, 13))
+                for act in accs:
+                    g = np.asarray(model.p_matrix(perfil, spot, act),
+                                   dtype=float)
+                    t += g
+                    mp = max(mp, float(g.max()))
+                t += np.asarray(model._prior_grid('fold', '', ''),
+                               dtype=float)
+                ms = max(ms, float(t.max()))
+            print('       %-8.1f %11.4f %11.4f %11s'
+                  % (a, mp, ms, 'OK' if max(mp, ms) <= 1.0 else 'SE ROMPE'))
+        model.alpha = player_ranges.DEFAULT_ALPHA
+    print()
+    print('   Si aguanta hasta alpha = 200, el contrato por celda NO acota')
+    print('   alpha. La restriccion que hay es la de la METRICA, no la de la')
+    print('   probabilidad.')
+    print()
 
     print('=' * 78)
-    print('5) LA RESOLUCION')
+    print('4) QUE ES matrix, Y QUE ES LO QUE NO SE SABE')
     print('=' * 78)
     print()
-    print('   Lo que la medicion DICE, sin interpretar nada:')
+    print('   LO QUE SE PUEDE DECIR, con la prueba buena:')
     print()
-    print('     1. `matrix` NO es una probabilidad sobre las 169 celdas: si lo')
-    print('        fuera, cada tabla sumaria 1, y lo hace 1 de 117.')
-    print('     2. Los priors de un spot NO pueden sumar 1 con esta formula.')
-    print('     3. Luego (cnt + alpha*prior)/(opp + alpha) NO es un shrinkage')
-    print('        hacia una probabilidad, y `alpha` no son pseudo-conteos.')
+    print('     - `matrix` NO es una distribucion sobre las 169 celdas: 1 de')
+    print('       117 tablas suma ~1, y van de 0,91 a 89,75.')
+    print('     - Las celdas SI son probabilidades en [0,1].')
+    print('     - `sum(matrix)` no es `sum(cnt)` ni un multiplo: 0,3x.')
+    print('     - Con alpha = 2 el motor NO viola el contrato por celda.')
     print()
-    print('   Eso es **CASO C**, y de las tres sub-opciones la **tercera**:')
+    print('   LO QUE NO SE SABE, y no se puede saber con datos:')
     print()
-    print('       `alpha` no es un parametro de regularizacion.')
-    print('       NO SE CALIBRA NUNCA.')
+    print('     - QUE clase de cosa es. Que las tablas no sumen 1 dice que')
+    print('       no son una distribucion; no dice que sean invalidas para')
+    print('       shrinkage. "Pesos relativos por celda" es un prior')
+    print('       perfectamente utilizable y daria las mismas sumas.')
+    print('     - Quien las genero y con que criterio. El fichero no lleva')
+    print('       metadatos: no hay campo `origen`, `version` ni `generado_por`.')
     print()
-    print('   Lo que NO se puede decidir con datos: QUE clase de cosa es. La')
-    print('   medicion acota la forma, no la intencion, y "proporciones')
-    print('   relativas" y "conteos con otra base" dan el mismo 89,75 con')
-    print('   Remedian distinto. Eso hay que preguntar a quien lo genero.')
+    print('   Y ESTO es lo que hay que preguntar a quien lo genero:')
+    print()
+    print('       "En `preflop_matrices.json`, ¿que representa `matrix`?')
+    print('        Las celdas estan en [0,1] pero las tablas suman entre 0,91')
+    print('        y 89,75. ¿Son una distribucion que seNormalized mal, pesos')
+    print('        relativos, o una magnitud distinta? Y si son pesos')
+    print('        relativos, ¿contra que se normalizan?"')
+    print()
+
+    print('=' * 78)
+    print('5) Y DEFAULT_ALPHA')
+    print('=' * 78)
+    print()
+    print('   La conclusion "NO SE CALIBRA" **se sostiene**, pero por otra')
+    print('   razon, y hay que decirlo porque es MUCHO mas debil:')
+    print()
+    print('     1. `L_prim` es MONOTONA en alpha: 224 de 256 celdas empujan')
+    print('        en el mismo sentido. Su ganador es siempre el candidato')
+    print('        menor, por definicion. No distingue.')
+    print()
+    print('     2. No hay metrica secundaria ADMISIBLE para arbitrar: el Brier')
+    print('        se pierde contra el predictor constante en la mitad')
+    print('        retrospectiva, y el AUC no es afirmable con 11 manos.')
+    print()
+    print('   Lo que NO sostiene ya es "alpha no es un parametro de')
+    print('   regularizacion". Esa frase sale del argumento retirado.')
+    print()
+    print('   Asi que la formulacion honesta es:')
+    print()
+    print('       NO SE CALIBRA porque las metricas disponibles no')
+    print('       distinguirian, no porque alpha no pueda ser un parametro')
+    print('       de regularizacion. Si alguien arregla `matrix` Y trae una')
+    print('       metrica que no sea monótona, la pregunta vuelve a')
+    print('       plantearse.')
+
+
+# `cal` se necesita en main() para la regla de particion canonica. Se
+# importa sin pagar el coste de `learn` al importar el modulo.
+import importlib.util as _il
+_spec = _il.spec_from_file_location('calibrar', os.path.join(ROOT, 'tools',
+                                                              'calibrar.py'))
+cal = _il.module_from_spec(_spec)
+_spec.loader.exec_module(cal)
 
 
 if __name__ == '__main__':
