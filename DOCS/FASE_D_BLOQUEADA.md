@@ -1,5 +1,10 @@
 # FASE D — bloqueada, y con la razón escrita
 
+> **Estado al final de este bloque: los cuatro bloques están cerrados.**
+>
+> `DEFAULT_ALPHA` no se calibra porque `matrix` no es una probabilidad, y eso es un **resultado medido**, no un bloqueo.
+> Lo que queda no es «desbloquear»: es más manos y el camino preflop. Abajo está el cierre.
+
 ## El estado
 
 **Fase D no puede continuar con las métricas actuales.**
@@ -130,3 +135,78 @@ preflop observable es justo lo que las mete.
 > Ahora se sabe que es de las dos cosas: cobertura **y** tamaño. Y las dos se
 > pueden atacar: la cobertura con el camino preflop, el tamaño con más manos,
 > que es un commit con su motivo y no un ajuste.
+
+---
+
+## El bloque 3 también está cerrado, y lo que queda
+
+La tabla de arriba ponía el bloque 3 como «abierto, y no se resuelve con
+datos». Cerrado: **se resuelve, y la respuesta es que `DEFAULT_ALPHA` no es
+calibrable.**
+
+### La prueba, que es aritmética y no interpretación
+
+`p_matrix = (cnt + α·prior) / (opp + α)`. Sumando sobre las 169 celdas:
+
+```
+sum_celdas p_matrix = [ N_k + α·S_k ] / (opp + α)
+```
+
+`p_matrix` es P(acción|mano, spot) y las acciones de un spot son mutuamente
+excluyentes, así que no puede pasar de 1. Como `sum_k N_k ≤ opp`, la única
+forma es **`sum_k S_k ≤ 1`**.
+
+Y medido: el prior **plano** del fold da `S = 0,15 × 169 = 25,35`. Se pasa
+**25 veces** por sí solo, sin tocar una sola de las 117 tablas.
+
+| | |
+|---|---|
+| las 117 tablas suman | de **0,91** a **89,75**, mediana **10,00** |
+| tablas que suman ≈1 | **1 de 117** |
+| celdas fuera de `[0, 1]` | **0** de 19 773 |
+| `sum(matrix)` contra `sum(cnt)` para `open` | **0,3×** — no es la misma escala |
+
+Las celdas **sí** son probabilidades: lo que faltó fue normalizar. Pero
+normalizar **no basta**: normalizadas darían `S_k = 1`, y dos acciones de un
+spot darían 2.
+
+### Lo que sale de eso
+
+> **`alpha · prior` no son pseudo-conteos. `DEFAULT_ALPHA` NO SE CALIBRA NUNCA.**
+
+Tres razones medidas e independientes: `matrix` no suma 1, la fórmula no puede
+ser un shrinkage, y `L_prim` es monótona en `alpha` (224 de 256 celdas empujan
+en el mismo sentido).
+
+### Y lo que sigue abierto, que es distinto de bloqueante
+
+Qué clase de cosa es `matrix` **no** se sabe, y no se puede saber con datos:
+las celdas están en `[0,1]`, las tablas no suman 1 y no hay relación con `cnt`,
+pero eso acota la forma y no la intención. *Proporciones relativas* y
+*conteos con otra base* dan el mismo 89,75 con Remedies distintos.
+
+Y `preflop_matrices.json` no lleva metadatos. Eso hay que preguntárselo a
+quien lo generó, y es una pregunta, no un bloque.
+
+## Entonces, ¿qué bloquea Fase D ahora?
+
+| | |
+|---|---|
+| el bloque 3 | **cerrado** |
+| la métrica | **elegida** (AUC, equity como ranking) |
+| **`DEFAULT_ALPHA`** | **cerrado como NO CALIBRABLE**, con test |
+
+> **Los cuatro bloques están cerrados. Fase D ya no está bloqueada por una
+> decisión pendiente: está parada porque no se puede calibrar `alpha`, y eso
+> es un resultado, no un bloqueo.**
+
+Lo que queda por hacer es lo otro, y es distinto de desbloquear:
+
+| | |
+|---|---|
+| el camino preflop observable | sin implementar. Sus dos decisiones ya están medidas y son ejecutables (3,3 h) |
+| la cobertura | **14 manos de 41** entran al AUC. Las 23 que faltan son cortes preflop |
+| más manos de validación | el reparto es `sha256(hand_id) % 10 < 3`, y cambiarlo es cambiar de fase |
+
+Y con 11 manos en el AUC, el intervalo va a ser ancho **por pequeño que sea el
+error del estimador**. Ese es el límite real, y no es un problema de código.

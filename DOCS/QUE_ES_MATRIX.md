@@ -1,93 +1,170 @@
-# QUÉ ES `matrix` — la pregunta, y por qué bloquea
+# QUÉ ES `matrix` — la respuesta, y la decisión
 
-> Bloque declarado, no resuelto. Es el tercer bloque que impide calibrar
-> `DEFAULT_ALPHA`, y el más barato de los tres.
+> **Resuelto con una prueba, no con una opinión.** Instrumento:
+> [`tools/auditar_matrix.py`](../tools/auditar_matrix.py)
+>
+> La respuesta es **C**, y de las tres sub-opciones, la **tercera**:
+> **`alpha` no es un parámetro de regularización. NO SE CALIBRA NUNCA.**
 
-## Lo medido
+## La fórmula, y lo que obliga
 
-`data/preflop_matrices.json` tiene **117 tablas**, cada una con clave
-`matrix` de 13×13.
+El motor calcula
+
+```python
+p_matrix(perfil, spot, accion) = (cnt + alpha * prior) / (opp + alpha)
+```
+
+en [`motor/player_ranges.py`](../motor/player_ranges.py). `cnt` son **cuentas**
+de manos, `opp` son las oportunidades. Sumando sobre las 169 celdas del grid:
+
+```
+sum_celdas p_matrix(spot, k) = [ N_k + alpha * S_k ] / (opp + alpha)
+```
+
+donde `N_k = sum_celdas cnt[spot, k]` y `S_k` es la suma de la tabla prior de
+la acción `k`.
+
+Ahora bien, `p_matrix` es **P(acción | mano, spot)**, así que no puede pasar de
+1, y las acciones de un spot son **mutuamente excluyentes**. Además
+`sum_k N_k ≤ opp`, porque una mano hace **una sola** acción. La única forma de
+que todo eso se cumpla a la vez es:
+
+> ### `sum_k S_k ≤ 1`
+
+**Los priors de todas las acciones de un spot, sumados, tienen que dar 1.**
+
+Y medido:
 
 | | |
-|---|---:|
-| celdas de `matrix` revisadas | 19 773 |
-| celdas con `0` | **17 150 (86,7 %)** |
-| suma de una matriz | de **0,91** a **89,75** |
-| valores que aparecen | `{0, 0.25, 0.33, 0.5, 0.66, 0.75, 1.0}` |
+|---|---|
+| el prior **plano** del fold: 0,15 × 169 celdas | **S = 25,35** |
+| tablas de `preflop_matrices.json`: 117 | de **0,91** a **89,75**, mediana **10,00** |
+| tablas que suman ≈1 | **1 de 117** |
 
-Una frecuencia sobre las 1 326 manos posibles debería sumar **1**. Estas
-suman hasta 89,75, y sus valores son un grid de cuatro pasos.
+> El prior plano del fold **se pasa 25 veces por sí solo**, sin tocar una sola
+> de las 117 tablas. Eso no es una interpretación de los datos: es aritmética
+> de la fórmula que ya está escrita.
 
-## Por qué bloquea
+## Las celdas SÍ son probabilidades. Lo que faltó fue normalizar
 
-`p_matrix` hace el shrinkage:
+| | |
+|---|---|
+| celdas totales | 19 773 |
+| celdas fuera de `[0, 1]` | **0** |
+| celdas exactamente iguales a 1 | 1 294 (6,5 %) |
+| tablas cuya celda máxima es exactamente 1 | **116 de 117** |
 
-```
-p = (cnt + alpha * prior) / (opp + alpha)
-```
+Las celdas son valores de probabilidad y el range es correcto. Lo que falló
+fue la **suma**: hay una probabilidad por celda y la tabla no está
+normalizada.
 
-`alpha` son pseudo-conteos: se suman al lado de `cnt`, que sí es un conteo.
-Para que eso signifique algo, **`prior` tiene que estar en las mismas
-unidades**.
+Eso **acota el problema**, y es lo que decide las opciones:
 
-Y no lo está. Así que `alpha * prior` no son pseudo-conteos: son pesos de
-una escala cuyo significado nadie ha escrito.
+> **Normalizar NO basta.** Si cada tabla se normalizara a 1, tendríamos
+> `S_k = 1`, y dos acciones de un spot darían `S = 2 > 1`. El problema no
+> está solo en las tablas.
 
-> `DEFAULT_ALPHA` se queda en `2.0` por **dos** motivos independientes, y
-> este es el segundo. Arreglar la métrica no arregla la escala.
+## Y el prior plano no es hipotético: se usa para lo más frecuente
 
-## La pregunta
+| acción | prior | manos |
+|---|---|---:|
+| `fold` | **PLANO** | **221** |
+| `fold_vs_open` | **PLANO** | 145 |
+| `open` | tabla | 124 |
+| `call_open` | tabla | 94 |
+| `bb_check` | **PLANO** | 64 |
+| `rol` | tabla | 57 |
+| `limp` | tabla | 46 |
+| `call_limp` | tabla | 34 |
+| `3bet` | tabla | 17 |
+| `fold_vs_3bet` | **PLANO** | 16 |
+| `squeeze` | tabla | 8 |
 
-> **¿Qué representa la clave `matrix` de `preflop_matrices.json`?**
+`fold`, `fold_vs_open`, `bb_check` y `fold_vs_3bet` no están en `CAT_TABLE`, así
+que `_prior_grid` les devuelve el plano **con un `RuntimeWarning` que el caller
+puede no ver**.
 
-Y las tres subpreguntas que la acompañan, porque sin ellas la respuesta no
-sirve:
+> **El fold es la acción más frecuente del proyecto y es la que más se pasa de
+> la raya**: `S = 25,35` donde la fórmula admite 1.
 
-1. **¿Sobre qué universo se calcula?** Si fuese una frecuencia de manos
-  observadas, sumaría el número de manos de la tabla.
-2. **¿Qué significan los ceros?** ¿Imposibilidad, falta de datos, o
-  frecuencia observada igual a cero?
-3. **¿Quién lo escribió y cuándo?** Eso está en `CANAL_MANUAL_CERRADO.md`
-  y en la historia de `learn.py`. **No se deduce del dato.**
+Es la misma trampa que el bloque anterior: *un fallback silencioso que produce
+un número plausible*.
 
-## Hipótesis, y cómo se refuta
+## Y `matrix` no viene de estos datos
 
-| hipótesis | cómo se prueba | refutación |
+Si `matrix` fueran **cuentas crudas** (opción B), su suma sería el número de
+veces que se vio esa acción. Comparado contra `sum(cnt)` del mismo dataset:
+
+| acción | `sum(cnt)` | `sum(matrix)` | ratio |
+|---|---:|---:|---:|
+| `open` | 124,0 | 38,75 | **0,3×** |
+
+No es 1, ni se parece a 1, ni a ningún múltiplo limpio. **`matrix` no es una
+tabla de conteos de este dataset.** Eso descarta la opción B como lectura
+literal.
+
+## Las tres opciones, con su respuesta
+
+| | opción | veredicto |
 |---|---|---|
-| **es una frecuencia mal formada** | debería sumar el número de manos observadas por tabla | suma hasta 89,75 y los valores son un grid de 4 pasos. **Descartada** |
-| **es una puntuación de fuerza por celda** | los ceros se explicarían como «esta combinación no está en la tabla de referencia» | posible, y encaja con que los ceros se concentren en las filas de rango bajo |
-| **es un residuo de una conversión** | los valores {0, 0.25, 0.5, 0.75, 1.0} parecen un redondeo | posible, y encaja con que las 117 tablas tengan ceros |
+| **A** | son priors normalizados; hay que normalizarlas | **NO BASTA**: normalizadas dan `S_k = 1` y dos acciones de un spot darían 2 |
+| **B** | son cuentas crudas; `player_ranges.py` está mal | **DESCARTADA**: la suma no es `sum(cnt)` ni un múltiplo de ella (0,3×) |
+| **C** | son otra cosa | **LA CORRECTA** |
 
-**La segunda y la tercera no se distinguen con el dato.** Y esa es la
-razón por la que esto no se resuelve midiendo: hace falta la intención de
+### Y qué hacer: la sub-opción tercera
+
+De las tres salidas de R1 para el caso C:
+
+| | | |
+|---|---|---|
+| 1 | cambiar la fórmula para que `prior` sea una probabilidad real | exige rediseñar el shrinkage: **otra decisión** |
+| 2 | cambiar la fuente de `prior` para que sea una probabilidad real | es una **decisión de poker**, no de datos |
+| **3** | **declarar que `alpha` no es un parámetro de regularización** | **la elegida** |
+
+> ## `DEFAULT_ALPHA` no se calibra. Nunca.
+>
+> No porque no haya datos, sino porque **`alpha · prior` no son pseudo-conteos**
+> y comparar dos valores de `alpha` es comparar dos números sin unidad
+> conocida.
+
+### Tres razones medidas e independientes
+
+1. **`matrix` no es una probabilidad.** Las celdas están en `[0, 1]` pero las
+   tablas no suman 1. Un prior de probabilidad suma 1.
+2. **La fórmula no puede ser un shrinkage.** Los priors de un spot no pueden
+   sumar 1, y el prior plano del fold ya se pasa 25× solo.
+3. **`L_prim` es monótona en `alpha`.** 224 de 256 celdas empujan en el mismo
+   sentido: su ganador es siempre el candidato menor. Aunque la escala fuera
+   correcta, no habría un ganador que distinguir.
+
+## Lo que NO se resuelve aquí, y hay que decirlo
+
+> **QUÉ clase de cosa es `matrix` sigue sin saberse.**
+
+La medición acota la forma — celdas en `[0, 1]`, tablas sin normalizar, sin
+relación con `cnt` — pero no dice cuál era la **intención**. *Proporciones
+relativas* y *conteos con otra base* producen el mismo 89,75 y se corrigen de
+forma distinta.
+
+Y `preflop_matrices.json` **no lleva metadatos**: no hay campo `origen`,
+`versión` ni `generado_por`. La respuesta a eso no está en el fichero, está en
 quien lo generó.
 
-## Qué se decide cuando se responda
+Eso no bloquea Fase D. Bloqueaba que se **declarara** algo que no se puede
+declarar con honestidad, y ya está declarado: `alpha` no es calibrable, y por
+esa razón, no por falta de datos.
 
-| si `matrix` es | entonces |
+## Estado
+
+| | |
 |---|---|
-| una **frecuencia** mal formada | opción **A**: regenerarla normalizada. Se van los 17 150 ceros y `alpha` vuelve a significar pseudo-conteos |
-| una **puntuación** de fuerza | opción **B**: el shrinkage tiene que ir sobre una escala declarada, y `p_matrix` deja de fingir que devuelve una probabilidad |
-| un **residuo** de conversión | hay que regenerarla desde `hands_db.jsonl`. Es lo más caro y lo más limpio |
-
-La opción elegida provisionalmente está en
-[`CEROS_PREFLOP_MATRICES.md`](CEROS_PREFLOP_MATRICES.md) — **B**, por ser
-la acotada. Y **B no desbloquea la calibración por sí sola**: `L_prim` ya
-es monótona y no distingue.
-
-## Lo que NO se hace
-
-- **No se toca `preflop_matrices.json`.** Cambiar los números sin saber qué
- significan es inventar.
-- **No se mueve `DEFAULT_ALPHA`.** Sigue en `2.0`, con su test.
-- **No se regenera nada.** Es un bloque con su migración, su hash y su
- backup.
+| `DEFAULT_ALPHA` | **2,0**, y no se calibra. Con test que falla si alguien lo mueve |
+| `data/preflop_matrices.json` | **intacto**. No se regenera nada |
+| `matrix` en la fórmula | **queda como está**, con su diagnóstico escrito |
+| opción 2 (fuente de prior) | **abierta**, y es una decisión de dominio |
 
 ## Reproducir
 
 ```
-python tools/calibrar.py --param DEFAULT_ALPHA --valores 0.5 1.0 2.0 5.0
+python tools/auditar_matrix.py
 ```
-
-El comando reporta en cada corrida las celdas con `p = 0` de los eventos que
-mide, para que esto se pueda volver a comprobar.
