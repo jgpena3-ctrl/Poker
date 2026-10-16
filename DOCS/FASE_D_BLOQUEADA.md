@@ -71,3 +71,33 @@ si alguien lo mueve sin pasar por aquí.
 - **No** se cambia P1–P7. Solo se añade **P0**, y es una adición.
 - **No** se empieza otro parámetro. Con el contrato así, todos darían igual.
 - **No** se toca `data/`: los 25 repartos incompletos quedan declarados.
+
+---
+
+## Actualización: dos bloques cerrados desde aquí
+
+El estado de arriba («bloque 0 es el que bloquea») era cierto cuando se
+escribió. Ya no.
+
+| # | bloque | estado |
+|---|---|---|
+| **0** | definir el objetivo de `L_sec` | **CERRADO.** Objetivo: **ranking**, no probabilidad. Población: hero continúa o checkea, en validación. [`CONTRATO_L_SEC.md`](CONTRATO_L_SEC.md) §8, [`AUC_INTERVALO.md`](AUC_INTERVALO.md) |
+| **1** | camino de equity preflop | **DESBLOQUEADO.** El objetivo ya está, así que se puede implementar. Y sus dos decisiones abiertas —exacto o muestreado, y qué pasa con la varianza— están medidas: muestreado a 40 combos, varianza admisible. [`CONTRATO_PREFLOP.md`](CONTRATO_PREFLOP.md) |
+| **2** | una métrica que sobreviva al 86 % de derrotas | **CERRADO, y por la vía obvia:** equity como *ranking*, que es la opción que el propio bloque 2 enumeraba. El AUC **no** depende de la base rate. Afirmable: 0,8308 con IC [0,6991, 0,9364] |
+| **3** | qué significa `matrix` | **abierto, y no se resuelve con datos** ([`QUE_ES_MATRIX.md`](QUE_ES_MATRIX.md)) |
+
+### Lo que queda bloqueando Fase D
+
+**Solo el bloque 3.** Y no por falta de datos: porque
+`alpha · prior` no son pseudo-conteos y nadie ha dicho qué representa el
+campo `matrix`.
+
+### Y la cobertura
+
+El AUC cubre **57 de 160** manos (35,6 %). Las otras 98 son cortes preflop, y
+quedan fuera porque su equity es **retrospectiva**: usa las cartas reales del
+rival. El bloque 1 las cubre, y con la varianza ya escrita en el contrato.
+
+> Antes se decía 38 %. La cifra medida es **57 / 160**, y los 3 repartos que
+> el AUC binario no admite están contados aparte. Se corrige el número, no el
+> criterio.
