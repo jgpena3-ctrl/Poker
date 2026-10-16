@@ -41,6 +41,12 @@ def cal():
 
 
 @pytest.fixture(scope='module')
+def ventana():
+    from motor import learn
+    return learn.load_hands(reliable_only=True)
+
+
+@pytest.fixture(scope='module')
 def aud():
     return _mod('auditar_muestra_fase_d', 'auditar_muestra_lsec.py')
 
@@ -59,11 +65,16 @@ def _mano(posiciones, nombres, cartas, winner, showdown=None):
 
 # ---------------------------------------------------------------- 1. muestra
 def test_la_muestra_son_los_numeros_del_contrato(cal):
-    """156 utilizables, 117 de calibracion, 39 de validacion."""
+    """161 utilizables, 120 de calibracion, 41 de validacion.
+
+    Los numeros bajan de 156 a 161 al poder ETIQUETAR los repartos: las 7
+    manos con dos ganadores hacen todas la misma mano en el board, y eso
+    se demuestra con el evaluador del motor.
+    """
     c, v = cal.muestra()
-    assert len(c) == 117
-    assert len(v) == 39
-    assert len(c) + len(v) == 156
+    assert len(c) == 120
+    assert len(v) == 41
+    assert len(c) + len(v) == 161
 
 
 def test_la_ventana_es_la_declarada(cal):
@@ -77,8 +88,8 @@ def test_la_particion_versionada_coincide_con_la_calculada(cal):
     c, v = cal.muestra()
     for hid, _y in v[:5]:
         assert '`%s`' % hid in texto
-    for marca in ('| validacion | 39 |', '| calibracion | 117 |',
-                  '| utilizables | 156 |'):
+    for marca in ('| validacion | 41 |', '| calibracion | 120 |',
+                  '| utilizables | 161 |'):
         assert marca in texto
 
 
@@ -98,7 +109,7 @@ def test_el_auditor_independiente_coincide(cal, aud):
         y, _m = aud.etiqueta(h)
         if y is not None:
             ys_aud.append(y)
-    assert len(ys) == len(ys_aud) == 156
+    assert len(ys) == len(ys_aud) == 161
     assert sorted(ys) == sorted(ys_aud)
 
 
@@ -111,32 +122,54 @@ def test_no_se_inventan_empates(cal):
     assert (y, ok) == (None, False)
 
 
-def test_winner1_tiene_que_resolver_no_solo_existir(cal):
-    """Un texto que no nombra a nadie de la mesa NO resuelve.
+def test_winner1_ya_no_etiqueta_nada(cal):
+    """El reparto se demuestra con el EVALUADOR, no con un texto.
 
-    Este es el bug que encontre revision_2: el codigo anterior aceptaba
-    cualquier texto no vacio y sin separadores, y luego usaba la lista
-    `winner` sin mirarla. Ahora el texto tiene que.names a alguien.
+    Este test existia para vigilar el bug de `revision_2` (2A y 2B): que
+    `showdown.winner1` se aceptara por existir, sin comprobar a quien nombra.
+    La respuesta fue dejar de usarlo: el texto ya no interviene en la
+    etiqueta, y con ello las dos objeciones desaparecen.
     """
     h = _mano(['UTG', 'BTN', 'BB'], ['A', 'B', 'Jarduan'],
               ['AhKd', 'QsJs', '2h3d'], ['hero', 'p2'],
-              showdown={'winner1': 'alguien que no esta en esta mesa'})
+              showdown={'winner1': 'texto que no nombra a nadie'})
+    h['comunitarias'] = {'flop': ['Kd', '7c', '2s'], 'turn': ['Kd'],
+                         'river': ['As']}
+    # AhKd hace dos pares (ases y reyes). 2h3d hace solo los reyes. No
+    # empatan, asi que NO es un reparto demostrable y la mano se queda sin
+    # etiqueta. Y el texto de showdown, que no nombra a nadie, es
+    # irrelevante: no se consulta.
+    assert cal.reparto(h, {'UTG', 'BB'}) is False
     assert cal.etiqueta(h) == (None, False)
-    assert cal.ganador_nombrado(h)[0] is None
 
 
-def test_winner1_resuelto_manda_sobre_la_lista(cal):
-    """Si `winner1` resuelve, ese es el ganador, no el primero de la lista.
+def test_un_reparto_demostrado_da_uno_como_mitad(cal):
+    """Dos jugadores que hacen la MISMA mano -> y = 0,5.
 
-    Aqui la lista y el texto CONTRADICEN a proposito: `winner` dice que ganan
-    los dos, `winner1` dice que gana el hero. Gana el hero.
+    Board `5d Qh 6s 2h 4s`; `TsQs` y `ThQc` hacen pareja de queens con
+    kicker T. Score identico. Eso es un reparto, y el reparto se demuestra.
     """
-    h = _mano(['BB', 'CO', 'BTN'], ['Jarduan', 'A', 'B'],
-              ['TsQs', '', 'AhKd'], ['hero', 'p2'],
-              showdown={'winner1': 'BB (Jarduan)'})
+    h = _mano(['BB', 'CO', 'BTN', 'SB'],
+              ['Jarduan', 'A', 'B', 'C'],
+              ['TsQs', '', '', 'ThQc'], ['hero', 'p3'])
+    h['comunitarias'] = {'flop': ['5d', 'Qh', '6s'], 'turn': ['2h'],
+                         'river': ['4s']}
+    assert cal.reparto(h, {'BB', 'SB'}) is True
     y, ok = cal.etiqueta(h)
     assert ok is True
-    assert y == 1.0
+    assert y == 0.5, 'reparto demostrado y el hero es de los que lo toman'
+
+
+def test_reparto_no_demostrable_deja_la_mano_sin_etiqueta(cal):
+    """Sin board no se demuestra el reparto, y entonces no hay etiqueta.
+
+    Poner 0,5 ahi seria inventarlo, que es lo que se prohibe.
+    """
+    h = _mano(['BB', 'SB'], ['Jarduan', 'C'], ['TsQs', 'ThQc'],
+              ['hero', 'p1'])
+    h['comunitarias'] = {}
+    assert cal.reparto(h, {'BB', 'SB'}) is None
+    assert cal.etiqueta(h) == (None, False)
 
 
 def test_sin_jugador_heroname_no_hay_etiqueta(cal):
@@ -177,6 +210,43 @@ def test_hero_no_es_el_primero_con_cartas(cal):
     assert cal.hero_de(h) == 'UTG'
     y, ok = cal.etiqueta(h)
     assert ok is True and y == 0.0
+
+
+def test_las_siete_manos_con_dos_ganadores_son_repartos(cal, ventana):
+    """Las 7 son repartos, y se demuestra una por una.
+
+    Antes se excluian 6 por "sin texto de showdown". Se excluian por no
+    leer las cartas: `y = 0,5` era DEMOSTRABLE con el evaluador.
+    """
+    from motor.multiway import PLAYER_IDS
+    multi = []
+    for h in ventana:
+        gs = {cal.id_a_pos(h, i) for i in (h.get('winner') or [])}
+        gs.discard(None)
+        if len(gs) > 1:
+            multi.append((h, gs))
+    assert len(multi) == 7, 'esperado 7 manos con 2+ ganadores'
+    for h, gs in multi:
+        assert cal.reparto(h, gs) is True, (
+            '%s declara dos ganadores que NO hacen la misma mano: %s. '
+            'Eso no es un reparto y hay que mirarlo' % (h['hand_id'],
+                                                         sorted(gs)))
+
+
+def test_h0798_es_un_reparto_no_una_victoria(cal, ventana):
+    """La mano concreta que cambio el numero.
+
+    `H_0798` daba `y = 1,0` porque `winner1` nominaba al hero. Con el
+    evaluador: las dos manos hacen 675194. Es un reparto, y el hero se
+    lleva la mitad del bote.
+    """
+    h = next(x for x in ventana if x['hand_id'] == 'H_0798')
+    gs = {cal.id_a_pos(h, i) for i in (h.get('winner') or [])}
+    gs.discard(None)
+    assert cal.reparto(h, gs) is True
+    y, ok = cal.etiqueta(h)
+    assert ok is True
+    assert y == 0.5
 
 
 def test_id_a_pos_usa_player_ids(cal):
@@ -242,6 +312,27 @@ def test_l_prim_no_tiene_fallback_de_maximo(cal):
                         'cambia la metrica cuando algo va mal' % nodo.id)
         if isinstance(nodo, _ast.Attribute) and nodo.attr == 'clip':
             continue
+
+
+def test_l_prim_no_cambia_el_denominador(cal):
+    """El denominador es FIJO. `revision_2`: si un evento cae en p = 0 y se
+    cuenta aparte, el denominador depende de alpha y las perdidas dejan de
+    ser comparables."""
+    c, _v = cal.muestra()
+    d1 = cal.l_prim(0.5, c)[1]
+    d2 = cal.l_prim(2.0, c)[1]
+    d3 = cal.l_prim(9.0, c)[1]
+    assert d1['medidos'] == d2['medidos'] == d3['medidos']
+    assert d1['eventos'] == d2['eventos'] == d3['eventos']
+
+
+def test_l_prim_los_cubos_cuadran(cal):
+    """Cada evento entra en un cubo y solo uno, y suman todos."""
+    c, _v = cal.muestra()
+    L, d = cal.l_prim(2.0, c)
+    assert d['medidos'] + d['p_0'] + d['sin_celda'] + d['sin_opp'] \
+        == d['eventos'], 'los cubos no suman todos los eventos'
+    assert d['p_0'] == 0
 
 
 def test_l_prim_falla_en_voz_alta_si_no_hay_celda(cal):

@@ -292,25 +292,55 @@ de las 877 manos el hero real está sentado en otra butaca.
 Y «el primer jugador con cartas» falla en 32, porque hay manos donde el hero
 no tiene cartas y otro jugador sí. Ahí la etiqueta `y` era de otro.
 
-#### Lo segundo: `showdown.winner1` tiene que resolver
+#### Lo segundo: el reparto se demuestra, no se lee
 
-De las 7 manos con dos ganadores distintos en la ventana, solo una
-(`H_0798`) trae `showdown.winner1`. **Se resuelve**: el texto es
-`'BB (Jarduan)'`, `BB` está en la mesa de esa mano, y ese jugador es el
-hero — o sea que la etiqueta sale de una identidad comprobada.
+Había dos fuentes en conflicto: `winner` (una lista de ids) y
+`showdown.winner1` (un texto que nombra a uno). El código aceptaba el
+texto por *existir y no parecer plural*, lo que `revision_2` objetó por
+dos motivos: la búsqueda por subcadena puede resolver al equivocado, y que
+`winner1` nombre a uno no demuestra que los demás estén mal.
 
-Las otras 6 no tienen texto. Sin él no se distingue *«dos ganan»* de *«el
-registro se equivocó»*, y ponerles `y = 0,5` sería **inventar la
-etiqueta**.
+**Ninguna de las dos preguntas hace falta ya**, porque hay una tercera
+fuente que sí demuestra: **el evaluador del motor**.
 
-> `recorder_live` solo escribe `showdown` cuando hay **un** ganador
-> (`len(all_still_in) == 1`). Un `showdown` junto a varios ganadores es una
-> mano editada a mano, así que su texto tiene que demostrar a quién nombra.
-> Antes se aceptaba por *existir y no parecer plural*; eso no es resolver.
+```
+python tools/equity_preflop.py --comprobar     # el enumerador, aparte
+```
+
+Si los jugadores que `winner` declara ganadores hacen **la misma mano en el
+board**, es un reparto, y el reparto es un hecho comprobable. Medido sobre
+las 7 manos con dos ganadores en la ventana:
+
+| | |
+|---|---:|
+| **empates demostrados** con el evaluador | **7 de 7** |
+
+Ejemplo, `H_0798`: board `5d Qh 6s 2h 4s`, `BB` con `TsQs` y `SB` con
+`ThQc`. **Score idéntico: 675194.** Las dos hacen pareja de queens con
+kicker T. O sea que `winner` con dos elementos **es correcto** y
+`showdown.winner1`, que nombra a uno solo, está **incompleto por
+construcción**: el recorder escribe `showdown` únicamente cuando hay **un**
+ganador.
+
+> Mi respuesta anterior —*«sin texto no se puede distinguir "dos ganan" de
+> "el registro se equivocó", y `y = 0,5` sería inventar»*— era una
+> afirmación sin medir. **Los 7 son repartos, y `y = 0,5` es lo que dice
+> el reparto.** La pregunta de `revision_2` llevaba tres bloques siendo la
+> correcta y yo la había cerrado sin mirar las cartas.
 
 Como comprobación de que el instrumento sirve: cuenta **147** manos con dos
 ganadores distintos en la base entera, que es exactamente lo que declara
 `learn.py` (`winner con 2+ en la base entera: 179 -> 147`).
+
+#### Y un defecto que sale de mirar
+
+`H_0173`: board `Th 2h 3c Qd Js`. El **hero** tiene `Qh3h` con score
+**1031914** y los ganadores declarados hacen **423449**. El hero tiene la
+mejor mano de la mesa y **no está en `winner`**.
+
+Eso **no se corrige aquí**: `data/` no se toca en este bloque. Queda
+declarado como defecto encontrado, con la mano y los números, para que se
+mire aparte.
 
 #### El desglose
 
@@ -318,41 +348,38 @@ ganadores distintos en la base entera, que es exactamente lo que declara
 |---:|---|
 | 580 | board incompleto (no hay showdown) |
 | 134 | menos de 2 jugadores con cartas |
-| 5 | varios ganadores y **sin** texto de showdown |
 | 1 | sin ganador |
 | 1 | el ganador no tiene cartas |
-| **156** | **utilizables (17,8 %)** |
+| **161** | **utilizables (18,4 %)** |
 
-**Reparto 70/30 sobre las 156 utilizables:** **117 de calibración y 39 de
+**Reparto 70/30 sobre las 161 utilizables:** **120 de calibración y 41 de
 validación**, disjuntas por construcción (§2.2). La lista exacta está
-versionada en [`PARTICION_FASE_D.md`](PARTICION_FASE_D.md), y **no cambia**
-con la corrección del hero: los ids son los mismos, lo que cambia es la
-etiqueta de dentro.
+versionada en [`PARTICION_FASE_D.md`](PARTICION_FASE_D.md).
 
 ### 2.1.1.b La etiqueta, y la referencia que tiene que ganarse
 
-`y` para el hero: **1,0** si el ganador es el hero, **0,0** si no. Con las
-dos definiciones de arriba ya corregidas:
+`y` para el hero: **1,0** si es el único ganador, **0,5** si el bote está
+repartido y el hero es de los que lo comparten, **0,0** si no. Con las
+tres definiciones ya corregidas:
 
 | | |
 |---|---|
-| reparto | el hero **gana 21 de 156** y pierde 135 |
-| Brier de un predictor **constante** `p = 0,135` | **0,1165** |
+| reparto | el hero **gana 20 de 161**, **reparte 3** y pierde 138 |
+| Brier de un predictor **constante** `p = 0,124` | **0,1111** |
 
-> La cuenta anterior decía *31 victorias y 0,1592*. Era comparar contra el
-> jugador equivocado en 232 manos. **El error más caro no es medir mal, es
+> Las cuentas anteriores decían 21 victorias y 0,1165. Cambiaron al poder
+> usar las 7 manos que son repartos, y H_0798 pasó de `y = 1,0` a
+> `y = 0,5`, que es lo correcto. **El error más caro no es medir mal, es
 > medir la cosa equivocada con confianza.**
 
-**El motor tiene que estar por debajo de 0,1165.** Si no, `L_sec` no mide
+**El motor tiene que estar por debajo de 0,1111.** Si no, `L_sec` no mide
 calidad: mide la base rate, y el mejor modelo es decir *«el hero va a
-perder»*. Es la misma trampa que el plan ya rechazó para la métrica de
-acuerdo, vista por el otro lado.
+perder»*.
 
 Por eso la comparación contra esa referencia se **reporta en cada
-iteración**, al lado de `L_sec` y no en una nota al pie. Un `L_sec` de
-0,12 no es un resultado: es perder.
+iteración**, al lado de `L_sec` y no en una nota al pie.
 
-> **39 manos de validación, con un 87 % de derrotas.** Un cambio del 2 %
+> **41 manos de validación, con un 87 % de derrotas.** Un cambio del 2 %
 > en `L_sec` no es distinguible del ruido. Está escrito aquí antes de
 > medir, no después de ver qué salía: si el resultado no se
 > distingue, **se dice que no se distingue**.

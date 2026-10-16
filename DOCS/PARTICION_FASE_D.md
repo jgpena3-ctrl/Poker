@@ -6,9 +6,9 @@ cambiar de fase, y eso es un commit con su motivo.
 | | |
 |---|---:|
 | ventana | 877 |
-| utilizables | 156 |
-| calibracion | 117 |
-| validacion | 39 |
+| utilizables | 161 |
+| calibracion | 120 |
+| validacion | 41 |
 
 Regla: `validacion` si `sha256(hand_id) % 10 < 3`.
 
@@ -20,7 +20,9 @@ Regla: `validacion` si `sha256(hand_id) % 10 < 3`.
 - `H_0080`
 - `H_0110`
 - `H_0121`
+- `H_0173`
 - `H_0185`
+- `H_0188`
 - `H_0194`
 - `H_0253`
 - `H_0264`
@@ -63,6 +65,7 @@ Regla: `validacion` si `sha256(hand_id) % 10 < 3`.
 - `H_0074`
 - `H_0093`
 - `H_0095`
+- `H_0105`
 - `H_0112`
 - `H_0114`
 - `H_0125`
@@ -103,6 +106,7 @@ Regla: `validacion` si `sha256(hand_id) % 10 < 3`.
 - `H_0293`
 - `H_0300`
 - `H_0306`
+- `H_0307`
 - `H_0311`
 - `H_0321`
 - `H_0322`
@@ -156,6 +160,7 @@ Regla: `validacion` si `sha256(hand_id) % 10 < 3`.
 - `H_0759`
 - `H_0763`
 - `H_0773`
+- `H_0793`
 - `H_0823`
 - `H_0829`
 - `H_0833`

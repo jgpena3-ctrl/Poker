@@ -96,3 +96,7 @@ data/test_trace.jsonl
 # comentario: lo escriben `tools/test_recorder_juego.py` y `tools/test_mano2.py`
 # como `output_path`. Aparece al correr la suite y no lo lee nadie.
 data/test_output.jsonl
+
+# Cache de la enumeracion preflop: se regenera sola (1.7 M
+# de evaluaciones por par de manos, ~13 s). No se versiona.
+data/_cache_equity_preflop.json

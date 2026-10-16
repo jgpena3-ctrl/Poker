@@ -33,6 +33,7 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
+sys.path.insert(0, os.path.join(ROOT, 'tools'))
 
 import numpy as np                                       # noqa: E402
 
@@ -42,6 +43,7 @@ from motor.asistente_live import (                       # noqa: E402
     RangeState, _preflop_spot, _pf_rival_pos,
     _villain_postflop_actions, situation)
 from motor.multiway import PLAYER_IDS                    # noqa: E402
+from motor.observations import lead_label              # noqa: E402
 from motor.profile import Profiles                       # noqa: E402
 
 ORDEN_CALLES = ('preflop', 'flop', 'turn', 'river')
@@ -112,16 +114,80 @@ def se_foldio_antes_de(h, pos, calle):
     return False
 
 
-def punto_de_decision(h, hero_pos):
-    """La calle donde el hero actuo por ultima vez."""
-    ultima = None
-    for st in ORDEN_CALLES:
+def corte_de_decision(h, hero_pos):
+    """(calle, indice) de la ULTIMA accion del hero, o (None, None).
+
+    El indice es dentro de esa calle. Hace falta el indice y no solo la
+    calle: si el hero y el rival juegan en la misma calle, la accion del
+    rival puede ser posterior y mirarla seria mirar al futuro.
+    """
+    for st in reversed(ORDEN_CALLES):
         acts = ((h.get('streets') or {}).get(st) or {}).get('actions') or []
-        for a in acts:
+        for i in range(len(acts) - 1, -1, -1):
+            a = acts[i]
             if a.get('pos') == hero_pos and a.get('action') in (
                     'b', 'c', 'r', 'f', 'x'):
-                ultima = st
-    return ultima
+                return st, i
+    return None, None
+
+
+def punto_de_decision(h, hero_pos):
+    """La calle donde el hero actuo por ultima vez."""
+    return corte_de_decision(h, hero_pos)[0]
+
+
+def acciones_hasta(h, calle, indice):
+    """[(street, i)] de TODAS las acciones hasta el corte, calle incluida.
+
+    `indice` es `None` = hasta el final de la calle.
+    """
+    out = []
+    for st in ORDEN_CALLES:
+        acts = ((h.get('streets') or {}).get(st) or {}).get('actions') or []
+        for i in range(len(acts)):
+            if st == calle and indice is not None and i >= indice:
+                return out
+            out.append((st, i))
+        if st == calle and indice is None:
+            return out
+    return out
+
+
+def villain_hasta_corte(h, villain_pos, calle, indice):
+    """Acciones YA OBSERVADAS del rival hasta el corte. Copia de la cadena
+    de `asistente_live` con el corte puesto.
+
+    `_villain_postflop_actions` devuelve la calle entera y no tiene por
+    donde cortar. Reimplementarlo aqui es lo que deja la fuga a medias
+    controllable: si el motor algun dia anade un paso, hay que replicarlo.
+
+    `lead_label` se importa del MISMO sitio, para que las etiquetas de
+    lead caigan en las mismas celdas de entrenamiento que en vivo.
+    """
+    out = []
+    pf_acts = ((h.get('streets') or {}).get('preflop') or {}).get(
+        'actions') or []
+    pf_initiator = next((a.get('pos') for a in reversed(pf_acts)
+                         if a.get('action') in ('b', 'r')), '')
+    pot_raised = bool(pf_initiator)
+    limite = set(acciones_hasta(h, calle, indice))
+    for st in ('flop', 'turn', 'river'):
+        acts = ((h.get('streets') or {}).get(st) or {}).get('actions') or []
+        board = ((h.get('streets') or {}).get(st) or {}).get('board') or []
+        board_str = ','.join(str(c) for c in board) if board else ''
+        facing = ''
+        for i, a in enumerate(acts):
+            if (st, i) not in limite:
+                break
+            pos, action = a.get('pos'), a.get('action')
+            if action == 'x':
+                continue
+            if pos == villain_pos and action in ('b', 'c', 'r', 'f'):
+                out.append((st, facing or 'none', action, board_str))
+            if action in ('b', 'r'):
+                facing = ('raise' if facing else
+                          lead_label(st, pos, pf_initiator, pot_raised))
+    return out
 
 
 # ------------------------------------------------------------------- modelo
@@ -132,7 +198,7 @@ def perfiles_de(manos):
 
 
 def rango_del_rival(h, villain_pos, hero, board, labels, modelo,
-                    postflop_model=None):
+                    postflop_model=None, calle=None, indice=None):
     """El `RangeState` del rival, por la MISMA cadena que el motor vivo.
 
     Se importa de `asistente_live` y se sigue en el mismo orden:
@@ -148,17 +214,23 @@ def rango_del_rival(h, villain_pos, hero, board, labels, modelo,
                             villain_pos=_pf_rival_pos(h, villain_pos,
                                                       spot))
     rs = RangeState(reach=reach)
-    blockers = []
-    for p in h.get('players') or []:
-        if p.get('pos') == villain_pos:
-            continue
-        c = (p.get('cards') or '').strip()
-        if c:
-            blockers.extend(codigos(c))
-    rs.set_known_cards(list(hero) + list(board) + list(blockers))
-    if postflop_model is not None:
-        for st_v, facing, act, board_str in _villain_postflop_actions(
-                h, villain_pos):
+
+    # SOLO lo que se sabia en ese instante: las cartas del hero y el board.
+    #
+    # Antes se metia ademas la carta de todos los demas jugadores que
+    # tienen cartas en el REGISTRO, lo que son las que se revelan en el
+    # showdown: 216 cartas que en la calle del punto de decision no se
+    # conocian de nadie. Y el hero entraba dos veces, una en `hero` y otra
+    # en el bucle: 310 cartas contadas de mas.
+    #
+    # No se puede hacer mejor con estos datos: el registro guarda las
+    # cartas finales de cada jugador y no dice EN QUE MOMENTO se revelaron.
+    # Anyadir las de terceros seria inventar que se sabian.
+    rs.set_known_cards(list(hero) + list(board))
+
+    if postflop_model is not None and calle is not None:
+        for st_v, facing, act, board_str in villain_hasta_corte(
+                h, villain_pos, calle, indice):
             board_v = [c.strip() for c in board_str.split(',')] \
                 if board_str else []
             rs.update(postflop_model.prob_vec(perfil, st_v, facing,
@@ -171,7 +243,7 @@ def equity_contra(h, villain_pos, labels, modelo, postflop_model=None):
     hero_pos = hero_pos_de(h)
     if hero_pos is None:
         return None, 'la mano no tiene jugador con el nombre del hero'
-    calle = punto_de_decision(h, hero_pos)
+    calle, indice = corte_de_decision(h, hero_pos)
     if calle is None:
         return None, 'el hero no actuo en la mano'
     hero = cartas_de(h, hero_pos)
@@ -180,8 +252,33 @@ def equity_contra(h, villain_pos, labels, modelo, postflop_model=None):
         return None, 'el hero no tiene cartas'
     if not board and calle != 'preflop':
         return None, 'no hay board en la calle del punto de decision'
+    # PREFLOP: el camino es OTRO. `situation` necesita un board de 3 a 5
+    # cartas, y preflop no tiene board. Ademas en una mano historica las
+    # cartas del rival SI estan registradas, asi que no hace falta un
+    # rango: se enumeran los 1 712 304 sorteos de 5 comunitarias.
+    if calle == 'preflop':
+        vc = cartas_de(h, villain_pos)
+        if len(vc) < 2:
+            return None, 'el rival no tiene cartas en el registro'
+        try:
+            from equity_preflop import equity_preflop
+            eq, det = equity_preflop(hero[0] + hero[1], vc[0] + vc[1])
+        except Exception as e:
+            return None, 'equity_preflop fallo: %s: %s' % (type(e).__name__,
+                                                           e)
+        return float(eq), {
+            'calle': calle,
+            'hero': ''.join(hero),
+            'board': [],
+            'rival': villain_pos,
+            'perfil': None,
+            'combos': det['boards'],
+            'via': 'enumeracion preflop',
+        }
+
     rs, perfil = rango_del_rival(h, villain_pos, hero, board, labels, modelo,
-                                  postflop_model)
+                                  postflop_model, calle=calle,
+                                  indice=indice)
     try:
         sit = situation(hero, board, villain_reach=rs,
                         position=hero_pos, street=calle)
@@ -221,7 +318,7 @@ def equity_de_mano(hand, labels, modelos, rival_unico=None):
     hero_pos = hero_pos_de(hand)
     if hero_pos is None:
         return None, 'la mano no tiene jugador con el nombre del hero'
-    calle = punto_de_decision(hand, hero_pos)
+    calle, indice = corte_de_decision(hand, hero_pos)
     if calle is None:
         return None, 'el hero no actuo en la mano'
     rivales = candidatos(hand, hero_pos, calle)
@@ -256,16 +353,31 @@ def main():
     ap.add_argument('--mano', help='un hand_id, p.ej. H_0798')
     ap.add_argument('--manos', type=int, default=0,
                     help='las primeras N manos utilizables')
-    ap.add_argument('--etiquetas-desde', default='ventana',
+    ap.add_argument('--etiquetas-desde', default='calibracion',
                     choices=('ventana', 'calibracion'),
                     help='de que manos se sacan las etiquetas de perfil')
+    ap.add_argument('--ajuste', default='calibracion',
+                    choices=('calibracion', 'ventana'),
+                    help='con que manos se ajusta el modelo de rangos')
     args = ap.parse_args()
+
+    import hashlib
 
     from motor import player_ranges, postflop_ranges
     ventana = learn.load_hands(reliable_only=True)
+
+    def _particion(h):
+        d = int(hashlib.sha256(h['hand_id'].encode('utf-8')).hexdigest(), 16)
+        return 'validacion' if d % 10 < 3 else 'calibracion'
+
+    # C) EL AJUSTE SE SEPARA. Medido: las 6 de las 6 claves de `opp` cambian
+    # segun se ajuste con la ventana entera o con calibracion. O sea que un
+    # modelo ajustado con la ventana ha visto las 39 manos de validacion,
+    # y evaluarlas con el no mide generalizacion: mide recuerdo.
+    ajuste = [h for h in ventana if _particion(h) == args.ajuste]
     modelos = {
         'preflop': player_ranges.ProfileRangeModel.from_hands(
-            ventana, alpha=player_ranges.DEFAULT_ALPHA),
+            ajuste, alpha=player_ranges.DEFAULT_ALPHA),
     }
     try:
         modelos['postflop'] = postflop_ranges.PostflopModel()
@@ -273,16 +385,20 @@ def main():
         modelos['postflop'] = None
 
     if args.etiquetas_desde == 'calibracion':
-        import hashlib
-        cal = [h for h in ventana
-               if int(hashlib.sha256(
-                   h['hand_id'].encode('utf-8')).hexdigest(), 16) % 10 >= 3]
-        labels = perfiles_de(cal)
+        labels = perfiles_de([h for h in ventana
+                              if _particion(h) == 'calibracion'])
         print('etiquetas de perfil: %d manos de calibracion'
-              % len(cal))
+              % len([h for h in ventana if _particion(h) == 'calibracion']))
     else:
         labels = perfiles_de(ventana)
         print('etiquetas de perfil: las %d de la ventana' % len(ventana))
+    print()
+    print('ajuste del modelo de rangos: %d manos de %s'
+          % (len(ajuste), args.ajuste))
+    if args.ajuste == 'ventana':
+        print()
+        print('   AVISO: con --ajuste ventana el modelo ha visto las 39')
+        print('   manos de validacion. Las cifras NO miden generalizacion.')
     print()
 
     objetivo = []

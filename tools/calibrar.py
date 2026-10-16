@@ -37,6 +37,8 @@ sys.path.insert(0, ROOT)
 import numpy as np                                       # noqa: E402
 
 from motor import learn                                  # noqa: E402
+from motor.hand_evaluator import evaluate_hand
+from motor.multiway import PLAYER_IDS                  # noqa: E402
 from motor import player_ranges as PR                    # noqa: E402
 from motor.multiway import PLAYER_IDS                  # noqa: E402
 
@@ -125,6 +127,42 @@ def ganador_nombrado(h):
     return None, 'el texto no nombra a nadie de esta mesa'
 
 
+ORDEN_CALLES = ('preflop', 'flop', 'turn', 'river')
+
+def reparto(h, gs):
+    """True si los jugadores de `gs` hacen la MISMA mano en el board.
+
+    Eso es lo que hace un reparto, y es demostrable: lo dice el evaluador
+    del motor sobre las cartas y el board que el registro tiene. No hace
+    falta fiarse de `showdown.winner1`, que es un texto y que el recorder
+    escribe SOLO cuando hay un solo ganador, asi que en un reparto esta
+    incompleto por construccion.
+
+    Si no se puede evaluar (falta board, o algun ganador no tiene cartas),
+    devuelve None: y entonces la mano se queda SIN etiqueta, porque no se
+    puede demostrar el reparto ni descartarlo.
+    """
+    board = []
+    for st in ORDEN_CALLES:
+        board += [str(c) for c in
+                  ((h.get('comunitarias') or {}).get(st) or [])]
+    if not board:
+        return None
+    scores = {}
+    for p in h.get('players') or []:
+        c = (p.get('cards') or '').strip()
+        c = ''.join(c) if not isinstance(c, str) else c
+        if not c:
+            continue
+        try:
+            scores[p.get('pos')] = evaluate_hand([c[0:2], c[2:4]], board)
+        except Exception:
+            continue
+    if not gs or not all(pos in scores for pos in gs):
+        return None
+    return len({scores[pos] for pos in gs}) == 1
+
+
 def etiqueta(h):
     """(y del hero, ok). Regla de FASE_D_PLAN §2.1.1.
 
@@ -146,10 +184,12 @@ def etiqueta(h):
     if any(x not in cpos for x in gs):
         return None, False
     if len(gs) > 1:
-        nom, _mot = ganador_nombrado(h)
-        if nom is None:
+        # El reparto se DEMUESTRA. Antes se aceptaba `showdown.winner1`,
+        # que nombra a uno solo de varios: para H_0798 eso daba y = 1,0 y
+        # la verdad es que hacen la misma mano y el bote se reparte.
+        if not reparto(h, gs):
             return None, False
-        gs = {nom}
+        return (0.5 if hero in gs else 0.0), True
     return (1.0 if hero in gs else 0.0), True
 
 
@@ -249,14 +289,22 @@ def l_prim(alpha, manos, labels=None):
         raise MedicionSinSentido('from_hands fallo: %s: %s'
                                  % (type(e).__name__, e))
 
-    logp, n = 0.0, 0
-    ceros = 0
-    sin_celda = 0
-    sin_opp = 0
+    # CONTADORES MUTUAMENTE EXCLUYENTES. Cada evento con cartas entra en
+    # uno y solo uno de estos cubos, y al final se comprueba que suman
+    # todos. Antes el denominador dependia de cuantos ceros salieran, y con
+    # eso dos alphas se median sobre poblaciones distintas.
+    eventos = 0          # eventos con `hand_known`
+    sin_celda = 0        # cartas que no caen en el grid
+    sin_opp = 0          # celda sin observacion: cae al prior
+    p_0 = 0              # celda con probabilidad 0
+    medidos = 0
+    logp = 0.0
+
     for h in manos:
         for ev in learn.preflop_events(h):
             if not ev.hand_known:
                 continue
+            eventos += 1
             if PR._cell_(ev.cards) is None:
                 sin_celda += 1
                 continue
@@ -267,19 +315,28 @@ def l_prim(alpha, manos, labels=None):
             p = modelo.p_hand(perfil, ev.denom, ev.category, ev.cards,
                               ev.pos)
             if p <= 0.0:
-                ceros += 1
+                p_0 += 1
                 continue
             logp += float(np.log(p))
-            n += 1
+            medidos += 1
 
-    if sin_opp == n + ceros + sin_celda:
+    if sin_celda + sin_opp + p_0 + medidos != eventos:
         raise MedicionSinSentido(
-            'NINGUN evento cae en una celda con `opp`: la metrica seria el '
-            'prior y no responderia a alpha')
-    if not n:
+            'los cubos no cuadran: %d + %d + %d + %d != %d'
+            % (sin_celda, sin_opp, p_0, medidos, eventos))
+
+    if p_0:
+        raise MedicionSinSentido(
+            '%d eventos caen en celdas con p = 0. Medir sobre el resto es '
+            'medir sobre una poblacion distinta, y el denominador '
+            'dependeria de alpha.' % p_0)
+
+    if not medidos:
         raise MedicionSinSentido('sin eventos utilizables')
-    return -logp / n, {'eventos': n, 'p_0': ceros, 'sin_celda': sin_celda,
-                       'sin_opp': sin_opp}
+
+    return -logp / medidos, {'eventos': eventos, 'medidos': medidos,
+                             'p_0': p_0, 'sin_celda': sin_celda,
+                             'sin_opp': sin_opp}
 
 
 def la_metrica_ve_a_alpha(manos, labels=None):

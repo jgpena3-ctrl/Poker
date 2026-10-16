@@ -221,6 +221,29 @@ es exactamente el error que §2.1.1.b dice que no se va a cometer otra vez.
 > cobertura sigue ahí. Si el sesgo desaparece, hay que reescribir esta
 > conclusión.
 
+## 6.c Con el camino preflop, `L_sec` ya se calcula. Y **pierde**
+
+`tools/equity_preflop.py` llena el hueco y las tres fugas quedan cerradas.
+La cobertura sube a **159 de 161 (98,8 %)** y el sesgo **desaparece**:
+cubre el 95 % de las victorias, el 100 % de los repartos y el 99 % de las
+derrotas. Antes eran 95 % contra 28 %.
+
+La equity sigue ordenando —**0,7673 donde gana, 0,4056 donde pierde,
+diferencia +0,3618**— y aun así:
+
+| | |
+|---|---:|
+| Brier con la mediana de la equity | **0,1783** |
+| Brier del predictor constante | **0,1076** |
+
+**Pierde contra decir «el hero va a perder»**, y no por poco. Con un 86 % de
+derrotas en la muestra y la equity mediana del hero entre 0,41 y 0,77, la
+equity **sobreestima** su chance.
+
+O sea: `L_sec`, tal como el plan la define, **no es un criterio válido**
+para seleccionar `alpha`. Se puede calcular y aun así mediría al motor por
+debajo de una constante. Detalle en [`L_SEC_ESTADO.md`](L_SEC_ESTADO.md).
+
 ## 7. Las barreras, que son código
 
 `tools/calibrar.py` no publica cuando no puede:
@@ -240,7 +263,56 @@ a elegir el mínimo de `L_prim` **sin ninguna métrica secundaria**.
 Y `--aplicar` ahora **escribe de verdad**: `DEFAULT_ALPHA` es la única línea
 que toca, en `motor/player_ranges.py`, y avisa de qué línea a qué línea.
 
-## 8. Qué reabriría esto
+## 8. Los dos motivos, y son independientes
+
+Hay **dos** razones por las que `DEFAULT_ALPHA` no se calibra. Se
+encontraron en bloques distintos y **ninguna depende de la otra**: si
+mañana se arregla una, la otra sigue bloqueando.
+
+### Motivo 1 — `L_prim` no puede elegir una regularización
+
+`L_prim` suma `log p` **solo sobre celdas observadas**, y ahí el prior es
+pura dilución. Celda a celda sobre las **256** celdas observadas:
+
+| | celdas |
+|---|---:|
+| subir `alpha` **baja** `p` | **224** |
+| empujan al revés | **32** |
+
+La curva no da una sola excepción entre `0,1` y `100`. Ordena `alpha` por
+cuánto se diluyó el prior, que no es una respuesta sobre el poker.
+
+**Se arreglaría** con una métrica que scoree también las celdas no
+observadas, o que mida en partición de validación.
+
+### Motivo 2 — `alpha` mezcla contra algo que no es una probabilidad
+
+`p = (cnt + alpha * prior) / (opp + alpha)`. `alpha` son pseudo-conteos: se
+suman al lado de `cnt`, que sí es un conteo. Para que eso signifique algo,
+`prior` tiene que estar en las mismas unidades.
+
+No lo está:
+
+| | |
+|---|---:|
+| celdas de `matrix` con `0` | **17 150 de 19 773 (86,7 %)** |
+| suma de una matriz | de **0,91** a **89,75** |
+| valores que aparecen | `{0, 0.25, 0.33, 0.5, 0.66, 0.75, 1.0}` |
+
+Una frecuencia sobre las 1 326 manos posibles debería sumar 1. Estas suman
+hasta 89,75. **No son priors normalizados**, así que `alpha * prior` no son
+pseudo-conteos: son pesos de una escala que no se sabe qué es.
+
+**Se arreglaría** decidiendo qué es `matrix` y normalizándola, o
+cambiando el shrinkage para que no la use como si fuera una frecuencia.
+Ver [`CEROS_PREFLOP_MATRICES.md`](CEROS_PREFLOP_MATRICES.md).
+
+> **Los dos siguen vivos.** Arreglar la métrica no arregla la escala, y
+> normalizar las matrices no arregla el hecho de que `L_prim` solo mire
+> donde el prior molesta. Por eso `DEFAULT_ALPHA` sigue en `2.0` aunque se
+> cerrara cualquiera de los dos.
+
+## 8.b Qué reabriría esto
 
 `DEFAULT_ALPHA` se puede recalibrar cuando **una** de estas sea cierta:
 

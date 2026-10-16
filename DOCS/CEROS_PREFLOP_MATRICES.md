@@ -124,6 +124,59 @@ cómoda:
 O sea que **cualquier cambio en cómo se interpretan estas matrices cambia el
 rango que el motor da en vivo.** No se toca nada aquí.
 
+## La acción elegida: **B**
+
+Había tres caminos y se elige **B**.
+
+| | opción | coste |
+|---|---|---|
+| **A** | regenerar las matrices como priors normalizados | alto: recalcular desde `hands_db.jsonl` |
+| **B** | **declarar que no son priors, y cambiar el shrinkage para que no se usen como si lo fueran** | **acotado: un cambio en `player_ranges.py`, no en las matrices** |
+| C | dejarlo como está y no calibrar hasta resolverlo | gratis, y deja el bug puesto |
+
+**Se elige B, y no porque sea la más barata.**
+
+La razón es que el diagnóstico apunta a que **el problema no son los
+números, es el contrato que se les supone**. Una matriz que suma 89,75
+puede ser una fuerza, o una puntuación, o un marcador de muchas manos. Lo
+que no puede ser es una frecuencia sobre 1 326 manos, y **eso es lo que
+`_prior_grid` la trata de ser** al usarse como pseudo-conteo.
+
+Cambiar las matrices (A) es cambiar la respuesta sin saber la pregunta.
+Dejarlas (C) deja un `alpha` que se puede mover y no significa nada, que
+es exactamente el estado en el que está el proyecto ahora mismo y la razón
+de que este documento exista.
+
+> **Y B es la única que separa las dos cosas.** A cerraría los 17 150 ceros
+> *y* dejaría sin tocar el hecho de que `L_prim` solo mira celdas
+> observadas. C no cierra nada. B dice la verdad sobre el dato y ajusta el
+> código a esa verdad.
+
+### Qué implica B, exactamente
+
+`p_matrix` deja de hacer `cnt + alpha * prior` sobre una escala que no es
+una frecuencia. Hay que decidir el sustituto, y **esa decisión no se puede
+tomar sin saber qué significa `matrix`**: si es una puntuación de fuerza,
+el shrinkage tiene que ir sobre una escala declarada; si es un conteo
+muestreado, hay que dividir por su tamaño de muestra.
+
+Mientras tanto, y hasta que eso se decida con evidencia:
+
+- **`DEFAULT_ALPHA` no se mueve.** Sigue en `2.0` con su test.
+- **`_prior_grid` deja de fingir** que devuelve una probabilidad, o el
+  shrinkage se apaga donde la escala no sea creíble. Lo que haga falta
+  para eso está en el bloque siguiente.
+
+### Cómo se sabría que B está bien
+
+| si | entonces |
+|---|---|
+| B es correcto | cambiar la escala de `matrix` **no cambia** el orden de los candidatos que `L_prim` prefiere, porque `L_prim` ya es monótona y no distingue. O sea: **B no puede arreglar por sí sola** |
+| A sería necesario | `matrix` resultara ser una frecuencia mal formada y normalizarla **cambia** el comportamiento |
+
+Que la propia B no baste para desbloquear la calibración es lo que hace que
+los **dos** motivos sigan siendo independientes, y no uno con dos nombres.
+
 ## Qué haría falta, y por qué no se hizo
 
 1. **Decidir qué es `matrix`.** Es una pregunta para quien generó el

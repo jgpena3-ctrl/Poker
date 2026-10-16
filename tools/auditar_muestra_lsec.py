@@ -23,6 +23,10 @@ sys.path.insert(0, ROOT)
 
 from motor import learn                                # noqa: E402
 from motor.multiway import PLAYER_IDS                  # noqa: E402
+from motor.hand_evaluator import evaluate_hand       # noqa: E402
+
+
+ORDEN_CALLES = ('preflop', 'flop', 'turn', 'river')
 
 
 def id_a_pos(h, ident):
@@ -81,6 +85,36 @@ def ganador_nombrado(h):
     return None, 'el texto no nombra a nadie de esta mesa'
 
 
+def reparto(h, gs):
+    """True si los jugadores de gs hacen la MISMA mano en el board.
+
+    Eso es lo que hace un reparto, y es demostrable: lo dice el evaluador
+    del motor sobre las cartas y el board del registro. No hace falta
+    fiarse de showdown.winner1, que es un texto y que el recorder
+    escribe SOLO con un ganador, asi que en un reparto esta incompleto por
+    construccion.
+    """
+    board = []
+    for st in ORDEN_CALLES:
+        board += [str(c) for c in
+                  ((h.get('comunitarias') or {}).get(st) or [])]
+    if not board:
+        return None
+    scores = {}
+    for p in h.get('players') or []:
+        c = (p.get('cards') or '').strip()
+        c = ''.join(c) if not isinstance(c, str) else c
+        if not c:
+            continue
+        try:
+            scores[p.get('pos')] = evaluate_hand([c[0:2], c[2:4]], board)
+        except Exception:
+            continue
+    if not gs or not all(pos in scores for pos in gs):
+        return None
+    return len({scores[pos] for pos in gs}) == 1
+
+
 def etiqueta(h):
     """(y del hero, motivo) o (None, motivo) si la mano no es utilizable.
 
@@ -105,10 +139,13 @@ def etiqueta(h):
     if any(x not in cpos for x in gs):
         return None, 'el ganador no tiene cartas'
     if len(gs) > 1:
-        nom, mot = ganador_nombrado(h)
-        if nom is None:
-            return None, 'varios ganadores: ' + mot
-        return (1.0 if nom == hero else 0.0), 'resuelto por showdown'
+        r = reparto(h, gs)
+        if r is None:
+            return None, ('varios ganadores y no se puede demostrar el '
+                          'reparto')
+        if not r:
+            return None, 'varios ganadores que NO hacen la misma mano'
+        return (0.5 if hero in gs else 0.0), 'reparto demostrado'
     return (1.0 if hero in gs else 0.0), 'ganador unico'
 
 
