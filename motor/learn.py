@@ -98,9 +98,9 @@ RELIABLE_HANDS = 900
 # no se puede reproducir no es un hash.
 #
 # Documentacion: `DOCS/CANAL_MANUAL_CERRADO.md`, `DOCS/RANGO_VIGENTE.md`.
-HANDS_DB_COMMIT = 'bf60aa8'
+HANDS_DB_COMMIT = 'dfef471'
 HANDS_DB_SHA256 = (
-    '92f450b0d758596a17c321a0d6387cf9b4f70c1e506e961f96307e3d78ba24ee')
+    '31eba6e1c4824015c1b149193ebfceacccb46b025673ea294a93bd486205bac5')
 HANDS_DB_LINEAS = 1258
 
 # El rango AUDITADO no es el de calibracion. Son dos cosas distintas y

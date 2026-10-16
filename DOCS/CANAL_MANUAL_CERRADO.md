@@ -2,11 +2,11 @@
 
 **Estado:** vigente.
 **Fecha:** 2026-10-15
-**Commit del estado canónico:** `bf60aa8`
-**SHA-256:** `92f450b0d758596a17c321a0d6387cf9b4f70c1e506e961f96307e3d78ba24ee`
+**Commit del estado canónico:** `dfef471`
+**SHA-256:** `31eba6e1c4824015c1b149193ebfceacccb46b025673ea294a93bd486205bac5`
 **Líneas:** 1258
-**Revisión manual:** en curso, `H_1070` de ~1200.
-**Vigila:** `motor/test_canal_manual.py` — 15 tests
+**Revisión manual:** **terminada**. `H_0001`..`H_1282`, en tres tramos.
+**Vigila:** `motor/test_canal_manual.py` — 16 tests
 
 ---
 
@@ -71,16 +71,96 @@ Con `ajeno`, `--apply` se niega y dice cuántas líneas se perderían. En
 
 El estado vigente (`9b5905a`) es `ajeno`, y con razón: es la revisión manual.
 
-## 4. El estado vigente: la revisión manual, medida
+## 4. El estado vigente: la revisión manual, terminada
 
-`hands_db.jsonl` la está revisando el mantenedor mano a mano. Va en dos
-tramos declarados, y los dos se midieron contra el estado anterior, no se
-supusieron.
+`hands_db.jsonl` la revisó el mantenedor mano a mano, de `H_0001` a `H_1282`.
+Fueron **tres tramos declarados**, y los tres se midieron contra el estado
+anterior, no se supusieron.
 
 | tramo | commit | manos | rango | qué corrigió |
 |---|---|---|---|---|
 | 1.º | `9b5905a` | 63 | `H_1014` → `H_1029` | orden de la ciega del BB, `winner`, `active`/`pos`, 3 cartas por OCR |
-| **2.º** | **`bf60aa8`** | **40** | `H_1029` → **`H_1070`** | casi todo `winner`: listas de 2 a 6 nombres reducidas a una |
+| 2.º | **`bf60aa8`** | **40** | `H_1029` → `H_1070` | casi todo `winner`: listas de 2 a 6 nombres reducidas a una |
+| 3.º | **`dfef471`** | **211** | `H_0173` → **`H_1282`** | el resto de los ganadores múltiples, 8 preflops reetiquetados, `Sandm` y `Capitan spiff` |
+
+Los tres tramos juntos pasaron las manos con 2+ ganadores de **179 a 14**, y
+ninguna mano se quedó sin ganador. La revisión **está terminada**: la
+comprobación manual se hizo sobre las 1258 líneas.
+
+### 4.0-bis El tercer tramo, en detalle
+
+El tercero es el grande, y cerró lo que quedaba: **211 manos de golpe**, de
+`H_0173` a `H_1282`, sin manos nuevas ni borradas.
+
+| | antes | después |
+|---|---|---|
+| líneas del fichero | 1258 | 1258 |
+| manos añadidas o borradas | — | ninguna |
+| manos modificadas | — | **211** (`H_0173`..`H_1282`) |
+| manos que no cambian en ningún campo | — | **1047** de 1258 |
+| `winner` con 2+ en la base entera | 179 | **14** |
+| manos sin ganador declarado | 0 | **0** |
+| **`BB b` mal ordenadas (invariante de CM-004)** | 0 | **1** (`H_1196`) |
+
+Y lo que corrigió, por familia:
+
+| manos | qué cambió |
+|---|---|
+| 39 | `winner` de 2 a 1 |
+| 17 | `winner` de 3 a 1 |
+| 10 | `winner` de 2 a 1, y además `flop` |
+| 8 | `winner` de 5 a 1 |
+| 8 | `river`, y el jugador `Sandm` |
+| 6 | `winner` de 2 a 1, y además `turn` |
+| 6 | `river` |
+| 5 | `winner` de 4 a 1 |
+| 5 | `winner` de 6 a 1 |
+| 4 | `river`, y el jugador `Capitan spiff` |
+| 3 | `river`, y dos jugadores (`Sandm`, `ComboHunter`) |
+| 8 | preflop reetiquetado, con longitud distinta |
+
+**Y sí mueve las cifras de `CONTRATO_F72A.md` §5**, a diferencia del tramo
+anterior: `H_0173` está dentro de la ventana de 877. El tramo 3 se cierra
+**antes** de recalibrar, y el plan de `DOCS/FASE_D_PLAN.md` se queda
+pendiente de rehacer contra este estado, no contra `bf60aa8`.
+
+### 4.0-b La única violation del invariante que queda: `H_1196`
+
+Este es el punto abierto de la revisión, y se declara en vez de esconderse.
+
+```
+  0  BB  b  0.5     la ciega
+  1  UTG f  0.0
+  2  MP  f  0.0
+  3  CO  c  1.0     limpeo
+  4  BTN f  0.0
+  5  SB  c  1.0     limpeo
+  6  BB  b  2.0     <-- el detector marca esto
+  7  CO  f  0.0
+  8  SB  c  2.0
+```
+
+El motor **no** confunde el `BB b 2.0` con la ciega: `_es_ciega_bb` exige que
+no haya ninguna acción voluntaria antes, y aquí hay dos limpeos, así que la
+rechaza como ciega y la trata como subida. Lo que hace
+`entradas_bb_rechazadas` es más ancho: registra **toda** `BB b` que el motor
+no reconoció como ciega, y le pone `CAUSA_ORDEN`.
+
+Hay dos lecturas defendibles, y **la decisión es del mantenedor, no del
+motor**:
+
+1. **El dato está mal.** Una subida del BB debería grabarse como `'r'`, y
+   `learn._es_ciega_bb` ya avisa de ello: la regla exige `act == 'b'`, así que
+   una subida bien grabada *nunca* se lee como ciega. Si la GUI escribe la
+   subida del BB como `b`, esa es la forma exacta de CM-004 y la corrección es
+   `'BB r 2.0'`.
+2. **El guard es más ancho que el defecto.** La regla de CM-004 era «una
+   `BB b` tardía **sin posting previo**», no «una `BB b` tardía». Aquí el BB ya
+   posteó en el índice 0.
+
+Mientras no se decida, el test `test_ninguna_mano_tiene_una_bb_b_que_no_pueda_ser_la_ciega`
+**está en rojo a propósito**. Relajar el invariante para ponerlo verde sería
+justo el error que este canal manual existe para evitar.
 
 ### 4.0 El segundo tramo, en detalle
 
@@ -134,13 +214,22 @@ Lo que se comprobó, contra el fichero anterior y no contra una impresión:
 revertirlo: revertir devolvería dos violaciones del invariante de CM-004 y
 perdería trabajo real. Se llama Opción A en `revision_1`.
 
-### 4.1 La revisión en curso NO congela la base
+### 4.1 La revisión manual NO congela la base
 
 > **Mientras haya revisión manual en curso, ningún SCRIPT escribe
 > `hands_db.jsonl`.**
 
-`learn.REVISION_EN_CURSO = True`. El mantenedor va revisando las manos una a
-una —lleva **1029** de ~1200— y eso, por definición, es editar el fichero.
+`learn.REVISION_EN_CURSO = False` desde el 2026-10-15: la revisión del
+mantenedor está **terminada**, tras tres tramos que llegaron desde
+`H_0001` hasta `H_1282`. Mientras estuvo en `True`, el mantenedor iba revisando
+las manos una a una y eso, por definición, es editar el fichero.
+
+**Y `False` no significa que la base sea correcta.** Significa que nadie la
+está mirando en este momento. Quedan 30 `IMPORTE_SUBIDA`, 15
+`SHOWDOWN_SIN_WINNER`, 3 `WINNER_FOLDEO` y 2 `ACCION_FANTASMA`, todos
+declarados en `DOCS/HALLZGOS_H0001_H1014.md`, más la mano `H_1196` de §4.0-b.
+Terminar la revisión cierra un estado; no cierra los defectos que quedan, y
+confundir las dos cosas sería el error de este bloque.
 
 **Lo que esta frase ya NO dice**, y antes sí:
 
@@ -265,4 +354,10 @@ dice. Hay dos tests que lo comprueban simulando justo esos dos fallos.
   borraron**, y que la evidencia que lo autoriza está sin escribir. Ver
   `DOCS/HALLZGOS_H0001_H1014.md` §5.
 - No dice que `9b5905a` esté completo. Dice que las 63 manos que tocó están
-  medidas y declaradas, y que la revisión sigue en `H_1029` de ~1200.
+  medidas y declaradas, y que la revisión siguió en `H_1029` con dos tramos
+  más por delante: `bf60aa8` (40 manos) y `dfef471` (211 manos), hasta
+  `H_1282`.
+- No dice que la revisión haya encontrado todos los errores. Dice que se ha
+  mirado las 1258 líneas y que lo que queda está en la lista: 30
+  `IMPORTE_SUBIDA`, 15 `SHOWDOWN_SIN_WINNER`, 3 `WINNER_FOLDEO`, 2
+  `ACCION_FANTASMA` y `H_1196` (§4.0-b). Lo no declarado sigue sin mirar.
