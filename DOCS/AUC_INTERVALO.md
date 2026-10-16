@@ -1,117 +1,135 @@
-# EL AUC DE LA EQUITY — con intervalo, y afirmable
+# EL AUC DE LA EQUITY — corregido, y la conclusión ha cambiado
 
-## El resultado
+> ## AVISO: la versión anterior de este documento publicaba un resultado
+> **incorrecto** y este lo sustituye entero.
+>
+> Decía AUC 0,8308 con intervalo [0,6991, 0,9364] y p = 0,0001, y lo
+> calificaba de afirmable. Ese número mezclaba las manos de **calibración**
+> con las de **validación**. La corrección la encontró `revision_2` §1.
 
-| población | n | gana | pierde | **AUC** | **95 % IC** | p (permutaciones) |
+## Lo que estaba mal
+
+El código era:
+
+```python
+c, v = cal.muestra()
+etiqueta = {i: y for i, y in c + v}      # <-- las dos
+```
+
+El modelo sí se ajustaba **solo** en calibración, pero las predicciones
+evaluadas incluían también las manos con las que se ajustó. Eso es mezclar
+dentro y fuera de muestra, y empuja el AUC **hacia arriba**: una equity
+ajustada a una mano la subestima menos que la de una mano que nunca vio.
+
+Y el documento afirmaba «solo validación». El código no lo hacía. Cuando el
+texto y el código discrepan, el que se publica es el que engaña.
+
+## Lo corregido
+
+| | antes | **ahora** |
+|---|---|---|
+| manos evaluadas | 160 (119 cal + 41 val) | **41, solo validación** |
+| manos que entran | 57 | **14** |
+| regla de partición | dos copias del sha256 | **una**, `calibrar.es_validacion` |
+| comprobación | ninguna | **una a una**, y lanza si falla |
+
+No es un `assert`, que `python -O` se come. Es una función que lanza
+`FugaDeValidacion`.
+
+## El resultado corregido
+
+**Población B — el hero continúa o checkea, validación:**
+
+| | n | gana | pierde | AUC | 95 % IC | p (1 cola) |
 |---|---:|---:|---:|---:|---|---:|
-| **A)** el hero continúa (`b`/`c`/`r`) | 25 | 8 | 17 | 0,8015 | [0,5965, 0,9559] | 0,0071 |
-| **B)** el hero continúa o checkea | **47** | 19 | 28 | **0,8308** | **[0,6991, 0,9364]** | **0,0001** |
+| A) continúa (`b`/`c`/`r`) | 6 | 2 | 4 | 0,8750 | [0,5000, 1,0000] | 0,1366 |
+| **B) continúa o checkea** | **11** | **6** | **5** | **0,7667** | **[0,4333, 1,0000]** | **0,0896** |
 
-**Se elige la población B.** El intervalo **no incluye 0,5** en ninguna de
-las dos, y los dos métodos de incertidumbre coinciden.
+| | |
+|---|---|
+| el IC excluye 0,5 | **NO** |
+| el p rechaza H0 al 5 % | **NO** |
 
-> **La equity ordena las manos mejor que el azar.** Eso es afirmable con
-> estas 47 manos, y no lo era hace dos bloques.
+> ## NO AFIRMABLE.
+>
+> Con 11 manos de validación no se puede distinguir ordenamiento útil de
+> azar. Y esa **es** la conclusión, no un fallo del análisis.
+
+## Las otras cuatro correcciones de `revision_2` §2
+
+No eran el error principal, pero las cuatro eran ciertas:
+
+| # | qué estaba mal | qué hay ahora |
+|---|---|---|
+| 1 | «los dos métodos coinciden» — el veredicto **solo miraba el intervalo** | el IC y el p se **informin por separado**, con su pregunta distinta |
+| 2 | el IC y el p no son dos intervalos: uno dice de qué valor puede ser el AUC, el otro si hay evidencia contra H0 | está dicho en el propio documento, y el código no vuelve a llamarlos «los dos métodos» |
+| 3 | el bootstrap remuestreaba la muestra conjunta y **descartaba** las réplicas que perdían una clase | **estratificado**: se remuestrea por separado victorias y derrotas y no se tira ninguna réplica |
+| 4 | el p era `ge / n`, que puede dar **0**, un valor imposible | **`(ge + 1) / (n + 1)`**, la corrección de Monte Carlo |
+
+La cola única del test de permutaciones se declara a propósito: H0 es
+**AUC ≤ 0,5**, una hipótesis direccional fijada en
+[`CONTRATO_L_SEC.md`](CONTRATO_L_SEC.md) §8 antes de mirar los números. Con
+dos colas habría que duplicar el p, y también estaría declarado.
+
+## Por qué el intervalo es tan ancho
+
+No es un defecto del bootstrap. Con 6 victorias y 5 derrotas hay **C(11, 6)
+= 462 reparticiones** posibles de las manos en dos clases, y elbootstrap las
+recorre todas muchas veces. El intervalo es ancho porque la muestra lo es.
+
+Y esto **sigue siendo cierto** aunque la conclusión no se pueda afirmar:
+> Un intervalo que incluye 0,5 no es un fallo del análisis: es la conclusión.
 
 ## La población, y por qué B
 
-| | A (continúa) | B (continúa + check) |
-|---|---:|---:|
-| n | 25 | **47** |
-| victorias | 8 | **19** |
-| intervalo | [0,60, 0,96] | **[0,70, 0,94]** |
-| ancho | 0,36 | **0,24** |
+La elección **no** cambia. B tiene el doble de manos que A y el check es una
+decisión legítima: el hero sigue en el bote, su equity se mide igual que en
+cualquier otra decisión, y no aparecen las dos magnitudes del fold.
 
-**B**, por tres razones:
+Lo que sí cambia es el número, y baja. Excluir los checks **seguía siendo**
+una decisión de Brier y no de ranking — eso no se toca.
 
-1. **Más manos** y por tanto un intervalo más estrecho. Con 25 y 8
-  victorias, el punto del AUC dice poco.
-2. **El check es una decisión legítima.** El contrato excluye las manos
-  donde el hero **foldea**, porque su equity se mide antes de abandonar y
-  la etiqueta es 0: dos magnitudes. El check **no** tiene ese problema: el
-  hero sigue en el bote, y su equity sigue siendo relevante.
-3. **La exclusión de la Brier sigue justificada por otra razón** que no
-  afecta al AUC. El subgrupo de check tenía 50 % de victorias contra el
-  12 % de la muestra, lo que lo hacía **no representativo para un Brier**
-  (que es sensible a la base rate). Un **AUC no lo es**: mide el orden, y
-  el orden no depende de cuántas victorias haya en la clase.
+## Qué sí se sostiene
 
-> **Excluir los checks era una decisión de Brier, no de ranking.** Y al
-> cambiar de métrica, la decisión cambia. Eso es lo que significa que el
-> objetivo estuviera escondido.
+No es poco, aunque suene a menos de lo que sonaba:
 
-## Qué entra y qué no, contado
-
-De las **160** manos de la muestra:
-
-| | manos |
-|---|---:|
-| **entra al AUC** | **57** |
-| excluida: **preflop retrospectiva** | **98** |
-| excluida: reparto (`y = 0,5`, el AUC binario no lo admite) | 3 |
-| excluida: el hero no actuó | 1 |
-| excluida: sin equity | 1 |
-
-Y las 57 se reparten así: river 45, flop 6, turn 6.
-
-### Las reglas fijadas antes de calcular
-
-| regla | por qué |
+| | |
 |---|---|
-| **el reparto se excluye, no se convierte** | `y = 0,5` no es una victoria ni una derrota. Convertirlo en una de las dos sería inventar la etiqueta, y el recuento de 3 queda publicado |
-| **solo validación** | el modelo se ajusta en calibración. Evaluar en la misma muestra con la que se ajusta sería medir recuerdo, no generalización |
-| **el intervalo se publica aunque incluya 0,5** | un intervalo ancho no es un fallo del análisis: es la conclusión |
+| el punto del AUC es **alto y en la dirección correcta** | 0,7667 contra 0,5 |
+| pero **no se puede afirmar** | el intervalo incluye 0,5 |
+| y la exclusión **más grande** no es el intervalo | 23 de las 41 manos de validación son cortes **preflop**, y su equity es retrospectiva |
 
-## Los dos métodos de incertidumbre
+> **La cobertura es el problema real, no la significance.** 14 de 41. Con
+> 11 manos en el AUC, cualquier intervalo va a ser ancho; lo que falta son
+> manos, y las que faltan son las preflop.
 
-**No se publica un AUC con un solo intervalo.** Dos, y tienen que coincidir:
+## Y qué haría falta para poder afirmarlo
 
-| método | qué es | por qué |
-|---|---|---|
-| **bootstrap percentil** | 10 000 remuestreos con reemplazo, semilla 7 | el estándar para intervalos |
-| **permutaciones** | 10 000 barajados de las etiquetas, semilla 7 | la respuesta no paramétrica pura: no hace ninguna suposición de forma |
+No es «más tiempo de cómputo» ni «otrobootstrap»:
 
-> **Un tercer método se intentó y se descartó**: Hanley-McNeil dio un error
-> estándar de **0,42** para un AUC de 0,80, y un z de 0,71. La fórmula se
-> degrada cuando el AUC se aleja de 0,5 en muestras pequeñas. Citar un
-> intervalo que no se ha mirado es el error que este bloque lleva quince
-> bloques corrigiendo.
+1. **El camino preflop observable.** Metería las 23 manos que hoy se
+   excluyen, y es lo que decide si la cobertura pasa de 34 % a algo útil.
+   Su varianza ya está medida y es admisible
+   ([`CONTRATO_PREFLOP.md`](CONTRATO_PREFLOP.md)).
+2. **Más manos de validación.** El reparto es `sha256(hand_id) % 10 < 3`, y
+   cambiarlo es cambiar de fase: es un commit con su motivo, no un ajuste.
 
-Y un error propio que salió al el método: la primera versión del test de
-permutaciones usaba `|AUC − observado| ≥ |0,5 − observado|`, que con un
-observado de 1,0 contaba las permutaciones con AUC ≤ 0,5 — **la mitad**.
-Daba p = 0,51 con una separación perfecta. Se cazó porque en un caso
-sintético con AUC = 1,0 el p tiene que ser minúsculo, y no lo era.
+## `DEFAULT_ALPHA`
 
-## Lo que este resultado NO dice
-
-> **AUC es discriminación. No es calibración.**
-
-La equity ordena las manos. Eso **no** significa que 0,80 signifique «gana
-el 80 % de las veces». Y desde luego no significa que el motor decida bien:
-ese es el objetivo **C** del contrato, que sigue fuera porque no hay
-etiqueta de optimalidad.
-
-Y hay una exclusión que pesa mucho más que el tamaño del intervalo:
-
-> **98 de las 160 manos son preflop, y quedan fuera porque su equity es
-> RETROSPECTIVA**: usa las cartas reales del rival, que al decidir no se
-> conocían. Este AUC es, de hecho, **de postflop**.
-
-El camino preflop del motor sigue sin existir
-([`CONTRATO_PREFLOP.md`](CONTRATO_PREFLOP.md)), y sin él este resultado
-cubre el **36 %** de la muestra. Afirmable, sí. Completo, no.
-
-## Y `DEFAULT_ALPHA`
-
-**Sigue en 2,0.** Un AUC afirmable dice que la equity ordena; **no** dice
-que un valor de `alpha` sea mejor que otro. Para eso hacen falta los otros
-dos bloques: qué significa `matrix`
-([`QUE_ES_MATRIX.md`](QUE_ES_MATRIX.md)) y una métrica que mida al
-**candidato**, no al modelo entero.
+**Sigue en 2,0.** Nada de esto dice que un `alpha` sea mejor que otro. Un
+AUC mide orden; `alpha` es una escala.
 
 ## Reproducir
 
 ```
 python tools/auditar_auc.py
 ```
+
+Y el guardián de que no vuelva a pasar:
+
+```
+python -m pytest tools/test_auditar_auc.py -q
+```
+
+`test_no_evalua_manos_de_calibracion` falla si alguna mano evaluada no es de
+validación. Es el test que faltaba cuando se publicó el número malo.

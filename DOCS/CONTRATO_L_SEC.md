@@ -207,3 +207,56 @@ arbitraria. Se excluye y **se cuenta**: en la muestra son 3 manos.
 Un tercer método (Hanley-McNeil) se intentó y **se descartó**: da un error
 estándar de 0,42 para un AUC de 0,80, y se degrada cuando el AUC se aleja
 de 0,5 en muestras pequeñas.
+
+---
+
+## 11. Corrección de `revision_2` §1 y §2: el AUC anterior estaba mal
+
+La versión anterior de este contrato, y de
+[`AUC_INTERVALO.md`](AUC_INTERVALO.md), publicaba un AUC de **0,8308** con
+intervalo [0,6991, 0,9364] y p = 0,0001, y lo daba por afirmable.
+
+**Ese número era incorrecto.** `auditar_auc.py` hacía:
+
+```python
+c, v = cal.muestra()
+etiqueta = {i: y for i, y in c + v}      # las dos particiones
+```
+
+El modelo se ajustaba solo en calibración, pero se evaluaban también las
+manos con las que se ajustó. **Dentro y fuera de muestra, mezcladas.**
+
+### Las reglas, ya fijadas
+
+| # | regla |
+|---|---|
+| 1 | **el ajuste usa calibración y la evaluación usa validación**, y son conjuntos disjuntos por construcción |
+| 2 | la regla de partición se llama a `calibrar.es_validacion`, la **canónica**. No hay una segunda copia del sha256 en un auditor |
+| 3 | **toda mano evaluada se comprueba una a una** antes de calcular nada, y una que no sea de validación **lanza**. No es un `assert`: `python -O` se come los asserts |
+| 4 | el IC bootstrap es **estratificado** (una réplica por clase, tamaños conservados, ninguna réplica descartada) |
+| 5 | el p de permutaciones es `(ge + 1) / (n + 1)`, corrección de Monte Carlo. `ge / n` puede dar 0, que es imposible |
+| 6 | **la cola es única y se declara**: H0 es AUC ≤ 0,5. Es una hipótesis direccional (§8), fijada antes de mirar. Con dos colas el p se duplicaría |
+| 7 | **el IC y el p no son dos intervalos.** El IC dice de qué valor puede ser el AUC; el p dice si hay evidencia contra H0. Se informan por separado y **no se declaran de acuerdo entre sí** |
+
+### El resultado corregido
+
+| población | n | gana | pierde | AUC | 95 % IC | p | afirmable |
+|---|---:|---:|---:|---:|---|---:|---|
+| A) continúa | 6 | 2 | 4 | 0,8750 | [0,5000, 1,0000] | 0,1366 | **no** |
+| B) continúa o checkea | 11 | 6 | 5 | 0,7667 | [0,4333, 1,0000] | 0,0896 | **no** |
+
+**14 manos de 41.** El intervalo incluye 0,5 en las dos poblaciones y el p no
+rechaza H0 al 5 %.
+
+### Y el principio, que es lo que hay que no olvidar
+
+> **La mezcla dentro/fuera de muestra no da un número más grande. Da un
+> número que no significa nada.** El punto del AUC (0,7667) sigue siendo
+> alto y en la dirección correcta; lo que no se puede es **afirmarlo**.
+
+Y la regla que se habría tenido que tener antes:
+
+> **Si el código y el texto discrepan, el que se publica es el que engaña.**
+> El documento decía «solo validación». El código no filtraba nada. Aquí no
+> hay ninguna forma de que eso se repita: el evaluado se comprueba contra la
+> partición antes de calcular, y si no encaja el script se para.

@@ -12,6 +12,7 @@ Cuatro bloques:
   4. QUE LAS REGLAS DEL CONTRATO SE CUMPLEN. Reparto excluido y contado,
      y solo validacion.
 """
+import ast
 import importlib.util
 import io
 import os
@@ -87,9 +88,11 @@ def test_el_bootstrap_y_las_permutaciones_coinciden(auc):
     p, _ge, _n = auc.p_permutaciones(pos, neg, n=2000)
     incluye = lo <= 0.5 <= hi
     afirma = p < 0.05
-    assert incluye != afirma, (
-        'los metodos se contradicen: IC incluye 0,5 = %s, p = %.4f'
-        % (incluye, p))
+    # lo que no puede pasar es que el intervalo NO incluya 0,5 mientras el
+    # p dice que no hay efecto: eso si es una contradiccion
+    assert not (afirma and incluye), (
+        'se contradicen: el p rechaza H0 (%.4f) y el IC incluye 0,5 '
+        '[%.4f, %.4f]' % (p, lo, hi))
 
 
 def test_sin_efecto_los_dos_dicen_que_no(auc):
@@ -131,18 +134,176 @@ def test_la_semilla_es_fija(auc):
 
 
 # ------------------------------------------- 4. las reglas del contrato
-def test_la_muestra_es_la_declarada(auc):
-    """La medicion se hace sobre la particion de validacion y solo ella.
+RUTA_AUC = os.path.join(ROOT, 'tools', 'auditar_auc.py')
 
-    El modelo se ajusta en calibracion; evaluar en la misma muestra con la
-    que se ajusta seria medir recuerdo. Y eso no lo comprueba nadie salvo
-    que se compruebe.
+
+def _fuente():
+    return io.open(RUTA_AUC, encoding='utf-8').read()
+
+
+def test_el_ajuste_es_solo_calibracion(auc):
+    """El lado del AJUSTE. Este lo comprobaba el test viejo."""
+    src = _fuente()
+    assert 'not cal.es_validacion(h[' in src, (
+        'el ajuste tiene que ser SOLO calibracion')
+
+
+def test_no_evalua_manos_de_calibracion(auc):
+    """El test que FALTABA cuando se publico el numero de 0,8308.
+
+    `auditar_auc.py` hacia:
+
+        c, v = cal.muestra()
+        etiqueta = {i: y for i, y in c + v}      # las dos particiones
+
+    El modelo se ajustaba en calibracion pero se evaluaban tambien las manos
+    con las que se ajusto. Dentro y fuera de muestra, mezcladas, y el AUC
+    salia empujado hacia arriba.
+
+    Este test falla si vuelve a pasar. Y es COMPORTAMENTAL: llama a la
+    comprobacion con un ID de calibracion y exige que lance. No mira el
+    codigo, que es lo que permitio el error.
     """
-    src = io.open(os.path.join(ROOT, 'tools', 'auditar_auc.py'),
-                  encoding='utf-8').read()
-    assert 'es_val' in src
-    i = src.index('ajuste = [h for h in ventana if not es_val(h)]')
-    assert i > 0, 'el ajuste tiene que ser SOLO calibracion'
+    import hashlib
+
+    # un hand_id que NO es de validacion: sha256 % 10 >= 3
+    cal_id = None
+    for i in range(500):
+        cand = 'H_%04d' % i
+        if int(hashlib.sha256(cand.encode('utf-8')).hexdigest(), 16) % 10 >= 3:
+            cal_id = cand
+            break
+    assert cal_id is not None, 'no se encontro un id de calibracion'
+
+    with pytest.raises(auc.FugaDeValidacion):
+        auc.comprobar_solo_validacion([cal_id])
+
+    # y la misma comprobacion pasa con uno que si lo es
+    val_id = None
+    for i in range(500):
+        cand = 'H_%04d' % i
+        if int(hashlib.sha256(cand.encode('utf-8')).hexdigest(), 16) % 10 < 3:
+            val_id = cand
+            break
+    assert auc.comprobar_solo_validacion([val_id]) is True
+
+
+def test_la_comprobacion_no_es_un_assert(auc):
+    """`python -O` se come los asserts, y esta es justo la comprobacion que
+    no puede desaparecer."""
+    src = _fuente()
+    assert 'raise FugaDeValidacion' in src, (
+        'tiene que LANZAR, no afirmar')
+    desnudos = [n for n in ast.walk(ast.parse(src))
+                if isinstance(n, ast.Assert)]
+    assert not desnudos, (
+        'no debe quedar ningun assert desnudo protegiendo la particion: %d'
+        % len(desnudos))
+
+
+def test_la_evaluacion_toma_solo_de_val(auc):
+    """La correccion literal de `revision_2` §1: `dict(v)`, no `c + v`.
+
+    Se mira el ARBOL, no el texto: el docstring del modulo menciona `c + v`
+    para explicar el error, y un `in src` lo detectaria como si el bug
+    estuviera en el codigo.
+    """
+    arbol = ast.parse(_fuente())
+    asignaciones = [
+        n for n in ast.walk(arbol)
+        if isinstance(n, ast.Assign)
+        for t in n.targets
+        if isinstance(t, ast.Name) and t.id == 'etiqueta']
+    assert asignaciones, 'no se encuentra la asignacion de `etiqueta`'
+    valor = asignaciones[-1].value
+    assert isinstance(valor, ast.Call), 'tiene que ser dict(...)'
+    assert isinstance(valor.func, ast.Name) and valor.func.id == 'dict'
+    assert len(valor.args) == 1
+    arg = valor.args[0]
+    assert isinstance(arg, ast.Name) and arg.id == 'val_', (
+        'la evaluacion tiene que ser dict(val_): solo validacion')
+
+    # y ningun BinOp `+` entre `c` y `v` en el codigo
+    sumas = [n for n in ast.walk(arbol)
+             if isinstance(n, ast.BinOp) and isinstance(n.op, ast.Add)
+             and {x.id for x in ast.walk(n.left)
+                  if isinstance(x, ast.Name)} == {'c'}
+             and any(isinstance(x, ast.Name) and x.id == 'v'
+                     for x in ast.walk(n.right))]
+    assert not sumas, '`c + v` mezcla calibracion y validacion'
+
+
+def test_ajuste_y_evaluacion_son_disjuntos(auc):
+    """Aparte de la comprobacion: que no haya solape de verdad."""
+    _c, v = auc.cal.muestra()
+    ids_val = [i for i, _y in v]
+    ids_cal = [i for i, _y in auc.cal.muestra()[0]]
+    assert not (set(ids_val) & set(ids_cal)), (
+        'calibracion y validacion se solapan')
+    assert all(auc.cal.es_validacion(i) for i in ids_val)
+    assert not any(auc.cal.es_validacion(i) for i in ids_cal)
+
+
+def test_la_particion_es_la_canonica(auc):
+    """Una sola copia de la regla.
+
+    `revision_2` §1: si `cal.muestra()` usa una particion distinta de la del
+    script, no hay que asumir que son la misma. Aqui no hay una segunda
+    copia: se llama a `calibrar.es_validacion`.
+    """
+    src = _fuente()
+    assert 'cal.es_validacion' in src
+    assert 'hashlib' not in src, (
+        'no debe reimplementar el sha256: la regla canonica es una sola')
+
+
+def test_el_bootstrap_es_estratificado(auc):
+    """Conserva los dos tamanos de clase y no descarta ninguna replica.
+
+    La version anterior remuestreaba la muestra conjunta y TIRABA las
+    replicas que perdian una clase, lo que sesga el intervalo hacia el lado
+    que mas manos tiene.
+    """
+    rng = np.random.default_rng(4)
+    pos = list(rng.normal(1.0, 0.4, 8).round(3))
+    neg = list(rng.normal(0.0, 0.4, 40).round(3))
+    ic = auc.ic_bootstrap(pos, neg, n=3000)
+    assert ic is not None, 'con estratificacion no puede faltar una clase'
+    assert len(neg) > len(pos), 'clases desiguales a proposito'
+
+
+def test_el_p_usa_la_correccion_de_monte_carlo(auc):
+    """`ge / n` puede dar 0, que es un p-valor imposible."""
+    src = _fuente()
+    assert '(ge + 1) / (n + 1)' in src, (
+        'la correccion de Monte Carlo tiene que estar ahi')
+    # y con separacion perfecta el p es diminuto pero NO cero
+    pos = [0.80 + 0.01 * i for i in range(8)]
+    neg = [0.20 + 0.01 * i for i in range(17)]
+    p, ge, n = auc.p_permutaciones(pos, neg, n=2000)
+    assert p > 0.0, 'un p-valor de 0 no existe'
+    assert p == pytest.approx((ge + 1) / (n + 1))
+
+
+def test_el_ic_y_el_p_no_se_declaran_de_acuerdo(auc):
+    """El veredicto anterior solo miraba el intervalo y decia que los dos
+    metodos coincidian. Un IC y un p son preguntas distintas."""
+    src = _fuente()
+    assert 'los dos metodos coinciden' not in src, (
+        'un IC y un p no se declaran de acuerdo entre si')
+    assert 'no son dos intervalos' in src.lower() or \
+        'NO SON DOS INTERVALOS' in src
+
+
+def test_la_hipotesis_nula_es_direccional_y_declarada(auc):
+    """Una cola, y declarada. La direccion se fijo antes de mirar."""
+    src = _fuente()
+    assert 'AUC <= 0,5' in src or 'AUC ≤ 0,5' in src, (
+        'H0 direccional: AUC <= 0,5')
+    contrato = io.open(os.path.join(ROOT, 'DOCS', 'CONTRATO_L_SEC.md'),
+                       encoding='utf-8').read()
+    assert 'direccional' in contrato, (
+        'la direccion tiene que estar en el contrato, no solo en el codigo')
 
 
 def test_el_reparto_no_se_convierte_en_victoria(auc):

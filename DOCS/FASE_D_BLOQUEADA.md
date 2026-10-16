@@ -83,7 +83,7 @@ escribió. Ya no.
 |---|---|---|
 | **0** | definir el objetivo de `L_sec` | **CERRADO.** Objetivo: **ranking**, no probabilidad. Población: hero continúa o checkea, en validación. [`CONTRATO_L_SEC.md`](CONTRATO_L_SEC.md) §8, [`AUC_INTERVALO.md`](AUC_INTERVALO.md) |
 | **1** | camino de equity preflop | **DESBLOQUEADO.** El objetivo ya está, así que se puede implementar. Y sus dos decisiones abiertas —exacto o muestreado, y qué pasa con la varianza— están medidas: muestreado a 40 combos, varianza admisible. [`CONTRATO_PREFLOP.md`](CONTRATO_PREFLOP.md) |
-| **2** | una métrica que sobreviva al 86 % de derrotas | **CERRADO, y por la vía obvia:** equity como *ranking*, que es la opción que el propio bloque 2 enumeraba. El AUC **no** depende de la base rate. Afirmable: 0,8308 con IC [0,6991, 0,9364] |
+| **2** | una métrica que sobreviva al 86 % de derrotas | **CERRADO como ELECCIÓN:** equity como *ranking*, que es la opción que el propio bloque 2 enumeraba, y el AUC **no** depende de la base rate. Que **ordene bien** es otra pregunta, y con 11 manos de validación **no se puede afirmar** |
 | **3** | qué significa `matrix` | **abierto, y no se resuelve con datos** ([`QUE_ES_MATRIX.md`](QUE_ES_MATRIX.md)) |
 
 ### Lo que queda bloqueando Fase D
@@ -101,3 +101,32 @@ rival. El bloque 1 las cubre, y con la varianza ya escrita en el contrato.
 > Antes se decía 38 %. La cifra medida es **57 / 160**, y los 3 repartos que
 > el AUC binario no admite están contados aparte. Se corrige el número, no el
 > criterio.
+
+---
+
+## Corrección: el bloque 2 está cerrado como **elección**, no como resultado
+
+La tabla de arriba ponía el bloque 2 en «CERRADO» con la coletilla
+«Afirmable: 0,8308 con IC [0,6991, 0,9364]». Ese número estaba mal: la
+evaluación mezclaba calibración y validación
+([`CONTRATO_L_SEC.md`](CONTRATO_L_SEC.md) §11).
+
+| | estado correcto |
+|---|---|
+| **2** | **CERRADO como elección.** La métrica es el AUC — equity como *ranking* — que es la opción que el propio bloque enumeraba y que no depende de la base rate. Lo que **no** es un resultado es que ordene bien: con 11 manos de validación el intervalo incluye 0,5 |
+
+Y el estado de Fase D cambia por debajo:
+
+| | antes | **ahora** |
+|---|---|---|
+| lo que bloquea | el bloque 3 | **el bloque 3, y la muestra** |
+
+Porque el bloque 3 no se resuelve con datos, y la muestra **sí** es un
+problema medible: 14 de 41 manos de validación entran al AUC. Las 23 que
+quedan fuera son cortes preflop con equity retrospectiva, y el camino
+preflop observable es justo lo que las mete.
+
+> **Antes de este bloque se creía que el bloqueo era de cobertura (38 %).**
+> Ahora se sabe que es de las dos cosas: cobertura **y** tamaño. Y las dos se
+> pueden atacar: la cobertura con el camino preflop, el tamaño con más manos,
+> que es un commit con su motivo y no un ajuste.

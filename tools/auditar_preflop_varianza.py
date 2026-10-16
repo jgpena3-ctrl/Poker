@@ -57,14 +57,26 @@ def _m(nombre):
     return m
 
 
+# el comprobador de fuga vive en uditar_auc.py y se USA desde aqui, no
+# se copia: un solo sitio donde puede fallar
+_auc = _m('auditar_auc.py')
+comprobar_solo_validacion = _auc.comprobar_solo_validacion
+FugaDeValidacion = _auc.FugaDeValidacion
+
 eqp = _m('equity_preflop.py')
 eqm = _m('equity_de_mano.py')
 cal = _m('calibrar.py')
 
 
 def _es_validacion(h):
-    return int(hashlib.sha256(
-        h['hand_id'].encode('utf-8')).hexdigest(), 16) % 10 < 3
+    """La regla CANONICA de particion, la de calibrar.
+
+    Antes esta funcion reimplementaba el sha256 aqui. Dos copias de la
+    misma regla pueden divergir sin que nadie se entere, que es justo lo
+    que 
+evision_2 §1 pidio unificar.
+    """
+    return cal.es_validacion(h['hand_id'])
 
 
 def _cartas(h, pos):
@@ -118,7 +130,12 @@ def main():
         ajuste, labels=labels, alpha=player_ranges.DEFAULT_ALPHA)
 
     cal_, val_ = cal.muestra()
-    etiqueta = {i: y for i, y in cal_ + val_}
+    # SOLO VALIDACION. `revision_2` §1: la version anterior mezclaba las
+    # manos con las que se ajusta el modelo, y eso empuja el AUC arriba.
+    # Aqui el semiancho que hace de vara se calculaba sobre esa mezcla, de
+    # modo que el numero que sale ahora es mas pequeño y la vara mas dura.
+    etiqueta = dict(val_)
+    comprobar_solo_validacion(etiqueta)
     por_id = {h['hand_id']: h for h in ventana}
 
     print('=' * 78)
