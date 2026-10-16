@@ -3,9 +3,8 @@
 > **Estado: el bloque 3 está REABIERTO.** Los otros tres siguen cerrados.
 >
 > `DEFAULT_ALPHA` sigue en 2,0 y no se calibra, pero por una razón corregida:
-> las métricas disponibles no lo distinguirían. Y hay una cota inferior
-> medida: **α ≥ 1,3636**, por debajo el motor produce probabilidades que no
-> pueden existir. Ver el final del documento.
+> las métricas disponibles no lo distinguirían. Y **no tiene cota inferior**:
+> la coherencia por celda se cumple para todo α ≥ 0. Ver el final.
 
 ## El estado
 
@@ -91,7 +90,7 @@ escribió. Ya no.
 | **0** | definir el objetivo de `L_sec` | **CERRADO.** Objetivo: **ranking**, no probabilidad. Población: hero continúa o checkea, en validación. [`CONTRATO_L_SEC.md`](CONTRATO_L_SEC.md) §8, [`AUC_INTERVALO.md`](AUC_INTERVALO.md) |
 | **1** | camino de equity preflop | **DESBLOQUEADO.** El objetivo ya está, así que se puede implementar. Y sus dos decisiones abiertas —exacto o muestreado, y qué pasa con la varianza— están medidas: muestreado a 40 combos, varianza admisible. [`CONTRATO_PREFLOP.md`](CONTRATO_PREFLOP.md) |
 | **2** | una métrica que sobreviva al 86 % de derrotas | **CERRADO como ELECCIÓN:** equity como *ranking*, que es la opción que el propio bloque 2 enumeraba, y el AUC **no** depende de la base rate. Que **ordene bien** es otra pregunta, y con 11 manos de validación **no se puede afirmar** |
-| **3** | qué significa `matrix` | **REABIERTO.** La prueba que lo cerraba estaba mal planteada: la exclusión mutua es **por mano**, no sobre las 169 manos ([`QUE_ES_MATRIX.md`](QUE_ES_MATRIX.md)). Sí hay una cota inferior medida: **α ≥ 1,3636** |
+| **3** | qué significa `matrix` | **REABIERTO.** La prueba que lo cerraba estaba mal planteada: la exclusión mutua es **por mano**, no sobre las 169 manos ([`QUE_ES_MATRIX.md`](QUE_ES_MATRIX.md)). **No hay cota inferior**: la coherencia se cumple para todo α ≥ 0 |
 
 ### Lo que queda bloqueando Fase D
 
@@ -251,18 +250,18 @@ Medido, con el motor en vez de con álgebra:
 
 Barriendo `alpha`, la suma por celda **se pasa de 1 por debajo**:
 
-| `alpha` | suma por celda | coherente |
+| `alpha` | coherencia | coherente |
 |---:|---:|:---:|
-| 1,00 | 1,0333 | **NO** |
-| 1,30 | 1,0056 | **NO** |
-| **1,3636** | **1,0000** | ← el borde, por bisección |
-| 2,00 | 0,9500 | sí |
-| 200,00 | 0,4671 | sí |
+| 0,05 | 0,9955 | sí |
+| 0,25 | 0,9780 | sí |
+| 1,00 | 0,9214 | sí |
+| 1,3636 | 0,9080 | sí |
+| 2,00 | 0,8625 | sí |
+| 5,00 | 0,7500 | sí |
 
-> **`DEFAULT_ALPHA = 2,0` está 1,47× por encima del borde de coherencia.**
-> Abajo de 1,3636 el motor asigna a una mano más probabilidad total que 1
-> entre acciones que son mutuamente excluyentes. Eso no se calibra: es
-> imposible.
+> **No hay borde.** La coherencia por celda se cumple para todo α ≥ 0, porque
+> `N(c) ≤ opp(c)` por construcción. El umbral de 1,3636 del bloque anterior
+> era un artefacto de sumar el prior crudo del fold, y queda **retirado**.
 
 ### El estado corregido
 

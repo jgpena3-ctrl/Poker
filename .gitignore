@@ -102,3 +102,4 @@ data/test_output.jsonl
 data/_cache_equity_preflop.json
 data/_cache_equity_preflop.json.v*
 data/_cache_equity_observable.json.v*
+data/_cache_varianza_exactas*

@@ -412,6 +412,13 @@ def equity_preflop_rango(hero_codes, villain_reach=None,
 
     Lanza ValueError si el rango no tiene combos legales.
 
+    `n_runouts` se acepta y se valida, pero **no cambia el calculo**: contra
+    cada combo se enumeran TODOS los sorteos posibles, o sea que una sola
+    pasada ya es exacta. Se mantiene en la firma porque el contrato la
+    escribio, y para que el camino postflop y este sean intercambiables. Si
+    en algun momento se pasa a muestrear tableros en vez de enumerarlos, ese
+    es el parametro que habria que usar, y no antes.
+
     Muestreado, y es por FUERZA: contra 1326 combos serian 1326 x C(48,5)
     = 2,3 x 10^9 evaluaciones. La varianza de este estimador esta MEDIDA y
     escrita en `CONTRATO_PREFLOP.md`: con 40 combos, sigma ~ 0,09 y mueve
@@ -428,6 +435,11 @@ def equity_preflop_rango(hero_codes, villain_reach=None,
             % (n_combos, n_combos * 1712304, _MAX_COMBOS))
     if n_runouts < 1:
         raise ValueError('n_runouts tiene que ser >= 1, no %r' % (n_runouts,))
+    if n_combos < 1:
+        raise ValueError(
+            'n_combos tiene que ser >= 1, no %r. Con 0 el muestreo queda '
+            'vacio y la media seria una division por cero en vez de un '
+            'error util.' % (n_combos,))
 
     hero = _cards_de_hero(hero_codes)
     if hero.shape[0] != 2:
@@ -454,17 +466,29 @@ def equity_preflop_rango(hero_codes, villain_reach=None,
 
     n = int(min(n_combos, ids.size))
     rng = np.random.default_rng(seed)
-    elegidos = rng.choice(len(ids), size=n, replace=False,
-                           p=w_leg / total)
+    p = w_leg / total
+
+    # MUESTREO CON REEMPLAZO SEGUN EL RANGO, Y MEDIA SIN VOLVER A PONDERAR.
+    #
+    # Antes se sorteaba con `p` y luego se ponderaba por `w` otra vez. Eso
+    # es un DOBLE PONDERADO: el muestreo ya favorece los combos pesados y
+    # ponderarlos de nuevo empuja la equity hacia ellos. `revision_2` §1.C.
+    #
+    # Aqui el estimador es la media simple de extracciones i.i.d. de la
+    # distribucion `p`, que es INSEGADO para `sum_i p_i * equity_i`.
+    #
+    # Con reemplazo y no sin, a proposito: con reemplazo la media simple es
+    # exactamente insesgada, y los combos repetidos salen de la cache sin
+    # coste. Sin reemplazo con probabilidades desiguales habria que
+    # corregir por las probabilidades de inclusion.
+    elegidos = rng.choice(len(ids), size=n, replace=True, p=p)
 
     acc = 0.0
-    peso = 0.0
     for k in elegidos:
         i = int(ids[int(k)])
         acc += equity_preflop_contra_combo(
-            hero, np.array([COMBO0[i], COMBO1[i]], dtype=np.intp)) * w_leg[k]
-        peso += w_leg[k]
-    return float(acc / peso)
+            hero, np.array([COMBO0[i], COMBO1[i]], dtype=np.intp))
+    return float(acc / n)
 
 
 if __name__ == '__main__':

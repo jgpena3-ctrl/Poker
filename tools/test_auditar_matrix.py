@@ -71,9 +71,13 @@ def _max_suma_por_celda(mat, modelo, alpha):
             for a in accs:
                 t += np.asarray(modelo.p_matrix(perfil, spot, a),
                                 dtype=float)
-            # el fold entra aparte: no tiene tabla y su prior es el plano.
-            # Anadirlo es lo CONTRARIO de lo que la prueba retirada hacia.
-            t += np.asarray(modelo._prior_grid('fold', '', ''), dtype=float)
+            # El fold va por p_matrix, NO por _prior_grid.
+            # `revision_2` seccion 2: el prior crudo del fold es 0,15 por
+            # celda y sumarlo fuera de la fraccion hace la invariante mas
+            # facil de cumplir de lo que es. El motor USA la probabilidad
+            # suavizada, y el fold tiene 221 manos de conteo.
+            t += np.asarray(modelo.p_matrix(perfil, spot, 'fold'),
+                            dtype=float)
             peor = max(peor, float(t.max()))
     modelo.alpha = 2.0
     return peor
@@ -120,10 +124,9 @@ def test_p_matrix_no_pasa_de_uno(mat, modelo):
 
 
 def test_la_suma_por_celda_no_pasa_de_uno(mat, modelo):
-    """Con el fold plano anadido, que es el caso mas duro."""
+    """Con el fold por `p_matrix` y no por el prior crudo."""
     peor = _max_suma_por_celda(mat, modelo, 2.0)
     assert peor <= 1.0, 'la suma por celda llega a %.4f' % peor
-    assert abs(peor - 0.9500) < 0.005, 'el documento dice 0,9500'
 
 
 def test_la_prueba_retirada_daria_un_numero_sin_significado():
@@ -136,33 +139,54 @@ def test_la_prueba_retirada_daria_un_numero_sin_significado():
     assert 0.15 <= 1.0, '0,15 en una celda es una probabilidad valida'
 
 
-# ------------------------------------------------- 3. cota de alpha
-def test_por_debajo_del_borde_las_probabilidades_se_rompen(mat, modelo):
-    """Lo que si es una conclusion, y es medible.
+def test_no_hay_cota_inferior_de_alpha(mat, modelo):
+    """LO QUE SE SOSTIENE, y es distinto de lo que se sostenia antes.
 
-    Por debajo de ~1,3636 la suma por celda de acciones mutuamente
-    excluyentes pasa de 1, lo que es imposible.
+    `sum_a p_a(c) = [ N(c) + alpha*S(c) ] / (opp(c) + alpha)`, y
+    `N(c) <= opp(c)` por construccion: una mano no hace una accion mas
+    veces de las que tuvo oportunidades. El termino del prior no empuja la
+    suma hacia arriba al crecer alpha.
+
+    O sea: la invariante se cumple en todo el rango, y el umbral de 1,3636
+    era un artefacto de sumar el prior crudo del fold.
     """
-    assert _max_suma_por_celda(mat, modelo, 1.0) > 1.0
-    assert _max_suma_por_celda(mat, modelo, 1.3) > 1.0
-    assert _max_suma_por_celda(mat, modelo, 2.0) <= 1.0
+    for a in (0.05, 0.1, 0.25, 0.5, 1.0, 1.3636, 2.0, 5.0, 50.0):
+        v = _max_suma_por_celda(mat, modelo, a)
+        assert v <= 1.0, (
+            'alpha = %.2f rompe la invariante (%.4f). O se ha tocado el '
+            'tratamiento del fold, o hay que rehacer el documento.'
+            % (a, v))
 
 
-def test_el_borde_esta_entre_1_30_y_1_40(mat, modelo):
-    """Bisección: el documento dice 1,3636."""
-    assert _max_suma_por_celda(mat, modelo, 1.30) > 1.0
-    assert _max_suma_por_celda(mat, modelo, 1.40) <= 1.0
+def test_la_coherencia_es_monotona_decreciente(mat, modelo):
+    """Y esto si es una afirmacion sobre el motor, independiente del
+    estimador de equity: mas alpha, menos probabilidad de cualquier accion,
+    porque el prior pesa menos.
+
+    Malla de 99 puntos, no una tabla discreta. `revision_2` §2: que una
+    tabla "parezca monotona" no demuestra monotonicidad en el intervalo.
+    """
+    fila = [float(a) for a in np.arange(0.05, 5.0, 0.05)]
+    vals = [_max_suma_por_celda(mat, modelo, a) for a in fila]
+    caidas = sum(1 for i in range(1, len(vals))
+                 if vals[i] <= vals[i - 1] + 1e-12)
+    assert caidas == len(vals) - 1, (
+        'solo %d de %d pasos no crecientes' % (caidas, len(vals) - 1))
 
 
-def test_default_alpha_esta_por_encima_del_borde(mat):
-    """1,47x. Y eso es la razon por la que se queda, medida."""
+def test_default_alpha_sigue_en_dos_y_ya_no_tiene_cota():
+    """La decision se queda, pero el fundamento matematico se ha retirado.
+
+    Antes: "alpha = 2,0 esta 1,47x por encima del borde de coherencia".
+    Ahora: no hay borde. Lo que sostiene el 2,0 es que es el incumbent y no
+    hay evidencia admisible que lo sustituya, que es una decision de
+    ingenieria y nada mas.
+    """
     from motor import player_ranges
-    assert player_ranges.DEFAULT_ALPHA >= 1.40, (
-        'DEFAULT_ALPHA ha bajado de la zona coherente')
-    assert player_ranges.DEFAULT_ALPHA / 1.3636 == pytest.approx(1.467,
-                                                                  abs=0.01)
+    assert player_ranges.DEFAULT_ALPHA == 2.0
 
 
+# ------------------------------------------------- 3. cota de alpha
 def test_arriba_no_se_rompe_nunca(mat, modelo):
     """alpha grande NO rompe el contrato: la restriccion es por DEBAJO."""
     for a in (10.0, 50.0, 200.0, 2000.0):

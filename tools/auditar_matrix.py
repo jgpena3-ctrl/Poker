@@ -385,27 +385,48 @@ def main():
         print('   era demasiado estricto.')
     print()
 
-    print('   3e) LA BISECCION, REPRODUCIBLE Y CON MONOTONIA')
+    print('   2b) NO HAY COTA INFERIOR DE alpha')
     print()
-    borde, n_iter, monotona, fila, caidas = biseccion(model)
-    print('       %-9s %11s' % ('alpha', 'max suma'))
-    print('       ' + '-' * 24)
-    for a, v in fila:
-        print('       %-9.2f %11.4f' % (a, v))
+    print('   Con el fold por `p_matrix` y no por el prior crudo:')
     print()
-    print('       pasos monótonos no crecientes: %d de %d'
+    print('       sum_a p_a(c) = [ N(c) + alpha*S(c) ] / (opp(c) + alpha)')
+    print()
+    print('   `N(c) <= opp(c)` POR CONSTRUCCION: una mano no hace una accion')
+    print('   mas veces de las que tuvo oportunidades. Y el termino del prior')
+    print('   no empuja la suma hacia arriba al crecer alpha. De ahi que la')
+    print('   funcion sea decreciente y este por debajo de 1 SIEMPRE.')
+    print()
+    print('       %-9s %12s %12s' % ('alpha', 'coherencia', 'coherente'))
+    print('       ' + '-' * 38)
+    for a in (0.0, 0.05, 0.1, 0.25, 0.5, 1.0, 1.3636, 2.0, 5.0, 200.0):
+        v, _q = coherencia(model, a)
+        print('       %-9.2f %12.4f %12s'
+              % (a, v, 'si' if v <= 1.0 else 'NO'))
+    print()
+    if all(coherencia(model, a)[0] <= 1.0 for a in
+           (0.05, 0.1, 0.25, 0.5, 1.0, 1.3636, 2.0, 5.0)):
+        print('       Y no hay ni un solo alpha que la rompa.')
+    print()
+    print('       El 1,3636 del bloque anterior era un ARTEFACTO de sumar el')
+    print('       prior crudo del fold (0,15 por celda) fuera de la fraccion')
+    print('       suavizada. Se RETIRA.')
+    print()
+    print('   2c) MONOTONIA, QUE SI SE COMPRUEBA Y SIGUE VALIENDO')
+    print()
+    fila = [(float(a), coherencia(model, float(a))[0])
+            for a in np.arange(0.05, 5.0, 0.05)]
+    caidas = sum(1 for i in range(1, len(fila))
+                 if fila[i][1] <= fila[i - 1][1] + 1e-12)
+    monotona = caidas == len(fila) - 1
+    print('       malla de 99 puntos de 0,05 a 5,00')
+    print('       pasos no crecientes: %d de %d'
           % (caidas, len(fila) - 1))
-    print('       %s' % ('MONOTONA: la biseccion es valida' if monotona else
-                         'NO MONOTONA: la biseccion NO seria valida'))
+    print('       %s' % ('MONOTONA: la funcion no crece con alpha'
+                         if monotona else 'NO MONOTONA'))
     print()
-    print('       intervalo [1,20, 1,60] · tolerancia 1e-06 · %d iteraciones'
-          % n_iter)
-    print('       BORDE OBSERVADO: alpha = %.4f' % borde)
-    print()
-    print('       Y esto es lo que hay que decir de el, y nada mas: es el')
-    print('       limite OBSERVADO para este modelo, estos datos y estas')
-    print('       combinaciones. No es una cota universal deducida de la')
-    print('       formula, porque la equivalencia que lo sostenia era falsa.')
+    print('       Y eso si es una afirmacion sobre el motor, independiente')
+    print('       del estimador de equity: mas alpha, menos probabilidad de')
+    print('       cualquier accion, porque el prior pesa menos.')
     print()
 
     print('=' * 78)
@@ -463,6 +484,14 @@ def main():
     print('       de regularizacion. Si alguien arregla `matrix` Y trae una')
     print('       metrica que no sea monótona, la pregunta vuelve a')
     print('       plantearse.')
+    print()
+    print('   Y LA COTA DE COHERENCIA: NO HAY. Se cumple para todo alpha >= 0.')
+    print()
+    print('   Asi que lo que sostiene DEFAULT_ALPHA = 2,0 es SOLO (3): es el')
+    print('   incumbent y no hay evidencia admisible que lo sustituya. Que')
+    print('   sea defendible como decision de ingenieria, si. Que tenga un')
+    print('   fundamento matematico debajo, NO: el unico que habia, la cota')
+    print('   de 1,3636, se ha retirado en este bloque.')
 
 
 # `cal` se necesita en main() para la regla de particion canonica. Se

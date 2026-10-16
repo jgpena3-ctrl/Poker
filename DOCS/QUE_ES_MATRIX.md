@@ -88,7 +88,46 @@ Barriendo `alpha` y mirando si la suma por celda se pasa de 1:
 | 3,00 | 0,6812 | 0,8875 | sí |
 | 200,00 | 0,1707 | 0,4671 | sí |
 
-**Bisección, 19 iteraciones, tolerancia 1e-06, en `auditar_matrix.py`.**
+> ## CORRECCIÓN: esta cota **no existe**, y se retira.
+>
+> `revision_2` §2 encontró que `coherencia()` sumaba el **prior crudo** del
+> fold (`_prior_grid('fold', …)` = 0,15 por celda) en vez de su
+> **probabilidad** (`p_matrix(…, 'fold')`, que está suavizada con sus 221
+> manos de conteo). Sumar 0,15 por celda fuera de la fracción es lo que
+> producía el umbral.
+>
+> Con el fold bien tratado:
+>
+> ```
+> sum_a p_a(c) = [ N(c) + α·S(c) ] / (opp(c) + α)
+> ```
+>
+> y **`N(c) ≤ opp(c)` por construcción**: una mano no hace una acción más
+> veces de las que tuvo oportunidades. El término del prior no empuja la suma
+> hacia arriba al crecer `α`. Medido:
+
+| `α` | coherencia |
+|---:|---:|
+| 0,05 | 0,9955 |
+| 0,10 | 0,9910 |
+| 0,25 | 0,9780 |
+| 0,50 | 0,9577 |
+| 1,00 | 0,9214 |
+| **1,3636** | **0,9080** |
+| 2,00 | 0,8625 |
+| 5,00 | 0,7500 |
+
+> **Ni un solo `α` la rompe.** El «1,3636» era un artefacto del bug.
+
+La propiedad que **sí** se sostiene, y es independiente:
+
+| | |
+|---|---|
+| la coherencia por celda | se cumple para **todo** `α ≥ 0` |
+| la coherencia es **monótona decreciente** en `α` | malla de 99 puntos de 0,05 a 5,00, **98 de 98 pasos no crecientes** |
+
+Más `α` es menos probabilidad de cualquier acción, porque el prior pesa
+menos. Eso es una afirmación sobre el motor y no depende del estimador.
 
 Y con la comprobación que hace falta para que una bisección valga:
 
@@ -107,17 +146,18 @@ Y con la comprobación que hace falta para que una bisección valga:
 **11 de 11 pasos no crecientes: la función es monótona en el rango
 explorado.** Sin eso, una bisección no demuestra nada.
 
-> ### Por debajo de **1,3636** el motor produce probabilidades incoherentes.
+> ### No hay ningún `alpha` que produzca probabilidades incoherentes
 >
-> Para una mano dada, asigna más probabilidad total a acciones que son
-> mutuamente excluyentes. Eso no es una uncommon: es imposible.
+> Para una mano dada, la suma de las probabilidades de acciones mutuamente
+> excluyentes está siempre por debajo de 1. Y no es caso: `N(c) ≤ opp(c)`
+> por construcción, una mano no hace una acción más veces de las que tuvo
+> oportunidades.
 >
-> Y lo que es: el **límite observado** para este modelo, estos datos y estas
-> combinaciones. No una cota universal deducida de la fórmula, porque la
-> equivalencia que lo sostenía era falsa.
+> **El «1,3636» queda RETIRADO.** Era un artefacto de sumar el prior crudo
+> del fold (0,15 por celda) fuera de la fracción suavizada.
 
-**Y `DEFAULT_ALPHA = 2,0 está 1,47× por encima del borde.** No está pegado al
-límite, pero tampoco es arbitrario: hay una razón medida para no bajar.
+**Y `DEFAULT_ALPHA = 2,0` no tiene ahora ninguna razón medida debajo.** No
+está pegado a un límite porque no hay límite: se queda por ser el incumbent.
 
 ## Lo que se sabe y lo que no, con la prueba buena
 
@@ -129,7 +169,7 @@ límite, pero tampoco es arbitrario: hay una razón medida para no bajar.
 | las celdas **sí** son probabilidades | **0** de 19 773 fuera de `[0,1]`; 116 de 117 tablas tienen celda máxima = 1 |
 | `sum(matrix)` no es `sum(cnt)` ni un múltiplo | **0,3×** para `open` |
 | con α = 2 el motor **no viola** el contrato por celda | máximo 0,7571 y 0,9500 |
-| **α < 1,3636 sí lo viola** | borde medido |
+| **no hay `α` que lo viole** | `N(c) ≤ opp(c)` por construcción |
 
 ### No se sabe, y no se puede saber con datos
 
@@ -158,8 +198,8 @@ una demostración.
 ### (1) Coherencia — **medida**
 
 Los valores probados respetan la invariante por celda. Con α = 2 el máximo es
-**0,7571** y la suma por celda **0,9500**. Y hay una cota por debajo de la
-cual **no**: **α ≥ 1,3636** (límite observado).
+**0,7571** y la suma por celda **0,8625**. Y **no hay ningún `α` que la
+viole**: se cumple para todo `α ≥ 0`.
 
 ### (2) Discriminación — **medida sobre la función agregada**
 
@@ -204,16 +244,16 @@ no estuviera probada.
 
 Y lo que sí es permanente, y ahora está **medido**:
 
-> **No se baja de 1,3636.** Por debajo, el motor produce probabilidades que no
-> pueden existir. Eso no es una preferencia de calibración: es una
-> contradicción medible.
+> **No hay cota que lo acote.** La coherencia por celda se cumple para todo
+> `α ≥ 0`. El umbral de 1,3636 se ha retirado: era un artefacto de sumar el
+> prior crudo del fold, y el motor usa su probabilidad suavizada.
 
 ## Estado
 
 | | |
 |---|---|
-| `DEFAULT_ALPHA` | **2,0**. Se queda por estar **1,47× por encima del borde de coherencia** y por ser el incumbent. **No** porque esté calibrado |
-| cota inferior | **1,3636**, medida por bisección |
+| `DEFAULT_ALPHA` | **2,0**. Se queda por ser el incumbent y porque no hay evidencia admisible que lo sustituya. **No** porque esté calibrado, y **ya no** por una cota: no hay ninguna |
+| cota inferior | **ninguna**: la coherencia se cumple para todo `α ≥ 0` |
 | `data/preflop_matrices.json` | **intacto** |
 | qué es `matrix` | **abierto**. Era cerrado en el bloque anterior sobre una prueba que no se sostenía |
 
