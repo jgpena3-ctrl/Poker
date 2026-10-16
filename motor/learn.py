@@ -111,7 +111,7 @@ RANGO_AUDITADO_HASTA = 'H_1014'
 RANGO_AUDITADO_LINEAS = 991
 
 # ---------------------------------------------------------------------------
-# REVISION MANUAL: EN CURSO. NINGUN SCRIPT ESCRIBE LA BASE.
+# REVISION MANUAL: TERMINADA.
 # ---------------------------------------------------------------------------
 # ANTES, este bloque decia DOS cosas a la vez:
 #
@@ -145,9 +145,22 @@ RANGO_AUDITADO_LINEAS = 991
 # reaplicadas. Se han decidido en `DOCS/CANAL_MANUAL_CERRADO.md` §4 y
 # `DOCS/APARCADO_DB.md`. Un "pendiente" que nadie puede resolver no es un
 # estado defendible en un repositorio.
-REVISION_EN_CURSO = True
-REVISION_HASTA = 'H_1070'
-REVISION_TOTAL_ESPERADA = 1200
+#
+# REVISION TERMINADA (2026-10-15). El mantenedor reviso `H_0001`..`H_1282` a
+# mano y el tramo final toco 211 manos de golpe. Con esto False.
+#
+# Lo que False NO significa, porque es facil de malinterpretar:
+#   - NO significa que la base sea correcta. Significa que NADIE LA ESTA
+#     MIRANDO en este momento. Sigue habiendo 30 `IMPORTE_SUBIDA`, 15
+#     `SHOWDOWN_SIN_WINNER`, 3 `WINNER_FOLDEO` y 2 `ACCION_FANTASMA`, y todos
+#     estan declarados en `DOCS/HALLZGOS_H0001_H1014.md`.
+#   - NO significa que se pueda escribir la base a lo bruto. El canal manual
+#     sigue cerrado: lo que se abre es la declaracion, no la escritura.
+#   - Si la revision vuelve a empezar, esto pasa a True y el mismo mecanismo
+#     vuelve a separar "el mantenedor edita" de "un script escribe".
+REVISION_EN_CURSO = False
+REVISION_HASTA = 'H_1282'
+REVISION_TOTAL_ESPERADA = 1282
 
 # Manos que la ventana fiable EXCLUYE, y por que.
 #

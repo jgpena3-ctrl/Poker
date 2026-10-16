@@ -80,12 +80,17 @@ def test_la_revision_en_curso_impide_que_un_script_escriba(monkeypatch, tmp_path
     guard decia tambien "la base esta congelada", que era contradictorio —
     revisar una mano ES cambiarla— y por eso 9b5905a dejo el repo en rojo. Ver
     `learn.REVISION_EN_CURSO`.
+
+    Se pone la revision a True a proposito: el 2026-10-15 la del mantenedor
+    termino (`REVISION_EN_CURSO = False`), y un guard que solo se puede
+    comprobar mientras el mundo esta en un estado concreto no protege nada
+    cuando ese estado cambia. Lo que se fija aqui es que el mecanismo
+    EXISTE y FUNCIONA, no que hoy este activo.
     """
     destino = tmp_path / 'hands_db.jsonl'
     _escribir(_previa(), destino)
     monkeypatch.setattr(AR, 'DB_PATH', str(destino))
-    assert AR.learn.REVISION_EN_CURSO is True, (
-        'la revision manual deberia seguir en curso')
+    monkeypatch.setattr(AR.learn, 'REVISION_EN_CURSO', True)
     rc = main(['--apply'])
     out = capsys.readouterr().out
     assert rc == 4, out
@@ -106,6 +111,7 @@ def test_el_dry_run_informa_de_la_revision_pero_no_falla(monkeypatch,
     destino = tmp_path / 'hands_db.jsonl'
     _escribir(_previa(), destino)
     monkeypatch.setattr(AR, 'DB_PATH', str(destino))
+    monkeypatch.setattr(AR.learn, 'REVISION_EN_CURSO', True)
     rc = main([])
     out = capsys.readouterr().out
     assert rc == 0, out

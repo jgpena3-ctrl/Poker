@@ -236,7 +236,7 @@ def test_el_ancla_protege_el_CONJUNTO_esperado_de_cambios():
 
 
 def test_cada_mano_editada_cambia_una_sola_accion_del_bb():
-    """Cuántas acciones de preflop difieren de la versión previa: 34.
+    """Cuántas acciones de preflop difieren de la versión previa: 55.
 
     El guard sigue siendo el mismo: si el número sube, alguien ha añadido,
     borrado o reordenado algo. Lo que cambia es el número, y el motivo está
@@ -244,19 +244,17 @@ def test_cada_mano_editada_cambia_una_sola_accion_del_bb():
 
     | | acciones | manos |
     |---|---|---|
-    | CM-004 (`e314f74` → `5c41b23`) | 21 | 20 |
-    | revisión manual (`5c41b23` → `9b5905a`) | **13** | 8 |
-    | **total** | **34** | 27 |
+    | CM-004 (`e314f74` → `9b5905a`) | 34 | 27 |
+    | revisión posterior (`9b5905a` → hoy) | **21** | 8 |
+    | **total** | **55** | 35 |
 
-    Las 13 de la revisión son `H_0022[5]`, `H_0022[6]`, `H_0044[1]`,
-    `H_0061[5]`, `H_0097[3]`, `H_0097[4]`, `H_0198[4]`, `H_0253[2..5]`,
-    `H_0407[10]` y `H_0883[8]`. **Ninguna está en el conjunto CM-004**, así
-    que las dos revisiones no se solapan: corrigieron cosas distintas.
+    Las 21 de la revisión posterior son `H_0173[2,3]`, `H_1080[3]`,
+    `H_1089[1..5]`, `H_1099[3,4,5]`, `H_1217[1..7]`, `H_1231[6]`, `H_1239[6]`
+    y `H_1279[8]`. **Ninguna está en el conjunto CM-004**, así que las dos
+    revisiones no se solapan: corrigieron manos distintas.
 
-    Y por qué 21 y no 23: el test excluye las manos cuya lista de preflop
-    cambia de longitud, y 2 de las 23 de CM-004 (`H_0143`, `H_0263`) están en
-    manos que `9b5905a` acortó. La regla del guard es la de siempre; lo que
-    se movió es la base contra la que se mide."""
+    Y el número no cuadra con 34+21 porque el guard **excluye** las manos cuya
+    lista de preflop cambia de longitud, y el tramo final tocó algunas."""
     anteriores = _por_id(_anteriores())
     actual = _actual()
     n_acciones = 0
@@ -269,9 +267,9 @@ def test_cada_mano_editada_cambia_una_sola_accion_del_bb():
         if len(pa) != len(pb):
             continue          # ninguna mano editada cambia la longitud
         n_acciones += sum(1 for x, y in zip(pa, pb) if x != y)
-    assert n_acciones == 34, (
-        'se han cambiado %d acciones de preflop, se esperaban 34.\n\n'
-        'Las 34 son 21 de CM-004 + 13 de la revision manual de 9b5905a.\n'
+    assert n_acciones == 55, (
+        'se han cambiado %d acciones de preflop, se esperaban 55.\n\n'
+        'Las 55 son 34 de CM-004 + 21 de la revision posterior.\n'
         'Si el numero es MENOR, alguien ha revertido una correccion.\n'
         'Si es MAYOR, hay cambios que no estan en el motivo escrito.'
         % n_acciones)

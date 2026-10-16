@@ -190,7 +190,7 @@ def test_los_dos_invariantes_se_comprueban_por_separado():
     import inspect
     from motor import test_canal_manual as M
     hash_test = getattr(M, 'test_el_hash_de_la_base_es_el_declarado', None)
-    rev_test = getattr(M, 'test_la_revision_en_curso_impide_escribir_a_un_script',
+    rev_test = getattr(M, 'test_el_bloqueo_impide_escribir_cuando_la_revision_esta_activa',
                        None)
     assert hash_test is not None, 'falta el invariante del hash'
     assert rev_test is not None, 'falta el invariante de la revision en curso'
@@ -256,24 +256,18 @@ def test_el_blob_y_el_disco_coinciden_byte_a_byte():
 
 # --- lo que la revision en curso SI protege -------------------------------
 
-def test_la_revision_en_curso_impide_escribir_a_un_script():
-    """El mantenedor esta revisando las manos una a una. De ahi sale UNA
-    proteccion, y es coherente: **ningun script** escribe la base.
-    `tools/aplicar_reinterpretacion.py --apply` se niega y devuelve 4.
+def test_el_bloqueo_por_revision_existe_y_esta_cableado():
+    """El bloqueo tiene que EXISTIR, esté o no activo.
 
-    Lo que NO sale de aqui, y antes si salia, es que la base no pueda
-    cambiar. Revisar las manos una a una ES cambiarlas: el guard anterior
-    (`test_la_base_no_cambia_mientras_hay_revision_manual`) prohibia la
-    actividad de la revision, y por eso el commit `9b5905a` —63 manos, con
-    mejora medida— dejo el repo en rojo. Volveria a rojo en el siguiente
-    commit de la revision. Ver el bloque de `learn.REVISION_EN_CURSO`.
+    `REVISION_EN_CURSO` pasó a `False` el 2026-10-15: el mantenedor terminó
+    la revisión de `H_0001`..`H_1282`. Un guard que se borra cuando deja de
+    hacer falta no es un guard, es una nota: la próxima revisión vuelve a
+    necesitarlo y no habría nada que activar.
 
-    Lo que protege las ediciones del mantenedor no es un congelamiento: es
-    `test_el_hash_de_la_base_es_el_declarado`, que obliga a redeclarar el
-    manifiesto y su motivo. Dos guards del mismo invariante no son mas
-    seguridad, son dos sitios donde el invariante puede estar mal."""
-    assert learn.REVISION_EN_CURSO is True, (
-        'la revision manual deberia seguir en curso')
+    Por eso este test NO comprueba que el bloqueo esté activo —comprobar eso
+    sería atar el guard a un estado del mundo que cambia— sino que el
+    mecanismo sigue cableado y sigue siendo alcanzable."""
+    assert hasattr(learn, 'REVISION_EN_CURSO')
     texto = io.open(os.path.join(ROOT, 'tools', 'aplicar_reinterpretacion.py'),
                     encoding='utf-8').read()
     assert 'REVISION_EN_CURSO' in texto, (
@@ -284,6 +278,38 @@ def test_la_revision_en_curso_impide_escribir_a_un_script():
         'el mensaje sigue diciendo "BASE CONGELADA", que afirma tambien que '
         'el mantenedor no puede editarla a mano. Es la mitad contradictoria '
         'del mensaje viejo y ya no describe lo que el script hace.')
+
+
+def test_el_bloqueo_impide_escribir_cuando_la_revision_esta_activa(
+        tmp_path, capsys):
+    """Que el bloqueo funcione, ahora con la revision terminada.
+
+    Con `REVISION_EN_CURSO = False` no se puede comprobar «está activo» sin
+    cambiar el mundo. Se comprueba lo que importa: **poniéndolo a True, el
+    script se niega.** Un guard que solo existe mientras el mundo está en un
+    estado concreto no protege nada cuando ese estado cambia.
+
+    Es el mismo criterio que todos los tests de este fichero: se simula la
+    regresión que el guard tiene que detectar."""
+    from tools import aplicar_reinterpretacion as AR
+    destino = tmp_path / 'hands_db.jsonl'
+    destino.write_text('{"hand_id": "X"}\n', encoding='utf-8')
+
+    original_db, original_rev = AR.DB_PATH, AR.learn.REVISION_EN_CURSO
+    AR.DB_PATH, AR.learn.REVISION_EN_CURSO = str(destino), True
+    try:
+        assert AR.main(['--apply']) == 4, (
+            'con la revision en curso, --apply deberia negarse')
+        out = capsys.readouterr().out
+        assert 'REVISION EN CURSO' in out, out
+        assert AR.main(['--apply', '--descartar-cambios']) == 4
+        assert 'REVISION EN CURSO' in capsys.readouterr().out
+        # Y con la revision terminada, el mismo comando NO se niega.
+        AR.learn.REVISION_EN_CURSO = False
+        assert AR.main(['--apply']) != 4, (
+            'sin revision en curso, --apply no deberia negarse por eso')
+    finally:
+        AR.DB_PATH, AR.learn.REVISION_EN_CURSO = original_db, original_rev
 
 
 def test_el_mensaje_de_revision_no_prohibe_la_revision():

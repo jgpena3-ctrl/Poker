@@ -77,6 +77,14 @@ data/_snapshot_pre_audit/
 # tambien por git, porque hands_db.jsonl esta versionado.
 data/_backup_aplicar_correcciones/
 
+# Backup que escribe `hand_editor._guardar_base` en cada guardar desde la
+# GUI. Es la red del canal manual: si una edicion sale mal, esto es lo que
+# salva la base. Copia local de un solo uso —la siguiente edicion la
+# sobrescribe— y jamas versionable: si acabara en el repo, dos manos con el
+# mismo hand_id pero distinto contenido.
+data/hands_db.jsonl.bak
+data/hands_db.jsonl.tmp
+
 # Telemetria del modo sombra: se escribe CADA vez que el asistente en vivo
 # registra una situacion, y tambien al correr los tests. Es un log de
 # observacion, no una fuente: su valor esta en acumularse, no en versionarse.
