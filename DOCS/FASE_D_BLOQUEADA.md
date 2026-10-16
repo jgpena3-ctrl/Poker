@@ -12,7 +12,7 @@ rival que al decidir no se conocían.
 Y lo que da la mitad observable **es bueno**: la equity gana al predictor
 constante, 0,1962 contra 0,2124, y ordena con +0,3300.
 
-Detalle en [`L_SEC_INVALIDA.md`](L_SEC_INVALIDA.md).
+Detalle en [`L_SEC_NO_ADMISIBLE.md`](L_SEC_NO_ADMISIBLE.md).
 
 ## La opción elegida: **C**, con **A** como trabajo siguiente
 
@@ -55,11 +55,12 @@ En orden de dependencia:
 
 | # | bloque | qué resuelve |
 |---|---|---|
+| **0** | **definir el objetivo de `L_sec`** | equity contra "gano el bote" o contra "si continuo, ganaba?". Son dos magnitudes y se eligio una sin decirlo. Ver `METRICA_SECUNDARIA_ALTERNATIVA.md` |
 | **1** | **`hand_evaluator` con camino preflop** | que `_SUBSETS` tenga entrada para menos de 5 cartas, o una ruta que calcule la equity preflop contra rango. Sin esto, `L_sec` cubre el 38 % |
 | **2** | **una métrica que sobreviva al 86 % de derrotas** | el Brier está dominado por la clase mayor. Opciones: comparar contra la mediana de la propia equity, o usar `equity` como *ranking* y no como probabilidad |
 | **3** | **qué significa `matrix`** | sin eso, `DEFAULT_ALPHA` no se puede calibrar ni aunque haya secundaria ([`CEROS_PREFLOP_MATRICES.md`](CEROS_PREFLOP_MATRICES.md)) |
 
-El 1 es el que bloquea. Los otros dos solo importan cuando el 1 esté.
+El 0 es el que bloquea: implementaría el 1 para medir mejor una magnitud que no está definida, que es exactamente lo que pasó en los dos bloques anteriores.
 
 Y mientras tanto: **`DEFAULT_ALPHA` sigue en `2.0`**, con un test que falla
 si alguien lo mueve sin pasar por aquí.

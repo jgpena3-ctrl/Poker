@@ -48,15 +48,31 @@ RUTA_CACHE = os.path.join(
     'data', '_cache_equity_preflop.json')
 _CACHE_DISCO = None
 
+#: Version del algoritmo. Si cambia `evaluate_n_batch`, `_cell_`, el
+#: reparto del bote o la comparacion de scores, hay que subirla: si no, la
+#: cache devuelve numeros de la version anterior sin avisar.
+#:
+#: Va DENTRO de la clave y del fichero, no solo en el nombre. Un fichero
+#: cacheado con otra version se descarta entero.
+VERSION = 2
+
+
+def _ruta_de(version):
+    return '%s.v%d.json' % (RUTA_CACHE, version)
+
 
 def _cargar_disco():
+    """Solo lee la cache de ESTA version. La de otra se ignora."""
     global _CACHE_DISCO
     if _CACHE_DISCO is None:
+        _CACHE_DISCO = {}
         try:
-            with open(RUTA_CACHE, encoding='utf-8') as fh:
-                _CACHE_DISCO = json.load(fh)
+            with open(_ruta_de(VERSION), encoding='utf-8') as fh:
+                crudo = json.load(fh)
         except Exception:
-            _CACHE_DISCO = {}
+            return _CACHE_DISCO
+        if crudo.get('version') == VERSION:
+            _CACHE_DISCO = crudo.get('entradas') or {}
     return _CACHE_DISCO
 
 
@@ -65,12 +81,18 @@ def _guardar_disco():
         return
     try:
         os.makedirs(os.path.dirname(RUTA_CACHE), exist_ok=True)
-        tmp = RUTA_CACHE + '.tmp'
+        ruta = _ruta_de(VERSION)
+        tmp = ruta + '.tmp'
         with open(tmp, 'w', encoding='utf-8') as fh:
-            json.dump(_CACHE_DISCO, fh)
-        os.replace(tmp, RUTA_CACHE)
+            json.dump({'version': VERSION, 'entradas': _CACHE_DISCO}, fh)
+        os.replace(tmp, ruta)
     except Exception:
         pass          # la cache es una comodidad, no un requisito
+
+
+def version_cache_en_uso():
+    """La version con la que se ha leido o escrito. Para los tests."""
+    return VERSION
 
 
 def limpiar_cache():
@@ -79,7 +101,7 @@ def limpiar_cache():
     _CACHE.clear()
     _CACHE_DISCO = None
     try:
-        os.remove(RUTA_CACHE)
+        os.remove(_ruta_de(VERSION))
     except OSError:
         pass
 

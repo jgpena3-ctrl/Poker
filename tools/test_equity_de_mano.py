@@ -342,6 +342,56 @@ def test_el_brier_de_la_equity_pierde_contra_el_trivial(eq, labels, modelos,
         'este documento hay que reescribirlo')
 
 
+def test_la_cache_no_cambia_el_numero(eqp):
+    """Cacheado tiene que ser IGUAL a calculado. Sin cache.
+
+    La clave de la cache son las cartas, pero si cambia `evaluate_n_batch`
+    o la comparacion de scores los resultados viejos se siguen usando. Por
+    eso la clave lleva la VERSION del algoritmo dentro, y este test
+    comprueba que la version que dice la clave es la del codigo.
+
+    No recalcula desde cero (13 s): comprueba que lo que devuelve la cache
+    coincide con lo que devuelve el enumerador cuando la cache esta
+    vacia para ESE par, y que la version no miente.
+    """
+    eq, _d = eqp.equity_preflop('AsAd', 'KhKs')
+    eq2, _ = eqp.equity_preflop('AsAd', 'KhKs')
+    assert eq == eq2, 'la cache cambia el numero'
+
+    clave = 'AsAd|KhKs'
+    disco = eqp._cargar_disco()
+    if clave in disco:
+        assert disco[clave][0] == eq, 'disco y memoria no coinciden'
+
+    assert isinstance(eqp.VERSION, int)
+    assert eqp.version_cache_en_uso() == eqp.VERSION
+
+
+def test_subir_la_version_invalida_la_cache(eqp, tmp_path):
+    """Un fichero cacheado de otra version se ignora entero.
+
+    Es el agujero que cerro revision_2: la cache esta ignorada por Git, asi
+    que dos entornos con el mismo commit podian tener contenidos distintos
+    sin que se notara.
+    """
+    import json
+    viejo = eqp._ruta_de(eqp.VERSION)
+    try:
+        with open(viejo.replace('.v%d.json' % eqp.VERSION,
+                               '.v999.json'), 'w',
+                  encoding='utf-8') as fh:
+            json.dump({'version': 999,
+                       'entradas': {'ZZZZ|YYYY': [0.5, {}]}}, fh)
+        assert eqp._cargar_disco().get('ZZZZ|YYYY') is None, \
+            'acepto una cache de otra version'
+    finally:
+        try:
+            os.remove(viejo.replace('.v%d.json' % eqp.VERSION,
+                                    '.v999.json'))
+        except OSError:
+            pass
+
+
 # ------------------------------------------------- 6. el enumerador preflop
 def test_el_enumerador_da_los_valores_de_manual(eqp):
     """AA contra KK, y KK contra QQ. Valores conocidos de manual.

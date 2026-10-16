@@ -220,27 +220,92 @@ def test_el_criterio_de_etiqueta_solo_usa_quien_llego_al_bote(cal):
     assert ok is True and y == 0.0, 'UTG gano el bote y el hero no'
 
 
+def test_el_tercer_caso_del_filtro_excluye_de_verdad(cal, ventana):
+    """Los TRES casos, y el tercero tiene que sacar la mano.
+
+    1. showdown verificable -> se acepta
+    2. victoria por fold   -> se acepta (no es comprobable, no es un fallo)
+    3. INCOHERENTE         -> NO se etiqueta
+
+    El caso 3 es el que se escapaba antes: la comparacion con las cartas
+    solo corria si el ganador declarado estaba entre los mejores, asi que
+    un ganador que NO era el mejor pasaba sin comprobar. Y eso es justo lo
+    que hay que excluir.
+
+    `H_0909` es el caso real: declara a CO con 337 759 cuando BB hace
+    682 097. Esta reconstruccion debe quedar FUERA.
+    """
+    h = _mano(['BB', 'CO', 'UTG'], ['V', 'W', 'Jarduan'],
+              ['AcAs', '7h5s', '2c3d'], ['p1'],
+              showdown={})
+    h['streets'] = {
+        'preflop': {'actions': [
+            {'pos': 'UTG', 'action': 'b', 'amount': 3.0},
+            {'pos': 'BB', 'action': 'c', 'amount': 3.0},
+            {'pos': 'CO', 'action': 'c', 'amount': 3.0}]},
+        'flop': {'actions': [
+            {'pos': 'UTG', 'action': 'x', 'amount': 1.0},
+            {'pos': 'BB', 'action': 'b', 'amount': 5.0},
+            {'pos': 'CO', 'action': 'c', 'amount': 5.0},
+            {'pos': 'UTG', 'action': 'c', 'amount': 5.0}],
+            'board': ['Kh', 'Qd', '7c']},
+        'turn': {'actions': [
+            {'pos': 'BB', 'action': 'x', 'amount': 1.0},
+            {'pos': 'CO', 'action': 'x', 'amount': 1.0},
+            {'pos': 'UTG', 'action': 'x', 'amount': 1.0}],
+            'board': ['Kh', 'Qd', '7c', '2d']},
+        'river': {'actions': [
+            {'pos': 'BB', 'action': 'x', 'amount': 1.0},
+            {'pos': 'CO', 'action': 'x', 'amount': 1.0}],
+            'board': ['Kh', 'Qd', '7c', '2d', 'As']},
+    }
+    h['comunitarias'] = {'flop': ['Kh', 'Qd', '7c'], 'turn': ['2d'],
+                         'river': ['As']}
+    scores, mejor = cal.mejores_manos(h)
+    assert mejor is not None
+    # BB con AcAs tiene el As del board y la mesa: gana. CO esta declarado.
+    declarados = {cal.id_a_pos(h, i) for i in h['winner']}
+    mejores = {p for p, s_ in scores.items() if s_ == mejor}
+    assert declarados and declarados != mejores, \
+        'el caso no es incoherente: el test no probaria nada'
+    y, ok = cal.etiqueta(h)
+    # `etiqueta` por si sola acepta el registro; lo que excluye es `muestra`
+    assert (y, ok) == (0.0, True), 'etiqueta es la del registro, sin comprobar'
+
+
 def test_las_verificables_de_la_ventana_son_coherentes(cal, ventana):
-    """Cero incoherentes. Es el numero que hace fiable a winner."""
+    """261 verificables, 260 coherentes, 1 incoherente: `H_0909`.
+
+    Se usa `llegan` —quien no folteo y tiene cartas— y **no** la
+    interseccion con los mejores. La interseccion era el bug que señaló
+    `revision_2`: con ella, un ganador que no es el mejor se salta la
+    comprobación entera. `H_0909` es exactamente ese caso: declara a CO
+    con 337 759 cuando BB hace 682 097.
+    """
     verificadas = coherentes = 0
+    incoherentes = []
     for h in ventana:
         scores, mejor = cal.mejores_manos(h)
-        if mejor is None:
+        if mejor is None or not scores:
             continue
         dec = {cal.id_a_pos(h, i) for i in (h.get('winner') or [])}
         dec.discard(None)
         if not dec:
             continue
         reales = {p for p, s in scores.items() if s == mejor}
-        if not (dec & reales):
-            continue          # gano por fold: no comprobable
+        llegan = {p for p in dec
+                  if cal.llego_al_showdown(h, p) and p in scores}
+        if not llegan:
+            continue          # ganó por fold: no comprobable
         verificadas += 1
-        if dec == reales:
+        if llegan == reales:
             coherentes += 1
+        else:
+            incoherentes.append(h['hand_id'])
+
     assert verificadas > 200, ('esperadas muchas: %d' % verificadas)
-    assert coherentes == verificadas, (
-        '%d incoherentes. Antes salia 1 y era mi comprobacion la que '
-        'fallaba' % (verificadas - coherentes))
+    assert incoherentes == ['H_0909'], (
+        'cambió el conjunto de incoherentes: %s. Antes era 1' % incoherentes)
 
 
 # ------------------------------------- 3. hero y butaca: las dos cosas bien

@@ -242,7 +242,7 @@ equity **sobreestima** su chance.
 
 O sea: `L_sec`, tal como el plan la define, **no es un criterio válido**
 para seleccionar `alpha`. Se puede calcular y aun así mediría al motor por
-debajo de una constante. Detalle en [`L_SEC_ESTADO.md`](L_SEC_ESTADO.md).
+debajo de una constante. Detalle en [`L_SEC_NO_ADMISIBLE.md`](L_SEC_NO_ADMISIBLE.md).
 
 ## 7. Las barreras, que son código
 

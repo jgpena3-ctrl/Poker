@@ -537,7 +537,7 @@ una decisión**: usa las cartas que el rival escondía al decidir.
 Y el motor no tiene ningún camino de equity preflop: `situation` y
 `runout_equity` fallan los dos porque `evaluate_batch` pide `_SUBSETS[2]`,
 que no existe. Detalle en
-[`L_SEC_INVALIDA.md`](L_SEC_INVALIDA.md).
+[`L_SEC_NO_ADMISIBLE.md`](L_SEC_NO_ADMISIBLE.md).
 
 **Consecuencia: sin secundaria, no hay criterio admisible para aceptar un
 valor**, y el plan no admite aceptar sin las dos.

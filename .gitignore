@@ -100,3 +100,4 @@ data/test_output.jsonl
 # Cache de la enumeracion preflop: se regenera sola (1.7 M
 # de evaluaciones por par de manos, ~13 s). No se versiona.
 data/_cache_equity_preflop.json
+data/_cache_equity_preflop.json.v*

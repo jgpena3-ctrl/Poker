@@ -137,11 +137,18 @@ def ultima_calle(h):
     return None
 
 
-def llego_al_showdown(h, pos, ult):
-    """True si `pos` no folteo en ninguna calle ANTERIOR a `ult`."""
+def llego_al_showdown(h, pos, ult=None):
+    """True si `pos` NO folteo en ninguna calle de la mano.
+
+    **Cualquier** calle, incluida la última. `revision_2`: antes retornaba
+    True al LLEGAR a la ultima calle sin inspeccionar sus acciones, así
+    que un jugador que folteaba en el river entraba como si hubiera
+    llegado al showdown.
+
+    Un fold es definitivo: el que folio salio del bote y no puede ganar.
+    No hace falta `ult`; se queda por compatibilidad.
+    """
     for st in ORDEN_CALLES:
-        if st == ult:
-            return True
         acts = ((h.get('streets') or {}).get(st) or {}).get('actions') or []
         for a in acts:
             if a.get('pos') == pos and a.get('action') == 'f':
@@ -318,14 +325,21 @@ def muestra():
         declarados.discard(None)
         if not declarados:
             continue
-        if mejor is not None and declarados & {p for p, s_ in
-                                                scores.items()
-                                                if s_ == mejor}:
-            # COMPROBABLE. Y tiene que coincidir exactamente: si no, es un
-            # reparto incompleto y la etiqueta seria media por un reparto
-            # que no ocurrio.
-            if declarados != {p for p, s_ in scores.items() if s_ == mejor}:
-                continue
+
+        # TRES CASOS, explicitos. `revision_2`: antes la comparacion solo
+        # corria si habia interseccion con los mejores, de modo que un
+        # ganador que NO era el mejor pasaba sin comprobar. Ese es
+        # precisamente el caso que hay que excluir.
+        mejores = ({p for p, s_ in scores.items() if s_ == mejor}
+                   if mejor is not None else set())
+        llegan = {p for p in declarados
+                  if llego_al_showdown(h, p) and scores and p in scores}
+        if not llegan:
+            pass                      # 2. VICTORIA POR FOLD: no se comprueba
+        elif llegan == mejores:
+            pass                      # 1. SHOWDOWN VERIFICABLE
+        else:
+            continue                  # 3. INCONSISTENTE -> sin etiqueta
         y, ok = etiqueta(h)
         if not ok:
             continue

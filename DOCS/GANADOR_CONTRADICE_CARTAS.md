@@ -1,89 +1,90 @@
 # `winner` y las cartas — el error, y lo que sí hay
 
-## Lo primero: un error mío que casi se publica
+## Lo primero: dos errores míos, y el primero casi se publica
 
-Este bloque comprobó si `winner` coincide con las cartas y el primer
-resultado fue **«354 manos incoherentes de 584, el 61 %»**, y a punto de
-publicarse como defecto de la base.
+### El primero: «el 61 % de las manos está mal»
 
-Era una comprobación mala.
+Comprobé si `winner` coincide con las cartas y salió **354 incoherentes de
+584**. A punto de documentarlo como que el recorder está roto.
 
-Comparaba las cartas de **todos** los jugadores con el board. Pero un
-jugador que folteó antes **no estaba en el bote**, y sus cartas registradas
-—que el recorder guarda igual— no compiten con nadie.
+**La comprobación era mía y estaba mal.** Comparaba las cartas de **todo**
+el mundo con el board. Un jugador que folteó antes **no estaba en el
+bote**, y sus cartas registradas no compiten con nadie.
 
 `H_0002` lo deja claro:
 
 ```
-board Ah 8c Qc
-winner UTG <- no tiene cartas: GANO POR FOLD
-flop BB x 1.0 | UTG b 6.0 | CO f 0.0 | BB f 0.0
+board  Ah 8c Qc
+winner UTG  <- NO tiene cartas: GANO POR FOLD
+flop  BB x 1.0 | UTG b 6.0 | CO f 0.0 | BB f 0.0
 ```
 
-Mi código decía: «la mejor mano es de MP, que tiene `6c4s`», y concluía
-que `winner` estaba mal. `UTG` ganó el bote sin showdown porque todo el mundo
-fold, y **tenía razón**. `MP` había folderado preflop.
+Mi código decía «la mejor es MP, que tiene `6c4s`» y concluía que `UTG`
+estaba mal. `UTG` ganó sin showdown porque todo el mundo fold, y **tenía
+razón**.
 
-> **El instrumento estaba mal y habría publicado un defecto de 61 % que no
-> existe.** Un número alto no es evidencia de un problema grande: a veces es
-> evidencia de una pregunta mal hecha.
+### El segundo: «no hay muestra si no llegaron al showdown»
 
-El criterio correcto: **solo los jugadores que no foltearon antes de la
-última calle con acciones**.
+Corregido lo anterior, la función seguía retornando `True` **al llegar** a
+la última calle, sin inspeccionar sus acciones. Un jugador que folteaba en
+el river entraba como si hubiera llegado al showdown.
 
-## Lo que sí hay, con el criterio correcto
+La regla correcta es más simple y más fuerte: **un fold es definitivo**. El
+que folteó, salió del bote y no puede ganar. Da igual la calle.
 
-### Ventana de 877
+Con el filtro así aparecieron 25 supuestos «repartos incompletos»… que
+también eran de este mismo bug.
 
-| | manos |
-|---|---:|
-| con `winner` declarado | 348 |
-| **verificables por cartas** | **261** |
-| **coherentes** | **261** |
-| **incoherentes** | **0** |
-| ganador por fold, sin cartas: no comprobable | 87 |
+## El resultado, ya con las dos correcciones
 
-**Cero ganadores equivocados.** `winner` es fiable cuando se puede
-comprobar.
+| | ventana de 877 | base entera |
+|---|---:|---:|
+| con `winner` declarado | 348 | 487 |
+| **verificables por cartas** | **261** | **354** |
+| **coherentes** | **260** | **353** |
+| **ganador equivocado** | **1** | **1** |
+| reparto incompleto | 0 | 0 |
+| ganado por fold, no comprobable | 11 | 31 |
 
-### Base entera
+### El único defecto real
 
-| | manos |
-|---|---:|
-| con `winner` declarado | 487 |
-| verificables por cartas | 369 |
-| coherentes | 344 |
-| **incoherentes** | **25 (6,8 %)** |
-| de ellos, **ganador equivocado** | **0** |
-| de ellos, **reparto incompleto** | **25** |
-| no comprobables | 118 |
+**`H_0909`**: `winner` declara a `CO`, que hace **337 759**, y `BB` hace
+**682 097** con el mismo board. El ganador declarado pierde la comparación.
+No es un reparto incompleto: es un ganador que no ganó.
 
-### El único defecto real: repartos incompletos
+Una mano en 877. **No afecta a la muestra de `L_sec`**, que se queda en 161
+utilizables.
 
-En esas 25 manos los ganadores declarados **sí hacen la mejor mano**, pero
-hay un tercero que hace exactamente lo mismo y no está declarado. O sea:
-el reparto del bote no se registró entero.
+## Lo que queda
 
-Es el mismo tipo de cosa que los 25 repartos incompletos que el mantenedor ya
-corrigió a mano en `H_1030..H_1070` (`CANAL_MANUAL_CERRADO.md` §4), y que
-siguen en las manos anteriores.
+`H_0909`, declarado y fuera del ajuste. Arreglarla es tocar `data/`, con
+migración, hash y backup. Aquí no.
 
-**No se corrige aquí**: es tocar `data/`, con migración, hash y backup.
+## La lección
 
-En la ventana de 877 hay **0**, así que **no afecta a la muestra de
-`L_sec`**.
+> **Un instrumento que dice «el recorder está roto» cuando la verdad es
+> «mi comprobación está rota» es peor que uno que dice «no sé».**
 
-## Por qué importa igual
+Porque el primero produce un número alto, y un número alto se lee como un
+problema grande y ajeno. Aquí produjo **61 %**, y era un filtro de dos
+líneas mal puesto.
 
-1. **`winner` no es comprobable en el 20 % de la ventana** (87 de 348). Quien
- ganó por fold y no tiene cartas no se puede verificar con las cartas.
- No es un defecto, es un límite del dato, y hay que saberlo.
-2. **La etiqueta de `L_sec` se acepta sin comprobar en esas 87.** Es la
- única fuente, y se declara como tal.
-3. **El método que sí funciona**: exigir, cuando es comprobable, que
- `winner` coincida exactamente con las mejores manos evaluadas. Con eso
- salen **0 incoherentes** en la ventana y la muestra queda en **161
- utilizables, 20 victorias, 3 repartos**.
+Tres cosas que salieron de ahi:
+
+1. **El caso que desmiente se busca primero.** `H_0002` —el ganador sin
+  cartas, que ganó por fold— era el que rompía el argumento entero, y lo
+  tenía delante en la salida del script.
+2. **Un número grande pide una prueba de que el número es real**, no una
+  explicación de por qué. Yo tenía la explicación y no la prueba.
+3. **`revision_2` lo pidió y por eso se encontró.** Nadie lo habría visto
+  solo. Lo que parece demasiado evidente para mirar es exactamente lo
+  que hay que medir.
+
+Y una regla que queda escrita para no volver a hacerlo:
+
+> **Antes de comparar a un jugador con el board, comprobar que estaba en
+> el bote cuando terminó la mano.** Si no, no está compitiendo y sus cartas
+  no dicen nada.
 
 ## Reproducir
 
@@ -91,7 +92,3 @@ En la ventana de 877 hay **0**, así que **no afecta a la muestra de
 python tools/calibrar.py particion
 python tools/auditar_muestra_lsec.py
 ```
-
-El desglose del auditor cuenta `INCOHERENTE: reparto incompleto` y
-`ganador por fold, no comprobable`. Si los dos se mueven, hay que rehacer
-esto.
