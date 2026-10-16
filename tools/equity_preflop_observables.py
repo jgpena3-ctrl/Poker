@@ -249,36 +249,22 @@ def semilla_de(hand_id):
     ).hexdigest()[:8], 16)
 
 
-def main():
-    ap = argparse.ArgumentParser(prog='equity_preflop_observables.py')
-    ap.add_argument('--manos', type=int, default=0,
-                    help='cuantas manos calcular (0 = todas)')
-    ap.add_argument('--todo', action='store_true',
-                    help='calibracion y validacion (por defecto: validacion)')
-    ap.add_argument('--solo-recaudo', action='store_true',
-                    help='imprimir la poblacion etapa a etapa y salir sin '
-                         'calcular ninguna equity. Para auditar quien entra '
-                         'y quien se cae, sin 3 h de calculo')
-    args = ap.parse_args()
+def seleccionar_manos(etiqueta, por_id, model):
+    """Las manos preflop que el camino preflop mete, con el recuento POR
+    ETAPA y por spot.
 
-    ventana = learn.load_hands(reliable_only=True)
-    ajuste = [h for h in ventana if not cal.es_validacion(h['hand_id'])]
-    labels = eqm.perfiles_de(ajuste)
-    model = player_ranges.ProfileRangeModel.from_hands(
-        ajuste, labels=labels, alpha=player_ranges.DEFAULT_ALPHA)
+    `revision_2` §1: esto estaba dentro de `main()` y por eso los
+    contadores no se podian PROBAR, solo leer. Una refactorizacion podia
+    conservar los nombres de las variables y volver a romper la auditoria
+    sin que nada se notara. Aqui hay manos sinteticas que fallan en cada
+    etapa y comprueban el recuento.
 
-    cal_, val_ = cal.muestra()
-    universo = list(val_) if not args.todo else list(val_) + list(cal_)
-    etiqueta = dict(universo)
-    por_id = {h['hand_id']: h for h in ventana}
-
+    Devuelve (trabajo, etapas, sin_rango, sp_cortes).
+    """
+    eqm = _m('equity_de_mano.py')
     trabajo = []
     sin_rango = collections.Counter()
     sp_cortes = collections.Counter()
-    # Un contador POR ETAPA y por spot. `revision_2` §1: antes la
-    # columna "con mano" y la columna "con rival" salian de `trabajo`,
-    # que solo contiene manos que YA pasaron TODOS los filtros. Las dos
-    # decian lo mismo y el encabezado prometia mas de lo que se media.
     etapas = collections.defaultdict(collections.Counter)
 
     def _pasa(spot, etapa):
@@ -293,6 +279,7 @@ def main():
         calle, idx = eqm.corte_de_decision(h, hero)
         if calle != 'preflop':
             continue
+
         # ETAPA 1: el corte es preflop y el spot es uno de los tres.
         spot = mano_del_spot(h, calle, hero, idx)
         sp_cortes[spot] += 1
@@ -320,16 +307,41 @@ def main():
             sin_rango['villano sin perfil: cae al prior plano'] += 1
             continue
         _pasa(spot, '4_perfil')
+
         trabajo.append({'id': hid, 'y': y, 'hero': mc, 'villano': nombre,
                         'vpos': vpos, 'spot': spot,
                         'semilla': semilla_de(hid),
                         'cartas_villano': cartas_de(h, vpos)})
 
-    print('=' * 78)
-    print('MANOS QUE EL CAMINO PREFLOP METE   (VERSION %d, iid-media-simple)'
-          % VERSION)
-    print('=' * 78)
-    print()
+    return trabajo, etapas, sin_rango, sp_cortes
+
+
+def main():
+    ap = argparse.ArgumentParser(prog='equity_preflop_observables.py')
+    ap.add_argument('--manos', type=int, default=0,
+                    help='cuantas manos calcular (0 = todas)')
+    ap.add_argument('--todo', action='store_true',
+                    help='calibracion y validacion (por defecto: validacion)')
+    ap.add_argument('--solo-recaudo', action='store_true',
+                    help='imprimir la poblacion etapa a etapa y salir sin '
+                         'calcular ninguna equity. Para auditar quien entra '
+                         'y quien se cae, sin 3 h de calculo')
+    args = ap.parse_args()
+
+    ventana = learn.load_hands(reliable_only=True)
+    ajuste = [h for h in ventana if not cal.es_validacion(h['hand_id'])]
+    labels = eqm.perfiles_de(ajuste)
+    model = player_ranges.ProfileRangeModel.from_hands(
+        ajuste, labels=labels, alpha=player_ranges.DEFAULT_ALPHA)
+
+    cal_, val_ = cal.muestra()
+    universo = list(val_) if not args.todo else list(val_) + list(cal_)
+    etiqueta = dict(universo)
+    por_id = {h['hand_id']: h for h in ventana}
+
+    trabajo, etapas, sin_rango, sp_cortes = seleccionar_manos(
+        etiqueta, por_id, model)
+
     print('   universo de la particion      : %d' % len(etiqueta))
     print('   cortes preflop con todo listo : %d' % len(trabajo))
     for k, n in sin_rango.most_common():
@@ -344,10 +356,28 @@ def main():
              'calculada'))
     print('      ' + '-' * 66)
     hechos = cache_abrir()
+
+    def calculadas_para(spot):
+        """SOLO las admitidas, con equity, y de ESTA version.
+
+        `revision_2`: contar cualquier diccionario con el spot coincide mete
+        manos de otra VERSION y manos que ya no se admiten. Y el texto decia
+        "de esta VERSION", que el filtro NO garantizaba.
+        """
+        n = 0
+        for x in trabajo:
+            if x['spot'] != spot:
+                continue
+            e = hechos.get(x['id'])
+            if (isinstance(e, dict) and 'equity' in e
+                    and e.get('version') == VERSION):
+                n += 1
+        return n
+
+    total_calc = 0
     for spot in sorted(ACCIONES_SPOT):
         adm = sum(1 for x in trabajo if x['spot'] == spot)
-        n_calc = sum(1 for v in hechos.values()
-                     if isinstance(v, dict) and v.get('spot') == spot)
+        n_calc = calculadas_para(spot)
         print('      %-14s %6d %7d %7d %7d %8d %9d'
               % (spot, sp_cortes.get(spot, 0),
                  etapas['2_cartas_hero'][spot], etapas['3_rival'][spot],
@@ -357,11 +387,21 @@ def main():
              etapas['2_cartas_hero']['__total__'],
              etapas['3_rival']['__total__'],
              etapas['4_perfil']['__total__'], len(trabajo),
-             sum(1 for v in hechos.values()
-                 if isinstance(v, dict) and 'equity' in v)))
+             total_calc))
     print()
     print('   ADMIT. son las que pasan las CUATRO etapas. calculada es lo')
     print('   que ya esta en la cache de esta VERSION.')
+    print()
+    extras = [k for k in sp_cortes if k not in ACCIONES_SPOT]
+    if extras:
+        print('   Spots NO reconocidos (se cuentan aparte, con su clave):')
+        for k in extras:
+            print('      %-14r %6d' % (k, sp_cortes[k]))
+        print('   Se cuentan porque verlos es el punto: un spot desconocido')
+        print('   tiene que verse, no desaparecer.')
+    else:
+        print('   Spots no reconocidos: ninguno. Los tres declarados cubren')
+        print('   todos los cortes.')
     print()
     print('   Motivos de descarte:')
     for k, n in sin_rango.most_common():
@@ -431,7 +471,7 @@ def main():
         cache[hid] = {'equity': acc / n, 'n_combos': n,
                       'villano': t['villano'], 'spot': t['spot'],
                       'y': t['y'], 'hero': t['hero'],
-                      'semilla': t['semilla'],
+                      'semilla': t['semilla'], 'version': VERSION,
                       'estimador': 'iid-media-simple'}
         hechos += 1
         mins = (time.time() - t0) / 60.0

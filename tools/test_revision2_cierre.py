@@ -94,8 +94,12 @@ def test_la_poblacion_es_auditable(ins):
         'sin una salida de solo recuento, auditar la poblacion cuesta 3 h '
         'de calculo')
     # y el recuento es ANTES de exigir villano
-    # dentro del CUERPO de main(), no en los docstrings
-    cuerpo = src[src.index('def main():'):]
+    # Los contadores viven en `seleccionar_manos`, no en `main`:
+    # `revision_2` seccion 1 pide que sean PROBABLES con manos sinteticas,
+    # y dentro de `main` no lo son. `test_contadores_poblacion.py` lo
+    # comprueba con comportamiento; aqui solo la estructura.
+    cuerpo = src[src.index('def seleccionar_manos('):
+                 src.index('def main():')]
     i = cuerpo.index('sp_cortes[spot] += 1')
     j = cuerpo.index('villano_del_corte(h, hero, calle, idx)')
     assert i < j, 'el recuento por spot tiene que ir antes del filtro'
