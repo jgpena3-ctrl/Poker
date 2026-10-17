@@ -142,6 +142,42 @@ Y no por coincidencia.
 
 Y esa es la diferencia entre «el test pasa» y «el contrato se sostiene».
 
+### Y `y = 0` no es «de los folds»
+
+Un enunciado que se ha escrito aquí y que hay que corregir, porque se dio por
+bueno sin medirlo, y al medirlo salió falso en las dos partes.
+
+| | |
+|---|---:|
+| manos con un **fold** del héroe | **651** |
+| — de ellas, **en** la muestra etiquetada | **108** |
+| — de ellas, fuera de la muestra | 543 |
+| manos con **`y = 0`** | **137** |
+| — de ellas, **con** fold | **108** |
+| — de ellas, **sin** fold: showdown perdido | **29** |
+
+Lo que se decía era «`y = 0` no es de los folds, es de los folds que no están
+en `muestra()`». Y las dos partes se caen:
+
+- **«es de los folds que no están en `muestra()`»** — no. Hay **108 folds que
+  sí están en la muestra** y reciben `y = 0` legítimo. Un fold es *suficiente*
+  para `y = 0`, y si la mano está en la muestra, se le pone.
+- **«`y = 0` no es de los folds»** — no. De las 137 manos con `y = 0`, **29 no
+  tienen fold**: son showdowns perdidos.
+
+**Lo que sí es cierto, y es otra cosa:** `y = 0` significa *el héroe pierde*, y
+eso pasa de dos maneras —**108 folds** y **29 showdowns perdidos**. El fold es
+suficiente y no necesario.
+
+Y esto es lo que explica por qué la población B del AUC **excluye** los folds:
+no porque su etiqueta sea distinta —es `0`, y es una etiqueta legítima—, sino
+porque **no hay showdown que verificar**.
+
+Que es la misma distinción de la §4.3, aplicada a otro sitio: una cosa es lo
+que el dato **dice** y otra es lo que el dato **permite concluir**. Aquí
+también se estaban confundiendo. La etiqueta del fold es válida; su
+observabilidad no.
+
 ### 2.1 La razón que da R1 para B no se sostiene
 
 R1 recomienda B porque «para eso hace falta que el héroe tenga decisiones

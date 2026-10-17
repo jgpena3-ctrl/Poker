@@ -41,6 +41,7 @@ sale la validez.
 """
 import io
 import os
+import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -77,6 +78,211 @@ def test_la_validez_comes_del_contrato_y_no_del_auc():
     assert afirmada_sin_negar(doc, 'no una consecuencia'), (
         'y no dice que la validez NO es consecuencia de que el AUC salga con '
         'dos decimales: esa es la confusion exacta')
+
+
+# ==================== 1. los tres pares, y no dos cadenas sueltas
+#
+# «0,8308 aparece en el documento» no es «0,8308 es el numero SIN el filtro».
+# Si los dos numeros estuvieran en un parrafo sobre otra cosa, los dos
+# asserts pasan.
+#
+# Y no hace falta un verificador universal de prosa. Basta con que el test sea
+# sensible a las contradicciones CONCRETAS que ya se encontraron, que son tres,
+# y cada una es un PAR: cifra <-> condicion.
+#
+# El criterio del par: cifra y condicion tienen que estar en la MISMA clausula,
+# o en clausulas contiguas. No es que tengan que estar en la misma linea —un
+# documento bien escrito parte las frases— sino que no puede haber otras cosas
+# en medio.
+def _seccion(doc, desde):
+    """La SECCION que contiene la posicion `desde`: del ultimo encabezado
+    anterior hasta el siguiente.
+
+    Y el criterio del par es la SECCION, no la clausula. Uno anterior exigia
+    la misma clausula, y el documento separa en una tabla de dos columnas,
+    con la cifra y su condicion en celdas distintas. La clausula es mas
+    pequena de lo que la idea, y mas grande de lo que la linea.
+
+    Y la seccion tiene que ser la QUE CONTIENE la posicion, no la que empieza
+    en ella. Una version empezaba en `desde` y por eso no encontraba la
+    condicion, que en el documento va ANTES de la cifra:
+
+        | con el filtro de particion | 11 | **0,7667** |
+
+    La condicion esta a la izquierda, en la misma fila, y una ventana que
+    empieza en la cifra no la ve nunca.
+    """
+    cab = None
+    for m in re.finditer(r'\n#{2,4} ', doc):
+        if m.start() < desde:
+            cab = m.start()
+        else:
+            fin = m.start()
+            break
+    else:
+        fin = len(doc)
+    ini = cab if cab is not None else 0
+    return doc[ini:fin]
+
+
+def _misma_seccion(doc, cifra, condiciones):
+    """True si la cifra esta ASOCIADA a su condicion. Y «asociada» depende de
+    donde este escrita:
+
+      - en una FILA DE TABLA, la condicion tiene que estar en esa misma fila.
+        En una tabla, la condicion y el valor son la misma linea: por eso la
+        tabla de §4.2 dice «| con el filtro | 11 | 0,7667 |».
+
+      - en PROSA, basta con la misma seccion. En prosa la condicion puede
+        estar dos frases antes, y exigir la misma linea seria exigir que el
+        documento este escrito como el test.
+
+    POR QUE NO «CUALQUIER MENCION CON UNA CONDICION»
+
+    Porque una version anterior hacia eso, y no era sensible: el documento
+    tiene siete menciones de 0,7667, y romper una no la tumba. Los tres tests
+    de sensibilidad de `test_sensibilidad_de_los_tests.py` PASABAN con el
+    documento deliberadamente roto, y por eso los tres se escribieron.
+
+    O sea: «esta en algun sitio con una condicion» no es «esta con SU
+    condicion». Y esa distincion es la que hace que el test sea un detector
+    y no una busqueda.
+
+    Y no se trata «con la condicion contraria» como una contradiccion: una
+    tabla de comparacion trae las DOS condiciones, porque la comparacion es
+    eso. Eso fue el TERCER falso positivo de este bloque.
+    """
+    b = doc.lower()
+    for m in re.finditer(re.escape(cifra), b):
+        ini = b.rfind('\n', 0, m.start()) + 1
+        fin = b.find('\n', m.start())
+        linea = b[ini:fin if fin > 0 else len(b)]
+        if linea.lstrip().startswith('|'):
+            # fila de tabla: la condicion va en la fila
+            if any(c in linea for c in condiciones):
+                return True
+        else:
+            if any(c in _seccion(b, m.start()).lower() for c in condiciones):
+                return True
+    return False
+
+
+def test_los_numeros_no_estan_sueltos_y_su_condicion_no():
+    """0,8308 SIN el filtro, y 0,7667 CON el. Cada cifra con su condicion."""
+    doc = leer('QUE_REPRESENTA_LA_PREDICCION.md').lower()
+    pares = (
+        ('0,8308', ('sin el filtro', 'sin filtro', 'no filtrar'), 'el malo'),
+        ('0,7667', ('con el filtro', 'filtrada', 'con filtro'), 'el bueno'),
+    )
+    sueltos = []
+    for cifra, condiciones, quien in pares:
+        if not _misma_seccion(doc, cifra, condiciones):
+            sueltos.append('%s (%s) no aparece junto a su condicion' % (
+                cifra, quien))
+    assert not sueltos, (
+        'las cifras aparecen pero sin su condicion:\n   '
+        + '\n   '.join(sueltos) + '\n\n   O sea: estan sueltas en el '
+        'documento, y un numero suelto no dice a que condicin pertenece.')
+
+
+def test_la_relacion_de_validez_no_esta_suelta():
+    """Y lo que R2 senala en el mismo punto: que las DOS afirmaciones esten,
+    y que la relacion este escrita.
+
+    «Dice CONTRATO_L_SEC» mas «dice no es una consecuencia» son dos
+    afirmaciones que pueden estar en paginas distintas. Lo que las une es que
+    la segunda las alcance."""
+    doc = leer('QUE_REPRESENTA_LA_PREDICCION.md').lower()
+    # La relacion vive en §4.3, NO en la primera mencion del nombre del
+    # contrato, que esta en §5. Y eso lo dijo el fallo de este test: estaba
+    # midiendo la relacion en el sitio equivocado del documento, que es lo
+    # mismo que no medirla.
+    i = doc.find('es el correcto', 4000)          # el de §4.3, no el de §4.2
+    assert i > 0, 'no se encuentra la tesis del §4.3'
+    sec = _seccion(doc, i)
+    assert 'no una consecuencia' in sec or 'no es una consecuencia' in sec, (
+        'la relacion —la validez NO es consecuencia del AUC bonito— no esta '
+        'en la seccion de la tesis. Y las dos formas valen: el documento '
+        'escribe una, y un test que exige una sola senala el documento que '
+        'esta bien')
+    assert 'contrato_l_sec' in sec, (
+        'y el contrato no se menciona en la seccion de la tesis, que es '
+        'justo donde tiene que estar: la validez sale de ahi')
+
+
+# ==================== 2. la polaridad de las tesis
+def _orbita_de_la_tesis(doc):
+    """La clausula que sigue a la tesis del CORRECTO, en §4.3.
+
+    Y no la seccion. Una version anterior de este comprobador miraba los
+    primeros 200 caracteres de la seccion, y §4.3 tiene muchos «no», o sea
+    que la comprobacion era tan laxa que nunca caia. Y un test que nunca cae
+    no es un test de sensibilidad.
+
+    La orbita es la clausula: en
+
+        **El filtro es el CORRECTO.** Eso **no** esta demostrado, y no lo
+        puede estar con esta prueba.
+
+    lo que lleva la polaridad es «Eso **no** esta demostrado».
+
+    Y HAY QUE SALTAR LA PUNTUACION del principio. Una version anterior
+    tomaba lo que venia despues de «es el correcto» hasta el primer
+    delimitador, y el primer delimitador era el punto que cierra la tesis.
+    O sea: la orbita salia VACIA, y el test que la usa fallaba sin decir por
+    que. Un comprobador que devuelve cadena vacia no es un comprobador: hay
+    que devolver lo que hay despues de la puntuacion, que es justo lo que
+    lleva la polaridad.
+    """
+    b = doc.lower()
+    i = b.find('es el correcto', 4000)
+    if i < 0:
+        return ''
+    j = i + len('es el correcto')
+    # se salta la puntuacion y los espacios que cierran la frase anterior
+    while j < len(b) and b[j] in '. \t\n':
+        j += 1
+    m = re.search(r'[.;:\n]', b[j:])
+    return b[j:j + (m.start() if m else 200)]
+
+
+def test_la_tesis_de_causa_se_afirma_y_no_se_niega():
+    """Que `afirmada()` no acepte la NEGACION de la tesis.
+
+    «el filtro NO es la causa» pasa un test de presencia y es justo lo
+    contrario de lo que el §4.3 sostiene."""
+    doc = leer('QUE_REPRESENTA_LA_PREDICCION.md')
+    for negation in ('no es la causa', 'No es la causa',
+                     'no es la CAUSA'):
+        assert not afirmada_sin_negar(doc, negation), (
+            'el documento NIEGA la tesis de causa con %r. El §4.3 dice lo '
+            'contrario, y una tesis que se afirma y se niega en el mismo '
+            'documento no es una tesis' % negation)
+
+
+def test_la_tesis_de_no_validez_se_afirma_como_no_demostrada():
+    """Y lo mismo al reves: que el documento diga que NO esta demostrado que
+    el filtro sea el correcto.
+
+    Y que lo diga de una forma que un test pueda distinguir de «esta
+    demostrado». Que es el punto entero: «dice CORRECTO» y «dice que NO esta
+    demostrado CORRECTO» no son lo mismo, y un test de presencia no lo ve."""
+    doc = leer('QUE_REPRESENTA_LA_PREDICCION.md')
+    b = doc.lower()
+    # La tesis se mide en §4.3. Buscando la PRIMERA mencion, el test cae en
+    # la de §4.2, que es otra cosa: §4.2 habla de la prueba de la CAUSA.
+    i = b.find('es el correcto', 4000)
+    assert i > 0, 'no se encuentra la tesis del §4.3'
+    sec = _seccion(b, i)[:600]
+    assert ('no' in sec and 'demostrado' in sec), (
+        'la tesis del CORRECTO se menciona en §4.3 sin decir que NO esta '
+        'demostrada. La seccion empieza asi: %r' % sec[:160])
+    # y que no afirme lo contrario
+    for mala in ('esta demostrado que sea el correcto',
+                 'está demostrado que sea el correcto'):
+        assert not afirmada_sin_negar(doc, mala), (
+            'el documento AFIRMA %r, que es lo contrario de lo que sostiene '
+            'el §4.3' % mala)
 
 
 def test_el_documento_avisa_de_que_la_prueba_no_lo_detecta():
