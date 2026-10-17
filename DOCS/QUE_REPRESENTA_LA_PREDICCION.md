@@ -149,21 +149,79 @@ implementación: cambiar el corte cambia el conjunto de rivales (141 de los
 235 cortes que cambian de calle), así que la elección de reducir a un número
 deja de ser neutra.
 
-## 4. Lo que queda sin escribir
+## 4. Qué reducción se usa, y cuánto importa
 
-Se escribe aquí lo que falta, para que la decisión lo tenga delante y no
-adivinando:
+**La que se usa es la mediana, sin ponderar.** Está en una línea:
 
-1. **Qué reducción a un número se usa en el AUC**, y si es la correcta. Con
-   415 de 877 manos con más de un rival, no es una elección menor.
+```python
+# tools/auditar_auc.py:299
+filas.append((r[1]['mediana'], y, acts[idx].get('action')))
+```
+
+Y no estaba escrita en ningún `.md`. Ahora sí.
+
+### 4.1 Y cuánto mueve
+
+Medido sobre las seis reducciones razonables, en la **población del AUC**:
+
+| reducción | n | AUC | IC |
+|---|---:|---:|---|
+| **mediana** — la que se usa | 11 | **0,7667** | [0,4333; 1,0000] |
+| media | 11 | 0,7667 | [0,4333; 1,0000] |
+| primer rival de la mesa | 11 | 0,7667 | [0,4333; 1,0000] |
+| último rival de la mesa | 11 | 0,8000 | [0,5000; 1,0000] |
+| mínimo | 11 | 0,7667 | [0,4333; 1,0000] |
+| máximo | 11 | 0,8000 | [0,5000; 1,0000] |
+
+**Recorrido: 0,0333. Amplitud del IC ya publicado: 0,5667.**
+
+Y el motivo por el que el recorrido es tan pequeño: **1 de las 11
+observaciones** tiene más de un rival. Las otras 10 tienen una sola equity, y
+para una sola equity todas las reducciones coinciden.
+
+En la muestra etiquetada postflop entera, sin el filtro de validación, **11 de
+47** tienen más de un rival y el recorrido es **0,0169**. Menor todavía.
+
+**Para este AUC, la elección es un detalle.** Y conviene decirlo con sus
+palabras exactas: *para este AUC y con estas manos*. Con 11 observaciones,
+cualquier cosa mueve un AUC.
+
+### 4.2 Cómo se midió, y el rodeo que hubo que deshacer
+
+La primera medición dio 47 observaciones y 0,8308. Dos filtros posibles:
+
+- **los folds**: `resto_de_muestra` etiqueta los folds, porque una victoria
+  por fold tiene etiqueta. Medido: las 48 postflop con etiqueta son las 48 de
+  población B. **Cero folds.** No era eso.
+- **la partición**: `muestra()` devuelve calibración **y** validación, y
+  `resto_de_muestra` etiqueta las dos porque las dos tienen etiqueta. Pero el
+  AUC se publica sobre la validación. **Era ese.**
+
+La prueba de que el filtro es el correcto no es que «parezca»: es que con
+él, la mediana **reproduce el AUC publicado exacto** — n = 11, AUC 0,7667, IC
+[0,4333; 1,0000]. Si no lo reprodujera, el filtro estaría mal y no el AUC.
+
+> **Y esa es la regla que hay que aplicarle a toda medición que se compare
+> con una cifra publicada: que la reproduzca.** Una medición que no
+> reproduce la cifra publicada no mide lo que dice medir, y el siguiente paso
+> es siempre mirar la población antes que el número.
+
+## 5. Lo que queda sin escribir
+
+Tres, de los cuatro que había. El primero ya está:
+
+1. ~~Qué reducción a un número se usa en el AUC~~ → **§4: es la mediana, y
+   para este AUC no importa.**
 2. **Qué se hace con las 5 manos de board divergente.** Hoy se refina el
    rango con un board que el cálculo no ve. Es medible y es corregible, pero
-   corregirlo mueve las cifras.
+   corregirlo mueve las cifras, y eso es otro bloque.
 3. **Si el preflop entra alguna vez**, con qué vía. Hoy la única es
    retrospectiva y marcada como tal, y el motor no tiene la otra.
 4. **Si la predicción se pondera por rival.** Con 4 rivales y una equity
    para cada una, «la equity del héroe» no tiene un valor único salvo que se
-   declare cuál.
+   declare cuál. Y nótese que §4 no contesta esto: que la reducción *no mueva
+   el AUC* no significa que la *ponderación* no importe, porque la ponderación
+   no está medida.
 
-Ninguno de los cuatro se resuelve aquí. Los cuatro son prerequisites de la
+Ninguno de los tres se resuelve aquí. Los tres son prerequisites de la
 decisión, y la decisión sigue siendo de otro sitio.
