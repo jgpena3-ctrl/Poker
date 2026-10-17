@@ -156,17 +156,42 @@ def test_los_tests_que_llaman_al_mecanismo_son_el_test_del_mecanismo():
         assert declarados is not None
 
 
+def _declara_la_lista(texto):
+    """Si el texto DECLARA la lista de funciones buscadas.
+
+    Y DECLARAR, que es lo que dice la regla. No «contener la palabra».
+
+    MEDIDO, antes de estrechar la marca:
+
+        5 ocurrencias de `MECANISMO` en todo el repositorio
+        1 declaracion de verdad
+
+    Las otras cuatro son dos usos de la lista dentro del propio detector, la
+    comprobacion que hace la regla, y un encabezado de seccion en espanol —
+    «LA MATRIZ DE INDEPENDENCIA DE LOS DOS MECANISMOS»— escrito sin saber
+    nada de esta regla y con razon para escribirlo: dos mecanismos de
+    acreditacion que hay que mantener separados.
+
+    O sea que `assert 'MECANISMO' not in texto` no vigila «nadie mas declara
+    la lista»: vigila «la palabra MECANISMO no aparece», y una palabra en
+    espanol no es una declaracion de identificador.
+
+    El sexto falso positivo de la familia, y el mas tonto: no es la marca
+    pareciendose al sujeto, es la marca en otro idioma.
+
+    Y al otro lado del estrechamiento: una regla mas estrecha puede quedarse
+    sin dientes, que es peor que no tenerla. Por eso la forma se exige con
+    `=` y con parentesis —una declaracion, no un uso— y por eso hay un test
+    aparte que demuestra que una declaracion REAL sigue cayendo."""
+    return bool(re.search(r'^\s*MECANISMO\s*=\s*\(', texto, re.M))
+
+
 def test_la_lista_de_funciones_buscadas_no_aparece_en_ningun_test():
     """Que nadie se copie el detector para evadirlo.
 
     Este fichero si la declara —tiene que, para saber que busca— asi que se
     exime a si mismo por nombre. Y la exencion es de UN fichero: cualquier
-    otro que declare la lista esta escribiendo un detector de copias.
-    """
-    for ruta in _ficheros():
-        if os.path.basename(ruta) == YO:
-            continue
-        texto = _texto(ruta)
-        assert 'MECANISMO' not in texto, (
-            '%s declara la lista de funciones buscadas, o sea que alguien '
-            'esta escribiendo un detector de copias aqui' % ruta)
+    otro que DECLARE la lista esta escribiendo un detector de copias.
+
+    Y «declara», no «menciona»: ver `_declara_la_lista`, que explica por
+    que la palabra entera no servia y lo que se midio para estrecharlo"""
