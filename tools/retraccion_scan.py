@@ -49,8 +49,28 @@ LOS_TRES = ('LIMITACION_PREFLOP_AUC.md', 'REPRESENTATIVIDAD_23.md',
             'FASE_D_BLOQUEADA.md')
 
 
+# El directorio de documentos. Se puede sobreescribir con la variable de
+# entorno POKER_DOCS_DIR, y SOLO para poder ejecutar los tests de aceptacion
+# contra una copia deliberadamente rota del documento.
+#
+# Y por que una variable de entorno y no un parametro: porque el test de
+# aceptacion no es nuestro para cambiarlo. Se ejecuta tal cual. Meterle un
+# parametro seria cambiar el objeto de prueba para que pueda fallar, que es
+# lo contrario de una prueba.
+#
+# Sin la variable puesta se lee `DOCS`, que es lo que tiene que pasar el
+# 99 % de las veces. Ver `test_sensibilidad_de_los_tests.py`, que es quien la
+# usa.
+DIR_DE_DOCUMENTOS = 'POKER_DOCS_DIR'
+
+
+def directorio_de_documentos():
+    return os.environ.get(DIR_DE_DOCUMENTOS) or DOCS
+
+
 def leer(nombre):
-    with io.open(os.path.join(DOCS, nombre), encoding='utf-8') as f:
+    with io.open(os.path.join(directorio_de_documentos(), nombre),
+                 encoding='utf-8') as f:
         return f.read()
 
 

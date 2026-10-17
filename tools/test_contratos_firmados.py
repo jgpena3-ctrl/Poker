@@ -68,8 +68,20 @@ AFIRMACIONES = {
 
 
 def _leer(nombre):
-    with io.open(os.path.join(DOCS, nombre), encoding='utf-8') as f:
-        return f.read()
+    """A traves de `retraccion_scan.leer()`, y no de `DOCS` directo.
+
+    Y no por elegancia: porque si se lee del directorio fijo, este fichero
+    no se puede ejecutar contra una copia rota del contrato. Y eso es
+    justamente lo que hay que comprobar — que los tests CAIGAN cuando el
+    contrato cambia — asi que leer del sitio fijo hacia imposible la
+    comprobacion.
+
+    El fallo sale asi: el test que rompe el contrato dice «los tests de los
+    contratos NO han caido», y la conclusion apparent es que no vigilan.
+    Lo que pasaba es que seguian leyendo el contrato bueno.
+    """
+    from retraccion_scan import leer
+    return leer(nombre)
 
 
 def test_los_contratos_dicen_lo_que_el_proyecto_les_pide():
@@ -112,8 +124,9 @@ def test_los_contratos_no_cambian_sin_que_se_sepa():
     }
     cambios = []
     for nombre, (esperada, que) in sorted(HUELLAS.items()):
-        with io.open(os.path.join(DOCS, nombre), 'rb') as f:
-            h = hashlib.sha256(f.read()).hexdigest()
+        import retraccion_scan as _rs
+        h = hashlib.sha256(
+            _leer(nombre).encode('utf-8')).hexdigest()
         if h[:32] != esperada:
             cambios.append(
                 '%s (%s)\n      era %s\n      ahora %s'

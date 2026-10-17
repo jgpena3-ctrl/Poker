@@ -324,7 +324,15 @@ Y no por coincidencia.
 
 Y esa es la diferencia entre «el test pasa» y «el contrato se sostiene».
 
-### Y `y = 0` no es «de los folds»
+### Y `y = 0`: las manos que el héroe pierde, por dos vías
+
+> **Lo que se decía, y lo que se retira:**
+>
+> «`y = 0` no es de los folds, es de los folds que no están en `muestra()``
+
+Y un encabezado como el de arriba es el PEOR sitio para una frase que se
+retira: es lo primero que se lee y lo último que se olvida. Si solo se lee
+el título, el documento afirma lo contrario de lo que sostiene.
 
 Un enunciado que se ha escrito aquí y que hay que corregir, porque se dio por
 bueno sin medirlo, y al medirlo salió falso en las dos partes.
@@ -338,14 +346,23 @@ bueno sin medirlo, y al medirlo salió falso en las dos partes.
 | — de ellas, **con** fold | **108** |
 | — de ellas, **sin** fold: showdown perdido | **29** |
 
-Lo que se decía era «`y = 0` no es de los folds, es de los folds que no están
-en `muestra()`». Y las dos partes se caen:
+> **Lo que se decía, y lo que se retira:**
+>
+> «`y = 0` no es de los folds, es de los folds que no están en `muestra()`»
 
-- **«es de los folds que no están en `muestra()`»** — no. Hay **108 folds que
-  sí están en la muestra** y reciben `y = 0` legítimo. Un fold es *suficiente*
-  para `y = 0`, y si la mano está en la muestra, se le pone.
-- **«`y = 0` no es de los folds»** — no. De las 137 manos con `y = 0`, **29 no
-  tienen fold**: son showdowns perdidos.
+Y las dos mitades se caen:
+
+- **La primera mitad** — la que excluye a los que no están en
+  `muestra()`. No: hay **108 folds que sí están en la muestra** y reciben `y = 0` legítimo. Un fold es
+  *suficiente* para `y = 0`, y si la mano está en la muestra, se le pone.
+- **La segunda mitad** — la que excluye a los folds. No: de las 137
+  manos con `y = 0`, **29 no tienen fold**: son showdowns perdidos.
+
+> Y una cosa de forma, que sale de arreglar esto: el enunciado se escribe
+> **una vez, y como cita**. Repetirlo para desmentir cada mitad es prosa
+> buena y mala a la vez — el escáner ve tres afirmaciones, y basta una mal
+> para que el documento se contradiga. Una retracción no repite lo que retira:
+> lo señala una vez y luego trabaja con «la primera mitad» y «la segunda».
 
 **Lo que sí es cierto, y es otra cosa:** `y = 0` significa *el héroe pierde*, y
 eso pasa de dos maneras —**108 folds** y **29 showdowns perdidos**. El fold es

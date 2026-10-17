@@ -197,8 +197,11 @@ def test_la_relacion_de_validez_no_esta_suelta():
     # contrato, que esta en §5. Y eso lo dijo el fallo de este test: estaba
     # midiendo la relacion en el sitio equivocado del documento, que es lo
     # mismo que no medirla.
-    i = doc.find('es el correcto', 4000)          # el de §4.3, no el de §4.2
-    assert i > 0, 'no se encuentra la tesis del §4.3'
+    i, _sec = _indice_de_la_tesis_43(doc)
+    assert i > 0, (
+        'no se encuentra la tesis en §4.3. Y si no esta, el §4.3 no esta o '
+        'la tesis se ha movido: las dos cosas hay que saberlas antes de '
+        'seguir')
     sec = _seccion(doc, i)
     assert 'no una consecuencia' in sec or 'no es una consecuencia' in sec, (
         'la relacion —la validez NO es consecuencia del AUC bonito— no esta '
@@ -211,6 +214,31 @@ def test_la_relacion_de_validez_no_esta_suelta():
 
 
 # ==================== 2. la polaridad de las tesis
+# La seccion donde vive la tesis de §4.3. Y se busca por ENCABEZADO y no por
+# offset: un `find(frase, 4000)` funciona mientras el documento no crezca por
+# encima, y en cuanto crece cae en el sitio equivocado. Un numero magico
+# posicionado es un `offset` disfrazado de estructura.
+#
+# Y si la seccion no esta, se dice. Una funcion que devuelve cadena vacia
+# porque no ha encontrado lo que buscaba hace que el test falle por un motivo
+# que no dice nada — que es como se rompio esto la primera vez.
+SECCION_DE_LA_TESIS = '### 4.3'
+
+
+def _indice_de_la_tesis_43(doc):
+    """(indice, seccion) de la primera mencion de la tesis en §4.3.
+
+    Devuelve (indice, seccion) del par. Si la seccion no existe, (-1, '')."""
+    b = doc.lower()
+    i_sec = b.find(SECCION_DE_LA_TESIS.lower())
+    if i_sec < 0:
+        return -1, ''
+    m = re.search(r'\n#{2,4} ', b[i_sec + 1:])
+    sec = b[i_sec:i_sec + 1 + (m.start() if m else len(b))]
+    i = sec.find('es el correcto')
+    return (i_sec + i if i >= 0 else -1), sec
+
+
 def _orbita_de_la_tesis(doc):
     """La clausula que sigue a la tesis del CORRECTO, en §4.3.
 
@@ -235,12 +263,22 @@ def _orbita_de_la_tesis(doc):
     lleva la polaridad.
     """
     b = doc.lower()
-    i = b.find('es el correcto', 4000)
+    i, _sec = _indice_de_la_tesis_43(b)
     if i < 0:
         return ''
     j = i + len('es el correcto')
-    # se salta la puntuacion y los espacios que cierran la frase anterior
-    while j < len(b) and b[j] in '. \t\n':
+    # Se salta lo que CIERRA la frase anterior: puntuacion, espacios y
+    # MARCADO DE EMPATIS. El marcado no es contenido, y si no se salta, un
+    # `**` seguido de salto de linea corta la orbita ahi y devuelve `**`.
+    #
+    # Que es lo que pasaba con la variante legitima mas comun de Markdown:
+    #
+    #     El filtro es el correcto**
+    #     Eso **no** esta demostrado, y no lo puede estar.
+    #
+    # Y eso se vio porque el test de formatos existia y miraba. Un caso de
+    # formato que no se cubre es un caso que nadie sabe que existe.
+    while j < len(b) and b[j] in '. \t\n-*_`>':
         j += 1
     m = re.search(r'[.;:\n]', b[j:])
     return b[j:j + (m.start() if m else 200)]
@@ -271,12 +309,25 @@ def test_la_tesis_de_no_validez_se_afirma_como_no_demostrada():
     b = doc.lower()
     # La tesis se mide en §4.3. Buscando la PRIMERA mencion, el test cae en
     # la de §4.2, que es otra cosa: §4.2 habla de la prueba de la CAUSA.
-    i = b.find('es el correcto', 4000)
-    assert i > 0, 'no se encuentra la tesis del §4.3'
-    sec = _seccion(b, i)[:600]
-    assert ('no' in sec and 'demostrado' in sec), (
+    i, _sec = _indice_de_la_tesis_43(b)
+    assert i > 0, (
+        'no se encuentra la tesis en §4.3. Y si no esta, el §4.3 no esta o '
+        'la tesis se ha movido: las dos cosas hay que saberlas antes de '
+        'seguir')
+    # Y aqui va la ORBITA, no los primeros 600 caracteres de la seccion.
+    #
+    # Con los 600 caracteres, esta comprobacion NO CAIA al invertir la
+    # polaridad de la tesis: §4.3 tiene muchos «no», y con que hubiera uno en
+    # los primeros 600 daba por buena la tesis invertida.
+    #
+    # Y eso es exactamente lo que R2 senala: un test de aceptacion que sigue
+    # pasando por otra ruta. Aqui la otra ruta era una comprobacion floja del
+    # mismo test — o sea, no hacia falta ni un segundo test para ocultarla.
+    orb = _orbita_de_la_tesis(b)
+    assert orb, 'no se encuentra la orbita de la tesis'
+    assert ('no' in orb and 'demostrado' in orb), (
         'la tesis del CORRECTO se menciona en §4.3 sin decir que NO esta '
-        'demostrada. La seccion empieza asi: %r' % sec[:160])
+        'demostrada. La orbita dice: %r' % orb)
     # y que no afirme lo contrario
     for mala in ('esta demostrado que sea el correcto',
                  'está demostrado que sea el correcto'):
