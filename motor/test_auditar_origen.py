@@ -20,6 +20,7 @@ un test que las fije, un detector que empieza a devolver 0 casos —porque ha
 dejado de mirar— pasa inadvertido, y «no hay nada que arreglar» es la peor
 respuesta posible de un instrumento.
 """
+import collections
 import hashlib
 import io
 import json
@@ -260,6 +261,13 @@ def test_la_serie_acumulada_es_monotona():
 
     Es lo que distingue un campo acumulado de un campo delta: con delta, una
     `b` posterior puede ser menor sin que pase nada. Con acumulado, no.
+
+    PERO NO ES LA MEDIDA DE CONSISTENCIA, y este docstring lo decía mal.
+    Monotonia solo comprueba que la caja de un jugador no BAJE. No comprueba
+    que una `c` LLEGUE a la apuesta viva, que es la propiedad fuerte.
+
+    Medida esa: **503 de 13826 acciones son calls que no llegan a la viva.**
+    Ver `test_las_calls_que_no_llegan_a_la_viva`.
     """
     manos = AO.cargar()
     s2 = AO.seccion_2(manos)
@@ -273,6 +281,89 @@ def test_la_serie_acumulada_es_monotona():
             % (clave, pa[clave]['NO_MONOTONA']))
     total_no_mono = sum(v['NO_MONOTONA'] for v in pa.values())
     assert total_no_mono == 26, total_no_mono
+
+
+def test_las_calls_que_no_llegan_a_la_viva():
+    """503 de 13826. Esta es la cifra de consistencia, no las 26.
+
+    Es la propiedad que `seccion_2` NO midia, y por eso el «99.6% monótono» del
+    informe anterior invite a leer «el dato es consistente en general». No lo
+    es: el numero fuerte es 503.
+
+    Y hay una segunda lectura de estos casos que no es «la caja esta mal»: una
+    lectura OBSOLETA. `record_hand.py:244` emite cuando `new_bet != old_bet`, y
+    el fallback por estado (`:256-285`) emite para un jugador NO detectado en
+    el primer bucle, leyendo la caja EN ESE MOMENTO. Si la caja todavia no se
+    ha actualizado, el importe emitido es el viejo. `H_0039` lo tiene claro.
+    """
+    manos = AO.cargar()
+    total = 0
+    por_calle = collections.Counter()
+    for h in manos.values():
+        for calle in AO.CALLES:
+            viva = 0.0
+            for a in AO.acciones(h, calle):
+                act = a.get('action')
+                try:
+                    imp = float(a.get('amount') or 0)
+                except (TypeError, ValueError):
+                    continue
+                if act == 'c' and imp < viva - 1e-6:
+                    total += 1
+                    por_calle[calle] += 1
+                if act in ('b', 'r', 'c'):
+                    viva = max(viva, imp)
+    assert total == 503, total
+    assert por_calle['preflop'] == 412, dict(por_calle)
+    # y el caso paradigmatico, byte a byte
+    h = manos['H_0039']
+    seq = [(a.get('pos'), a.get('action'), a.get('amount'))
+           for a in AO.acciones(h, 'preflop')]
+    assert seq[6] == ('BTN', 'c', 6.0), seq
+    assert seq[7] == ('SB', 'r', 11.0), seq
+    assert seq[8] == ('BTN', 'c', 6.0), (
+        'se esperaba la lectura OBSOLETA de H_0039[8]. Si aqui hay un 11.0, o '
+        'la mano cambio, o este test ha dejado de mirar lo que dice mirar.')
+
+
+def test_las_manos_con_una_accion_repetida():
+    """21 manos. Y la repeticion NO es consecutiva en ninguna.
+
+    Eso importa para la formula `aportado = amount - acumulado_anterior`: una
+    repeticion da `aportado = 0`, que es un importe inventado. Y como el
+    esquema no guarda marca de tiempo, **no se puede distinguir** una repeticion
+    de una lectura duplicada de un jugador que actuo dos veces con la misma
+    caja.
+    """
+    manos = AO.cargar()
+    claves = 0
+    pares = set()
+    consecutivas = 0
+    for hid, h in sorted(manos.items()):
+        for calle in AO.CALLES:
+            acs = AO.acciones(h, calle)
+            visto = collections.Counter(
+                (a.get('pos'), a.get('action'), a.get('amount')) for a in acs)
+            for k, v in visto.items():
+                if v > 1:
+                    claves += 1
+                    pares.add((hid, calle))
+            for i in range(len(acs) - 1):
+                a, b = acs[i], acs[i + 1]
+                if (a.get('pos') == b.get('pos')
+                        and a.get('action') == b.get('action')
+                        and a.get('amount') == b.get('amount')):
+                    consecutivas += 1
+    # dos cifras distintas y las dos certainas: 26 ACCIONES repetidas,
+    # repartidas en 21 pares (mano, calle). Una mano con dos acciones
+    # repetidas cuenta una vez en `pares` y dos en `claves`, y esa diferencia
+    # es la que hizo que una primera version de este test fallara.
+    assert claves == 26, claves
+    assert len(pares) == 21, len(pares)
+    assert consecutivas == 0, (
+        '%d repeticiones consecutivas. Una repeticion CONSECUTIVA con la misma '
+        'caja es la firma de una doble lectura, que es un defecto distinto del '
+        'de una repeticion separada por otras acciones.' % consecutivas)
 
 
 def test_las_no_monotonas_son_calls():
@@ -313,11 +404,16 @@ def test_h001_es_el_ejemplo_del_informe():
 
 # --- (3) botes ------------------------------------------------------------
 
-def test_el_bote_solo_cuadra_en_89_manos():
-    """7.1%. La cifra baja del informe, y bajarla es una buena noticia.
+def test_el_bote_exacto_cuadra_en_69_de_1258():
+    """69 exactas, 5.5%. La cifra del informe, y fijada contra la función.
 
     Un detector que empieza a cuadrar mas puede ser una mejora O puede ser que
     ha dejado de mirar. Por eso el numero esta fijado con su motivo.
+
+    El nombre de este test decía 89 y el docstring decia 7.1%. Los dos
+    estaban mal: 89 era la cifra con la lectura DELTA, que se corrigio, y
+    69/1258 es 5.5%. La ASERCION siempre fue 69; lo que estaba mal era el
+    texto, que es lo que se lee. Corregido sin cambiar el resultado.
     """
     manos = AO.cargar()
     s3 = AO.seccion_3(manos)
@@ -327,12 +423,23 @@ def test_el_bote_solo_cuadra_en_89_manos():
 
 
 def test_el_rake_no_explica_el_bote():
-    """La regla del mantenedor, contra los datos. Y pierde.
+    """La regla del mantenedor, contra los datos. Y no cambia nada.
 
-    `final_pot` ya descuenta el 5% hasta 2.5BB. Aplicarlo aqui cuadra 16 de
-    1258; sin rake, 189. Se deja escrito porque «me dijeron que habia rake» es
-    exactamente el tipo de entrada que hace cuadrar cualquier cosa y no
-    cuadrar nada.
+    `final_pot` ya descuenta el 5% hasta 2.5BB. Aplicarlo aqui cuadra **29**
+    de 1258; sin rake, **69**.
+
+    Y no es que el rake empeore el cuadre por poco: es que no cambia nada del
+    ajuste. Por minimos cuadrados, R² es 0.6965 sin rake y 0.6920 con rake.
+    Una comision que se descuenta siempre no puede dejar la mitad de las manos
+    con el bote por encima y la otra mitad por debajo, y eso es justo lo que
+    pasa: 34.0% por debajo, 39.5% por encima, 18.0% iguales.
+
+    Se deja escrito porque «me dijeron que hay rake» es el tipo de entrada que
+    hace cuadrar cualquier cosa y no cuadrar nada.
+
+    Este docstring decia «16 de 1258; sin rake, 189». Las dos cifras eran de la
+    lectura DELTA, que se corrigio en `aportar_por_jugador`. La asercion ya
+    era 29 y 69.
     """
     import collections
     manos = AO.cargar()
