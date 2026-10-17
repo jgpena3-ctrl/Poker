@@ -237,10 +237,40 @@ se comprobaran *después* del camino de fold, ¿cuál sería la población?
 > demás —por eso existe—, así que la población **no está vacía: está
 > bloqueada** por dos filtros que se adelantan a ese camino.
 >
-> Y desbloqueada daría **1,0 por definición**: 78 victorias contra 0
-> derrotas. **No es que falten manos; es que no hay una sola derrota.**
+> Y desbloqueada daría un AUC **indefinido**: 78 victorias contra 0
+> derrotas, y `auditar_auc.auc_de()` devuelve `None` cuando falta una
+> clase —es lo que dice su docstring—. No «1,0 por definición», que fue lo
+> que se escribió aquí y es falso: el código del proyecto ya devolvía
+> `None` y el documento lo contradecía.
+> **No es que falten manos; es que no hay una sola derrota.**
 > La razón es medible: el corte es la última acción del héroe, y para que
 > sea jugada en preflop la mano tiene que terminar ahí.
+>
+> Y el arreglo está **medido**, no afirmado: con el corte en la *primera*
+> decisión hay **270** observaciones con etiqueta, **216 victorias y 54
+> derrotas**. Es un cambio de la definición del objetivo, así que va
+> medido y no implementado. Detalle en
+> [`LIMITACION_PREFLOP_AUC.md`](LIMITACION_PREFLOP_AUC.md) §4.
+
+### 6.2 Los dos problemas, que no son uno
+
+`revision_2` pide que no se confundan, y tienen nombres distintos:
+
+| | problema | de qué tipo | se arregla | qué da |
+|---|---|---|---|---|
+| 1 | **bloqueo de etiquetado**: el orden de los filtros deja fuera etiquetas que sí se pueden verificar | del **instrumento** | moviendo filtros | 78 y 0 — que no es un AUC |
+| 2 | **sesgo de la selección del corte**: la última acción del héroe no trae derrotas preflop jugadas | de la **definición del objetivo** | cambiando el corte | 270 y 54 — las dos clases |
+
+**Arreglar el 1 no arregla el 2.** Desbloquear las 78 deja 78 victorias y
+cero derrotas, que sigue sin ser un AUC. El único que abre la puerta es el
+2, y es una decisión: si el objetivo es evaluar la **última** decisión del
+héroe o la **primera** —esa elección determina qué ejemplos pueden entrar y
+si la evaluación puede contener victorias y derrotas a la vez—.
+
+La **hipótesis** de que el corte en la primera las trae se ha medido y **se
+sostiene**: 270 con etiqueta, 216 victorias y 54 derrotas, frente a 78, 78 y
+0. No está implementado, y no se implementa aquí: es un cambio de la
+definición del objetivo y va en un contrato.
 
 > No se cambia nada. `board_completo()` es parte de una muestra firmada en
 > `CONTRATO_L_SEC.md`: moverlo cambia los 160, la partición, el modelo

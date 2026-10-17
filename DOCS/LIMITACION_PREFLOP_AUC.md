@@ -101,9 +101,20 @@ Y la segunda parte es peor: **las 78 son todas victorias, cero derrotas.**
 | `y = 1` | 78 |
 | `y = 0` | **0** |
 
-Así que un AUC binario daría **1,0 por definición**, que es tan poco
-informativo como 0,5. **La razón por la que no hay AUC no es que falten
-manos: es que la población tiene una sola clase.**
+> **Y una corrección de vocabulario, que es también una corrección de
+> fondo.** Se escribió que el AUC «daría 1,0 por definición». **Eso es
+> falso, y el código del proyecto ya lo hacía bien:**
+> `auditar_auc.auc_de()` devuelve **`None`**, y lo dice en su docstring —
+> *«None si falta una clase»*. Medido: 78 positivas y 0 negativas dan
+> `None`; el caso normal da 1,0; cero positivas y 12 negativas también da
+> `None`.
+>
+> El valor correcto es **INDEFINIDO**, no 1,0. `revision_2` tiene razón, y
+> el documento estaba en contradicción con el instrumento del propio
+> proyecto.
+
+**La razón por la que no hay AUC no es que falten manos: es que la
+población tiene una sola clase.**
 
 ### Una explicación que se retiró, y por qué importa
 
@@ -186,11 +197,37 @@ buena. **Ninguno de los dos es un cambio de `motor/`.**
 > una acción posterior y el corte se movería de calle. Y si termina ahí con
 > acción jugada, el héroe **gana**.
 
-Es una propiedad **de cómo se define el corte**, y por eso tiene arreglo:
-un corte que fuera *la primera decisión* del héroe en lugar de *la última*
-traería las manos en las que jugó y perdió —que son las que hacen falta para
-tener la clase negativa—. Ese sí es un cambio de definición, y hay que
-decidirlo antes de hacerlo, porque cambia la muestra.
+Es una propiedad **de cómo se define el corte**, y por eso tiene arreglo.
+**Pero antes de afirmar que el arreglo funciona, se ha medido**, porque
+`revision_2` tiene razón en que una hipótesis razonable no es una
+medición:
+
+| | última (lo que hay) | primera |
+|---|---:|---:|
+| cortes preflop | 637 | 872 |
+| población B jugada | 83 | 377 |
+| con etiqueta posible | 78 | **270** |
+| `y = 1` | 78 | 216 |
+| **`y = 0`** | **0** | **54** |
+
+La hipótesis **se sostiene**, y no por poco: con el corte en la primera
+decisión hay **270** observaciones con etiqueta y **54 derrotas**, que es
+justo lo que a un AUC binario le hace falta.
+
+Y con eso quedan separados los **dos** problemas, que `revision_2` pide no
+confundir y que no se arreglan igual:
+
+| | problema | se arregla | qué da |
+|---|---|---|---|
+| 1 | **bloqueo de etiquetado**: el orden de los filtros deja fuera etiquetas verificables | moviendo filtros | 78 y 0 — sigue sin ser un AUC |
+| 2 | **sesgo de la selección del corte**: la última acción no trae derrotas preflop jugadas | cambiando la definición del corte | 270 y 54 — las dos clases |
+
+**Arreglar el 1 no arregla el 2.** Por eso el 2 es un cambio de la
+**definición del objetivo**, y va **medido y no implementado**: eso necesita
+un contrato, y el de la muestra está firmado. Lo que corresponde ahora es
+**decidir** si el objetivo es evaluar la última decisión del héroe o la
+primera —esa decisión determina qué ejemplos pueden entrar—, y solo después
+medir la población resultante y tocar nada más.
 
 Que hoy haya **cero** derrotas no es una imposibilidad del poker: es cómo
 se comporta **este** registro, donde además las acciones de los demás

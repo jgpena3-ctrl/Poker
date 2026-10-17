@@ -355,10 +355,30 @@ se comprobaran después, de las 83 **78** tendrían etiqueta. La población
 
 **Pero las 78 son todas victorias, y cero derrotas.** Por eso no hay AUC: no
 es que falten manos, es que la población tiene **una sola clase**, y un AUC
-binario daría 1,0 por definición. La causa es medible —el corte es la
-última acción del héroe, y para que sea jugada en preflop la mano tiene que
-terminar ahí— y tiene arreglo: un corte que fuera *la primera* decisión del
-héroe y no *la última* traería las manos en las que jugó y perdió.
+binario con una sola clase es **INDEFINIDO** —`auditar_auc.auc_de()`
+devuelve `None` cuando falta una clase—; no «1,0 por definición», que fue
+lo que se escribió aquí y contradecía al código del propio proyecto.
+
+La causa es medible: el corte es la última acción del héroe, y para que sea
+jugada en preflop la mano tiene que terminar ahí. **Y el arreglo está
+medido, no afirmado**: con el corte en la *primera* decisión hay **270**
+observaciones con etiqueta, **216 victorias y 54 derrotas**.
+
+Que son **dos** problemas distintos, y `revision_2` pide no confundirlos:
+
+| | problema | de qué tipo | se arregla |
+|---|---|---|---|
+| 1 | **bloqueo de etiquetado**: el orden de los filtros deja fuera 78 etiquetas verificables | del **instrumento** | moviendo filtros — y da 78 contra 0, que no es un AUC |
+| 2 | **sesgo de la selección del corte**: la última acción del héroe no trae derrotas preflop jugadas | de la **definición del objetivo** | cambiando la definición del corte |
+
+**Arreglar el 1 no arregla el 2.** El 2 es un cambio del objetivo, y por eso
+lo que corresponde es **decidirlo**, no implementarlo: eso va en un
+contrato, y el de la muestra está firmado.
+
+Y la **hipótesis** —que el corte en la *primera* decisión del héroe trae las
+manos en las que jugó y perdió— **está medida, y se sostiene**: 270
+observaciones con etiqueta, **216 victorias y 54 derrotas**, frente a 78,
+78 y 0. No está implementada: es un cambio de la definición del objetivo.
 
 Detalle completo, con el caso a mano y el contador:
 [`REPRESENTATIVIDAD_23.md`](REPRESENTATIVIDAD_23.md) §6.1, y

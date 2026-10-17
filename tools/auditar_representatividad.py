@@ -121,6 +121,12 @@ def sanity_de_cartas():
     return fallos, lineas, len(casos)
 
 
+# Con NOMBRES, y no una tupla suelta. El orden de los campos ya no puede
+# importar porque el acceso es por nombre, y si alguien usa indices por
+# costumbre, `Resto.motivo` deja de existir en cuanto se reordena.
+Resto = collections.namedtuple('Resto', ('motivo', 'y'))
+
+
 def resto_de_muestra(cal, h, hero_pos=None):
     """(motivo, y) con los filtros de `muestra()` MENOS los dos que se
     adelantan al camino de victoria por fold.
@@ -138,7 +144,7 @@ def resto_de_muestra(cal, h, hero_pos=None):
     declarados = {cal.id_a_pos(h, i) for i in (h.get('winner') or [])}
     declarados.discard(None)
     if not declarados:
-        return 'sin ganador declarado', None
+        return Resto('sin ganador declarado', None)
     scores, mejor = cal.mejores_manos(h)
     llegan = {p for p in declarados
               if cal.llego_al_showdown(h, p) and scores and p in scores}
@@ -147,16 +153,62 @@ def resto_de_muestra(cal, h, hero_pos=None):
         # demas, y por eso los dos filtros de arriba le hacen sombra
         ok_fold, _mot = cal.gano_por_fold(h, declarados)
         if not ok_fold:
-            return 'fold no verificable', None
-        return ('ok', 1.0)
+            return Resto('fold no verificable', None)
+        return Resto('ok', 1.0)
     # showdown: aqui SI hacen falta las cartas de los demas
     if len(cal.con_cartas(h)) < 2:
-        return 'showdown sin cartas de los demas', None
+        return Resto('showdown sin cartas de los demas', None)
     mejores = ({p for p, s_ in scores.items() if s_ == mejor}
                if mejor is not None else set())
     if llegan != mejores:
-        return 'ganadores que no son los mejores', None
-    return ('ok', 1.0 if hero_pos in llegan else 0.0)
+        return Resto('ganadores que no son los mejores', None)
+    return Resto('ok', 1.0 if hero_pos in llegan else 0.0)
+
+
+def cortes_de(ins, h, pos, cual):
+    """(calle, idx) del corte del heroe. `cual` = 'ultima' o 'primera'.
+
+    La version 'ultima' es la de `corte_de_decision`. La 'primera' NO
+    existe en el codigo y vive aqui SOLO para medir la hipotesis. No la usa
+    nada mas, y por eso no esta en `motor/`.
+    """
+    # El instrumento se pasa como argumento y no se busca un global: esta
+    # funcion es de MODULO, y dentro de ella no existe ins ni eqm. Una
+    # funcion de modulo que lee un global que existe solo dentro de otra es
+    # una que funciona hasta que alguien la llama desde otro sitio.
+    calles = ins.eqm.ORDEN_CALLES
+    if cual == 'ultima':
+        calles = list(reversed(calles))
+    for st in calles:
+        acts = ((h.get('streets') or {}).get(st) or {}).get('actions') or []
+        rango = (range(len(acts) - 1, -1, -1) if cual == 'ultima'
+                 else range(len(acts)))
+        for i in rango:
+            a = acts[i]
+            if a.get('pos') == pos and a.get('action') in ('b', 'c', 'r',
+                                                           'f', 'x'):
+                return st, i
+    return None, None
+
+
+def medir_corte(ins, por_id, cual):
+    """Las filas del corte pedido. Una por mano con corte preflop."""
+    filas = []
+    for hid in sorted(por_id):
+        h = por_id[hid]
+        pos = ins.eqm.hero_pos_de(h)
+        if not pos:
+            continue
+        calle, idx = cortes_de(ins, h, pos, cual)
+        if calle != 'preflop':
+            continue
+        acts = ((h.get('streets') or {}).get(calle) or {}).get('actions') or []
+        acc = acts[idx]['action'] if idx is not None and idx < len(acts) \
+            else None
+        r = resto_de_muestra(ins.cal, h, pos)
+        filas.append({'id': hid, 'accion': acc, 'y': r.y,
+                      'jugada': acc in ins.ACCIONES_JUGADAS})
+    return filas
 
 
 def main():
@@ -425,11 +477,10 @@ def main():
             grupos['B  el board esta en streets, comunitarias vacio'] += 1
         else:
             grupos['C  no hay board en ninguna parte'] += 1
-        m, y = resto_de_muestra(ins.cal, h,
-                                ins.eqm.hero_pos_de(h))
-        resto[m] += 1
-        if m == 'ok':
-            quien.append((hid, y))
+        r = resto_de_muestra(ins.cal, h, ins.eqm.hero_pos_de(h))
+        resto[r.motivo] += 1
+        if r.motivo == 'ok':
+            quien.append((hid, r.y))
 
     print('   Donde esta el board, en las %d:' % n_cont)
     for k, v in sorted(grupos.items()):
@@ -469,7 +520,7 @@ def main():
     print()
     print('   Y la respuesta es que AUN ASI NO: no por falta de manos, sino')
     print('   porque no hay una sola derrota. Un AUC binario necesita las dos')
-    print('   clases, y 78 victorias contra 0 derrotas dan 1,0 por definicion,')
+    print('   clases, y 78 victorias contra 0 derrotas dan un AUC INDEFINIDO,')
     print('   que es tan poco informativo como 0,5.')
 
     print()
@@ -477,10 +528,57 @@ def main():
     print('   y por que:')
     for hid in sorted(set(continuaciones) - {i for i, _y in quien}):
         h = por_id[hid]
-        m, _y = resto_de_muestra(ins.cal, h, ins.eqm.hero_pos_de(h))
-        print('      %-9s %s' % (hid, m))
+        r = resto_de_muestra(ins.cal, h, ins.eqm.hero_pos_de(h))
+        print('      %-9s %s' % (hid, r.motivo))
     print()
 
+    print('=' * 76)
+    print('   Y el AUC con una sola clase NO "daria 1,0 por definicion".')
+    print('   `auditar_auc.auc_de()` devuelve None, y lo dice en su docstring:')
+    print('   "None si falta una clase". El valor correcto es INDEFINIDO.')
+    print()
+    print()
+    print('=' * 76)
+    print('8.  EL CORTE EN LA PRIMERA DECISION, MEDIDO')
+    print('=' * 76)
+    print('   En tres documentos se afirmo, SIN MEDIR, que un corte en la')
+    print('   primera decision del heroe traeria las manos en las que')
+    print('   perduo. `revision_2` parrafo 3: es una hipotesis, no basta con')
+    print('   decirla. Aqui esta medida, y SE SOSTIENE:')
+    print()
+    fu = medir_corte(ins, por_id, 'ultima')
+    fp = medir_corte(ins, por_id, 'primera')
+
+    def _cuenta(filas):
+        jug = [f for f in filas if f['jugada']]
+        con = [f for f in jug if f['y'] is not None]
+        return (len(filas), len(jug), len(con),
+                sum(1 for f in con if f['y'] == 1.0),
+                sum(1 for f in con if f['y'] == 0.0))
+
+    cu, cp = _cuenta(fu), _cuenta(fp)
+    print('   %-28s %14s %14s' % ('', 'ULTIMA (ahora)', 'PRIMERA'))
+    for i, nombre in enumerate(('cortes preflop', 'poblacion B jugada',
+                                'con etiqueta posible', '   y = 1', '   y = 0')):
+        print('   %-28s %14d %14d' % (nombre, cu[i], cp[i]))
+    print()
+    print('   Y ASI SE SEPARAN LOS DOS PROBLEMAS, que `revision_2` pide que')
+    print('   no se confundan. Son de distinto tipo y no se arreglan igual:')
+    print()
+    print('     1. BLOQUEO DE ETIQUETADO. El orden de los filtros deja')
+    print('        fuera etiquetas que SI se pueden verificar. Se arregla')
+    print('        moviendo filtros, y NO cambia la poblacion: siguen')
+    print('        siendo 78 victorias y 0 derrotas.')
+    print()
+    print('     2. SESGO DE LA SELECCION DEL CORTE. La ULTIMA accion del')
+    print('        heroe selecciona una poblacion SIN derrotas preflop')
+    print('        jugadas. Arreglar el 1 NO arregla el 2.')
+    print()
+    print('   El 2 es lo que hay que cambiar, y es un cambio de la DEFINICION')
+    print('   del objetivo. Por eso va MEDIDO y no implementado: eso va en')
+    print('   un contrato, y el de la muestra esta firmado.')
+    print()
+    print()
     print('=' * 76)
     print('CONCLUSION')
     print('=' * 76)
