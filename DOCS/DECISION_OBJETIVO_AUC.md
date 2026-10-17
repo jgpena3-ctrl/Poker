@@ -232,13 +232,45 @@ tome con ella delante.
 
 ## 7. Lo que queda pendiente de documentar
 
-R2 pide dos cosas antes de adoptar B, y las dos siguen abiertas:
+R2 pedía dos cosas antes de adoptar B. **Una está escrita y la otra no**,
+y al escribir la primera han salido cuatro más.
 
-1. **Qué representa exactamente la predicción evaluada en cada corte.** En
-   la última acción, la equity se calcula con las cartas del héroe y el
-   rango del rival en ese instante. Con el corte en la última calle, el
-   board disponible es el de esa calle. No está escrito en ningún `.md` y es
-   lo primero que habría que escribir antes de cambiar el objetivo.
+1. ~~Qué representa exactamente la predicción evaluada en cada corte.~~
+   **Escrito**, y con sus cifras comprobadas contra el código:
+   [`QUE_REPRESENTA_LA_PREDICCION.md`](QUE_REPRESENTA_LA_PREDICCION.md),
+   `tools/test_que_representa.py`.
+
+   Lo que sale de ahí, y son prerequisites de la decisión:
+
+   - **A y B no son un recorte del mismo conjunto.** De 873 cortes, **235**
+     cambian de calle entre los dos cortes; de esos, **232** miran un board de
+     otro tamaño y **141** contestan a otro conjunto de rivales. El ejemplo:
+     `H_0001` es river con 5 cartas contra 2 rivales en A, y **preflop** con 0
+     cartas contra 4 rivales en B. Cambiar el corte no cambia *qué se
+     pregunta*: cambia la pregunta.
+
+   - **La predicción no es un número por mano.** **415 de 877** cortes tienen
+     más de un rival vivo. `equity_de_mano()` devuelve una equity **por
+     rival**, más `dispersion` y `mediana`, y su docstring dice que «la
+     elección de rival es una decisión de quien mide y tiene que quedar a la
+     vista». Lo que **no** está escrito en ningún `.md` es cuál es esa
+     elección para el AUC, ni por qué. Y con B el conjunto de rivales cambia
+     en 141 de los 235 cortes que cambian de calle, así que deja de ser
+     neutro.
+
+   - **El board tiene dos fuentes, y discrepan.** `tablero()` lee
+     `comunitarias`; `villain_hasta_corte()` lee `streets.*.board`. En **5 de
+     las 877** manos no coinciden. No se corrige aquí —cambia
+     instrumentación y hay que medir de nuevo—, pero queda medido y escrito.
+
+   - **La vía preflop es retrospectiva** y va marcada `observable: False`:
+     enumera contra las cartas **reales** del rival, que al decidir no se
+     conocían. El motor **no tiene camino de equity preflop**, y eso no es un
+     detalle: es lo que hace que la predicción preflop no sea la predicción
+     de una decisión.
+
+   Quedan **sin escribir**, y son de la misma familia: **qué reducción a un
+   número se usa en el AUC**, y **si la predicción se pondera por rival**.
 
 2. **Qué mezcla la partición.** Comprobado y limpio: `sha256(hand_id) % 10
    < 3` depende del identificador. Ninguna opción mueve una mano entre

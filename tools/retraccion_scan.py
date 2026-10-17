@@ -346,6 +346,8 @@ RETIRADAS = (
     ('sesgo de la selección', 'la separacion en dos problemas: es uno'),
     ('una sola clase', 'la poblacion no es de una clase: es vacia'),
     ('dos problemas', 'es UN problema, y su enunciado cabe en una frase'),
+    ('orden de filtros', 'el orden de filtros no es la causa: a el no llega'
+                         ' ninguna de las 83'),
     ('quedan separados', 'es UN problema'),
     ('que no son uno', 'es UN problema'),
     ('cero derrotas', 'no hay observaciones, ni positivas ni negativas'),

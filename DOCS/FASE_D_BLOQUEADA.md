@@ -339,14 +339,27 @@ Medido, es **casi todo** eso, y no del todo:
 
 | | |
 |---|---:|
-| las 83 se caen en el primer filtro de `muestra()`, `board_completo()` | 83 |
+| las 83 se caen al **leer la etiqueta**, por no estar en `muestra()` | **83** |
 | de ellas, las que no tienen board de verdad porque la mano termina en preflop | 81 |
 | de ellas, las que **sí** tienen board, en `streets.*.board`, con `comunitarias` vacío | **2** |
 
-`board_completo()` exige `comunitarias.river >= 1` y se comprueba **antes**
-del camino de victoria por fold, así que una victoria por fold limpia no
-puede tener etiqueta. Eso es una decisión de **orden de filtros**, escrita
-en el contrato firmado.
+**Ninguna llega a los filtros.** No se caen en `board_completo()`, ni en el
+filtro de las dos cartas, ni en el camino de fold: se caen al leer la
+etiqueta, que es el primer paso. Por eso el orden de filtros **no es la
+causa** de este cero —a él no llega ninguna de las 83— y por eso moverlo no
+produce ni una observación.
+
+> Antes este párrafo decía que `board_completo()` se comprueba antes del
+> camino de fold, «así que una victoria por fold limpia no puede tener
+> etiqueta», y que eso era «una decisión de orden de filtros, escrita en el
+> contrato firmado». La primera mitad es cierta: el filtro está donde dice.
+> La conclusión no lo era, porque **a ese filtro no llega ninguna de las 83**.
+
+Las **2** que sí tienen board son otra cosa, y conviene no mezclarlas con las
+81: su board está en `streets.*.board` y `comunitarias` está vacío. Es una
+inconsistencia del **registro**, con dos representaciones de la misma cosa y
+una vacía, y usarla como evidencia de que «no se repartieron cartas» sería
+convertir un defecto de datos en una afirmación.
 
 Y el contrafactual se retira. Decía: si los dos filtros que se adelantan al
 camino de fold se comprobaran después, de las 83 **78** tendrían etiqueta, y
@@ -369,10 +382,11 @@ observación**: produce las mismas cero.
 > y que la población «no está vacía: está bloqueada». Retirado. Mover los
 > filtros no da 78: da cero.
 
-**Pero ninguna de las 83 tiene etiqueta.** No es un problema de clase: no
+**Y ninguna tiene etiqueta.** Lo cual ya se ha dicho arriba, y conviene no
+repetirlo como si fuera una conclusión nueva: no es un problema de clase: no
 hay ninguna observación que evaluar. Y cuando no hay clase, `auditar_auc`
 no devuelve `1,0` ni `0,5`: devuelve **`None`**, que es lo que dice su
-docstring. No es lo mismo, y searoscribió aquí como si lo fuera.
+docstring. No es lo mismo, y se escribió aquí como si lo fuera.
 
 **El motivo real, y cabe en una frase.** El corte en la última acción
 del héroe, cuando cae en preflop, **solo puede caer en una mano que
