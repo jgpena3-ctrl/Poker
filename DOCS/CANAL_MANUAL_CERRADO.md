@@ -2,10 +2,12 @@
 
 **Estado:** vigente.
 **Fecha:** 2026-10-15
-**Commit del estado canónico:** `dfef471`
-**SHA-256:** `31eba6e1c4824015c1b149193ebfceacccb46b025673ea294a93bd486205bac5`
+**Commit del estado canónico:** `33ab8ee`
+**SHA-256:** `35727961646dfaba2c67fd5ee0dbe9b0669d3156f9c6f3fa3585060a93f097e2`
 **Líneas:** 1258
 **Revisión manual:** **terminada**. `H_0001`..`H_1282`, en tres tramos.
+**Saneamiento:** empezado. 2 correcciones; el resto documentado en
+`DOCS/SANEAMIENTO.md`.
 **Vigila:** `motor/test_canal_manual.py` — 16 tests
 
 ---
@@ -358,6 +360,6 @@ dice. Hay dos tests que lo comprueban simulando justo esos dos fallos.
   más por delante: `bf60aa8` (40 manos) y `dfef471` (211 manos), hasta
   `H_1282`.
 - No dice que la revisión haya encontrado todos los errores. Dice que se ha
-  mirado las 1258 líneas y que lo que queda está en la lista: 30
-  `IMPORTE_SUBIDA`, 15 `SHOWDOWN_SIN_WINNER`, 3 `WINNER_FOLDEO`, 2
-  `ACCION_FANTASMA` y `H_1196` (§4.0-b). Lo no declarado sigue sin mirar.
+  mirado las 1258 líneas y que lo que queda está en la lista: el saneamiento
+  ya corrigió 2 y **`DOCS/SANEAMIENTO.md`** deja el resto con id, calle,
+  índice y acción exacta. Lo no declarado sigue sin mirar.
