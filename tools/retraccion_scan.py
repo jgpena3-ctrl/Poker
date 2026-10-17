@@ -54,8 +54,35 @@ def leer(nombre):
         return f.read()
 
 
+# Un `>` delante significa: ESTO NO LO AFIRMA ESTE DOCUMENTO. Y esa es la
+# propiedad que necesita el escaner, y la que se cumple en los TRES usos
+# legitimos:
+#
+#   1. RETRACCION  "> Antes decia 78 con etiqueta. Retirado"
+#   2. CODIGO      "> No se puede hacer mejor con estos datos", que es el
+#                  docstring de equity_de_mano.py
+#   3. NOTA DE CABECERA  el aviso de los primeros lineas del documento,
+#                       que explica de que va antes de que empiece
+#
+# El cuarto uso es SUBRAYAR, y es el unico que rompe: un `>` delante de una
+# afirmacion propia la convierte en invisible para el escaner, que aparta las
+# lineas de cita. Ya paso, en `QUE_REPRESENTA_LA_PREDICCION.md`, que tenia sus
+# tres tesis principales -la CAUSA de la diferencia, que NO es el CORRECTO, y
+# que no es una coincidencia- marcadas con `>`.
+#
+# EL LIMITE, y es lo que hace inutil un detector de esto
+#
+# Un `>` NO dice de donde sale lo que cita. Markdown no distingue citar de
+# subrayar, y por eso no se puede escribir una regla de "ninguna afirmacion
+# propia empieza por `>`": dio 31 lineas y casi todas eran correctas.
+#
+# Lo unico comprobable es POR CONTENIDO, y por eso lo comprueba
+# `test_el_signo_de_cita.py`: que las afirmaciones centrales del documento
+# sean afirmaciones y no citas.
 def cita(linea):
-    """¿Esta linea es una cita? Lo unico que lo marca es el `>` inicial."""
+    """¿Esta linea NO la afirma este documento? Lo unico que lo marca es el
+    `>` inicial. Ver el comentario de arriba para los usos legitimos y para
+    el que rompe."""
     return linea.lstrip().startswith('>')
 
 

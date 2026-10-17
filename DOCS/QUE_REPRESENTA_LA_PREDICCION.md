@@ -209,22 +209,50 @@ El mismo AUC a cuatro decimales, y no uno cualquiera. `AUC_INTERVALO.md`
 cuenta que la versión anterior de ese documento publicó 0,8308 porque el
 código mezclaba calibración y validación.
 
-> **Y esto es lo que hace que la prueba sea una prueba y no una
-> coincidencia.** Una medición sin el filtro de partición no da un número
-> aleatorio: **da el número del bug**, que es un número que ya se sabe cuál
-> es. Si tu medición te da *ese*, y con el filtro te da el otro, has
-> encontrado exactamente la línea que los separa.
+**Y esto es lo que hace que la prueba sea una prueba y no una
+coincidencia.** Una medición sin el filtro de partición no da un número
+aleatorio: **da el número del bug**, que es un número que ya se sabe cuál
+es. Si tu medición te da *ese*, y con el filtro te da el otro, has
+encontrado exactamente la línea que los separa.
 >
-> Y tiene una consecuencia más allá de este caso: si el 0,8308 se puede
-> reproducir a mano, se puede reproducir en cualquier sitio donde el código
-> corra sin el filtro. El guard de `test_auditar_auc.py` —
-> `test_no_evalua_manos_de_calibracion`— no es una comprobación de estilo:
-> **es lo único que separa los dos números.**
+Y tiene una consecuencia más allá de este caso: si el 0,8308 se puede
+reproducir a mano, se puede reproducir en cualquier sitio donde el código
+corra sin el filtro. El guard de `test_auditar_auc.py` —
+`test_no_evalua_manos_de_calibracion`— no es una comprobación de estilo:
+**es lo único que separa los dos números.**
 
-> **Y esa es la regla que hay que aplicarle a toda medición que se compare
-> con una cifra publicada: que la reproduzca.** Una medición que no
-> reproduce la cifra publicada no mide lo que dice medir, y el siguiente paso
-> es siempre mirar la población antes que el número.
+**Y esa es la regla que hay que aplicarle a toda medición que se compare
+con una cifra publicada: que la reproduzca.** Una medición que no
+reproduce la cifra publicada no mide lo que dice medir, y el siguiente paso
+es siempre mirar la población antes que el número.
+
+### 4.3 Y lo que esta prueba NO demuestra
+
+Porque hay que separar dos cosas que se parecen y no son lo mismo:
+
+**El filtro es la CAUSA de la diferencia.** Eso está demostrado, y es una
+prueba causal: quitarlo produce 0,8308, ponerlo produce 0,7667, y 0,8308 es
+el número que `AUC_INTERVALO.md` dice que se publicó por error. No es una
+coincidencia y no es una correlación: es el mecanismo.
+
+**El filtro es el CORRECTO.** Eso **no** está demostrado, y no lo puede
+estar con esta prueba. «El filtro explica por qué los dos números difieren»
+no es «el filtro está bien». Son dos afirmaciones distintas, y confundirlas
+es el error que este proyecto lleva cuatro bloques corrigiendo en otro
+sitio: creer que una explicación correcta es una conclusión correcta.
+
+De dónde sale la validez, entonces: de
+[`CONTRATO_L_SEC.md`](CONTRATO_L_SEC.md) §«Población», que es lo que declara
+que la población es «solo manos donde el héroe continúa» y por qué el check
+cuenta aparte. **Eso es un hecho del contrato, no una consecuencia de que el
+AUC salga con dos decimales.**
+
+Y hay una consecuencia práctica que conviene tener presente: si alguien
+cambia la definición de la población en el contrato, **el filtro no dejará de
+ser la causa de la diferencia** —seguirá explicando por qué 0,8308 y 0,7667
+difieren—, pero dejará de ser el filtro correcto. **La prueba que hay aquí no
+lo detecta.** Lo que lo detectaría es el contrato, y por eso el contrato está
+firmado y no se toca en un bloque de auditoría.
 
 ## 5. Lo que queda sin escribir
 
