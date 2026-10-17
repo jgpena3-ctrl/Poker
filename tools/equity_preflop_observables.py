@@ -321,10 +321,15 @@ def porque_no_reutilizable(entrada, version, estimador, t, n_combos, huella):
     """La lista de lo que NO coincide. Para no tener que releer el codigo."""
     if not isinstance(entrada, dict):
         return 'no es una entrada'
+    # `y` tambien sale. Va DENTRO de la huella, asi que cambiarlo ya impide
+    # la reutilizacion, pero si no se mira aqui el motivo sale vacio y
+    # parece que la entrada servia. Un diagnostico que no dice por que no
+    # dice nada.
     esperado = (('version', version), ('estimador', estimador),
                 ('semilla', t['semilla']), ('n_combos', n_combos),
                 ('villano', t['villano']), ('spot', t['spot']),
-                ('hero', t['hero']), ('huella', huella))
+                ('hero', t.get('hero')), ('y', t.get('y')),
+                ('huella', huella))
     return ', '.join('%s=%r != %r' % (k, entrada.get(k), v)
                      for k, v in esperado if entrada.get(k) != v)
 

@@ -1,5 +1,8 @@
 # REPRESENTATIVIDAD_23 — las 23 manos preflop no son lo que parecían
 
+> **Este documento cierra la pregunta del AUC preflop: no se calcula, y la
+> razón es el hallazgo de la §1, no la falta de tiempo.**
+>
 > Tarea 2 de `revision_1`: auditar si las 23 representan las decisiones
 > preflop del motor, o son un subconjunto sesgado. «Si hay un sesgo, dilo.
 > Si no lo hay, también».
@@ -115,18 +118,43 @@ Ratio 2,45×, y el umbral de «no pasar del doble» **falla**. Pero son
 la concentración es baja en términos absolutos. Las tres son `H_0041`,
 `H_0110`, `H_0121`.
 
-**C3 — cartas del héroe: no se detecta sesgo.** Premium 0 % en ambos
-(0,0 pp); pares 0 % contra 1,3 % (−1,3 pp, −1,0 σ); suited 30,4 % contra
-21,3 % (+9,1 pp, 0,9 σ).
+**C3 — cartas del héroe: sin señal, que no es lo mismo que sin sesgo.**
+Premium 0 % en ambos (0,0 pp); pares 0 % contra 1,3 % (−1,3 pp, −1,0 σ);
+suited 30,4 % contra 21,3 % (+9,1 pp, 0,9 σ).
+
+> Y aquí hay que decir la segunda cosa, que es la que importa: **los dos
+> grupos tienen CERO manos premium.** No hay ni una sola. Las 23 son
+> `43 53 54 62 65 82 86 86 86 92 93 A6 J7 K2 K9 Q3 Q3 Q7 Q8 T3 T4 T6 T7`:
+> sueltas, sin palo, y **ni un par**. En calibración, 75 manos y un único
+> par, el `66`.
+>
+> C3 compara 0 % contra 0 %. Eso no es «sin sesgo», es **sin señal**: no hay
+> nada que discriminar porque la población es de manos flojas. Y es lo
+> esperable: son 554 folds de 637 cortes preflop, casi todos de manos
+> que no se juegan. Un criterio que compara dos ceros no ha comparado nada, y
+> decirlo de otro modo es como se publica un número que no significa
+> nada.
 
 > Y aquí el criterio **pasaba en falso**, dos veces seguidas. El detector
 > comparaba `s[:2]` con `'AA'`, `'KK'`… sobre cadenas como `'Qh3c'`, donde
 > `s[2:4]` es `'3c'` y nunca puede ser un par de rangos: devolvía `False`
 > **siempre**. Después el par se montaba como `'Q3'` en vez de `'AK'`, y
-> seguía devolviendo `False` siempre. Un criterio que no puede fallar no
-> es un criterio. Lo que lo destapó fue una tabla de siete casos de
-> prueba con cartas de verdad —`'AhKs'`, `'QcJc'`, `'AcAd'`— escrita *antes*
-> de mirar el resultado, y fallando.
+> seguía devolviendo `False` siempre.
+>
+> Y una tercera, que encontró `revision_2`: el par se ordenaba con
+> `sorted()`, que es **alfabético**, y los premiums son `'KJ'`, `'AK'`…
+> Con `sorted()`, `'K' > 'J'` es `'JK'`, que no es `'KJ'`. De los nueve
+> premiums, **`KJ` era el único inalcanzable**; los otros ocho llegaban por
+> casualidad, porque sus letras ya salen en orden alfabético. Un detector
+> que funciona en ocho de nueve casos parece correcto.
+>
+> Un criterio que no puede fallar no es un criterio. Lo que lo destapó fue
+> una tabla de casos con cartas de verdad —`'AhKs'`, `'KhJs'`,
+> `'QcJc'`, `'ThTs'`— escrita *antes* de mirar el resultado. Y esa tabla,
+> la tercera vez, tenía **mis expectativas** mal, no el detector: tres de
+> ocho casos fallaron porque yo había escrito `'KhJs'` esperando *suited*
+> cuando es sin palo. El detector acertaba las tres y la tabla de pruebas
+> fallaba las tres: el problema estaba de mi lado, en las expectativas.
 
 ## 6. Lo que hay de verdad, y si el preflop cabe
 
@@ -145,20 +173,68 @@ La última acción del héroe en las 877 manos fiables:
 
 > **La población B en preflop no es pequeña: en este conjunto es vacía.**
 
-Y hay una razón de por qué, y no es un azar del etiquetado:
+### 6.1 Por qué no hay etiqueta — y una explicación que era falsa
 
-- Si el héroe **juega y gana**, vuelve a actuar, y entonces el corte se
-  mueve de calle. Para que el corte se quede en preflop con una acción
-  jugada, la mano tiene que terminar ahí mismo.
-- Para que tenga etiqueta hace falta un **ganador verificable**
-  (`calibrar.muestra()` exige showdown verificable o victoria por fold con
-  evidencia positiva).
+> **Se retira.** Este párrafo decía antes:
+>
+> «Si el héroe **juega y gana**, vuelve a actuar, y entonces el corte se
+> mueve de calle. Para que el corte se quede en preflop con una acción
+> jugada, la mano tiene que terminar ahí mismo. […] Las dos cosas a la vez
+> no se dan.»
+>
+> `revision_2` dijo que era demasiado fuerte. Era más que eso: **era otra**.
+> Medido, las dos mitades son falsas.
 
-Las dos cosas a la vez no se dan. Por eso las 81 manos jugables del
-preflop no tienen etiqueta: o el héroe ganó y actuó después, y entonces el
-corte no era preflop; o la mano terminó ahí mismo y no hay ganador
-verificable; o la acción registrada no cierra la mano. En los tres casos la
-mano sale de `muestra()`, y por eso no hay etiqueta.
+Lo que ocurre, filtro a filtro, en las 83:
+
+| | |
+|---|---:|
+| `b/c/r` (acciones) | 81 |
+| `x` (checks) | 2 |
+| con etiqueta | **0** |
+
+**Las 83 se caen en el mismo sitio: el primer filtro de `muestra()`.**
+
+| dónde está el board | |
+|---|---:|
+| `comunitarias.river` con cartas | 0 |
+| el board **sí** está en `streets.*.board`, `comunitarias` vacío | 2 |
+| no hay board en ninguna parte | 81 |
+
+`board_completo()` exige `len(comunitarias.river) >= 1`, y se comprueba
+**antes** del camino de victoria por fold. O sea que una victoria por fold
+limpia no puede tener etiqueta: el board se pide antes de llegar al único
+camino que la aceptaría.
+
+Y el caso que desmonta mi explicación, `H_0043`:
+
+```
+preflop   UTGf MPc COc BTNb SBf BBf MPf COf
+winner    ['p1']        showdown  {'winner1': 'BTN (Jarduan)'}
+comunitarias  {'flop': [], 'turn': [], 'river': []}
+```
+
+La mano **termina en preflop** porque todos foldean a la apuesta del héroe,
+y el héroe **gana por fold** con ganador declarado. El corte se queda en
+preflop por eso —no porque el héroe vuelva a actuar— y no hay board porque
+no se repartieron cartas comunitarias, que es lo correcto.
+
+**Contrafactual**: si `board_completo()` se comprobara *después* del camino
+de fold, ¿cuál sería la población?
+
+| de las 83 | |
+|---|---:|
+| menos de dos jugadores con cartas | 82 |
+| con etiqueta | **1** (`H_0485`, una call, `y = 1`) |
+
+**Ni con otra regla.** Una observación no es un AUC, y no tiene la clase
+negativa que hace falta ni para empezar.
+
+> No se cambia nada. `board_completo()` es parte de una muestra firmada en
+> `CONTRATO_L_SEC.md`: moverlo cambia los 160, la partición, el modelo
+> ajustado y el AUC ya publicado. Lo que se mide aquí es si la pregunta
+> *sería* respondible con otra regla, que es lo que hace falta para poder
+> decir «no se calcula» **y por qué**.
 
 ## 7. Conclusión
 

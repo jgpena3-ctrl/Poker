@@ -93,8 +93,17 @@ PATRONES = ('tools/*.py', 'motor/*.py', 'recorder/*.py', 'DOCS/*.md',
             'tests/*.py')
 
 
-def revisar(patrones=PATRONES):
-    """(fichero, caracter, nombre) para cada sospechoso. NO ESCRIBE NADA."""
+def revisar(patrones=None):
+    """(fichero, caracter, nombre) para cada sospechoso. NO ESCRIBE NADA.
+
+    `patrones=None` significa "usa PATRONES, LEIDA AHORA". Antes era
+    `patrones=PATRONES`, que se evalua al importar: cambiar la constante no
+    cambiaba lo que se escanea, y como `main()` sale antes de `--corregir`
+    cuando no hay hallazgos, la correccion quedaba colgando de un valor
+    congelado y la herramienta no se podia probar.
+    """
+    if patrones is None:
+        patrones = PATRONES
     hallazgos = []
     for pat in patrones:
         for p in sorted(glob.glob(os.path.join(ROOT, pat))):
@@ -170,29 +179,32 @@ def lineas_nuevas(path):
             return None
         return list(enumerate(contenido.split('\n'), 1))
 
-    nuevas = []
-    # ---- caso 2: zona de TRABAJO. `git diff` la ve.
-    for argv in (['git', 'diff', '-U0', '--', rel],
-                 # y la zona INDICE, que `git diff` no mira: un fichero
-                 # staged sale como sin cambios
-                 ['git', 'diff', '--cached', '-U0', '--', rel]):
-        try:
-            out = subprocess.run(argv, cwd=ROOT,
-                                 capture_output=True, timeout=20)
-        except (OSError, subprocess.SubprocessError):
-            return None
-        if out.returncode != 0:
-            return None
-        try:
-            texto = out.stdout.decode('utf-8')
-        except UnicodeDecodeError:                   # pragma: no cover
-            return None
-        nuevas.extend(parsear_hunks(texto))
-
-    # el mismo numero puede aparecer en las dos zonas: se ordena y se quita
-    # repetidos, y la clasificacion no cambia por eso
-    vistas = set()
-    return [x for x in sorted(nuevas) if not (x in vistas or vistas.add(x))]
+    # ---- caso 2: UN SOLO diff, `git diff HEAD`.
+    #
+    # Antes eran dos: `git diff` (arbol vs indice) y `git diff --cached`
+    # (indice vs HEAD). Cada uno va en coordenadas de SU version, y con
+    # cambios en las dos zonas los numeros no coinciden con el fichero
+    # actual. MEDIDO: staged abajo y unstaged arriba, 2 de 3 lineas con el
+    # numero equivocado. `git diff HEAD` es arbol contra HEAD, su lado `+`
+    # es el fichero ACTUAL, y da 0 de 3 erroneos.
+    #
+    # Y sale mas corto: al no haber dos zonas que combinar, no hace falta
+    # quitar duplicados ni ordenar. Una cosa menos que puede quedar mal.
+    #
+    # Lo que NO cambia: la clasificacion. "Este hallazgo es del cambio" ya
+    # era cierta con las dos vistas y lo sigue siendo con una.
+    try:
+        out = subprocess.run(['git', 'diff', 'HEAD', '-U0', '--', rel],
+                             cwd=ROOT, capture_output=True, timeout=20)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if out.returncode != 0:
+        return None
+    try:
+        texto = out.stdout.decode('utf-8')
+    except UnicodeDecodeError:                       # pragma: no cover
+        return None
+    return parsear_hunks(texto)
 
 
 def _porcelain(rel):

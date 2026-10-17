@@ -297,3 +297,84 @@ llega a `S = 1,30` y ahí sí habría una cota superior. Ver
 El bloque 3, otra vez, **y ahora por una razón mejor**: no es que las tablas
 sean raras, es que **no sabemos qué son**. Eso hay que preguntárselo a quien
 las generó, y no se resuelve con datos.
+
+
+---
+
+## El bloque 1: el camino está, y la métrica no se puede calcular
+
+El bloque 1 («camino de equity preflop») sigue **DESBLOQUEADO**: el
+objetivo ya está, la equity preflop está implementada en `motor/` y sus
+decisiones abiertas —exacto o muestreado, y qué hacer con la varianza—
+están medidas y escritas en [`CONTRATO_PREFLOP.md`](CONTRATO_PREFLOP.md).
+
+Lo que se ha medido después es que **la métrica que ese camino iba a
+servir no se puede calcular con esta base**. No es que falte trabajo, ni
+que falte un número: es que la población que la métrica necesita **no
+existe**.
+
+| | |
+|---|---:|
+| cortes preflop de validación | 23 |
+| los que son población B | **0** |
+| los 23 que entran | folds, y con `y = 0` por construcción |
+
+Y en la ventana fiable entera, de 877 manos:
+
+| | |
+|---|---:|
+| continuaciones preflop (`b`/`c`/`r`/`x`) | 83 |
+| con etiqueta | **0** |
+
+> **«Desbloqueado» sin destino no es un desbloqueado.** Lo que se
+> desbloqueó fue *implementar el camino*. Lo que se iba a medir con él no
+> se puede medir. El bloque 1 no se cierra: se le quita el trabajo que
+> tenía encima y se le deja el que sí tiene, que es la equity preflop
+> como observable, sin AUC detrás.
+
+### Por qué, y es una limitación de datos con una salvedad
+
+`revision_1` lo describe como «una limitación de datos, no de código».
+Medido, es **casi todo** eso, y no del todo:
+
+| | |
+|---|---:|
+| las 83 se caen en el primer filtro de `muestra()`, `board_completo()` | 83 |
+| de ellas, las que no tienen board de verdad porque la mano termina en preflop | 81 |
+| de ellas, las que **sí** tienen board, en `streets.*.board`, con `comunitarias` vacío | **2** |
+
+`board_completo()` exige `comunitarias.river >= 1` y se comprueba **antes**
+del camino de victoria por fold, así que una victoria por fold limpia no
+puede tener etiqueta. Eso es una decisión de **orden de filtros**, escrita
+en el contrato firmado.
+
+Y el contrafactual, que es lo que hace falta para poder decir «no se
+calcula» sin excusas: si `board_completo()` se comprobara después, de las
+83 **una sola** tendría etiqueta (`H_0485`, una call, `y = 1`), porque las
+82 otras no tienen las cartas de ningún otro jugador. **Ni con otra regla
+la pregunta es respondible.**
+
+Detalle completo, con el caso a mano y el contador:
+[`REPRESENTATIVIDAD_23.md`](REPRESENTATIVIDAD_23.md) §6.1, y
+[`LIMITACION_PREFLOP_AUC.md`](LIMITACION_PREFLOP_AUC.md) para lo que la
+desbloquearía.
+
+### Y `DEFAULT_ALPHA` no se mueve
+
+Se mantiene **2,0**, por el argumento (3): es el titular y ninguna
+evidencia admisible justifica sustituirlo. Ni el argumento (2) ni este
+AUC dependían de él, y este AUC **no se ha calculado**, así que no puede
+informar. Lo que este bloque añade es una razón más para **no** tocarlo.
+
+### El estado, una vez más
+
+| bloque | estado |
+|---|---|
+| 0 · objetivo de `L_sec` | cerrado |
+| 1 · camino preflop | **desbloqueado para implementar; su métrica NO es calculable con esta base** |
+| 2 · métrica que sobreviva | cerrado como **elección** |
+| 3 · qué significa `matrix` | **REABIERTO**, y sin cambio: no se deduce de datos |
+
+**Lo que sigue bloqueando Fase D no ha cambiado: el bloque 3.** Lo que se
+ha añadido es que el bloque 1 no puede cerrar el hueco por el lado de los
+datos, porque en esta base no hay población que medir.

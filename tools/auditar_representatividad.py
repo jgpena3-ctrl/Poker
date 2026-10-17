@@ -45,14 +45,24 @@ def _inst():
 
 
 def cartas(c2):
-    """('AK', 'hs') para 'AhKs'. '' si no son dos cartas."""
+    """('AK', 'hs') para 'AhKs'. '' si no son dos cartas.
+
+    El par se ordena por RANGO DE POKER, no alfabeticamente.
+    `revision_2` parrafo 1: `sorted(('K', 'J'))` da `'JK'`, y `PREMIOS`
+    tiene `'KJ'`, asi que **KJ no se reconocia**. De los nueve premiums,
+    KJ era el UNICO al que `sorted()` no llegaba; los otros ocho si,
+    porque sus letras ya salen en orden alfabetico. Un detector que
+    funciona en ocho de nueve casos parece correcto.
+    """
     c2 = (c2 or '').strip()
     if len(c2) != 4:
         return ''
     for i in (0, 2):
         if c2[i] not in RANGOS or c2[i + 1] not in PALOS:
             return ''
-    return ''.join(sorted((c2[0], c2[2]))), c2[1] + c2[3]
+    # de mayor a menor, que es como se escribe una mano: AK, no KA
+    return ''.join(sorted((c2[0], c2[2]), key=RANGOS.index,
+                          reverse=True)), c2[1] + c2[3]
 
 
 def es_premium(s):
@@ -77,6 +87,68 @@ def tipico(pp, n):
 def herfindahl(conteo):
     n = sum(conteo.values())
     return sum((c / n) ** 2 for c in conteo.values()) if n else 0.0
+
+
+def sanity_de_cartas():
+    """(fallos, lineas) de siete casos con cartas de verdad.
+
+    Se escribe ANTES de mirar el resultado, y es lo que destapo los dos
+    fallos del detector: uno que devolvia False SIEMPRE, y otro que
+    confundia orden alfabetico con orden de rangos. Un criterio que no
+    puede fallar no es un criterio, y por eso hace falta una tabla que si
+    pueda fallar.
+
+    `KhJs` esta porque es EL caso que rompia: con `sorted()` alfabetico
+    daba `'JK'`, y `PREMIOS` tiene `'KJ'`, asi que noidia premium.
+    """
+    casos = (('AhKs', True, False, False),     # AK sin palo
+             ('KhJs', True, False, False),     # KJ sin palo: el que fallaba
+             ('KhJh', True, False, True),      # KJ suited
+             ('AdKd', True, False, True),      # AK suited: dos diamantes
+             ('QhKs', False, False, False),    # KQ NO es premium
+             ('QcJc', False, False, True),     # jotas suited, no un par
+             ('ThTs', False, True, False),     # un par, sin palo
+             ('9h8s', False, False, False))
+    fallos, lineas = 0, []
+    for s_, prem, par, suited in casos:
+        c = cartas(s_)
+        ok = (es_premium(s_) == prem and es_par(s_) == par
+              and es_suited(s_) == suited)
+        fallos += not ok
+        lineas.append('   %-6s %-14s premium=%-5s par=%-5s suited=%-5s  %s'
+                      % (s_, c or 'NO SON CARTAS', es_premium(s_), es_par(s_),
+                         es_suited(s_), 'ok' if ok else '>>> MAL <<<'))
+    return fallos, lineas
+
+
+def resto_de_muestra(cal, h):
+    """(motivo, y) con los filtros de `muestra()` EXCEPTO el de board.
+
+    `revision_2` parrafo 2: sin esto habia una teoria —una
+    imposibilidad— donde lo medido es una ausencia. Y la teoria era
+    ademas FALSA. El orden se replica: board, dos con cartas, ganador
+    declarado, showdown o victoria por fold, coherencia, etiqueta. Se
+    devuelve el PRIMER filtro que rechaza; `ok` es que pasan todos.
+    """
+    if len(cal.con_cartas(h)) < 2:
+        return 'menos de dos jugadores con cartas', None
+    scores, mejor = cal.mejores_manos(h)
+    declarados = {cal.id_a_pos(h, i) for i in (h.get('winner') or [])}
+    declarados.discard(None)
+    if not declarados:
+        return 'sin ganador declarado', None
+    mejores = ({p for p, s_ in scores.items() if s_ == mejor}
+               if mejor is not None else set())
+    llegan = {p for p in declarados
+              if cal.llego_al_showdown(h, p) and scores and p in scores}
+    if not llegan:
+        ok_fold, _mot = cal.gano_por_fold(h, declarados)
+        if not ok_fold:
+            return 'nadie al showdown y sin victoria por fold limpia', None
+    elif llegan != mejores:
+        return 'ganadores declarados que no son los mejores', None
+    y, ok = cal.etiqueta(h)
+    return ('ok', y) if ok else ('etiqueta() no', None)
 
 
 def main():
@@ -128,6 +200,18 @@ def main():
     B = cortes(dict(cal_), False)
     nA, nB = len(A), len(B)
 
+    print('=' * 76)
+    print('0.  EL DETECTOR DE CARTAS, antes de usarlo')
+    print('=' * 76)
+    fallos, lineas = sanity_de_cartas()
+    for l in lineas:
+        print(l)
+    print('   fallos: %d de 7' % fallos)
+    assert fallos == 0, (
+        'el detector de cartas falla en %d de 7 casos: los numeros de C3 no '
+        'se publican con un detector roto' % fallos)
+
+    print()
     print('=' * 76)
     print('1.  QUE SON LAS 23')
     print('=' * 76)
@@ -252,7 +336,12 @@ def main():
     print('6.  LO QUE HAY DE VERDAD EN LA VENTANA, y si el preflop cabe')
     print('=' * 76)
     celda = collections.Counter()
-    jugables = []
+    # DOS recuentos y DOS nombres. `revision_2` parrafo 3:
+    #   bcr             acciones b/c/r — un recuento de ACCIONES
+    #   continuaciones  b/c/r/x — un recuento de POBLACION B
+    # `ACCIONES_JUGADAS` incluye 'x', asi que usarla para contar acciones
+    # mezclaba dos cosas y el total no cuadraba con la tabla de arriba.
+    bcr, continuaciones = [], []
     for h in ventana:
         pos = ins.eqm.hero_pos_de(h)
         if not pos:
@@ -266,8 +355,10 @@ def main():
         acc = acts[idx]['action'] if idx is not None and idx < len(acts) \
             else '?'
         celda[(calle, acc)] += 1
+        if calle == 'preflop' and acc in ('b', 'c', 'r'):
+            bcr.append(h['hand_id'])
         if calle == 'preflop' and acc in ins.ACCIONES_JUGADAS:
-            jugables.append(h['hand_id'])
+            continuaciones.append(h['hand_id'])
 
     print('   La ULTIMA accion del heroe, en las %d manos fiables'
           % len(ventana))
@@ -278,28 +369,76 @@ def main():
         print('   %-10s %s   total %3d'
               % (calle, ' '.join('%5d' % x for x in fila), sum(fila)))
     con_y = set(hid for hid, _y in cal_ + val_)
-    jug_con_y = [i for i in jugables if i in con_y]
-    n_bcr = sum(celda.get(('preflop', a), 0) for a in ('b', 'c', 'r'))
-    n_x = celda.get(('preflop', 'x'), 0)
+    n_bcr = len(bcr)
+    n_cont = len(continuaciones)
     print()
-    print('   preflop jugables (b/c/r)   en toda la ventana : %d' % n_bcr)
-    print('   preflop checks    (x)      en toda la ventana : %d' % n_x)
-    print('   de las jugables, tienen etiqueta              : %d'
-          % len(jug_con_y))
-    print('   y de esas, ganadoras                           : 0')
+    print('   b/c/r   un recuento de ACCIONES                : %d' % n_bcr)
+    print('   x       checks                                  : %d'
+          % celda.get(('preflop', 'x'), 0))
+    print('   b/c/r/x POBLACION B: continua o checkea        : %d' % n_cont)
+    print('   de esas, con etiqueta                          : %d'
+          % len([i for i in continuaciones if i in con_y]))
     print()
     print('   ASI QUE: la poblacion B en preflop no es que sea pequena. En')
-    print('   este conjunto es VACIA. Las %d decisiones preflop jugables de'
-          % len(jugables))
-    print('   la ventana no tienen etiqueta, y las 98 que si la tienen son')
-    print('   todas folds.')
+    print('   este conjunto es VACIA. Las %d continuaciones de la ventana no'
+          % n_cont)
+    print('   tienen etiqueta, y las 98 que si la tienen son todas folds.')
     print()
-    print('   Y hay una razon de por que, y no es un azar del etiquetado: si')
-    print('   el heroe juega y GANA, vuelve a actuar, y entonces el corte se')
-    print('   mueve de calle. Para que el corte se quede en preflop con una')
-    print('   accion jugada, la mano tiene que terminar ahi mismo; y para que')
-    print('   tenga etiqueta hace falta un ganador verificable. Las dos')
-    print('   cosas a la vez no se dan.')
+    print('   POR QUE. Y aqui se RETIRA una explicacion que era mia y era')
+    print('   falsa: "si el heroe juega y gana, vuelve a actuar y el corte')
+    print('   se mueve de calle". En 81 de las 83 la mano TERMINA en')
+    print('   preflop porque todos foldean a la apuesta del heroe, y el')
+    print('   heroe gana POR FOLD con `winner` declarado. El corte se queda')
+    print('   en preflop por eso, no porque el heroe vuelva a actuar.')
+    print('   Lo que las mata es `board_completo()`, que exige')
+    print('   `comunitarias.river >= 1` y es el PRIMER filtro de `muestra()`.')
+    print('   Seccion 7, con el contrafactual.')
+
+    print()
+    print('=' * 76)
+    print('7.  POR QUE NO HAY ETIQUETA: filtro a filtro, no con una teoria')
+    print('=' * 76)
+    grupos = collections.Counter()
+    resto = collections.Counter()
+    quien = []
+    for hid in continuaciones:
+        h = por_id[hid]
+        comunitarias = (h.get('comunitarias') or {}).get('river') or []
+        reales = []
+        st = h.get('streets') or {}
+        for calle in ('flop', 'turn', 'river'):
+            reales += list((st.get(calle) or {}).get('board') or [])
+        if comunitarias:
+            grupos['A  comunitarias.river con cartas'] += 1
+        elif reales:
+            grupos['B  el board esta en streets, comunitarias vacio'] += 1
+        else:
+            grupos['C  no hay board en ninguna parte'] += 1
+        m, y = resto_de_muestra(ins.cal, h)
+        resto[m] += 1
+        if m == 'ok':
+            quien.append((hid, y))
+
+    print('   Donde esta el board, en las %d:' % n_cont)
+    for k, v in sorted(grupos.items()):
+        print('      %3d  %s' % (v, k))
+    print()
+    print('   Que dicen los filtros de `muestra()` que QUEDAN, sin el de')
+    print('   board:')
+    for k, v in resto.most_common():
+        print('      %3d  %s' % (v, k))
+    print()
+    print('   CONTRAFACTUAL: con etiqueta serian %s  (%s)'
+          % (dict(collections.Counter(y for _i, y in quien)),
+             ' '.join('%s(y=%.0f)' % x for x in quien)))
+    print()
+    print('   NO SE CAMBIA NADA. `board_completo()` es parte de una muestra')
+    print('   firmada en CONTRATO_L_SEC.md; moverlo cambia los 160, la')
+    print('   particion, el modelo ajustado y el AUC ya publicado. Lo que se')
+    print('   mide es si la pregunta SERIA respondible con otra regla, que es')
+    print('   lo que hace falta para poder decir "no se calcula" y POR QUE.')
+    print()
+    print('   Y la respuesta es que ni con otra regla: una observacion.')
 
     print()
     print('=' * 76)
