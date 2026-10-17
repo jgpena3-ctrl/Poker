@@ -58,6 +58,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 sys.path.insert(0, os.path.join(ROOT, 'tools'))
 
+import ejecutar_pytest as ep
 import retraccion_scan as rs                                   # noqa: E402
 
 DOCS = os.path.join(ROOT, 'DOCS')
@@ -116,16 +117,21 @@ def _docs_rotos(viejo, nuevo, todas=True):
 
 
 def _ejecutar_aceptacion(docs_dir):
-    """El exit code de pytest sobre el fichero de aceptacion."""
+    """El exit code de pytest sobre el fichero de aceptacion.
+
+    Y el codigo YA DESCARTADO como 4 —«no se ha ejecutado nada»— y como 5
+    —«no se ha encontrado ningun test»—, que es lo que hace
+    `ejecutar_pytest.correr` antes de devolver.
+
+    Que no es una Kedada: los tres tests de rotura de este fichero vivian
+    sobre `!= 0`, y un `!= 0` aprueba un 4 en verde. Si alguna vez el
+    selector se descoloca, estos tres darian verde diciendo «algo ha
+    caido» sin que se haya ejecutado nada. Que es el error mas caro que
+    ha tenido este repositorio."""
     env = dict(os.environ)
     env[rs.DIR_DE_DOCUMENTOS] = docs_dir
     env['PYTHONPATH'] = os.path.join(ROOT, 'tools')
-    r = subprocess.run(
-        [sys.executable, '-m', 'pytest', FICHERO_DE_ACEPTACION, '-q',
-         '--no-header', '-p', 'no:cacheprovider'],
-        cwd=ROOT, env=env, stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT)
-    return r.returncode, r.stdout.decode('utf-8', 'replace')
+    return ep.correr(FICHERO_DE_ACEPTACION, None, env=env, cwd=ROOT)
 
 
 # ==================================================== el control
@@ -169,14 +175,22 @@ def test_el_fichero_de_aceptacion_falla_si_se_rompe(nombre, viejo, nuevo,
         pytest.skip('el texto %r no esta en el documento: hay que '
                     'actualizar este test, que es lo que comprueba' % viejo)
     try:
-        codigo, salida = _ejecutar_aceptacion(destino)
-        assert codigo != 0, (
-            'EL FICHERO DE ACEPTACION NO HA CAIDO con la rotura «%s».\n'
-            'Es decir: %s\n\nY eso significa que el test de aceptacion tiene '
-            'otra comprobacion que sigue dando verde, y que este fichero '
-            'NO protege esa relacion. R2 lo dijo: un test de aceptacion '
-            'puede seguir pasando por otra ruta.\n\nSalida:\n%s'
-            % (nombre, por_que, salida[-1500:]))
+        # Y `afirmar_caida`, no un `!= 0`: exige el codigo CONCRETO y ademas
+        # que la salida traiga el RECUENTO de fallos. Sin lo segundo, un 1
+        # por un `import` roto contaria como «la rotura ha funcionado», y no
+        # lo es: el fichero de aceptacion no llego a ejecutarse.
+        salida = ep.afirmar_caida(
+            FICHERO_DE_ACEPTACION, None, env=dict(
+                os.environ, **{
+                    rs.DIR_DE_DOCUMENTOS: destino,
+                    'PYTHONPATH': os.path.join(ROOT, 'tools')}),
+            cwd=ROOT,
+            cuando=('EL FICHERO DE ACEPTACION NO HA CAIDO con la rotura '
+                    '«%s».\nEs decir: %s\n\nY eso significa que el test de '
+                    'aceptacion tiene otra comprobacion que sigue dando '
+                    'verde, y que este fichero NO protege esa relacion. R2 lo '
+                    'dijo: un test de aceptacion puede seguir pasando por '
+                    'otra ruta.' % (nombre, por_que)))
     finally:
         shutil.rmtree(os.path.dirname(destino), ignore_errors=True)
 
@@ -201,10 +215,16 @@ def test_los_tres_casos_caen_y_el_umbral_lo_exige():
             codigo, _salida = _ejecutar_aceptacion(destino)
         finally:
             shutil.rmtree(os.path.dirname(destino), ignore_errors=True)
-        if codigo != 0:
+        # Y aqui SI se cuenta en vez de afirmar, porque el fallo tiene que
+        # decir QUE CASO no ha caido. Pero se cuenta SOLO el 1: un 4 o un 5
+        # ya los ha descartado `correr`, y cualquier otro se cuenta como lo
+        # que es —una interrupcion— y no como «una rotura que ha roto».
+        if codigo == 1:
             caidas += 1
         else:
-            detalle.append('%s: NO HA CAIDO' % nombre)
+            detalle.append('%s: NO HA CAIDO (codigo %d, %s)'
+                           % (nombre, codigo,
+                              ep.QUE_SIGNIFICA.get(codigo, '?')))
     assert caidas == len(ROTURAS), (
         'de los %d casos de rotura han caído %d:\\n   %s\\n\\nEl umbral es '
         '%d de %d, y no %d. Un umbral por debajo del numero de casos acepta '
@@ -301,30 +321,58 @@ def test_la_orbita_aguanta_las_cuatro_variantes_documentadas():
         + '\n   '.join(malas))
 
 
-def test_si_un_punto_separa_la_tesis_de_su_negacion_no_se_vigila():
-    """Y el caso que NO tiene que funcionar, porque no es un formato: es otro
-    documento.
+def test_si_la_negacion_esta_en_otro_parrafo_no_se_le_atribuye():
+    """LA FRONTERA ES EL PARRAFO. Y el codigo ya lo hacia bien: lo que estaba
+    mal era este docstring, que decia otra cosa.
 
-        **El filtro es el CORRECTO.**
-        Eso **no** esta demostrado.
+    LA REGLA, y por que es el parrafo y no el punto
 
-    Si el punto cierra la frase de la tesis, la negacion ya no es de la
-    tesis: es de otra cosa. Y entonces el documento AFIRMA la tesis y NIEGA
-    algo mas, que es exactamente la contradiccion 200/238 en otra forma — dos
-    afirmaciones que se parecen y no son la misma.
+    El documento real escribe:
 
-    Y por eso merece su propio test y no una variante mas: un formato
-    ilegitimo que la orbita no cubre no es un fallo de la orbita, es una
-    cosa que el documento no deberia escribir. Y hay que poder decir eso.
+        **El filtro es el CORRECTO.** Eso **no** esta demostrado, y no lo
+        puede estar con esta prueba.
 
-    O sea: la orbita es deliberadamente ESTRICTA, y esto es lo que declara su
-    limite. Un filtro laxo que aceptara este caso no detectaria el
-    documento que separa la tesis de su negacion."""
+    con un PUNTO entre la tesis y su negacion. Y esta bien escrito.
+
+      - Si la frontera fuera el PUNTO, ese documento —el bueno— dejaria de
+        ser detectable. Una frase puede llevar punto sin cambiar de oracion
+        que la quiero.
+
+      - Y al reves: con el punto, CUALQUIER frase con «no» del parrafo
+        siguiente contaria como negacion de la tesis. Eso es un falso positivo
+        esperando, y este bloque lleva veintiseis rondas quitandolos.
+
+    O sea: el parrafo es el punto en el que un lector deja de leer «esto
+    corrige lo de arriba» y empieza a leer «esto es otra cosa». Por debajo del
+    parrafo todo es ruido.
+
+    Y MEDIDO, con saltos de verdad
+
+        punto + salto simple     la polaridad se le atribuye
+        punto + PARRAFO          orbita vacia
+        sin punto + salto simple la polaridad se le atribuye
+        sin punto + PARRAFO      orbita vacia
+
+    Con chr(10), y NO con barras invertidas en el literal: una medicion
+    anterior de este bloque las uso, y a traves de un heredoc producen
+    caracteres `\` y `n` en vez de saltos. Se probo `\` `n` `\` `n`, que no es
+    un parrafo, y salio que el parrafo SI propagaba.
+
+    Y LO QUE NO SE HACE CON ESTE CASO: no se tolera
+
+    El test de aceptacion exige `assert orb`, o sea que una negacion en
+    parrafo separado no la deja pasar: falla, diciendo que la negacion tiene
+    que estar pegada a la tesis.
+
+    Un caso raro TOLERADO en silencio es un caso que nadie sabe que existe.
+    Un caso raro que falla diciendo por que, se puede arreglar.
+    """
     from test_causa_no_validez import _orbita_de_la_tesis
-    texto = ('relleno\n\n'
-             '### 4.3 Y lo que esta prueba NO demuestra\n\n'
-             '**El filtro es el CORRECTO**.\n\n'
-             'Eso **no** esta demostrado.\n')
+    NL = chr(10)                    # y NO barras invertidas: ver arriba
+    texto = ('relleno' + NL + NL +
+             '### 4.3 Y lo que esta prueba NO demuestra' + NL + NL +
+             '**El filtro es el CORRECTO**.' + NL + NL +
+             'Eso **no** esta demostrado.' + NL)
     orb = _orbita_de_la_tesis(texto.lower())
     assert not orb or 'no' not in orb, (
         'la orbita ha cogido una negacion que NO es de la tesis. Y si lo '
