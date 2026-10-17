@@ -120,6 +120,37 @@ def test_la_mediana_reproduce_el_auc_publicado(contexto):
         'el IC es [%r, %r], y el publicado es [0,4333; 1,0000]' % (lo, hi))
 
 
+def test_sin_el_filtro_se_reproduce_el_numero_malo(contexto):
+    """La prueba fuerte, y la que no es una coincidencia.
+
+    `AUC_INTERVALO.md` cuenta que la version anterior publico AUC 0,8308
+    porque el codigo mezclaba calibracion y validacion. Sin el filtro de
+    particion, esta medicion da ESE numero, a cuatro decimales.
+
+    Dos cosas de las que dependen:
+
+      - el filtro de la particion es el que toca, y no otro. Sin el, la
+        medicion cae en el numero del bug, que es un numero CONOCIDO.
+      - `test_auditar_auc.py::test_no_evalua_manos_de_calibracion` no es
+        estilo. Es lo unico que separa 0,8308 de 0,7667.
+    """
+    ar, auc, *_resto = contexto
+    red, n = _reducciones(contexto, solo_validacion=False)
+    pos, neg = red['mediana']
+    a = auc.auc_de(pos, neg)
+    assert len(pos) + len(neg) == 47, (
+        'sin el filtro hay 47 observaciones, y salen %d'
+        % (len(pos) + len(neg)))
+    assert abs(a - 0.8308) < 5e-4, (
+        'sin el filtro el AUC es %r, y el numero malo publicado es 0,8308. Si '
+        'ha cambiado, o ha cambiado el bug —que seria buena noticia— o ha '
+        'cambiado la poblacion, y hay que revisar las dos cosas' % a)
+    # y con el filtro, el bueno
+    red2, _n2 = _reducciones(contexto, solo_validacion=True)
+    p2, n2 = red2['mediana']
+    assert abs(auc.auc_de(p2, n2) - 0.7667) < 5e-4
+
+
 def test_el_filtro_de_validacion_es_el_que_importa(contexto):
     """Y que el filtro de la particion es el que hace falta, no el de los
     folds. Este fue el primer sospechoso y resulto ser el equivocado."""
@@ -191,6 +222,14 @@ def test_el_documento_lo_dice(contexto):
     assert "r[1]['mediana']" in doc, 'y la reduccion, textual'
     assert '1 de las 11' in doc, 'y por que el recorrido es pequeno'
     assert '0,0333' in doc and '0,5667' in doc, 'y las dos cifras'
-    assert 'reproduce el AUC publicado exacto' in doc, (
-        'y la regla de que una medicion comparada con una cifra publicada tiene '
-        'que reproducirla')
+    assert '0,8308' in doc, (
+        'el numero de la version incorrecta de AUC_INTERVALO.md, que es lo que '
+        'sale sin filtrar por la particion')
+    assert '47' in doc, 'y las 47 observaciones sin filtrar'
+    # OJO: no se comprueba el formato de la tabla. Un test que fija el
+    # markdown exacto obliga a escribir el documento como el test —que es lo
+    # que este bloque lleva tres rondas corrigiendo—. Se comprueba que el
+    # numero esta, no como esta puesto el asterisco.
+    assert 'no es una comprobación de estilo' in doc, (
+        'y que por que el guard de test_auditar_auc.py no es estilo: es lo '
+        'unico que separa los dos numeros')

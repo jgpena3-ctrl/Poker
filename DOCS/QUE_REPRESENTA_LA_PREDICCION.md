@@ -197,9 +197,29 @@ La primera medición dio 47 observaciones y 0,8308. Dos filtros posibles:
   `resto_de_muestra` etiqueta las dos porque las dos tienen etiqueta. Pero el
   AUC se publica sobre la validación. **Era ese.**
 
-La prueba de que el filtro es el correcto no es que «parezca»: es que con
-él, la mediana **reproduce el AUC publicado exacto** — n = 11, AUC 0,7667, IC
-[0,4333; 1,0000]. Si no lo reprodujera, el filtro estaría mal y no el AUC.
+La prueba de que el filtro es el correcto no es que «parezca». Son **dos**, y
+la segunda es la que convence:
+
+| | n | AUC |
+|---|---:|---:|
+| con el filtro de partición | 11 | **0,7667** — el publicado |
+| **sin** el filtro | 47 | **0,8308** — el de la versión **incorrecta** |
+
+El mismo AUC a cuatro decimales, y no uno cualquiera. `AUC_INTERVALO.md`
+cuenta que la versión anterior de ese documento publicó 0,8308 porque el
+código mezclaba calibración y validación.
+
+> **Y esto es lo que hace que la prueba sea una prueba y no una
+> coincidencia.** Una medición sin el filtro de partición no da un número
+> aleatorio: **da el número del bug**, que es un número que ya se sabe cuál
+> es. Si tu medición te da *ese*, y con el filtro te da el otro, has
+> encontrado exactamente la línea que los separa.
+>
+> Y tiene una consecuencia más allá de este caso: si el 0,8308 se puede
+> reproducir a mano, se puede reproducir en cualquier sitio donde el código
+> corra sin el filtro. El guard de `test_auditar_auc.py` —
+> `test_no_evalua_manos_de_calibracion`— no es una comprobación de estilo:
+> **es lo único que separa los dos números.**
 
 > **Y esa es la regla que hay que aplicarle a toda medición que se compare
 > con una cifra publicada: que la reproduzca.** Una medición que no
