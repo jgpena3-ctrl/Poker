@@ -29,6 +29,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 sys.path.insert(0, os.path.join(ROOT, 'tools'))
 
+import ejecutar_pytest as ep                    # noqa: E402
+
 from retraccion_scan import (                              # noqa: E402
     afirmada, afirmada_sin_negar, leer)
 
@@ -228,6 +230,29 @@ def test_los_tests_de_los_contratos_caen_si_el_contrato_cambia(nombre):
             '%s no tiene ninguna de las formas que el test exige: hay que '
             'actualizar AFIRMACIONES, que es lo que se comprueba aqui'
             % nombre)
+        # Y QUE NO QUEDE NINGUNA FORMA. R1 lo pide, y `tocadas` no lo dice:
+        # un mutador que tocara una forma de tres da 1, que no es cero, y
+        # pasa. O sea que el numero que se comprobaba no era el que
+        # distingue una mutacion de un cambio de redaccion.
+        #
+        # Y esta es la rotura REAL — la que rompe el contrato de verdad —,
+        # mientras que la comprobacion de `test_disciplina_de_los_tests.py`
+        # mira el mutador en abstracto, sobre un laboratorio. Las dos hacen
+        # falta: una dice que el mutador esta bien escrito, y esta dice que
+        # ha hecho su trabajo sobre ESTE documento.
+        #
+        # Y si alguna vez falla, el fallo dice que forma ha quedado, que es lo
+        # unico que permite arreglarlo sin volver a leer el mutador entero.
+        for clave in _cf.AFIRMACIONES[nombre]:
+            _, formas, porque = clave
+            for forma in formas:
+                assert forma not in cambiada, (
+                    'despues de la mutacion queda la forma %r, de «%s» — que '
+                    'se define como: %s. O sea que la rotura es PARCIAL y no '
+                    'rompe la afirmacion: el test de contenido la sigue '
+                    'aceptando por esa otra via. Una mutacion se hace en '
+                    'TODAS las formas o no es una mutacion.'
+                    % (forma, clave[0], porque))
 
         env = dict(os.environ)
         env['POKER_DOCS_DIR'] = destino
@@ -244,21 +269,6 @@ def test_los_tests_de_los_contratos_caen_si_el_contrato_cambia(nombre):
         # Y el caso que haria falta para verlo: si el test de contenido no
         # mirase el contrato, la mutacion caeria SOLO por la huella y este
         # test pasaria igualmente.
-        r = subprocess.run(
-            [sys.executable, '-m', 'pytest',
-             os.path.join(ROOT, 'tools',
-                          'test_contratos_firmados.py')
-             + '::test_los_contratos_dicen_lo_que_el_proyecto_les_pide',
-             '-q', '--no-header', '-p', 'no:cacheprovider'],
-            cwd=ROOT, env=env, stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT)
-        assert r.returncode != 0, (
-            'el test de CONTENIDO no ha caido al cambiar la frase de la que %s '
-            'depende. O sea que la comprobacion de contenido no vigila: '
-            'puede estar certificada por la huella sin serlo.\n\nSalida:\n%s'
-            % (nombre, r.stdout.decode('utf-8', 'replace')[-900:]))
-
-        # (b) rotura de HUELLA: una palabra que no cambia el significado
         # (b) rotura de HUELLA: el TEXTO cambia y el SENTIDO no. Se cambia
         #     la primera palabra suelta, que es lo mas seguro: ninguna
         #     afirmacion del contrato la contiene.
@@ -281,12 +291,14 @@ def test_los_tests_de_los_contratos_caen_si_el_contrato_cambia(nombre):
              '-q', '--no-header', '-p', 'no:cacheprovider'],
             cwd=ROOT, env=env, stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT)
-        assert r.returncode != 0, (
-            'el test de HUELLA no ha caido al cambiar una palabra sin '
-            'significado. Y eso es lo que hace la huella: un contrato '
-            'firmado que cambia en silencio no esta firmado, ni siquiera si '
-            'el cambio es cosmetico.\n\nSalida:\n%s'
-            % r.stdout.decode('utf-8', 'replace')[-900:])
+        ep.afirmar_caida(
+            os.path.join(ROOT, 'tools', 'test_contratos_firmados.py'),
+            'test_los_contratos_no_cambian_sin_que_se_sepa',
+            env=env, cwd=ROOT,
+            cuando='el test de HUELLA no ha caido al cambiar una palabra '
+                    'sin significado. Y eso es lo que hace la huella: un '
+                    'contrato firmado que cambia en silencio no esta '
+                    'firmado, ni siquiera si el cambio es cosmetico.')
         # y el de contenido NO tiene que caer: si caiase, seria porque mira
         # algo que no es una afirmacion, que es justo lo que la huella cubre
         r2 = subprocess.run(
