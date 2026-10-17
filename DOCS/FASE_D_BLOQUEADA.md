@@ -349,10 +349,16 @@ puede tener etiqueta. Eso es una decisión de **orden de filtros**, escrita
 en el contrato firmado.
 
 Y el contrafactual, que es lo que hace falta para poder decir «no se
-calcula» sin excusas: si `board_completo()` se comprobara después, de las
-83 **una sola** tendría etiqueta (`H_0485`, una call, `y = 1`), porque las
-82 otras no tienen las cartas de ningún otro jugador. **Ni con otra regla
-la pregunta es respondible.**
+calcula» sin excusas: si los dos filtros que se adelantan al camino de fold
+se comprobaran después, de las 83 **78** tendrían etiqueta. La población
+**no está vacía: está bloqueada.**
+
+**Pero las 78 son todas victorias, y cero derrotas.** Por eso no hay AUC: no
+es que falten manos, es que la población tiene **una sola clase**, y un AUC
+binario daría 1,0 por definición. La causa es medible —el corte es la
+última acción del héroe, y para que sea jugada en preflop la mano tiene que
+terminar ahí— y tiene arreglo: un corte que fuera *la primera* decisión del
+héroe y no *la última* traería las manos en las que jugó y perdió.
 
 Detalle completo, con el caso a mano y el contador:
 [`REPRESENTATIVIDAD_23.md`](REPRESENTATIVIDAD_23.md) §6.1, y

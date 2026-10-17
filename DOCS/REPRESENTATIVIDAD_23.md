@@ -219,22 +219,37 @@ y el héroe **gana por fold** con ganador declarado. El corte se queda en
 preflop por eso —no porque el héroe vuelva a actuar— y no hay board porque
 no se repartieron cartas comunitarias, que es lo correcto.
 
-**Contrafactual**: si `board_completo()` se comprobara *después* del camino
-de fold, ¿cuál sería la población?
+**Contrafactual**: si `board_completo()` **y** el filtro de las dos cartas
+se comprobaran *después* del camino de fold, ¿cuál sería la población?
 
 | de las 83 | |
 |---|---:|
-| menos de dos jugadores con cartas | 82 |
-| con etiqueta | **1** (`H_0485`, una call, `y = 1`) |
+| con etiqueta | **78** |
+| — victorias por fold verificables | 77 |
+| — showdown verificable (`H_0485`) | 1 |
+| — `y = 1` | **78** |
+| — `y = 0` | **0** |
 
-**Ni con otra regla.** Una observación no es un AUC, y no tiene la clase
-negativa que hace falta ni para empezar.
+> **Y aquí se retira una conclusión que era falsa.** Este documento decía
+> antes «ni con otra regla: una observación no es un AUC». Lo único cierto
+> es la conclusión; el número y el motivo no lo eran.
+> `gano_por_fold()` verifica la victoria por fold **sin** las cartas de los
+> demás —por eso existe—, así que la población **no está vacía: está
+> bloqueada** por dos filtros que se adelantan a ese camino.
+>
+> Y desbloqueada daría **1,0 por definición**: 78 victorias contra 0
+> derrotas. **No es que falten manos; es que no hay una sola derrota.**
+> La razón es medible: el corte es la última acción del héroe, y para que
+> sea jugada en preflop la mano tiene que terminar ahí.
 
 > No se cambia nada. `board_completo()` es parte de una muestra firmada en
 > `CONTRATO_L_SEC.md`: moverlo cambia los 160, la partición, el modelo
 > ajustado y el AUC ya publicado. Lo que se mide aquí es si la pregunta
-> *sería* respondible con otra regla, que es lo que hace falta para poder
-> decir «no se calcula» **y por qué**.
+> *sería* respondible con otra regla.
+>
+> **Y la respuesta es que no, pero no por lo que se pensaba.** No por
+> falta de manos: por falta de la **clase negativa**. Detalle y qué lo
+> arreglaría en [`LIMITACION_PREFLOP_AUC.md`](LIMITACION_PREFLOP_AUC.md) §4.
 
 ## 7. Conclusión
 

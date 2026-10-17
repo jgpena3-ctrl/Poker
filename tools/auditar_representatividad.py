@@ -121,34 +121,42 @@ def sanity_de_cartas():
     return fallos, lineas, len(casos)
 
 
-def resto_de_muestra(cal, h):
-    """(motivo, y) con los filtros de `muestra()` EXCEPTO el de board.
+def resto_de_muestra(cal, h, hero_pos=None):
+    """(motivo, y) con los filtros de `muestra()` MENOS los dos que se
+    adelantan al camino de victoria por fold.
 
-    `revision_2` parrafo 2: sin esto habia una teoria —una
-    imposibilidad— donde lo medido es una ausencia. Y la teoria era
-    ademas FALSA. El orden se replica: board, dos con cartas, ganador
-    declarado, showdown o victoria por fold, coherencia, etiqueta. Se
-    devuelve el PRIMER filtro que rechaza; `ok` es que pasan todos.
+    Los dos son `board_completo()` y `len(con_cartas(h)) < 2`, y los dos
+    estan ANTES de `gano_por_fold()`. Se saltan los dos porque la pregunta
+    que se responde es "la poblacion esta vacia, o esta bloqueada", y solo
+    se responde saltandolos.
+
+    `revision_2` parrafo 2 y otra vez: la version anterior de este script
+    mantenia los dos y de ahi salio la conclusion FALSA de que la
+    poblacion era vacia. El filtro no es informacion sobre la poblacion:
+    es informacion sobre el ORDEN de los filtros.
     """
-    if len(cal.con_cartas(h)) < 2:
-        return 'menos de dos jugadores con cartas', None
-    scores, mejor = cal.mejores_manos(h)
     declarados = {cal.id_a_pos(h, i) for i in (h.get('winner') or [])}
     declarados.discard(None)
     if not declarados:
         return 'sin ganador declarado', None
-    mejores = ({p for p, s_ in scores.items() if s_ == mejor}
-               if mejor is not None else set())
+    scores, mejor = cal.mejores_manos(h)
     llegan = {p for p in declarados
               if cal.llego_al_showdown(h, p) and scores and p in scores}
     if not llegan:
+        # el camino de victoria por fold: NO necesita las cartas de los
+        # demas, y por eso los dos filtros de arriba le hacen sombra
         ok_fold, _mot = cal.gano_por_fold(h, declarados)
         if not ok_fold:
-            return 'nadie al showdown y sin victoria por fold limpia', None
-    elif llegan != mejores:
-        return 'ganadores declarados que no son los mejores', None
-    y, ok = cal.etiqueta(h)
-    return ('ok', y) if ok else ('etiqueta() no', None)
+            return 'fold no verificable', None
+        return ('ok', 1.0)
+    # showdown: aqui SI hacen falta las cartas de los demas
+    if len(cal.con_cartas(h)) < 2:
+        return 'showdown sin cartas de los demas', None
+    mejores = ({p for p, s_ in scores.items() if s_ == mejor}
+               if mejor is not None else set())
+    if llegan != mejores:
+        return 'ganadores que no son los mejores', None
+    return ('ok', 1.0 if hero_pos in llegan else 0.0)
 
 
 def main():
@@ -211,8 +219,8 @@ def main():
     # acuerda de cambiarlo
     print('   fallos: %d de %d' % (fallos, n_casos))
     assert fallos == 0, (
-        'el detector de cartas falla en %d de 7 casos: los numeros de C3 no '
-        'se publican con un detector roto' % fallos)
+        'el detector de cartas falla en %d de %d casos: los numeros de C3 no '
+        'se publican con un detector roto' % (fallos, n_casos))
 
     print()
     print('=' * 76)
@@ -417,7 +425,8 @@ def main():
             grupos['B  el board esta en streets, comunitarias vacio'] += 1
         else:
             grupos['C  no hay board en ninguna parte'] += 1
-        m, y = resto_de_muestra(ins.cal, h)
+        m, y = resto_de_muestra(ins.cal, h,
+                                ins.eqm.hero_pos_de(h))
         resto[m] += 1
         if m == 'ok':
             quien.append((hid, y))
@@ -431,19 +440,47 @@ def main():
     for k, v in resto.most_common():
         print('      %3d  %s' % (v, k))
     print()
-    print('   CONTRAFACTUAL: con etiqueta serian %s  (%s)'
-          % (dict(collections.Counter(y for _i, y in quien)),
-             ' '.join('%s(y=%.0f)' % x for x in quien)))
+    clases = collections.Counter(y for _i, y in quien)
+    print('   CONTRAFACTUAL: %d de las %d tendrian etiqueta, y serian'
+          % (len(quien), n_cont))
+    print('                     %s' % dict(clases))
     print()
-    print('   NO SE CAMBIA NADA. `board_completo()` es parte de una muestra')
+    print('   O SEA QUE LA POBLACION NO ESTA VACIA: ESTA BLOQUEADA. De las')
+    print('   %d, %d tienen una victoria por fold VERIFICABLE —que es lo que'
+          % (n_cont, len(quien)))
+    print('   `gano_por_fold` sabe comprobar sin las cartas de los demas— y')
+    print('   lo que las deja fuera son dos filtros que se ADELANTAN a ese')
+    print('   camino: `board_completo()` y el de las dos cartas con cartas.')
+    print()
+    print('   PERO: las %d son TODAS victorias. Cero derrotas.' % len(quien))
+    print()
+    print('   Y esa es la razon por la que no hay AUC, que es distinta de la')
+    print('   que se escribio: no es que falten manos, es que la poblacion')
+    print('   tiene UNA SOLA CLASE. El corte es la ULTIMA accion del heroe;')
+    print('   para que ese corte sea una accion jugada en preflop, la mano')
+    print('   tiene que acabar ahi, y si acaba ahi con accion jugada, el')
+    print('   heroe gana. Si siguiera, habria una accion posterior y el corte')
+    print('   se moveria de calle.')
+    print()
+    print('   NO CAMBIA NADA. `board_completo()` es parte de una muestra')
     print('   firmada en CONTRATO_L_SEC.md; moverlo cambia los 160, la')
     print('   particion, el modelo ajustado y el AUC ya publicado. Lo que se')
-    print('   mide es si la pregunta SERIA respondible con otra regla, que es')
-    print('   lo que hace falta para poder decir "no se calcula" y POR QUE.')
+    print('   mide es si la pregunta SERIA respondible con otra regla.')
     print()
-    print('   Y la respuesta es que ni con otra regla: una observacion.')
+    print('   Y la respuesta es que AUN ASI NO: no por falta de manos, sino')
+    print('   porque no hay una sola derrota. Un AUC binario necesita las dos')
+    print('   clases, y 78 victorias contra 0 derrotas dan 1,0 por definicion,')
+    print('   que es tan poco informativo como 0,5.')
 
     print()
+    print('   Las que NO se pueden etiquetar ni saltando los dos filtros,')
+    print('   y por que:')
+    for hid in sorted(set(continuaciones) - {i for i, _y in quien}):
+        h = por_id[hid]
+        m, _y = resto_de_muestra(ins.cal, h, ins.eqm.hero_pos_de(h))
+        print('      %-9s %s' % (hid, m))
+    print()
+
     print('=' * 76)
     print('CONCLUSION')
     print('=' * 76)
@@ -452,10 +489,18 @@ def main():
     print('   no existen en este conjunto. Son representativas de una cosa')
     print('   distinta: de los folds preflop del heroe.')
     print()
-    print('   Por tanto el AUC "con preflop incluido" NO SE CALCULA. No es')
-    print('   que falte el numero: es que el numero mediria la regla de')
-    print('   seleccion. 23 observaciones de una sola clase, garantizadas')
-    print('   por construccion.')
+    print('   Y sobre el AUC "con preflop incluido": NO SE CALCULA. Por dos')
+    print('   razones distintas, y es importante que sean dos:')
+    print()
+    print('     1. Las 23 que el instrumentoLlegaba a producir eran folds, con')
+    print('        y = 0 por construccion. Meterlas mediria la regla de')
+    print('        seleccion. Eso ya no es una posibilidad: el instrumento ahora las')
+    print('        descarta por ACCIONES_JUGADAS.')
+    print()
+    print('     2. Las 83 decisiones preflop de la poblacion B que SI existen')
+    print('        en los datos tienen UNA SOLA CLASE: 78 serian')
+    print('        victorias y 0 derrotas. Aun desbloqueando el orden de')
+    print('        filtros, un AUC binario daria 1,0 por definicion.')
     print()
     print('   Y el instrumento ya no produce esas manos: `ACCIONES_JUGADAS`')
     print('   hace que un fold se cuente y se descarte, con su motivo.')

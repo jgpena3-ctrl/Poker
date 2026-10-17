@@ -9,7 +9,10 @@
 
 ## 1. El hecho
 
-**En esta base, la población B no tiene ninguna decisión preflop.**
+**En esta base, la población B no tiene ninguna decisión preflop *con
+etiqueta*.** Las decisiones **existen** —83— pero están bloqueadas por el
+orden de filtros, y desbloqueadas serían de **una sola clase**. Las dos
+cosas se miden abajo, y las dos importan.
 
 La población B es la del AUC: «el héroe **continúa** (`b`/`c`/`r`) o
 checkea (`x`)», en la partición de validación
@@ -58,16 +61,49 @@ Dónde está el board, en las 83:
 | el board **sí** está, en `streets.*.board`, y `comunitarias` vacío | **2** |
 | no hay board en ninguna parte | 81 |
 
-Y qué dicen los filtros que quedan, sin el de board:
+### Y aquí se corrige una conclusión que era falsa
+
+> **Se retira.** Este documento decía:
+>
+> «82 de las 83 no tienen las cartas de ningún otro jugador. […] **Ni con
+> otra regla** la pregunta es respondible: **una observación** no es un
+> AUC.»
+>
+> `revision_2` parrafo 2 lo señaló sin tener la Medición delante. Las dos
+> partes están mal, y por partida doble.
+
+**Medido, saltando los dos filtros que se adelantan al camino de fold:**
 
 | | |
 |---|---:|
-| menos de dos jugadores con cartas | 82 |
-| con etiqueta | **1** |
+| de las 83, con etiqueta posible | **78** |
+| — victorias por fold verificables | 77 |
+| — showdown verificable (`H_0485`) | 1 |
+| fold no verificable (dos jugadores sin foldear) | 4 |
+| showdown sin cartas de los demás | 1 |
 
-> **Contrafactual: ni con otra regla.** Si `board_completo()` se comprobara
-> después del camino de fold, la población sería **una** observación
-> (`H_0485`, una call, `y = 1`). Una observación no es un AUC.
+**La población no está vacía: está BLOQUEADA.** `gano_por_fold()` existe
+precisamente para verificar una victoria por fold **sin** las cartas de los
+demás jugadores, y funciona en 77 de las 83. Lo que las deja fuera son dos
+filtros que se **adelantan** a ese camino:
+
+```python
+if not board_completo(h):      continue   # <- 83 se caen aqui
+if len(con_cartas(h)) < 2:     continue   # <- 82 se caen aqui
+...
+ok_fold, _mot = gano_por_fold(h, declarados)   # <- el unico que las acepta
+```
+
+Y la segunda parte es peor: **las 78 son todas victorias, cero derrotas.**
+
+| | |
+|---|---:|
+| `y = 1` | 78 |
+| `y = 0` | **0** |
+
+Así que un AUC binario daría **1,0 por definición**, que es tan poco
+informativo como 0,5. **La razón por la que no hay AUC no es que falten
+manos: es que la población tiene una sola clase.**
 
 ### Una explicación que se retiró, y por qué importa
 
@@ -142,10 +178,29 @@ El punto 1 es un cambio de recorder. El punto 2 es una inconsistencia del
 registro y se arregla decidiendo cuál de las dos representaciones es la
 buena. **Ninguno de los dos es un cambio de `motor/`.**
 
-Y con las dos cosas, la pregunta sigue siendo de una observación. Para que
-haya un AUC preflop haría falta además **más manos decididas en preflop**:
-hoy son 83 en 877, y 81 son `b/c/r` sobre una ventana en la que el héroe
-finge el preflop en 554 de 637. El fondo del problema no es la métrica.
+**Y con las dos cosas sigue sin haber AUC**, por el motivo real:
+
+> La población desbloqueada sería de **una sola clase**, porque el corte es
+> la **última** acción del héroe. Para que ese corte sea una acción jugada
+> en preflop, la mano tiene que **terminar ahí**: si el héroe siguiera, habría
+> una acción posterior y el corte se movería de calle. Y si termina ahí con
+> acción jugada, el héroe **gana**.
+
+Es una propiedad **de cómo se define el corte**, y por eso tiene arreglo:
+un corte que fuera *la primera decisión* del héroe en lugar de *la última*
+traería las manos en las que jugó y perdió —que son las que hacen falta para
+tener la clase negativa—. Ese sí es un cambio de definición, y hay que
+decidirlo antes de hacerlo, porque cambia la muestra.
+
+Que hoy haya **cero** derrotas no es una imposibilidad del poker: es cómo
+se comporta **este** registro, donde además las acciones de los demás
+jugadores faltan a menudo —de las 83, 82 no tienen ninguna carta de otro
+jugador—. En un conjunto donde la acción del héroe se guardara aunque
+después perdiera, habría las dos clases.
+
+Y para que la pregunta merezca la pena hacen falta más manos: hoy son 83
+en 877, y el héroe foldea en 554 de los 637 cortes preflop de la ventana.
+**El fondo del problema no es la métrica.**
 
 ---
 
