@@ -1,7 +1,12 @@
 # DIAGNÓSTICO DEL GRABADOR
 
 **Estado:** diagnóstico. La base no se ha modificado.
-**HEAD:** `4fcca01` · **SHA de la base:** `35727961646dfaba` (1258 líneas, sin cambios)
+**HEAD:** `b944355` · **SHA de la base:** `35727961646dfaba` (1258 líneas, sin cambios)
+**Pruebas:** `867 passed, 1 failed, 1 skipped, 5 xfailed` · diagnóstico: `39 passed`
+
+> **Aviso.** El § 0 es un hallazgo posterior a la primera redacción de este
+> informe, y desmonta parte del § 6. Está arriba porque leer el § 6 sin él da
+> una conclusión equivocada.
 
 Marcas usadas en cada conclusión:
 
@@ -11,6 +16,124 @@ Marcas usadas en cada conclusión:
 | **[O]** | **anomalía observada**: patrón medido, causa no determinada |
 | **[I]** | **inferencia** compatible con los datos, que podría ser otra cosa |
 | **[D]** | **decisión de diseño** propuesta, no una conclusión empírica |
+| **[P]** | **pendiente**: falta el dato o la captura que lo resuelve |
+
+---
+
+## 0. HALLAZGO POSTERIOR: LA BASE SON DOS GRABADORES
+
+Este apartado se escribió después de todo lo que sigue, y **desmonta parte de
+lo que sigue**. Se pone arriba a propósito: las secciones 6 y 8 estaban
+construidas sobre una suposición que resultó falsa.
+
+### 0.1 Los dos programas escriben a la misma ruta
+
+**[C]** `recorder/record_hand.py` y `recorder/recorder_live.py` declaran el
+mismo destino:
+
+```
+OUTPUT_PATH = os.path.join(os.path.dirname(__file__), '..', 'data', 'hands_db.jsonl')
+```
+
+**[C]** Pero solo uno escribe el campo `allin`:
+
+| fichero | escribe `allin` |
+|---|---|
+| `record_hand.py` | **no**, en ninguna línea |
+| `recorder_live.py` | **sí**, en la 1040 |
+
+**[C]** En `data/hands_db.jsonl` el campo `allin` está en **1185 de 1258**
+manos. Las 73 que no lo tienen son **exactamente `H_0001`..`H_0073`**, una
+runa contigua desde el principio.
+
+**[I]** Las 73 las escribió `record_hand.py` y las 1185 `recorder_live.py`. Lo
+que parecía un bloque inicial de captura es un bloque de otro programa.
+
+### 0.2 Se confirma sin mirar ningún campo raro
+
+**[C]** La letra de la apertura depende de la regla de cada grabador, y las
+distribuciones son incompatibles:
+
+| grabador | manos | `b` | `c` | `r` |
+|---|---:|---:|---:|---:|
+| `record_hand` (73) | 68 | **40** | 26 | 2 |
+| `recorder_live` (1185) | 1166 | **1019** | 100 | 47 |
+
+El 87 % de las aperturas de `recorder_live` son `b`; en `record_hand` la
+apertura reparte casi a partes iguales. Es exactamente lo que predice cada
+regla (§ 0.3). Regresión: `test_la_apertura_no_tiene_la_misma_forma_en_los_dos`.
+
+### 0.3 `amount` no tiene UNA semántica, tiene TRES
+
+**[C]** Y cada rama mide otra cosa:
+
+| origen | línea | `amount` es… |
+|---|---|---|
+| `record_hand.py` | 200 | la **caja** del jugador, `state[pid_bet]` |
+| `recorder_live.py`, rama de all-in | 670 | `prev_stake + prev_bet`, el stack **antes** más la caja |
+| `recorder_live.py`, rama normal | 699 | `prev_stake - cur_stake`: el **delta del stack**, redondeado por `_round_bet` |
+
+La tercera es la que produce casi todo: es el camino de las líneas 697-714, el
+de toda acción con dinero que no es all-in.
+
+### 0.4 Lo que esto invalida
+
+**[C]** El modelo con el que se escribió el § 6 —«`amount` es un acumulado
+que puede haberse leído antes de tiempo»— **es el de `record_hand.py`, que
+produce 73 manos de 1258**. Para el 94 % restante es falso:
+
+> Con la semántica del delta, dos acciones del mismo jugador en la misma calle
+> **sí pueden tener importes descendentes**, porque cada uno es un delta
+> independiente. Marcar un delta descendente como «caja leída antes de tiempo»
+> sería un falso positivo sistemático sobre la mayoría de la base.
+
+Consecuencias concretas:
+
+- **`SIN_ALLIN` (73 manos) no es «posición vacía = no llegó a jugar».** Era la
+  huella del grabador. La explicación anterior era compatible con los datos y
+  falsa en el mecanismo. Regresión que lo fija:
+  `test_el_campo_allin_no_lo_escribe_record_hand`.
+- **La comparación `amount == stack` no es numéricamente limpia.** En la rama
+  de all-in el importe es `prev_stake + prev_bet`, que ya lleva la apuesta
+  dentro, mientras `stack` es el stack del jugador. Los 38 casos de
+  «compromisos reconstruidos» son coincidencias entre magnitudes distintas.
+- **`_add_implied_checks` y `_detect_river_check` inventan checks**
+  (`recorder_live.py:743-747`). buena parte de las acciones `c` de importe 0
+  no vienen de una lectura, sino de una regla de juego. Eso cambia lo que
+  «una call de 0» significa.
+
+### 0.5 Lo que NO se invalida
+
+**[C]** El patrón de la falta de 1.0 aparece **en los dos grabadores**, así que
+no es un artefacto de uno:
+
+| grabador | calls | cortas | % | faltas de 1.0 |
+|---|---:|---:|---:|---:|
+| `record_hand` | 140 | 23 | 16.4 % | 10 de 23 |
+| `recorder_live` | 2418 | 480 | 19.9 % | 330 de 480 |
+
+Y en el BB, que es donde se concentra el patrón: `record_hand` 7 de 10,
+`recorder_live` **217 de 241**. La diferencia entre ambos (16.4 % frente a
+19.9 %) es demasiado pequeña para que el grabador explique el patrón.
+
+**[D]** Con 73 manos de un grupo contra 1185 del otro, comparar los dos sin
+más es comparar dos instrumentos a la vez. **[P]** Habría que rehacer § 3 y § 8
+con un modelo de `amount` por grabador, y con el BB tratado aparte.
+
+### 0.6 Lo que hay que hacer con esto
+
+**[D]** Antes de seguir afinando el diagnóstico hay que decidir qué se hace
+con la mezcla:
+
+1. **Separar por grupo** en cada medición, y publicar los dos. Es lo
+   honesto y no cuesta nada.
+2. **Fijar el grabador de referencia** y decir que los 73 son material de un
+   instrumento distinto, que se audita aparte o se descarta.
+3. **Reescribir el diagnóstico** sobre la semántica del delta, que es la del
+   94 %, y re-derivar los tres conteos.
+
+**[P]** Nada de esto se ha hecho: cambiaría los conteos publicados, y eso es
+una decisión, no una reparación.
 
 ---
 
@@ -56,6 +179,41 @@ calculaba la viva incluyendo también las calls, y aquí la viva sale **solo de
 está en el código y el número es 498.
 
 **[D]** Las 498 son **anomalías observadas**, no 498 errores confirmados.
+
+### 2.1 El desglose por acción y por resultado, reconciliado
+
+**[C]** El informe anterior traía **dos** desgloses que no cuadraban entre sí:
+
+- por resultado: 5433 `CALCULABLE` + 445 `SOSPECHOSA` + 96 `INDETERMINADA` = 5974
+- por acción: 2398 + 2558 + 1018 = **5974** ✓
+
+pero el desglose por acción publicaba una fila de `c` de 2032/430/**96** que
+sumaba 2558, mientras la fila que se leía en el informe era de otra versión y
+daba 5981. Los dos números se comprobaban por separado y nadie los cruzó.
+
+**[C]** Reconciliado en **una sola pasada**, y las dos dimensiones cuadran:
+
+| acción | `CALCULABLE` | `SOSPECHOSA` | `INDETERMINADA` | total |
+|---|---:|---:|---:|---:|
+| `b` | 2392 | 6 | 0 | 2398 |
+| `c` | 2032 | 430 | 96 | 2558 |
+| `r` | 1009 | 9 | 0 | 1018 |
+| **total** | **5433** | **445** | **96** | **5974** |
+
+**[C]** La fila de `c` con 96 `INDETERMINADA` era la buena; la que no cuadraba
+era la que faltaba en el informe. 2398 + 2558 + 1018 = 5974 exactamente.
+
+**[D]** `f` (4996) y `x` (2856) quedan fuera a propósito: no aportan dinero,
+así que no hay nada que aportar. Total de acciones en la base: 13 826.
+
+**[C]** En las 5974 de `b/c/r`: 0 importes ausentes, 0 no convertibles, 0
+`pos` vacía. Los 96 `INDETERMINADA` son calls cortas sin acción previa, no
+importes ilegibles.
+
+**Regresión:** `test_el_desglose_por_accion_por_resultado_es_coherente` exige
+que filas, columnas y total coincidan, y que las columnas reproduzcan los
+totales absolutos. Si el clasificador cambia, se rompe en vez de dejar dos
+números que ya no hablan entre sí.
 
 ---
 
@@ -249,6 +407,66 @@ datos:
 **[C]** Las 8 clases de prueba sintética están en
 `--validar`: primera call válida, call tras subida, lectura obsoleta, `c 0.0`,
 acción repetida, all-in corto, orden anómalo y redondeo.
+
+### 5.2 Cuatro defectos del clasificador que las pruebas acaban de sacar
+
+Todos están **fijados como regresión con su comportamiento actual**, no
+corregidos, porque corregirlos cambia los tres conteos publicados y eso es una
+decisión (§ 0.6), no una reparación.
+
+**[C] Defecto 1 — la rama del all-in anula todas las demás sospechas.**
+`clasificar_aportado` devuelve `CALCULABLE` en cuanto `amount ≈ stack`, sin
+mirar nada más. Consecuencias medidas, una por una:
+
+| caso | qué debería pasar | qué pasa hoy |
+|---|---|---|
+| acción repetida, importe == stack | sospechosa, aporte 0 | **`CALCULABLE`**, aporte 0.0 |
+| caja incoherente, último importe == stack | indeterminada | **`CALCULABLE`**, **aporte −5.0** |
+| dos acciones idénticas, importe == stack | sospechosa la segunda | **`CALCULABLE`** |
+| ciega de 1.0 con stack 1.0 | ni abrir a ciegas ni «all-in» | **«all-in corta»** |
+
+Lo peor no es que se saltsen sospechas: es que **una aportación negativa sale
+`CALCULABLE`**. Nadie aporta fichas negativas. Un negativo no es un dato con
+signo, es la señal de que la caja se leyó antes de tiempo, y eso es
+indisponible.
+
+Además, con § 0.3 la comparación ni siquiera es homogénea: en la rama de
+all-in el importe es `prev_stake + prev_bet` y ya lleva la apuesta dentro.
+
+**[C] Defecto 2 — `or 0.0` confunde tres cosas distintas:**
+
+```
+float(a.get('amount') or 0.0)
+```
+
+| en el dato | llega al clasificador | debería ser |
+|---|---|---|
+| clave ausente | 0.0 | `INDETERMINADA` |
+| clave con `None` | 0.0 | `INDETERMINADA` |
+| clave con `0.0` | 0.0 | treated aparte, es un check |
+
+Y el motivo que sale es **inventado**: un importe ausente se reporta como «`c`
+0.0: el grabador traduce un check a call», que es una afirmación sobre el
+grabador hecha con un dato que no existe.
+
+**[C]** No ha contaminado los conteos: 0 importes ausentes en las 5974 de
+`b/c/r`. Es un defecto **latente**, no un error de datos.
+
+**[C] Defecto 3 — una acción repetida es solo sospecha, pero ahora `repeticiones`
+y `clasificar_aportado` son dos detecciones distintas.** `clasificar_aportado`
+llamaba a `repeticiones()`, pagaba el coste y **tiraba el resultado**,
+construyendo su propio `Counter` en `vistos`. Dos detecciones paralelas de lo
+mismo, una muerta, que podían divergir sin que nada lo notara.
+
+**Corregido**: la variable muerta se ha eliminado y queda una sola detección.
+No cambia ningún conteo. Es el único cambio de comportamiento de esta fase, y
+es una limpieza, no una reparación semántica.
+
+**[C] Defecto 4 — la detección marca la primera aparición.** `vistos` cuenta
+todas las ocurrencias de la clave, así que salvan **las dos**: la primera y la
+repetida. Marcar la primera es lo correcto (es evidencia de que la clave se
+repitió), pero el informe debe decirlo, porque «6 `b` sospechosas» se lee
+como 6 manos raras y en realidad son 3 pares vistos dos veces.
 
 ---
 
@@ -508,7 +726,43 @@ está **solo** en `final_pot`.
 la semántica del grabador se comprobaba buscando cadenas de texto, que pasan
 aunque el comportamiento cambie. Ahora se comprueba **ejecutando el código**.
 
-### 11.2 Lo que sigue sin cubrir
+### 11.2 Lo que se ha añadido en esta segunda pasada
+
+**[C]** `motor/test_diagnostico_grabador.py` pasó de **24 a 39 pruebas**. Las
+quince nuevas:
+
+| prueba | qué fija |
+|---|---|
+| `test_la_base_son_dos_grabadores` | **el reparto 1185 / 73 y que las 73 son `H_0001`..`H_0073`** |
+| `test_la_apertura_no_tiene_la_misma_forma_en_los_dos` | las dos distribuciones de apertura, medidas |
+| `test_el_campo_allin_no_lo_escribe_record_hand` | por qué `SIN_ALLIN` es una huella, no una categoría |
+| `test_el_allin_no_esta_confirmado` | qué dice y qué **no** dice `amount == stack`, sobre el código real |
+| `test_un_allin_corto_es_calculable` | caso 1 del all-in |
+| `test_allin_con_accion_repetida_sale_calculable` | caso 2: el defecto 1 |
+| `test_allin_con_caja_incoherente_sale_calculable` | caso 3: aportación negativa |
+| `test_sin_stack_la_allin_no_se_puede_detectar` | caso 4: sin stack no hay comparación |
+| `test_una_call_que_supera_la_viva_es_sospechosa` | caso A, separado del B |
+| `test_una_caja_que_baixa_es_sospechosa` | caso B, el que faltaba de verdad |
+| `test_importe_ausente_se_confunde_con_cero` | defecto 2, clave ausente |
+| `test_importe_none_tambien_se_confunde` | defecto 2, `None` explícito |
+| `test_importe_cero_legitimo_no_se_confunde_con_ausente` | el `0.0` real funciona |
+| `test_importe_no_convertible_es_indeterminada` | el único de los cinco que está bien |
+| `test_apuesta_viva_descarta_lo_ilegible` | el filtro de `apuesta_viva` sale más corto |
+| `test_el_desglose_por_accion_por_resultado_es_coherente` | **la 2D en una pasada** |
+| `test_el_reparto_por_accion_suma_el_total_de_la_base` | que la exclusión de `f`/`x` es la que se cree |
+
+**[C]** Una prueba anterior estaba mal y se ha partido en dos. Se llamaba
+`test_alcanzar_la_viva_no_basta_para_ser_calculable`, y su comentario hablaba
+de «la caja bajó antes», pero sus datos iban de **5.0 a 9.0**: una subida. No
+demostraba lo que su nombre decía. Ahora hay una prueba para superar la viva y
+otra para la bajada real.
+
+**[D]** Todos los casos sintéticos declaran en su docstring **qué semántica de
+`amount` modelan**, porque con la del delta (§ 0.3) algunos de ellos no son
+una anomalía. Sin esa nota, las pruebas fijan el modelo equivocado y parecen
+protegerlo.
+
+### 11.3 Lo que sigue sin cubrir
 
 - El **ROI** y su alineación: refutado por datos, pero el OCR real solo se
   comprueba con una imagen.
@@ -581,27 +835,45 @@ derivados de aprendizaje.
 `35727961646dfaba2c67fd5ee0dbe9b0669d3156f9c6f3fa3585060a93f097e2`
 — **idéntico al de apertura y al declarado**.
 
-**[M]** Suite: `828 passed, 1 failed, 1 skipped, 5 xfailed`. El rojo es `H_1196`.
+**[M]** Suite completa: `867 passed, 1 failed, 1 skipped, 5 xfailed`. El único
+rojo es `motor/test_cm004.py::test_ninguna_mano_tiene_una_bb_b_que_no_pueda_ser_la_ciega`
+por `H_1196`, conservado a propósito.
+
+**[M]** `motor/test_diagnostico_grabador.py`: `39 passed` (eran 24).
+`recorder`: `4 passed`. Autocomprobación `--validar`: **OK**.
 
 ---
 
 ## Conclusión
 
-**Lo que se sostiene.** La semántica acumulada de `amount` **[C]**, con un
-matiz duro y reproducido: la caja que se emite es **la del fotograma en que se
-detectó la acción**, que puede ser la anterior **[C]**. La letra de la acción
-depende de si la ciega se capturó **[O]**, y una caja en `0.0` no se detecta
-nunca **[C]**. El BB tiene un patrón propio de 1.0 por debajo **[O]**, que **no
-es del ROI** **[M]**. Los ids se resuelven con el botón **[M]**, corrigiendo un
-error mío. 498 calls no llegan a la viva **[M]**, de las que 4 son all-ins
-cortos legítimos **[M]** y 189 no tienen explicación evidente **[M]**.
+**El hallazgo que reordena el informe** es que la base la escribieron **dos
+grabadores distintos** a la misma ruta: 1185 manos de `recorder_live.py` y 73
+de `record_hand.py` **[C]**, con tres semánticas distintas de `amount` **[C]**.
+Todo lo que se había construido sobre «`amount` es un acumulado que puede
+haberse leído antes de tiempo» vale para el **5.8 %** de la base, no para el
+94 %.
+
+**Lo que se sostiene.** Los ids se resuelven con el botón **[M]**, corrigiendo
+un error mío. 498 calls no llegan a la viva **[M]**, de las que 4 son all-ins
+cortos legítimos **[M]** y 189 no tienen explicación evidente **[M]**. El BB
+tiene un patrón propio de 1.0 por debajo **[O]**, que **no es del ROI** **[M]**
+y que aparece **en los dos grabadores** por igual **[M]**. Los conteos
+reconciliados dan 5974 exactos **[M]**, ahora con una regresión que obliga a
+que filas y columnas cuadren entre sí.
 
 **Lo que no.** Ninguna ciega. Ningún importe. Ningún `final_pot`. Ningún
-`winner`, `allin` ni posición.
+`winner`, `allin` ni posición. Y ahora, además: **no sabemos qué grabador
+produjo cada mano sin mirar el campo `allin`**, que es un proxy, no una
+declaración.
 
 **El error conceptual que hereda todo el trabajo previo** es tratar
 `final_pot` como referencia. No lo es: es **otra lectura de OCR**, y por eso
 las 592 manos «imposibles» no son necesariamente errores de las acciones.
+
+**Y el más grande que es de esta fase:** se dio por bueno el grabador equivocado
+durante dos fases porque `record_hand.py` era el que se leía y el que se
+probaba, y no es el que produjo casi nada. No lo detectó ningún contraste
+porque todas las pruebas eran coherentes consigo mismas.
 
 **Y el hallazgo que más dato pide con menos evidencia:** una captura del BB y
 otra del pot display. Entre las dos explican la mitad de las anomalías, y las

@@ -115,7 +115,7 @@ def calls_por_debajo(hand):
     """Las calls cuya caja no llega a la viva, con todo el contexto.
 
     NO atribuye causa. Rellena los HECHOS que permiten atribuirlas despues:
-    cuanto falta, si el jugador habiaPreviously Holloway, si tiene acciones
+    cuanto falta, si el jugador ya habia acted antes, si tiene acciones
     despues, si su importe iguala su stack, y si hay un `c 0.0` —que el
     grabador produce cuando traduce un check (`record_hand.py:218`,
     `'pasar': 'c'`)—.
@@ -264,14 +264,27 @@ def clasificar_aportado(hand):
     for calle in CALLES:
         acs = acciones(hand, calle)
         caja_previa = {}
-        repetidas = {(r['calle'], tuple(r['clave'])) for r in repeticiones(hand)}
-        eventos, _v = apuesta_viva(hand, calle)
-        viva_por_indice = {e['i']: e['viva_antes'] for e in eventos}
-
-        # una pasada previa para detectar acciones repetidas de este jugador
+        # Una pasada previa para detectar acciones repetidas de este jugador.
+        #
+        # [DEFECTO CORREGIDO] Antes se calculaba tambien
+        #   repetidas = {(r['calle'], tuple(r['clave'])) for r in repeticiones(hand)}
+        # y NO SE USABA. Es decir, `clasificar_aportado` llamaba a
+        # `repeticiones()`, pagaba el coste, y luego repetia la deteccion con
+        # su propio `vistos`. Dos detecciones paralelas de lo mismo, una
+        # muerta, que pueden divergir sin que nada lo note.
+        #
+        # Ahora hay UNA sola deteccion, la de `vistos`, que queda indicada
+        # abajo. La consequence que queda es que `repeticiones()` —que si
+        # aporta la secuencia y la viva entre las repeticiones— no se usa
+        # aqui. Es una limitacion, no un error: `clasificar_aportado` no
+        # necesita la secuencia, solo la cuenta.
         vistos = collections.Counter(
             (a.get('pos'), a.get('action'), a.get('amount')) for a in acs
             if a.get('action') in ('b', 'c', 'r'))
+        # la viva ANTES de cada accion, que es lo que hace falta para
+        # decir «esperaba X y llego Y»
+        eventos, _v = apuesta_viva(hand, calle)
+        viva_por_indice = {e['i']: e['viva_antes'] for e in eventos}
 
         for i, a in enumerate(acs):
             act = a.get('action')
