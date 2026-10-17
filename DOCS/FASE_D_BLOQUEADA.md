@@ -348,37 +348,115 @@ del camino de victoria por fold, así que una victoria por fold limpia no
 puede tener etiqueta. Eso es una decisión de **orden de filtros**, escrita
 en el contrato firmado.
 
-Y el contrafactual, que es lo que hace falta para poder decir «no se
-calcula» sin excusas: si los dos filtros que se adelantan al camino de fold
-se comprobaran después, de las 83 **78** tendrían etiqueta. La población
-**no está vacía: está bloqueada.**
+Y el contrafactual se retira. Decía: si los dos filtros que se adelantan al
+camino de fold se comprobaran después, de las 83 **78** tendrían etiqueta, y
+la población «no está vacía: está bloqueada».
 
-**Pero las 78 son todas victorias, y cero derrotas.** Por eso no hay AUC: no
-es que falten manos, es que la población tiene **una sola clase**, y un AUC
-binario con una sola clase es **INDEFINIDO** —`auditar_auc.auc_de()`
-devuelve `None` cuando falta una clase—; no «1,0 por definición», que fue
-lo que se escribió aquí y contradecía al código del propio proyecto.
+**No es eso, y el motivo importa para Fase D**: de las 83, **77 ganan por
+fold verificable**, y **0 tienen etiqueta**. La población no está bloqueada
+por el orden de los filtros: **no tiene etiquetas**, porque ninguna de las
+83 está en `muestra()`.
+
+**Y el enunciado de fondo, que es el que decide este bloque:** ganar por
+fold verificable es **necesario y no suficiente**. El camino de fold verifica
+la victoria; la etiqueta la da estar en `muestra()`; y de estas 83 ninguna
+está. Por eso **el orden de los filtros no es la causa** —a él no llega
+ninguna de las 83, porque se caen antes, al leer la etiqueta— y por eso
+moverlo, que es lo que este bloque pedía explorar, **no produce ni una
+observación**: produce las mismas cero.
+
+> Antes decía que de las 83, 78 tendrían etiqueta si los filtros se movieran,
+> y que la población «no está vacía: está bloqueada». Retirado. Mover los
+> filtros no da 78: da cero.
+
+**Pero ninguna de las 83 tiene etiqueta.** No es un problema de clase: no
+hay ninguna observación que evaluar. Y cuando no hay clase, `auditar_auc`
+no devuelve `1,0` ni `0,5`: devuelve **`None`**, que es lo que dice su
+docstring. No es lo mismo, y searoscribió aquí como si lo fuera.
+
+**El motivo real, y cabe en una frase.** El corte en la última acción
+del héroe, cuando cae en preflop, **solo puede caer en una mano que
+termina en el preflop**. Y una mano que termina en el preflop no tiene
+board; sin board no hay ganador verificable; sin ganador verificable
+`muestra()` no le pone etiqueta.
+
+No es un problema de clase. No es un problema de filtros. No es un problema
+de «faltan cartas de los demás». Es que la mano no llega a tener board.
 
 La causa es medible: el corte es la última acción del héroe, y para que sea
-jugada en preflop la mano tiene que terminar ahí. **Y el arreglo está
-medido, no afirmado**: con el corte en la *primera* decisión hay **270**
-observaciones con etiqueta, **216 victorias y 54 derrotas**.
+jugada en preflop la mano tiene que terminar ahí. **Y la alternativa está
+medida, no afirmada**: con el corte en la *primera* decisión hay **67**
+observaciones con etiqueta, **20 positivas y 47 negativas**.
+
+> Antes decía «270 observaciones con etiqueta, 216 victorias y 54 derrotas».
+> Eran cifras de la réplica. Con la etiqueta leída: 67, 20 y 47.
+
+**Y que la alternativa dé 67 no la hace un arreglo**, porque el postflop
+pasa de 48 a cero. Lo que hace B1 **no es añadir** el preflop al objetivo:
+es **sustituir una población por otra**. Las dos cosas, en una tabla:
+
+| | A · última, lo que hay | B1 · primera, la alternativa |
+|---|---:|---:|
+| preflop con etiqueta | **0** | **67** |
+| — `y = 1` | 0 | **20** |
+| — `y = 0` | 0 | **47** |
+| postflop con etiqueta | **48** | **0** |
+| — `y = 1` | **20** | 0 |
+| — `y = 0` | **28** | 0 |
+| total | 48 | 67 |
+
+Los 67 no se suman a los 48: los 48 **desaparecen**. Y lo que el AUC mide
+hoy es justamente el postflop —20 positivas y 28 negativas, las dos
+clases—, que es exactamente lo que B1 borra.
 
 Que son **dos** problemas distintos, y `revision_2` pide no confundirlos:
 
-| | problema | de qué tipo | se arregla |
-|---|---|---|---|
-| 1 | **bloqueo de etiquetado**: el orden de los filtros deja fuera 78 etiquetas verificables | del **instrumento** | moviendo filtros — y da 78 contra 0, que no es un AUC |
-| 2 | **sesgo de la selección del corte**: la última acción del héroe no trae derrotas preflop jugadas | de la **definición del objetivo** | cambiando la definición del corte |
+> **Se retira la separación en dos problemas.** Este documento decía:
+>
+> | | problema | se arregla | qué da |
+> |---|---|---|---|
+> | 1 | **bloqueo de etiquetado**: el orden de los filtros deja fuera etiquetas verificables | moviendo filtros | 78 y 0 — que no es un AUC |
+> | 2 | **sesgo de la selección del corte**: la última acción no trae derrotas preflop jugadas | cambiando el corte | 270 y 54 — las dos clases |
+>
+> **Arreglar el 1 no arregla el 2.**
+>
+> Era una distinción inventada sobre una **réplica equivocada de los
+> filtros**. La columna 1 describía lo que hacía la réplica; la columna 2, lo
+> que hacía la otra. Con la etiqueta **leída** de `muestra()`:
+>
+> | | |
+> |---|---:|
+> | cortes preflop de población B | 83 |
+> | **con etiqueta** | **0** |
+>
+> No hay 78 etiquetas bloqueadas: no hay **ninguna** etiqueta. Y no hay un
+> problema de clase: no hay **ninguna** clase.
+>
+> **Es un problema, y cabe en una frase:**
+>
+> > El corte en la **última** acción del héroe, cuando cae en preflop, solo
+> > puede caer en una mano que **termina** en el preflop. Y una mano que
+> > termina en el preflop no tiene board; sin board no hay ganador
+> > verificable; sin ganador verificable `muestra()` no le pone etiqueta.
+>
+> Y la hipótesis del corte en la primera decisión se explica distinto de
+> lo que se escribió. No es que «traiga las negativas»: es que **trae las
+> manos que no terminan en preflop**. Ahí la mano continúa, se reparten
+> cartas, hay board y hay etiqueta. 67 observaciones, 20 positivas y 47
+> negativas.
 
-**Arreglar el 1 no arregla el 2.** El 2 es un cambio del objetivo, y por eso
-lo que corresponde es **decidirlo**, no implementarlo: eso va en un
+
+Es **un** problema, y ya está escrito más arriba. La hipótesis del
+corte en la primera decisión sigue siendo lo que era: una alternativa
+medida que cambia la definición del objetivo, y que por eso va medida y no
+implementada. Lo que corresponde es **decidirla**, y eso necesita un
 contrato, y el de la muestra está firmado.
 
 Y la **hipótesis** —que el corte en la *primera* decisión del héroe trae las
-manos en las que jugó y perdió— **está medida, y se sostiene**: 270
-observaciones con etiqueta, **216 victorias y 54 derrotas**, frente a 78,
-78 y 0. No está implementada: es un cambio de la definición del objetivo.
+manos en las que jugó y perdió— **está medida, y se sostiene**: **67**
+observaciones con etiqueta, **20 positivas y 47 negativas**, frente a **0**
+bajo el corte en la última. No está implementada: es un cambio de la
+definición del objetivo y va en un contrato.
 
 Detalle completo, con el caso a mano y el contador:
 [`REPRESENTATIVIDAD_23.md`](REPRESENTATIVIDAD_23.md) §6.1, y

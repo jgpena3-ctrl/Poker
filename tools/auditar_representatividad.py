@@ -159,17 +159,28 @@ def etiqueta_de(cal):
 
 
 def resto_de_muestra(cal, h, hero_pos=None):
-    """Resto.motivo = si la observacion es viable. Resto.y = la etiqueta.
+    """Resto.y = la etiqueta. Resto.motivo = si la observacion es viable.
 
-    `y` sale de `muestra()`, SI la mano esta ahi y si no es un reparto.
-    `motivo` es por que no, y se decide con los filtros de `muestra()` mas
-    los dos que se adelantan al camino de fold (`board_completo` y el de
-    las dos cartas con cartas), porque la pregunta que se responde es "la
-    poblacion esta vacia, o esta bloqueada", y solo se responde saltandolos.
+    SON INDEPENDIENTES, y esa es la separacion que faltaba:
+
+      - `y` sale de `muestra()` y no depende de nada. Si la mano tiene
+        etiqueta, aqui esta. Si no tiene, o si es un reparto que el AUC
+        binario excluye, es None. NUNCA se inventa y NUNCA se pierde.
+
+      - `motivo` es el juicio de VIABILIDAD: si esta observacion sirve para
+        el analisis, y si no, por que no. Se decide con los filtros de
+        `muestra()` mas los dos que se adelantan al camino de fold
+        (`board_completo` y el de las dos cartas con cartas).
+
+    Antes los dos estaban acoplados: `y` era None siempre que la
+    observacion no era viable. Con eso, una mano que TIENE etiqueta pero no
+    es viable devolvia None, y eso es indistinguible de "no tiene
+    etiqueta". `revision_2` lo senalo como asimetria del guardia; la
+    asimetria venía de ahi.
+
+    Quien cuenta observaciones pide las DOS cosas. Quien lee etiquetas pide
+    una.
     """
-    # 1. LA ETIQUETA, primero y de una sola fuente. Si la mano no esta en
-    #    `muestra()`, no hay observacion, y da igual lo que digan los
-    #    filtros de abajo.
     etiq = etiqueta_de(cal)
     y_real = etiq.get(h.get('hand_id'))
     if y_real is None:
@@ -177,11 +188,12 @@ def resto_de_muestra(cal, h, hero_pos=None):
     if y_real == 0.5:
         return Resto('reparto: el AUC binario lo excluye', None)
 
-    # 2. Y ahora si, la VIABILIDAD, que es lo que los filtros deciden.
+    # La etiqueta esta. A partir de aqui se juzga la VIABILIDAD, y eso ya no
+    # puede tocar `y`.
     declarados = {cal.id_a_pos(h, i) for i in (h.get('winner') or [])}
     declarados.discard(None)
     if not declarados:
-        return Resto('sin ganador declarado', None)
+        return Resto('sin ganador declarado', y_real)
     scores, mejor = cal.mejores_manos(h)
     llegan = {p for p in declarados
               if cal.llego_al_showdown(h, p) and scores and p in scores}
@@ -190,15 +202,15 @@ def resto_de_muestra(cal, h, hero_pos=None):
         # demas, y por eso los dos filtros de arriba le hacen sombra
         ok_fold, _mot = cal.gano_por_fold(h, declarados)
         if not ok_fold:
-            return Resto('fold no verificable', None)
+            return Resto('fold no verificable', y_real)
         return Resto('ok', y_real)
     # showdown: aqui SI hacen falta las cartas de los demas
     if len(cal.con_cartas(h)) < 2:
-        return Resto('showdown sin cartas de los demas', None)
+        return Resto('showdown sin cartas de los demas', y_real)
     mejores = ({p for p, s_ in scores.items() if s_ == mejor}
                if mejor is not None else set())
     if llegan != mejores:
-        return Resto('ganadores que no son los mejores', None)
+        return Resto('ganadores que no son los mejores', y_real)
     return Resto('ok', y_real)
 
 
@@ -244,6 +256,7 @@ def medir_corte(ins, por_id, cual):
             else None
         r = resto_de_muestra(ins.cal, h, pos)
         filas.append({'id': hid, 'accion': acc, 'y': r.y,
+                      'motivo': r.motivo, 'viable': r.motivo == 'ok',
                       'jugada': acc in ins.ACCIONES_JUGADAS})
     return filas
 
@@ -274,8 +287,12 @@ def medir_todas_calles(ins, por_id, cual='ultima'):
         acts = ((h.get('streets') or {}).get(st) or {}).get('actions') or []
         acc = acts[i]['action'] if i is not None and i < len(acts) else None
         r = resto_de_muestra(ins.cal, h, pos)
-        filas.append({'id': hid, 'calle': st, 'accion': acc, 'y': r.y,
-                      'motivo': r.motivo,
+        filas.append({'id': hid, 'calle': st, 'accion': acc,
+                      # `y` es la etiqueta y `viable` el juicio. Que esten
+                      # juntos pero no encadenados es el punto: una
+                      # observacion cuenta si tiene las dos cosas.
+                      'y': r.y, 'motivo': r.motivo,
+                      'viable': r.motivo == 'ok',
                       'jugada': acc in ins.ACCIONES_JUGADAS,
                       'val': ins.cal.es_validacion(hid)})
     return filas

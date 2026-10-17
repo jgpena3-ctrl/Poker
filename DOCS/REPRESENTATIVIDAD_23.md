@@ -219,16 +219,23 @@ y el héroe **gana por fold** con ganador declarado. El corte se queda en
 preflop por eso —no porque el héroe vuelva a actuar— y no hay board porque
 no se repartieron cartas comunitarias, que es lo correcto.
 
-**Contrafactual**: si `board_completo()` **y** el filtro de las dos cartas
-se comprobaran *después* del camino de fold, ¿cuál sería la población?
+> **Este contrafactual se retira, y la tabla con él.** Preguntaba qué
+> pasaría si los dos filtros se comprobaran *después* del camino de fold.
+> La pregunta estaba mal: la etiqueta no la da el orden de los filtros,
+> la da estar en `muestra()`.
 
-| de las 83 | |
+| de las 83, motivo por el que no son observación | |
 |---|---:|
-| con etiqueta | **78** |
-| — victorias por fold verificables | 77 |
-| — showdown verificable (`H_0485`) | 1 |
-| — `y = 1` | **78** |
-| — `y = 0` | **0** |
+| **sin etiqueta en la muestra** | **83** |
+| — de ellas, **ganan por fold verificable** | **77** |
+| — **con etiqueta** | **0** |
+| reparto (el AUC binario lo excluye) | 0 |
+
+**Y el contrafactual con la pregunta correcta**, que sí tiene respuesta
+interesante: de las 83, **77 ganan por fold verificable**. O sea que el
+camino de fold funciona y el orden de los filtros **no es la causa** del
+cero: a él no llega ninguna de las 83, porque se caen antes, al leer la
+etiqueta.
 
 > **Y aquí se retira una conclusión que era falsa.** Este documento decía
 > antes «ni con otra regla: una observación no es un AUC». Lo único cierto
@@ -257,25 +264,80 @@ se comprobaran *después* del camino de fold, ¿cuál sería la población?
 > medido y no implementado. Detalle en
 > [`LIMITACION_PREFLOP_AUC.md`](LIMITACION_PREFLOP_AUC.md) §4.
 
-### 6.2 Los dos problemas, que no son uno
+### 6.2 Un problema, y su enunciado
 
 `revision_2` pide que no se confundan, y tienen nombres distintos:
 
-| | problema | de qué tipo | se arregla | qué da |
-|---|---|---|---|---|
-| 1 | **bloqueo de etiquetado**: el orden de los filtros deja fuera etiquetas que sí se pueden verificar | del **instrumento** | moviendo filtros | 78 y 0 — que no es un AUC |
-| 2 | **sesgo de la selección del corte**: la última acción del héroe no trae derrotas preflop jugadas | de la **definición del objetivo** | cambiando el corte | 270 y 54 — las dos clases |
+> **Se retira la separación en dos problemas.** Este documento decía:
+>
+> | | problema | se arregla | qué da |
+> |---|---|---|---|
+> | 1 | **bloqueo de etiquetado**: el orden de los filtros deja fuera etiquetas verificables | moviendo filtros | 78 y 0 — que no es un AUC |
+> | 2 | **sesgo de la selección del corte**: la última acción no trae derrotas preflop jugadas | cambiando el corte | 270 y 54 — las dos clases |
+>
+> **Arreglar el 1 no arregla el 2.**
+>
+> Era una distinción inventada sobre una **réplica equivocada de los
+> filtros**. La columna 1 describía lo que hacía la réplica; la columna 2, lo
+> que hacía la otra. Con la etiqueta **leída** de `muestra()`:
+>
+> | | |
+> |---|---:|
+> | cortes preflop de población B | 83 |
+> | **con etiqueta** | **0** |
+>
+> No hay 78 etiquetas bloqueadas: no hay **ninguna** etiqueta. Y no hay un
+> problema de clase: no hay **ninguna** clase.
+>
+> **Es un problema, y cabe en una frase:**
+>
+> > El corte en la **última** acción del héroe, cuando cae en preflop, solo
+> > puede caer en una mano que **termina** en el preflop. Y una mano que
+> > termina en el preflop no tiene board; sin board no hay ganador
+> > verificable; sin ganador verificable `muestra()` no le pone etiqueta.
+>
+> Y la hipótesis del corte en la primera decisión se explica distinto de
+> lo que se escribió. No es que «traiga las negativas»: es que **trae las
+> manos que no terminan en preflop**. Ahí la mano continúa, se reparten
+> cartas, hay board y hay etiqueta. 67 observaciones, 20 positivas y 47
+> negativas.
 
-**Arreglar el 1 no arregla el 2.** Desbloquear las 78 deja 78 victorias y
-cero derrotas, que sigue sin ser un AUC. El único que abre la puerta es el
-2, y es una decisión: si el objetivo es evaluar la **última** decisión del
-héroe o la **primera** —esa elección determina qué ejemplos pueden entrar y
-si la evaluación puede contener victorias y derrotas a la vez—.
+
+Es **un** problema, y ya está escrito más arriba. La hipótesis del
+corte en la primera decisión sigue siendo lo que era: una alternativa
+medida que cambia la definición del objetivo, y que por eso va medida y no
+implementada. Lo que corresponde es **decidirla**, y eso necesita un
+contrato, y el de la muestra está firmado.
 
 La **hipótesis** de que el corte en la primera las trae se ha medido y **se
-sostiene**: 270 con etiqueta, 216 victorias y 54 derrotas, frente a 78, 78 y
-0. No está implementado, y no se implementa aquí: es un cambio de la
-definición del objetivo y va en un contrato.
+sostiene**: **67** observaciones con etiqueta, **20 positivas y 47 negativas**,
+frente a las **0** del corte en la última. No está implementada, y no se
+implementa aquí: es un cambio de la definición del objetivo y va en un
+contrato.
+
+> Antes decía «270 con etiqueta, 216 victorias y 54 derrotas, frente a 78,
+> 78 y 0». Las tres cifras venían de la réplica. Con la etiqueta leída: 67,
+> 20 y 47 frente a 0.
+
+**Y que se sostenga no la convierte en un arreglo.** Lo que hace B1 **no es
+añadir el preflop al objetivo**: es **sustituir una población por otra**.
+
+| | A · última, lo que hay | B1 · primera, la alternativa |
+|---|---:|---:|
+| preflop con etiqueta | **0** | **67** |
+| postflop con etiqueta | **48** | **0** |
+| total | 48 | 67 |
+
+Los 67 no se suman a los 48: los 48 **desaparecen**. Y lo que el AUC mide
+hoy es justamente el postflop.
+
+**Y el motivo por el que el preflop no aporta nada, que es la misma causa que
+en el corte en la última**: una mano que **termina** en el preflop no tiene
+board; sin board no hay ganador verificable; sin ganador verificable
+`muestra()` no le pone etiqueta. Ganar por fold verificable es **necesario
+y no suficiente**: de las 83 cortes preflop, **77 ganan por fold** y **ninguna
+tiene etiqueta**. El camino de fold verifica la victoria; la etiqueta la da
+estar en `muestra()`.
 
 > No se cambia nada. `board_completo()` es parte de una muestra firmada en
 > `CONTRATO_L_SEC.md`: moverlo cambia los 160, la partición, el modelo
@@ -321,7 +383,17 @@ La corrida iba 11 de 23 con 430 equities por combo en caché. A 31,5 s por
 combo —medido, y los 40 de una mano salen todos igual, ninguno patológico—
 las 12 que faltaban eran **4,2 h de CPU** para producir la equity de 23
 manos que no pueden entrar en el AUC: las 98 con etiqueta son todas folds,
-y 23 de ellas son la mitad de la muestra de una sola clase.
+y 23 de ellas son la mitad de una población que, con la etiqueta
+correcta, tiene **cero** observaciones aplicables.
+
+**El motivo real, y cabe en una frase.** El corte en la última acción
+del héroe, cuando cae en preflop, **solo puede caer en una mano que
+termina en el preflop**. Y una mano que termina en el preflop no tiene
+board; sin board no hay ganador verificable; sin ganador verificable
+`muestra()` no le pone etiqueta.
+
+No es un problema de clase. No es un problema de filtros. No es un problema
+de «faltan cartas de los demás». Es que la mano no llega a tener board.
 
 La caché por combo se conserva. Si algún día la pregunta es otra —por
 ejemplo, si la equity predice la fuerza del villano en un *fold*— el trabajo

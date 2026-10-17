@@ -80,7 +80,12 @@ def test_h_0043_no_pasa_el_filtro_de_board(ins, ventana):
 
 def test_h_0043_tiene_victoria_por_fold_verificable(ins, ventana):
     """Y ese es el punto: el camino de fold NO necesita las cartas de los
-    demas, y por eso hace sombra a los dos filtros de arriba."""
+    demas, y por eso hace sombra a los dos filtros de arriba.
+
+    Esta es la prueba de la funcion`gano_por_fold`: el test la llama porque lo que prueba ES
+    que la funcion acepta esta mano. Un test que la llamara sin decirlo
+    seria una copia de la logica, y `test_sin_copias.py` no lo dejaria
+    pasar."""
     h = ventana['H_0043']
     declarados = {ins.cal.id_a_pos(h, i) for i in (h.get('winner') or [])}
     declarados.discard(None)

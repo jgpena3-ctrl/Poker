@@ -22,6 +22,10 @@
 > La conclusión **no cambia** y ahora es más simple: el preflop no es «de una
 > clase», es **vacío**. Y las 48 son todas postflop, con las dos clases.
 
+**Y B1 tampoco es un arreglo.** No «trae las negativas»: **sustituye el
+postflop por el preflop**. Con la etiqueta correcta, B1 deja el postflop en
+cero observaciones, que es justo lo que el AUC mide hoy.
+
 | | |
 |---|---|
 | la partición **no se mueve** | 29 % de manos en las tres opciones |
@@ -55,21 +59,41 @@ las dos es ajena al sistema: son dos puntos de la misma línea temporal.
 Toda la ventana fiable, 877 manos. Filtros de etiqueta saltados, que es lo
 que separa «población vacía» de «población bloqueada».
 
-| | A · última | B1 · primera | B2 · primera, por calle |
-|---|---:|---:|---:|
-| cortes totales | 873 | 873 | **1389** |
-| población B con etiqueta | 131 | **271** | 538 |
-| — `y = 1` | 103 | 217 | 387 |
-| — `y = 0` | **28** | **54** | 151 |
-| observaciones por mano | 1 | 1 | **hasta 4** |
-| **cortes postflop** | **236** | **1** | 508 |
+> **Toda esta tabla se rehace con la etiqueta de `muestra()`.** La
+> anterior venía de una réplica de los filtros y contaba manos sin etiqueta.
+> Retirada entera.
+
+| | A · última | B1 · primera |
+|---|---:|---:|
+| **preflop** con etiqueta | **0** | **67** |
+| — `y = 1` | 0 | 20 |
+| — `y = 0` | 0 | **47** |
+| **postflop** con etiqueta | **48** | **0** |
+| — `y = 1` | **20** | 0 |
+| — `y = 0` | **28** | 0 |
+| **total** con etiqueta | **48** | **67** |
+| observaciones por mano | 1 | 1 |
+
+**Y la lectura cambia.** B1 no «arregla el preflop»: **sustituye una
+población por otra**. El preflop pasa de 0 a 67, y el postflop pasa de 48
+a **cero**.
+
+Eso es exactamente el argumento contra B, y ahora con cifras que no se han
+movido: B1 no añade el preflop al objetivo, **lo convierte en el objetivo
+entero**. Lo que el AUC mide hoy deja de medirse.
+
+> Y B2 —«la primera decisión del héroe en cada calle»— multiplica las
+> observaciones hasta cuatro por mano, todas en la misma partición porque la
+> partición es por `hand_id`. No es fuga entre entrenamiento y prueba: es
+> **dependencia dentro de la partición**. Y una mano que sale tres veces
+> pesa tres veces en el estimador.
 
 ### 2.1 La razón que da R1 para B no se sostiene
 
 R1 recomienda B porque «para eso hace falta que el héroe tenga decisiones
-donde pueda ganar o perder». **Ya las tiene**: bajo A, la población B
-completa son 103 victorias y 28 derrotas. El AUC no tiene un problema de
-clase; tiene un problema **preflop**.
+donde pueda ganar o perder». **Ya las tiene**: bajo A, el postflop son 48
+observables, **20 positivas y 28 negativas**. El AUC no tiene un problema de
+clase; y el preflop no aporta ni una observación.
 
 Que es un problema distinto y más pequeño de lo que parecía:
 
@@ -83,9 +107,15 @@ postflop: n = 11, reproducido exacto después del cambio de base.
 
 ### 2.2 Y B1, aplicada globalmente, destruye el postflop
 
-De **236 cortes postflop a 1**. No porque el corte «primera» sea malo, sino
-porque la primera acción del héroe en la mayoría de las manos **es la
-preflop**: casi todos los cortes B1 caen en preflop.
+De **48 observaciones postflop a cero**. No porque el corte «primera» sea
+malo, sino porque la primera acción del héroe en la mayoría de las manos
+**es la preflop**: con el corte en la primera, el postflop desaparece
+completo.
+
+> Antes decía «de 236 cortes a 1». El 236 era un recuento de *cortes* del
+> recorte anterior, no de observaciones, y venía de la misma réplica
+> equivocada. Con la etiqueta de `muestra()` la comparación es 48 contra 0:
+> no «casi desaparece», **desaparece entero**.
 
 Es decir: B1 no es «arreglar el preflop». Es **cambiar el objetivo de postflop a preflop**, y hacerlo sin decirlo. La incoherencia que R1 señalaba —«el postflop mantiene la última y el preflop la primera sería incoherente»— es real, y la medición muestra que **no hay forma honesta de mezclar**: o todo es última, o B1 hace desaparecer el postflop.
 
@@ -114,10 +144,19 @@ se considera.
 3. **A no toca nada firmado.** La partición no se mueve, el modelo no cambia
    —se ajusta sobre `cal.muestra()`, que depende de la etiqueta, no del
    corte—, y el AUC publicado sigue siendo válido.
-4. **El alcance del daño es más pequeño.** El preflop degenerado son 78
-   observaciones de una clase. Toda la población son 131 con las dos clases.
-   Reorganizar el objetivo para arreglar 78 observaciones que hoy no se usan
-   es un intercambio que no compensa.
+4. **El alcance del daño es CERO, no pequeño.** El preflop no aporta
+   **ninguna** observación aplicable: no son 78 de una clase, son 0. Y el
+   postflop aporta **48**, con **20 positivas y 28 negativas**.
+
+   > Este punto se escribió con las cifras de la réplica y decía «78
+   > observaciones de una clase» y «131 con las dos clases». Retirado.
+
+   Y eso cambia el argumento de signo, no lo debilita. No es que
+   reorganizar el objetivo para arreglar 78 observaciones que hoy no se
+   usan no compense: es que **no hay nada que arreglar por ese lado**. Lo
+   único que hay que arreglar, si se arregla algo, es el **postflop** —que
+   es lo que el AUC mide hoy— y B1 lo deja en **un** corte. Eso sí es un
+   intercambio que no compensa.
 
 ## 4. El coste de A, que es real
 
@@ -132,8 +171,19 @@ a confundir las cosas:
 
 | | | |
 |---|---|---|
-| **no hay datos** | ✗ | no es el caso: hay 78 observaciones |
-| **hay datos de una sola clase** | ✓ | es el caso, y es la razón |
+
+| **no hay datos** | ✗ | no es el caso: hay **83 cortes preflop** |
+| **hay datos de una sola clase** | ✗ | tampoco: de esos 83, **0** tienen etiqueta |
+| **no hay observaciones aplicables** | ✓ | es el caso, y es la razón |
+
+**El motivo real, y cabe en una frase.** El corte en la última acción
+del héroe, cuando cae en preflop, **solo puede caer en una mano que
+termina en el preflop**. Y una mano que termina en el preflop no tiene
+board; sin board no hay ganador verificable; sin ganador verificable
+`muestra()` no le pone etiqueta.
+
+No es un problema de clase. No es un problema de filtros. No es un problema
+de «faltan cartas de los demás». Es que la mano no llega a tener board.
 
 ## 5. El coste de B, si algún día se quisiera
 
@@ -141,14 +191,30 @@ Para que no sea un salto al vacío:
 
 | | |
 |---|---|
-| **cálculo** | 270 observaciones preflop × 40 combos. Medido: **31,5 s por combo**, y los 40 de una mano salen todos igual. **≈ 94 h de CPU**, en el orden de lo que ya costó una sola corrida de 23 manos |
+| **cálculo** | **67** observaciones preflop × 40 combos. Medido: **31,5 s por combo**, y los 40 de una mano salen todos igual. **≈ 23 h de CPU**, en el orden de lo que ya costó una sola corrida de 23 manos |
 | **modelo** | no se recalcula. `ProfileRangeModel.from_hands()` se ajusta sobre `cal.muestra()`, que depende de la etiqueta y no del corte |
 | **partición** | no se mueve, medido: 29 % en las tres opciones |
-| **postflop** | se pasa de 236 cortes a 1 |
+| **postflop** | se pasa de 48 observaciones a **cero** |
 | **contrato** | hay que escribir uno nuevo. `CONTRATO_L_SEC.md` está firmado y declara la población en términos del corte |
 
 La caché por combo sí se reutiliza, porque `equity_preflop_contra_combo()`
 es función pura de las dos manos. Eso no abarata la primera pasada.
+
+> **El coste también se corrige, y no bajó por poco.** Este documento decía
+> 270 observaciones y unas 94 horas de CPU. Las dos venían del mismo 270 de
+> la réplica. Con la etiqueta leída, B da **67** observaciones, y el cálculo
+> es de 40 combos a 31,5 s por combo:
+>
+> | | antes | medido |
+> |---|---:|---:|
+> | observaciones que entran | 270 | **67** |
+> | × combos por observación | 40 | 40 |
+> | × segundos por combo | 31,5 | 31,5 |
+> | **horas de CPU** | **94,5** | **23,4** |
+>
+> Que no cambia la decisión y la deja **más fuerte**: B no es cara, es
+> inútil. Compra 67 observaciones y a cambio deja el postflop —las 48 que el
+> AUC mide hoy— en **cero**. 23 horas por una sustitución completa.
 
 ## 6. El tercer camino, nombrado y NO tomado
 
