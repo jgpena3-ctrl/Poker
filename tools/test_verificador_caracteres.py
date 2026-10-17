@@ -159,25 +159,41 @@ def test_en_cambio_devuelve_todas_las_lineas_no_solo_la_primera():
         'el contrato de en_cambio dice que devuelve todas')
 
 # ============== §2 bis: lo que el diff NO ve, y que es justo lo nuevo
-def test_un_fichero_sin_seguimiento_es_todo_del_cambio(vc=None):
+def test_un_fichero_sin_seguimiento_es_todo_del_cambio():
     """git diff no ve un fichero sin seguimiento. Sin este caso, el
     fichero nuevo de este bloque salio PREEXISTENTE: es el mismo error que
-    R2 pointed, por el otro extremo."""
+    R2 pointed, por el otro extremo.
+
+    El fichero se CREA aqui y se BORRA al final, en vez de usar uno que este
+    mismo test acaba de crear: en cuanto el fichero del test se commitea,
+    deja de estar sin seguimiento y el test empieza a fallar sin que nada
+    haya cambiado. Un test que depende del estado del repositorio es un
+    test que se rompe solo.
+
+    Y el nombre acaba en .tmp, no en .py: PATRONES del verificador son
+    	ools/*.py, y un fichero de prueba no tiene que aparecer en el informe
+    de caracteres.
+    """
     vc = _mod()
-    rel = 'tools/test_verificador_caracteres.py'
-    assert vc._porcelain(rel).startswith('??') or '??' in vc._porcelain(rel), (
-        'este test solo tiene sentido si el fichero sigue SIN SEGUIMIENTO; '
-        'si ya esta commiteado, la asercion lo dira y habra que quitarlo')
-    nuevas = vc.lineas_nuevas(os.path.join(ROOT, rel))
-    assert nuevas, 'un fichero sin seguimiento tiene lineas nuevas'
-    assert min(n for n, _t in nuevas) == 1
-    # Y sale el TEXTO REAL del fichero, linea a linea: un fichero sin
-    # seguimiento es ENTERO nuevo, no un recorte.
-    propio = list(enumerate(open(os.path.join(ROOT, rel),
-                                 encoding='utf-8').read().split(chr(10)), 1))
-    assert nuevas == propio, (
-        'sin seguimiento tiene que devolver el fichero entero; devuelve %d '
-        'lineas de %d' % (len(nuevas), len(propio)))
+    rel = 'tools/_sin_seguimiento.tmp'
+    ruta = os.path.join(ROOT, rel)
+    cuerpo = 'primera\nsegunda\n' + chr(0x435) + 'cirilica\n'
+    try:
+        with open(ruta, 'w', encoding='utf-8') as f:
+            f.write(cuerpo)
+        assert '??' in vc._porcelain(rel), 'el fichero tiene que estar nuevo'
+        nuevas = vc.lineas_nuevas(ruta)
+        propio = list(enumerate(cuerpo.split(chr(10)), 1))
+        assert nuevas == propio, (
+            'sin seguimiento tiene que devolver el fichero ENTERO: %d lineas '
+            'de %d' % (len(nuevas), len(propio)))
+        estado, lineas = vc.en_cambio(ruta, chr(0x435))
+        assert estado is True and lineas == [3], (
+            'y el caracter raro se senala en su linea, la 3')
+    finally:
+        if os.path.exists(ruta):
+            os.remove(ruta)
+    assert not os.path.exists(ruta), 'el test tiene que limpiar'
 
 
 def test_un_fichero_rastreado_y_sin_cambios_no_tiene_lineas_nuevas():
