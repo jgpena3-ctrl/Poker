@@ -150,75 +150,112 @@ def test_h_0485_es_el_showdown_verificable_de_la_poblacion(ins, ventana,
 
 
 # ================================================= la clase, que es el nudo
-def test_las_78_que_se_desbloquearian_son_todas_victorias(ins, ventana,
-                                                         continuaciones):
-    """El numero que hace que no haya AUC, y el que mas cuesta creer.
+def test_las_83_cortes_preflop_no_tienen_ninguna_etiqueta(ins, ventana,
+                                                           continuaciones):
+    """La afirmacion RETIRADA era "las 78 desbloqueadas son todas
+    victorias". No hay 78: hay 83 cortes y NINGUNA etiqueta.
 
-    Con el orden de filtros ACTUAL la poblacion B preflop esta vacia. Si se
-    saltaran los dos filtros que se adelantan al camino de fold, habria 78
-    con etiqueta — y CERO con y = 0.
-
-    El AUC binario daria 1,0 por definicion. No es un AUC malo: es que no
-    hay la clase negativa.
+    El 78 salia de una replica local del etiquetado, dentro del propio
+    test, que contaba como positivas manos que no estan en `muestra()`.
+    Este test ya no tiene copia: usa la funcion de la herramienta.
     """
-    clases = collections.Counter()
+    assert len(continuaciones) == 83, 'cortes preflop de poblacion B'
+    con_y = [h for h in continuaciones if h in ventana
+             and ventana[h]['hand_id'] in _etiquetas(ins)]
+    assert con_y == [], (
+        'HAY %d cortes preflop con etiqueta: %s. Si esto ya no es cero, la '
+        'poblacion preflop cambio de verdad, y hay que mirar POR QUE antes '
+        'de cambiar ningun numero' % (len(con_y), con_y[:6]))
+
+
+def test_el_motivo_de_no_tener_etiqueta_es_que_la_mano_no_tiene_board(
+        ins, ventana, continuaciones):
+    """Y no es un filtro que se pueda mover. Si el heroe juega y la mano se
+    acaba en el preflop, no se repartieron cartas, y sin board no hay
+    ganador verificable."""
+    sin_board = 0
+    con_board_sin_y = 0
     for hid in continuaciones:
         h = ventana[hid]
-        pos = ins.eqm.hero_pos_de(h)
-        _m, y = _etiqueta_posible(ins, h, pos)
-        if y is not None:
-            clases[y] += 1
-    assert clases.get(0.0, 0) == 0, (
-        'HAY %d derrotas. Si las hay, el AUC preflop vuelve a ser una '
-        'pregunta y hay que rehacer el documento' % clases.get(0.0))
-    assert clases.get(1.0, 0) == 78, 'y 78 victorias: %r' % dict(clases)
+        riv = ((h.get('comunitarias') or {}).get('river') or [])
+        if not riv:
+            sin_board += 1
+        elif hid not in _etiquetas(ins):
+            con_board_sin_y += 1
+    assert sin_board + con_board_sin_y == len(continuaciones)
+    assert sin_board >= 75, (
+        'casi todas las manos jugadas en preflop terminan ahi: %d de %d sin '
+        'board' % (sin_board, len(continuaciones)))
+    # y de las que SI tienen board, cuántas tienen etiqueta: muy pocas, y
+    # ese es el resto del problema
+    assert con_board_sin_y <= 8, (
+        'y las que tienen board y no etiqueta son %d. Si(suben mucho, hay '
+        'otra causa y hay que medirla' % con_board_sin_y)
 
 
-def test_la_poblacion_esta_bloqueada_y_no_vacia(ins, ventana,
-                                               continuaciones):
-    """Las tres cosas juntas, que es lo que el documento afirma:
-    83 decisiones, 0 con etiqueta HOY, 78 si se desbloquea.
+def test_el_corte_en_la_primera_si_tiene_etiqueta(ins, ventana):
+    """La otra mitad: con el corte en la PRIMERA decision, la mano continua,
+    se reparten cartas, y aparece la etiqueta. No es un filtro distinto: es
+    que la mano no se acaba."""
+    import importlib.util
+    ruta = os.path.join(ROOT, 'tools', 'auditar_representatividad.py')
+    spec = importlib.util.spec_from_file_location('ar_primera', ruta)
+    ar = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(ar)
+    filas = ar.medir_todas_calles(ins, ventana, 'primera')
+    pre = [f for f in filas if f['jugada'] and f['calle'] == 'preflop'
+           and f['y'] is not None]
+    assert len(pre) == 67, 'preflop con etiqueta, corte en la primera: %d' % len(pre)
+    assert sum(1 for f in pre if f['y'] == 1.0) == 20
+    assert sum(1 for f in pre if f['y'] == 0.0) == 47, (
+        'y con las dos clases, que es lo que hace que el corte en la primera '
+        'traiga algo que el actual no trae')
 
-    "Hoy" no se replica con una funcion propia —eso ya lo hace
-    `_etiqueta_posible()`, que ademas se salta los dos filtros y por eso no
-    puede servir para contar "hoy"—. "Hoy" es la pertenencia REAL a
-    `muestra()`, que es la unica forma de no medir una copia del filtro en
-    vez del filtro.
-    """
-    assert len(continuaciones) == 83
+
+def test_el_postflop_si_tiene_las_dos_clases(ins, ventana):
+    """Y el motivo por el que el AUC se calcula hoy: no es que le falte una
+    clase a la poblacion. El postflop las tiene."""
+    import importlib.util
+    ruta = os.path.join(ROOT, 'tools', 'auditar_representatividad.py')
+    spec = importlib.util.spec_from_file_location('ar_post', ruta)
+    ar = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(ar)
+    filas = ar.medir_todas_calles(ins, ventana, 'ultima')
+    post = [f for f in filas if f['jugada'] and f['calle'] != 'preflop'
+            and f['y'] is not None]
+    assert len(post) == 48, 'postflop con etiqueta: %d' % len(post)
+    assert sum(1 for f in post if f['y'] == 1.0) == 20
+    assert sum(1 for f in post if f['y'] == 0.0) == 28
+
+
+def _etiquetas(ins):
     cal_, val_ = ins.cal.muestra()
-    en_la_muestra = set(hid for hid, _y in cal_ + val_)
-    con_y = len([h for h in continuaciones if h in en_la_muestra])
-    posibles = 0
-    for hid in continuaciones:
-        _m, y = _etiqueta_posible(ins, ventana[hid],
-                                  ins.eqm.hero_pos_de(ventana[hid]))
-        posibles += y is not None
-    assert con_y == 0, 'hoy: %d tienen etiqueta' % con_y
-    assert posibles == 78, 'desbloqueada: %d' % posibles
+    return dict(cal_ + val_)
 
 
 def _etiqueta_posible(ins, h, hero_pos):
-    cal = ins.cal
-    declarados = {cal.id_a_pos(h, i) for i in (h.get('winner') or [])}
-    declarados.discard(None)
-    if not declarados:
-        return 'sin ganador declarado', None
-    scores, mejor = cal.mejores_manos(h)
-    llegan = {p for p in declarados
-              if cal.llego_al_showdown(h, p) and scores and p in scores}
-    if not llegan:
-        ok, _mot = cal.gano_por_fold(h, declarados)
-        return ('ok', 1.0) if ok else ('fold no verificable', None)
-    if len(cal.con_cartas(h)) < 2:
-        return 'showdown sin cartas de los demas', None
-    mejores = {p for p, s_ in scores.items() if s_ == mejor}
-    if llegan != mejores:
-        return 'ganadores que no son los mejores', None
-    return 'ok', (1.0 if hero_pos in llegan else 0.0)
+    """YA NO HAY COPIA. Se usa la funcion de la herramienta.
+
+    Este test tenia su propia replica de los filtros de
+    `muestra()`, y afirmaba 78 victorias y cero derrotas con
+    una logica que ya no es la de la herramienta. Seguiria
+    dando verde con el error dentro, porque no comparte codigo
+    con lo que prueba. Eso es un test que no prueba.
+    """
+    ar = _mod_ar()
+    r = ar.resto_de_muestra(ins.cal, h, hero_pos)
+    return r.motivo, r.y
 
 
-# ------------------------- y el filtro, que es donde esta el bloqueo
+def _mod_ar():
+    import importlib.util
+    ruta = os.path.join(ROOT, 'tools',
+                        'auditar_representatividad.py')
+    spec = importlib.util.spec_from_file_location(
+        'ar_desde_bloqueo', ruta)
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    return m
 def test_el_bloqueo_es_de_ORDEN_no_de_datos(ins, ventana):
     """Los dos filtros van ANTES del camino de fold en `muestra()`. Eso se
     lee del codigo, y se lee porque es la razon entera del hallazgo."""

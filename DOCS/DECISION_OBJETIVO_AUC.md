@@ -7,6 +7,20 @@
 > No es la opción que recomienda `revision_1`, y la razón está medida en la
 > §2: **la razón que da para B no se sostiene**, porque el problema no es
 > que la última decisión no traiga derrotas. Las trae. Trae 28.
+>
+> **Y hay una cuarta corrección de las cifras, que es la de fondo.** La §2
+> usaba 131 / 78 / 53, y esas tres venían de **recalcular la etiqueta** en
+> lugar de leerla. Con la etiqueta de `muestra()`:
+>
+> | | lo publicado antes | lo medido |
+> |---|---:|---:|
+> | preflop con etiqueta | 78 | **0** |
+> | postflop con etiqueta | 53 | **48** |
+> | total | 131 | **48** |
+> | global `y = 1` / `y = 0` | 103 / 28 | **20 / 28** |
+>
+> La conclusión **no cambia** y ahora es más simple: el preflop no es «de una
+> clase», es **vacío**. Y las 48 son todas postflop, con las dos clases.
 
 | | |
 |---|---|
@@ -59,13 +73,13 @@ clase; tiene un problema **preflop**.
 
 Que es un problema distinto y más pequeño de lo que parecía:
 
-| subpoblación | `y = 1` | `y = 0` |
-|---|---:|---:|
-| todas las calles (A) | 103 | **28** |
-| solo preflop (A) | 78 | **0** |
+| subpoblación | n | `y = 1` | `y = 0` |
+|---|---:|---:|---:|
+| todas las calles (A) | **48** | **20** | **28** |
+| solo preflop (A) | **0** | 0 | 0 |
 
-El preflop evaluado en la última acción es degenerado. El resto no. Y el
-AUC publicado es postflop.
+El preflop no aporta **ninguna** observación. Y el AUC publicado es
+postflop: n = 11, reproducido exacto después del cambio de base.
 
 ### 2.2 Y B1, aplicada globalmente, destruye el postflop
 

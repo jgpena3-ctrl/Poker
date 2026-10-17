@@ -237,14 +237,19 @@ se comprobaran *después* del camino de fold, ¿cuál sería la población?
 > demás —por eso existe—, así que la población **no está vacía: está
 > bloqueada** por dos filtros que se adelantan a ese camino.
 >
-> Y desbloqueada daría un AUC **indefinido**: 78 victorias contra 0
-> derrotas, y `auditar_auc.auc_de()` devuelve `None` cuando falta una
-> clase —es lo que dice su docstring—. No «1,0 por definición», que fue lo
-> que se escribió aquí y es falso: el código del proyecto ya devolvía
-> `None` y el documento lo contradecía.
-> **No es que falten manos; es que no hay una sola derrota.**
-> La razón es medible: el corte es la última acción del héroe, y para que
-> sea jugada en preflop la mano tiene que terminar ahí.
+> **Y aquí se retira lo que decía este párrafo.** Se escribió que
+> desbloqueada daría «78 victorias contra 0 derrotas» y un AUC indefinido.
+> **El 78 estaba mal.** Venía de recalcular la etiqueta en vez de leerla.
+>
+> Con la etiqueta de `muestra()`: **cero**. De los 83 cortes preflop de
+> población B, ninguno está en la muestra etiquetada. No es un problema de
+> clase: **no hay ninguna observación aplicable**.
+>
+> La razón, que ya estaba medida en la §6 y no se había conectado: si el
+> héroe juega y la mano se acaba ahí, no se reparten cartas; sin board no hay
+> ganador verificable; sin ganador verificable no hay etiqueta. Y el corte
+> preflop, bajo el corte actual, **solo cae en una mano que termina en
+> preflop**.
 >
 > Y el arreglo está **medido**, no afirmado: con el corte en la *primera*
 > decisión hay **270** observaciones con etiqueta, **216 victorias y 54

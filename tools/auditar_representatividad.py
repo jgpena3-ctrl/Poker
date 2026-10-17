@@ -127,20 +127,57 @@ def sanity_de_cartas():
 Resto = collections.namedtuple('Resto', ('motivo', 'y'))
 
 
-def resto_de_muestra(cal, h, hero_pos=None):
-    """(motivo, y) con los filtros de `muestra()` MENOS los dos que se
-    adelantan al camino de victoria por fold.
+_ETIQUETA = None
 
-    Los dos son `board_completo()` y `len(con_cartas(h)) < 2`, y los dos
-    estan ANTES de `gano_por_fold()`. Se saltan los dos porque la pregunta
-    que se responde es "la poblacion esta vacia, o esta bloqueada", y solo
-    se responde saltandolos.
 
-    `revision_2` parrafo 2 y otra vez: la version anterior de este script
-    mantenia los dos y de ahi salio la conclusion FALSA de que la
-    poblacion era vacia. El filtro no es informacion sobre la poblacion:
-    es informacion sobre el ORDEN de los filtros.
+def etiqueta_de(cal):
+    """`hand_id -> y` de `muestra()`, memoizado.
+
+    LA FUENTE UNICA de la etiqueta. No se calcula, no se deduce, no se
+    replica: se lee.
+
+    Este es el cuarto arreglo del MISMO numero, y el que cierra la familia.
+    `resto_de_muestra()` reproducida los filtros de `muestra()` para decidir
+    si una observacion era viable, y en esa reproduccion devolvia `y = 1.0`
+    sin mirar si la mano era un reparto ni si estaba en la muestra. Medido:
+    83 manos que no estan en `muestra()` contadas como victorias preflop.
+
+    Consecuencia, y la importante: bajo el corte actual la poblacion B
+    preflop no es "de una sola clase", es VACIA. Las 83 son manos en las que
+    el heroe juega y la mano se acaba ahi, y una mano que se acaba ahi no
+    tiene board, y sin board no hay ganador verificable, y sin ganador
+    verificable no hay etiqueta.
+
+    Que el filtro siga decidiendo si la observacion es PUENTE no significa
+    que el filtro decida el VALOR. Son dos cosas y se separan.
     """
+    global _ETIQUETA
+    if _ETIQUETA is None:
+        cal_, val_ = cal.muestra()
+        _ETIQUETA = dict(cal_ + val_)
+    return _ETIQUETA
+
+
+def resto_de_muestra(cal, h, hero_pos=None):
+    """Resto.motivo = si la observacion es viable. Resto.y = la etiqueta.
+
+    `y` sale de `muestra()`, SI la mano esta ahi y si no es un reparto.
+    `motivo` es por que no, y se decide con los filtros de `muestra()` mas
+    los dos que se adelantan al camino de fold (`board_completo` y el de
+    las dos cartas con cartas), porque la pregunta que se responde es "la
+    poblacion esta vacia, o esta bloqueada", y solo se responde saltandolos.
+    """
+    # 1. LA ETIQUETA, primero y de una sola fuente. Si la mano no esta en
+    #    `muestra()`, no hay observacion, y da igual lo que digan los
+    #    filtros de abajo.
+    etiq = etiqueta_de(cal)
+    y_real = etiq.get(h.get('hand_id'))
+    if y_real is None:
+        return Resto('sin etiqueta en la muestra', None)
+    if y_real == 0.5:
+        return Resto('reparto: el AUC binario lo excluye', None)
+
+    # 2. Y ahora si, la VIABILIDAD, que es lo que los filtros deciden.
     declarados = {cal.id_a_pos(h, i) for i in (h.get('winner') or [])}
     declarados.discard(None)
     if not declarados:
@@ -154,7 +191,7 @@ def resto_de_muestra(cal, h, hero_pos=None):
         ok_fold, _mot = cal.gano_por_fold(h, declarados)
         if not ok_fold:
             return Resto('fold no verificable', None)
-        return Resto('ok', 1.0)
+        return Resto('ok', y_real)
     # showdown: aqui SI hacen falta las cartas de los demas
     if len(cal.con_cartas(h)) < 2:
         return Resto('showdown sin cartas de los demas', None)
@@ -162,7 +199,7 @@ def resto_de_muestra(cal, h, hero_pos=None):
                if mejor is not None else set())
     if llegan != mejores:
         return Resto('ganadores que no son los mejores', None)
-    return Resto('ok', 1.0 if hero_pos in llegan else 0.0)
+    return Resto('ok', y_real)
 
 
 def cortes_de(ins, h, pos, cual):
@@ -208,6 +245,39 @@ def medir_corte(ins, por_id, cual):
         r = resto_de_muestra(ins.cal, h, pos)
         filas.append({'id': hid, 'accion': acc, 'y': r.y,
                       'jugada': acc in ins.ACCIONES_JUGADAS})
+    return filas
+
+
+def medir_todas_calles(ins, por_id, cual='ultima'):
+    """Una fila por mano, con la CALLE del corte. Sin filtro de calle.
+
+    `medir_corte()` es la del AUC preflop y descarta todo lo que no sea
+    preflop. Esta es la GLOBAL, y es la que hace falta para separar "la
+    poblacion que tiene las dos clases" de "la poblacion preflop, que no".
+
+    `revision_2` parrafo 1: sin esto, el numero global de 131 salia de un
+    script de medicion y no del repositorio, que es peor que no tenerlo.
+
+    Y registra `calle`, que `medir_corte()` no guardaba: sin eso no se
+    puede restar preflop de postflop sobre las filas, que es lo que R2 pide
+    comprobar.
+    """
+    filas = []
+    for hid in sorted(por_id):
+        h = por_id[hid]
+        pos = ins.eqm.hero_pos_de(h)
+        if not pos:
+            continue
+        st, i = cortes_de(ins, h, pos, cual)
+        if st is None:
+            continue
+        acts = ((h.get('streets') or {}).get(st) or {}).get('actions') or []
+        acc = acts[i]['action'] if i is not None and i < len(acts) else None
+        r = resto_de_muestra(ins.cal, h, pos)
+        filas.append({'id': hid, 'calle': st, 'accion': acc, 'y': r.y,
+                      'motivo': r.motivo,
+                      'jugada': acc in ins.ACCIONES_JUGADAS,
+                      'val': ins.cal.es_validacion(hid)})
     return filas
 
 
@@ -459,11 +529,34 @@ def main():
 
     print()
     print('=' * 76)
-    print('7.  POR QUE NO HAY ETIQUETA: filtro a filtro, no con una teoria')
+    print('7.  POR QUE NO HAY ETIQUETA')
     print('=' * 76)
+    _et = etiqueta_de(ins.cal)
+    n_aplicables = sum(1 for hid in continuaciones if hid in _et)
+    print('   La respuesta es corta y no tiene misterio: NO HAY.')
+    print()
+    print('   De los %d cortes preflop de la poblacion B en la ventana, las' % n_cont)
+    print('   que estan en `muestra()` son:')
+    print()
+    print('      %3d de %3d' % (n_aplicables, n_cont))
+    print()
+    print('   Y el motivo, que ya estaba medido en la 6 y no se habia')
+    print('   conectado: si el heroe JUEGA y la mano SE ACABA AHI, no se')
+    print('   reparten cartas comunitarias. Sin board no hay ganador')
+    print('   verificable, y sin ganador verificable no hay etiqueta.')
+    print()
+    print('   O sea: **no es un problema de clase**. No es que las 83 sean')
+    print('   positivas y falten las negativas. Es que no hay ninguna mano')
+    print('   Applicable: el corte preflop, bajo el corte actual, SOLO puede')
+    print('   caer en una mano que termina en el preflop.')
+    print()
+    print('   Y por eso tampoco es un problema de "faltan cartas de los')
+    print('   demas", ni de "el filtro se adelanta": esas cosas se pueden')
+    print('   verificar o no, pero aunque se verificaran, la etiqueta')
+    print('   seguiria sin existir, porque la mano no llego a tener board.')
+    print()
+    print('   Donde esta el board, en las %d, por si acaso:' % n_cont)
     grupos = collections.Counter()
-    resto = collections.Counter()
-    quien = []
     for hid in continuaciones:
         h = por_id[hid]
         comunitarias = (h.get('comunitarias') or {}).get('river') or []
@@ -477,83 +570,26 @@ def main():
             grupos['B  el board esta en streets, comunitarias vacio'] += 1
         else:
             grupos['C  no hay board en ninguna parte'] += 1
-        r = resto_de_muestra(ins.cal, h, ins.eqm.hero_pos_de(h))
-        resto[r.motivo] += 1
-        if r.motivo == 'ok':
-            quien.append((hid, r.y))
-
-    print('   Donde esta el board, en las %d:' % n_cont)
     for k, v in sorted(grupos.items()):
         print('      %3d  %s' % (v, k))
     print()
-    print('   Que dicen los filtros de `muestra()` que QUEDAN, sin el de')
-    print('   board:')
-    for k, v in resto.most_common():
-        print('      %3d  %s' % (v, k))
-    print()
-    clases = collections.Counter(y for _i, y in quien)
-    print('   CONTRAFACTUAL: %d de las %d tendrian etiqueta, y serian'
-          % (len(quien), n_cont))
-    print('                     %s' % dict(clases))
-    print()
-    print('   O SEA QUE LA POBLACION NO ESTA VACIA: ESTA BLOQUEADA. De las')
-    print('   %d, %d tienen una victoria por fold VERIFICABLE —que es lo que'
-          % (n_cont, len(quien)))
-    print('   `gano_por_fold` sabe comprobar sin las cartas de los demas— y')
-    print('   lo que las deja fuera son dos filtros que se ADELANTAN a ese')
-    print('   camino: `board_completo()` y el de las dos cartas con cartas.')
-    print()
-    print('   PERO: las %d son TODAS victorias. Cero derrotas.' % len(quien))
-    print()
-    print('   Y esa es la razon por la que no hay AUC, que es distinta de la')
-    print('   que se escribio: no es que falten manos, es que la poblacion')
-    print('   tiene UNA SOLA CLASE. El corte es la ULTIMA accion del heroe;')
-    print('   para que ese corte sea una accion jugada en preflop, la mano')
-    print('   tiene que acabar ahi, y si acaba ahi con accion jugada, el')
-    print('   heroe gana. Si siguiera, habria una accion posterior y el corte')
-    print('   se moveria de calle.')
-    print()
-    print('   NO CAMBIA NADA. `board_completo()` es parte de una muestra')
-    print('   firmada en CONTRATO_L_SEC.md; moverlo cambia los 160, la')
-    print('   particion, el modelo ajustado y el AUC ya publicado. Lo que se')
-    print('   mide es si la pregunta SERIA respondible con otra regla.')
-    print()
-    print('   Y la respuesta es que AUN ASI NO: no por falta de manos, sino')
-    print('   porque no hay una sola derrota. Un AUC binario necesita las dos')
-    print('   clases. Y con una sola clase el resultado NO es 1,0 ni 0,5: es')
-    print('   None, INDEFINIDO.')
-    print()
-    print('   Y no son equivalentes. 0,5 es un valor VALIDO cuando hay las dos')
-    print('   clases y las puntuaciones no discriminan; None es la AUSENCIA')
-    print('   de un resultado. `revision_2`: ponerlos equivalentes invita a')
-    print('   leer que un resultado malo y uno inexistente valen lo mismo, y')
-    print('   no valen lo mismo.')
-
-    print()
-    print('   Las que NO se pueden etiquetar ni saltando los dos filtros,')
-    print('   y por que:')
-    for hid in sorted(set(continuaciones) - {i for i, _y in quien}):
-        h = por_id[hid]
-        r = resto_de_muestra(ins.cal, h, ins.eqm.hero_pos_de(h))
-        print('      %-9s %s' % (hid, r.motivo))
+    print('   El AUC propio del proyecto excluye 23 de las 41 de validacion')
+    print('   con el motivo "preflop retrospectiva", que es lo mismo dicho')
+    print('   de otra manera: la equity de esas manos se calculo CON el')
+    print('   futuro conocido, no en el momento de la decision. Y ademas no')
+    print('   tienen etiqueta. Las dos razones coinciden.')
     print()
 
-    print('=' * 76)
-    print('   Y el AUC con una sola clase NO "daria 1,0 por definicion".')
-    print('   `auditar_auc.auc_de()` devuelve None, y lo dice en su docstring:')
-    print('   "None si falta una clase". El valor correcto es INDEFINIDO.')
-    print()
     print()
     print('=' * 76)
     print('8.  EL CORTE EN LA PRIMERA DECISION, MEDIDO')
     print('=' * 76)
     print('   En tres documentos se afirmo, SIN MEDIR, que un corte en la')
     print('   primera decision del heroe traeria las manos en las que')
-    print('   perduo. `revision_2` parrafo 3: es una hipotesis, no basta con')
-    print('   decirla. Aqui esta medida, y SE SOSTIENE:')
+    print('   perduo. `revision_2`: es una hipotesis, no basta con decirla.')
     print()
-    fu = medir_corte(ins, por_id, 'ultima')
-    fp = medir_corte(ins, por_id, 'primera')
+    fu = medir_todas_calles(ins, por_id, 'ultima')
+    fp = medir_todas_calles(ins, por_id, 'primera')
 
     def _cuenta(filas):
         jug = [f for f in filas if f['jugada']]
@@ -563,27 +599,52 @@ def main():
                 sum(1 for f in con if f['y'] == 0.0))
 
     cu, cp = _cuenta(fu), _cuenta(fp)
-    print('   %-28s %14s %14s' % ('', 'ULTIMA (ahora)', 'PRIMERA'))
-    for i, nombre in enumerate(('cortes preflop', 'poblacion B jugada',
+    print('   %-28s %14s %14s'
+          % ('', 'ULTIMA (ahora)', 'PRIMERA'))
+    for i, nombre in enumerate(('cortes totales', 'poblacion B jugada',
                                 'con etiqueta posible', '   y = 1', '   y = 0')):
         print('   %-28s %14d %14d' % (nombre, cu[i], cp[i]))
     print()
-    print('   Y ASI SE SEPARAN LOS DOS PROBLEMAS, que `revision_2` pide que')
-    print('   no se confundan. Son de distinto tipo y no se arreglan igual:')
+    print('   Y AQUI ESTA LA LECCION, que es lo que hace el cambio de corte')
+    print('   distinto de un simple arreglo:')
     print()
-    print('     1. BLOQUEO DE ETIQUETADO. El orden de los filtros deja')
-    print('        fuera etiquetas que SI se pueden verificar. Se arregla')
-    print('        moviendo filtros, y NO cambia la poblacion: siguen')
-    print('        siendo 78 victorias y 0 derrotas.')
+    print('     - Con el corte ACTUAL, la preflop tiene CERO observaciones')
+    print('       aplicables. No es que le falte una clase: es que no hay')
+    print('       ninguna. Y el postflop si tiene las dos clases.')
     print()
-    print('     2. SESGO DE LA SELECCION DEL CORTE. La ULTIMA accion del')
-    print('        heroe selecciona una poblacion SIN derrotas preflop')
-    print('        jugadas. Arreglar el 1 NO arregla el 2.')
+    print('     - Con el corte en la PRIMERA decision, la preflop tiene %d'
+          % cp[2])
+    print('       observaciones aplicables, con %d positivas y %d negativas.'
+          % (cp[3], cp[4]))
     print()
-    print('   El 2 es lo que hay que cambiar, y es un cambio de la DEFINICION')
-    print('   del objetivo. Por eso va MEDIDO y no implementado: eso va en')
-    print('   un contrato, y el de la muestra esta firmado.')
+    print('   La razon de que ahiga haya etiqueta NO es un filtro distinto:')
+    print('   es que la mano CONTINUA. Si el heroe juega y la mano sigue, se')
+    print('   reparten cartas, hay board y hay ganador verificable. Si la')
+    print('   mano se acaba en el preflop, no hay nada de eso.')
     print()
+    print('   O sea que el corte en la primera decision NO "anade las')
+    print('   negativas": ANADE LAS MANOS QUE NO TERMINAN EN PREFLOP. Y de')
+    print('   ahi salen las negativas, porque ahi el heroe tambien pierde.')
+    print()
+    print('   Y con ello queda separado lo que llevaba cuatro bloques')
+    print('   confundido:')
+    print()
+    print('     1. El corte en la ULTIMA accion hace que el corte preflop solo')
+    print('        exista cuando la mano se acaba ahi, y ahi no hay etiqueta.')
+    print('        No es un sesgo de clase: es un filtro de supervivencia.')
+    print()
+    print('     2. El corte en la PRIMERA accion incluye manos que siguen, y')
+    print('        esas si tienen etiqueta y si traen las dos clases.')
+    print()
+    print('   El 2 es un cambio de la DEFINICION del objetivo, y por eso va')
+    print('   MEDIDO y no implementado: eso necesita un contrato, y el de la')
+    print('   muestra esta firmado. Ver `DECISION_OBJETIVO_AUC.md`.')
+    print()
+    print('   Y el AUC con una sola clase NO "daria 1,0 por definicion".')
+    print('   `auditar_auc.auc_de()` devuelve None cuando falta una clase, y')
+    print('   lo dice en su docstring. El valor correcto es INDEFINIDO. Y 0,5')
+    print('   es un valor VALIDO cuando hay las dos clases y no discriminan:')
+    print('   no son lo mismo, ni por remotisimo.')
     print()
     print('=' * 76)
     print('CONCLUSION')

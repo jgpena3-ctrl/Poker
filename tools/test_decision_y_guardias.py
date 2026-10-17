@@ -124,20 +124,28 @@ def test_las_etiquetas_de_una_fila_son_0_o_1_o_nada(ar, ventana):
 def test_los_conteos_de_la_tabla_salen_de_las_filas(ar, ventana):
     """No de un numero escrito al lado. La tabla tiene que ser la cuenta
     de las filas reales, o la tabla y las filas pueden separarse."""
-    filas = ar.medir_corte(ar._inst(), ventana, 'primera')
+    # Las cifras de aqui son LAS DE `muestra()`, no las que salian de la
+    # replica de filtros. Con la etiqueta leida:
+    #   corte en la ULTIMA: preflop 0, postflop 48 (20 y=1, 28 y=0)
+    #   corte en la PRIMERA: preflop 67 (20 y=1, 47 y=0)
+    filas = ar.medir_todas_calles(ar._inst(), ventana, 'primera')
     jugadas = [f for f in filas if f['jugada']]
     con_y = [f for f in jugadas if f['y'] is not None]
-    assert len(jugadas) == 377, 'poblacion B jugada: %d' % len(jugadas)
-    assert len(con_y) == 270, 'con etiqueta: %d' % len(con_y)
-    assert sum(1 for f in con_y if f['y'] == 1.0) == 216
-    assert sum(1 for f in con_y if f['y'] == 0.0) == 54
+    assert len(jugadas) == 378, 'poblacion B jugada: %d' % len(jugadas)
+    assert len(con_y) == 67, 'con etiqueta: %d' % len(con_y)
+    assert sum(1 for f in con_y if f['y'] == 1.0) == 20
+    assert sum(1 for f in con_y if f['y'] == 0.0) == 47
+    assert all(f['calle'] == 'preflop' for f in con_y), (
+        'con el corte en la primera, las que tienen etiqueta son todas '
+        # noqa
+        'preflop: la mano continua y ahi si hay board')
 
 
 def test_la_tabla_y_las_filas_no_pueden_ser_cosas_distintas(ar, ventana):
     """La comprobacion cruzada: `resto_de_muestra` sobre las mismas filas que
     usa la tabla tiene que dar lo mismo que el campo `y` de esas filas."""
     inst = ar._inst()
-    filas = ar.medir_corte(inst, ventana, 'primera')
+    filas = ar.medir_todas_calles(inst, ventana, 'primera')
     disagreements = 0
     for f in filas[:80]:
         h = ventana[f['id']]

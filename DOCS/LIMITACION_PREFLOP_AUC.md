@@ -9,10 +9,17 @@
 
 ## 1. El hecho
 
-**En esta base, la población B no tiene ninguna decisión preflop *con
-etiqueta*.** Las decisiones **existen** —83— pero están bloqueadas por el
-orden de filtros, y desbloqueadas serían de **una sola clase**. Las dos
-cosas se miden abajo, y las dos importan.
+**En esta base, la población B no tiene NINGUNA decisión preflop.** No «de
+una sola clase»: ninguna. Hay 83 cortes preflop con acción jugada, y **0**
+de ellos están en la muestra etiquetada.
+
+> **Cuarta corrección de esta cifra, y la de fondo.** Se escribió antes que
+> eran «78 con etiqueta, todas victorias, una sola clase» y que la
+> población estaba «bloqueada, no vacía». Todo eso venía de **recalcular la
+> etiqueta** en lugar de leerla. Las 83 que se contaban como victorias están,
+> una a una, **fuera de `muestra()`**: no son «positivas sin etiqueta», son
+> manos sin etiqueta. Medido identificador a identificador en
+> [`REPRESENTATIVIDAD_23.md`](REPRESENTATIVIDAD_23.md) §6.3.
 
 La población B es la del AUC: «el héroe **continúa** (`b`/`c`/`r`) o
 checkea (`x`)», en la partición de validación
@@ -82,10 +89,19 @@ Dónde está el board, en las 83:
 | fold no verificable (dos jugadores sin foldear) | 4 |
 | showdown sin cartas de los demás | 1 |
 
-**La población no está vacía: está BLOQUEADA.** `gano_por_fold()` existe
-precisamente para verificar una victoria por fold **sin** las cartas de los
-demás jugadores, y funciona en 77 de las 83. Lo que las deja fuera son dos
-filtros que se **adelantan** a ese camino:
+**La población está vacía, y no es por el filtro.** `gano_por_fold()`
+funciona: verifica una victoria por fold sin las cartas de los demás. Lo que
+no existe es la etiqueta, y no existe por un motivo anterior a cualquier
+filtro:
+
+> Si el héroe juega y la mano **se acaba ahí**, no se reparten cartas
+> comunitarias. Sin board no hay ganador verificable. Sin ganador
+> verificable no hay etiqueta.
+
+Y el corte preflop, bajo el corte actual, **solo puede caer en una mano que
+termina en el preflop**. De ahí el cero.
+
+Los dos filtros que se adelantan existen, y son estos:
 
 ```python
 if not board_completo(h):      continue   # <- 83 se caen aqui
