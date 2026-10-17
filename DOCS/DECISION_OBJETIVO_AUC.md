@@ -88,6 +88,60 @@ entero**. Lo que el AUC mide hoy deja de medirse.
 > **dependencia dentro de la partición**. Y una mano que sale tres veces
 > pesa tres veces en el estimador.
 
+### La corrección de fondo: la etiqueta se lee, no se calcula
+
+Todo lo de arriba viene de una cosa: **la etiqueta estaba mal.** Y estaba mal
+porque no se leía, sino que **se calculaba**.
+
+**La etiqueta se lee.** Esa es la regla, en activa y en presente, porque es
+la que hay que poder citar sin parafrasearla.
+
+Y no se calcula. Eso es lo que estaba mal, y es la razón de la corrección.
+
+El filtro de la herramienta replicaba los de `calibrar.muestra()` para decidir
+si una observación era viable, y en el camino de victoria por fold devolvía
+`y = 1.0` sin mirar dos cosas: si la mano era un reparto, que `muestra()`
+acepta y el AUC binario excluye; y si la mano estaba siquiera en
+`muestra()`. De ahí el 78.
+
+**Ahora hay una sola fuente de verdad: `muestra()`.** El filtro decide si la
+observación es viable y por qué no lo es; `muestra()` decide el valor.
+
+Y esa separación no es de estilo, es el contrato. Antes `y` y el motivo
+estaban **acoplados**: `y` era `None` siempre que la observación no era viable.
+Con eso, una mano que **tiene** etiqueta y no es viable devolvía `None`, y eso
+es indistinguible de «no tiene etiqueta».
+
+| lo que devuelve `y` | lo que significa | antes |
+|---|---|---|
+| `None` | la mano no está en la muestra, o es un reparto | las dos cosas, y también «tiene etiqueta pero no era viable» |
+| `0.0` / `1.0` | la etiqueta de `muestra()` | igual |
+
+**Ahora son independientes.** `y` es la etiqueta y no depende del juicio de
+viabilidad. `motivo` es el juicio, y ya no puede tocar `y`.
+
+#### Y lo que se midió antes de cambiar nada
+
+| | |
+|---|---:|
+| etiquetas **inventadas** (no hay etiqueta y devuelve una) | **0** |
+| etiquetas **distintas** de las de `muestra()` | **0** |
+| etiquetas **perdidas** (la hay y devuelve `None`) | **0** |
+
+En una frase, y para que se pueda citar sin parafrasear: **hoy la medición da
+0 inventadas, 0 distorsionadas y 0 perdidas.**
+
+**Y aquí está el matiz que hay que leer con esos ceros: hoy no se pierde
+ninguna, y por eso el contrato estricto pasaba. Pasaba por suerte.**
+
+Si mañana una mano etiquetada deja de ser viable, el código antiguo la habría
+devuelto como `None`, sin rastro y sin motivo. El arreglo no es que hoy no se
+pierda ninguna: es que **ya no se puede perder aunque las hubiera**. El contrato se sostiene por construcción.
+
+Y no por coincidencia.
+
+Y esa es la diferencia entre «el test pasa» y «el contrato se sostiene».
+
 ### 2.1 La razón que da R1 para B no se sostiene
 
 R1 recomienda B porque «para eso hace falta que el héroe tenga decisiones

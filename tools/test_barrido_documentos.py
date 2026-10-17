@@ -9,16 +9,23 @@ Por eso el primer test mete un documento con una violacion en un arbol
 temporal y comprueba que la ve. Si el barrido no la ve, EL TEST falla —que
 es lo que tiene que hacer para servir de algo.
 
-Y los dos falsos positivos que EL BARRIDO DIO, quedan como tests de que no
-vuelven. Los dos eran numeros que coinciden y no son el mismo numero:
+Y los tres falsos positivos que EL BARRIDO DIO quedan como tests de que no
+vuelven, en `test_falsos_positivos.py`. Los tres son numeros que coinciden y
+no son el mismo numero:
 
-    FASE_D_PLAN.md   | **TOTAL** | **78** |   -> total de DEFECTOS
-    TECNICO.md       perfil con mas muestra, 236 manos  -> tamaño de un
-                                                        PERFIL
+    FASE_D_PLAN.md     | **TOTAL** | **78** |  -> total de DEFECTOS
+    TECNICO.md         perfil con mas muestra, 236 manos  -> tamaño de un
+                                                             PERFIL
+    CONTRATO_PREFLOP   son 2 270 millones  -> el 270 es la cola de un numero
 
-Y los dos seromataron mirando donde esta el sujeto: el encabezado de la
-tabla, y el sujeto de la frase. Un numero dentro de una fila no dice de que
-es, y una palabra suelta como "muestra" aparece en prosa corriente.
+Los tres se resolvieron mirando DONDE ESTA EL SUJETO: el encabezado de la
+tabla, la palabra que lo dice, y el numero entero que es. Un numero dentro
+de una fila no dice de que es, y una palabra suelta como "muestra" aparece
+en prosa corriente.
+
+Y pytest NO avisa de nada de esto: dos tests con el mismo nombre en
+ficheros distintos se ejecutan los dos, los dos pasan, y el color es
+verde. Por eso hace falta `test_sin_duplicados.py`.
 """
 import io
 import os
@@ -87,45 +94,3 @@ def test_el_barrido_no_se_equivoca_con_una_cita():
             'senala una cita: %r' % salida)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
-
-
-# ============================== los dos falsos positivos, que no vuelven
-def test_un_total_de_defectos_no_es_el_total_de_observaciones():
-    """`FASE_D_PLAN.md` tiene `| TOTAL | 78 |`, y ese 78 es la suma de cuatro
-    DEFECTOS de datos. La fila no lo dice; lo dice el encabezado."""
-    texto = ('| defecto | publicado | ahora |\n'
-             '|---|---:|---:|\n'
-             '| `IMPORTE_SUBIDA` | 36 | 31 |\n'
-             '| **TOTAL** | **78** | **51** |\n')
-    assert barrido.frases_retiradas_en(texto)[0] == [], (
-        'un total de defectos no es un total de observaciones. El sujeto esta '
-        'en el ENCABEZADO, y por eso hay que mirar ahi y no en la fila')
-
-
-def test_el_tamanio_de_un_perfil_no_es_un_corte_postflop():
-    """`TECNICO.md` dice "perfil con mas muestra: ... 236 manos", y ese 236
-    es el numero de manos de un perfil del grid.
-
-    Y el motivo de que saliera: "muestra" estaba en la lista de palabras de
-    poblacion, y "perfil con mas muestra" no es la muestra etiquetada. Una
-    palabra que aparece en prosa corriente no puede decidir si un numero es el
-    retirado."""
-    texto = ('- Resultados reales (perfil con mas muestra): '
-             'Regular/no_raise 236 manos (open 51, fold 123).\n')
-    assert barrido.frases_retiradas_en(texto)[0] == [], (
-        'el tamano de un perfil no es un numero de cortes postflop')
-
-
-def test_una_mano_con_etiqueta_sigue_siendo_una_observacion():
-    """Y el caso contrario: que la regla NO se haya quedado tan estrecha que
-    deje pasar lo que tiene que senalar. Este es el que la regla existe para
-    cazar."""
-    texto = ('| | |\n'
-             '|---|---:|\n'
-             '| cortes preflop de poblacion B | 83 |\n'
-             '| con etiqueta | **78** |\n')
-    malas, _cit = barrido.frases_retiradas_en(texto)
-    assert malas, (
-        'la regla ya no ve un 78 afirmado sobre la poblacion. Se ha '
-        'estrechado de mas: cabe mas un numero retirado sin que lo vea nadie')
-    assert malas[0][1] == '78'

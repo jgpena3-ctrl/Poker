@@ -303,6 +303,73 @@ def test_la_seccion_8_mide_el_corte_que_dice_medir():
                                                     (calle, idx)))
 
 
+# ============ 2. la frase con la que R2 pregunta, y las dos mitas de la regla
+#
+# "cero derrotas" estaba en RETIRADAS desde el principio, y ningun test la
+# usaba: los de la regla usaban 270, 131 y "una sola clase", que son las
+# frases que aparecian en los documentos que se leyeron.
+#
+# Eso es un sesgo de muestreo en los propios tests — se prueban los casos que
+# se encuentran — y su coste es que una frase sin probar puede romperse sin
+# avisar. Aqui se prueba la nombrada, y en las DOS mitas, porque una sola no
+# demuestra nada: un filtro que descartara siempre pasaria las dos.
+FRASE_R2 = 'cero derrotas'
+
+
+def test_una_cita_de_cero_derrotas_no_cuenta_como_afirmacion():
+    """La primera mitad.
+
+    Y no es tolerancia: es lo correcto. Una retraccion TIENE que citar lo que
+    retira, o no se ve que se corrigio y parece que siempre se dijo lo nuevo."""
+    texto = ('Una correccion de las cifras del AUC.\n'
+             '\n'
+             '> Antes decia ' + FRASE_R2 + ', y 131 observaciones con '
+             'etiqueta. Retirado: con la etiqueta leida son 48.\n'
+             '\n'
+             'Hoy la poblacion B postflop tiene 48 observaciones con etiqueta, '
+             '20 positivas y 28 negativas.\n')
+    assert afirmada_sin_negar(texto, FRASE_R2) == [], (
+        'una cita se esta contando como afirmacion: %r'
+        % afirmada_sin_negar(texto, FRASE_R2))
+    assert citada(texto, FRASE_R2) is True, (
+        'y ademas la cita no se ve, que es peor: la retraccion no deja '
+        'constancia de que se corrigio')
+
+
+def test_una_afirmacion_de_cero_derrotas_si_cuenta():
+    """La segunda mitad, y es la que hace que la primera signifique algo."""
+    texto = ('La poblacion B postflop tiene 48 observaciones con etiqueta.\n'
+             '\n'
+             'En preflop hay ' + FRASE_R2 + ', y eso es lo que hace que el AUC '
+             'no se pueda calcular ahi.\n')
+    assert afirmada_sin_negar(texto, FRASE_R2) == [3], (
+        'una AFIRMACION no se esta contando: %r'
+        % afirmada_sin_negar(texto, FRASE_R2))
+
+
+def test_los_dos_casos_juntos_dan_distinto():
+    """Y los dos en el MISMO texto, que es donde un filtro se delata. Si el
+    mismo texto dice las dos cosas y el filtro devuelve lo mismo para las
+    dos, esta roto."""
+    texto = ('Una correccion.\n'
+             '\n'
+             '> Antes: ' + FRASE_R2 + '. Retirado.\n'
+             '\n'
+             'Y en el postflop sigue habiendo ' + FRASE_R2 + ', que es lo '
+             'que impide calcular el AUC preflop.\n')
+    assert afirmada_sin_negar(texto, FRASE_R2) == [5], (
+        'con las dos en el mismo texto tiene que salir SOLO la afirmacion, '
+        'que esta en la linea 5: %r' % afirmada_sin_negar(texto, FRASE_R2))
+
+
+def test_la_frase_de_r2_sigue_en_la_lista_de_retiradas():
+    """Y que no se pueda quitar de la lista sin que se note. Es la frase que
+    se nombro, y una frase retirada que sale de la lista deja de cazar."""
+    from retraccion_scan import RETIRADAS
+    assert FRASE_R2 in [f for f, _c in RETIRADAS], (
+        '"cero derrotas" ha salido de RETIRADAS: el escaner ya no la caza')
+
+
 # ============================ y el escaner comun, probado a si mismo
 def test_el_escaner_comun_no_tiene_una_copia_aqui():
     """La regla vive en `retraccion_scan`. Este fichero la usa y no la

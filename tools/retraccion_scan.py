@@ -254,26 +254,43 @@ def citada(texto, frase):
     return any(cita(l) and baja in l.lower() for l in texto.split('\n'))
 
 
+# Delimitadores de CLAUSULA, que son mas finos que los de oracion.
+#
+# La coma y la raya Dividen la oracion en partes que pueden tener polaridad
+# propia. Esto ha pasado TRES veces con alcances distintos:
+#
+#   oracion -> linea    «Y no es un arreglo. Lo que hace B1 es sustituir...»
+#   linea   -> oracion  el caso de arriba, al reves
+#   oracion -> clausula «En preflop hay cero derrotas, y eso es lo que hace
+#                           que el AUC no se pueda calcular ahi.»
+#
+# El tercero: la primera clausula AFIRMA y la segunda lleva su propia
+# negacion. Con la oracion entera, el «no» de la segunda descarta la primera.
+#
+# Y SE PUEDE SIN ROMPER NADA, porque esta ventana es solo para la POLARIDAD.
+# El emparejamiento de la frase se hace sobre el texto entero —ver
+# `_coincidencias()`—, asi que una frase con coma dentro sigue encontrandose.
+# Lo que se parte es la ventana en la que se busca el «no», no la ventana en
+# la que se busca la frase.
+_DELIMITADORES_CLAUSULA = ('.', ';', ':', ',', '\u2014', '!', '?', '\n')
+_DELIMITADORES_ORACION = ('.', ';', ':', '!', '?', '\n')
+
+
 def _oracion_que_rodea(unido, pos):
-    """La oracion del texto que contiene la posicion `pos`.
+    """La clausula del texto que contiene la posicion `pos`.
 
-    Delimitadores: punto, punto y coma, dos puntos, exclamacion,
-    interrogacion y salto de linea.
+    O sea: la oracion, partida por el delimitador mas cercano antes de la
+    frase. Es la ventana en la que se busca la POLARIDAD, y solo en esa.
 
-    Y el motivo de mirar la oracion y no la linea:
-
-        Y **no es un arreglo**, y esto hay que decirlo. Lo que B1 hace es
-        **sustituir una poblacion por otra**.
-
-    La oracion de «sustituye» no esta negada. La LINEA empieza con «no es»,
-    y si se mira la linea el detector dice que el documento esta mal cuando
-    esta bien. Una linea de Markdown puede tener cuatro oraciones, y la
-    polaridad de una no es la de las otras tres.
+    Que es lo que hace que el filtro no discriminate dos mitades de una
+    oracion que no se parecen. Y lo que evita el fallo contrario: una linea
+    entera con cuatro oraciones donde la polaridad de una no es la de las
+    otras tres.
     """
-    corte = max(unido.rfind(c, 0, pos) for c in ('.', ';', ':', '!', '?', '\n'))
+    corte = max(unido.rfind(c, 0, pos)
+                for c in _DELIMITADORES_CLAUSULA)
     fin = pos
-    while (fin < len(unido)
-           and unido[fin] not in ('.', ';', ':', '!', '?', '\n')):
+    while fin < len(unido) and unido[fin] not in _DELIMITADORES_CLAUSULA:
         fin += 1
     return unido[corte + 1:fin]
 
