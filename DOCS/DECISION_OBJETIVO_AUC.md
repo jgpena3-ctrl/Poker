@@ -144,10 +144,6 @@ Y esa es la diferencia entre «el test pasa» y «el contrato se sostiene».
 
 ### Y `y = 0`: las manos que el héroe pierde, por dos vías
 
-> **Lo que se decía, y lo que se retira:**
->
-> «`y = 0` no es de los folds, es de los folds que no están en `muestra()``
-
 Y un encabezado como el de arriba es el PEOR sitio para una frase que se
 retira: es lo primero que se lee y lo último que se olvida. Si solo se lee
 el título, el documento afirma lo contrario de lo que sostiene.

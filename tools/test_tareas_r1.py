@@ -203,50 +203,105 @@ def test_los_tests_de_los_contratos_caen_si_el_contrato_cambia(nombre):
         with io.open(ruta, encoding='utf-8') as f:
             texto = f.read()
 
-        # (a) rotura de AFIRMACION: se cambia una palabra de una frase que el
-        #     proyecto depende. Se elige una que aparece y que el test exige.
-        clave = ('héro continúa', 'héro continua', 'hero continúa',
-                 'enumeraci', 'varianza')
-        cambiada = None
-        for c in clave:
-            if c in texto:
-                cambiada = texto.replace(c, 'X' * len(c), 1)
-                break
-        assert cambiada is not None, (
-            '%s no tiene ninguna de las frases que el test exige: hay que '
-            'actualizar el test, que es lo que se comprueba aqui' % nombre)
+        # (a) rotura de AFIRMACION: NO queda ninguna forma de la afirmacion.
+        #
+        # Y NO una. Una version anterior cambiala primera aparicion de la
+        # primera variante que encontraba, y con eso el test de contenido NO
+        # caia — porque el test acepta cinco variantes y quedaban cuatro.
+        #
+        # O sea: la mutacion no era una rotura. Y esa es la TERCERA vez que
+        # una rotura resulta parcial, con la misma forma: cambiar una
+        # aparicion no es cambiar el concepto.
+        #
+        # Que es la version de este bloque de «no repetir lo que se retira»:
+        # una retraccion se retira en todas sus formas, no en una.
+        import test_contratos_firmados as _cf
+        cambiada = texto
+        tocadas = 0
+        for clave in _cf.AFIRMACIONES[nombre]:
+            _, formas, _porque = clave
+            for forma in formas:
+                if forma in cambiada:
+                    cambiada = cambiada.replace(forma, '§' * len(forma))
+                    tocadas += 1
+        assert tocadas, (
+            '%s no tiene ninguna de las formas que el test exige: hay que '
+            'actualizar AFIRMACIONES, que es lo que se comprueba aqui'
+            % nombre)
 
         env = dict(os.environ)
         env['POKER_DOCS_DIR'] = destino
         env['PYTHONPATH'] = os.path.join(ROOT, 'tools')
         with io.open(ruta, 'w', encoding='utf-8', newline='') as f:
             f.write(cambiada)
+        # SOLO el test de CONTENIDO, y solo ese.
+        #
+        # Y esto no es un detalle de R2, es la diferencia entre acreditar un
+        # mecanismo y acreditar el otro por descuento. Al mutar el TEXTO
+        # cambian las dos cosas —el contenido y la huella— asi que comprobar
+        # solo el exit code demuestra que «algo ha caido», no QUE.
+        #
+        # Y el caso que haria falta para verlo: si el test de contenido no
+        # mirase el contrato, la mutacion caeria SOLO por la huella y este
+        # test pasaria igualmente.
         r = subprocess.run(
             [sys.executable, '-m', 'pytest',
-             os.path.join(ROOT, 'tools', 'test_contratos_firmados.py'),
+             os.path.join(ROOT, 'tools',
+                          'test_contratos_firmados.py')
+             + '::test_los_contratos_dicen_lo_que_el_proyecto_les_pide',
              '-q', '--no-header', '-p', 'no:cacheprovider'],
             cwd=ROOT, env=env, stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT)
         assert r.returncode != 0, (
-            'los tests de los contratos NO han caido al cambiar %s. O sea '
-            'que no vigilan su contenido. Salida:\n%s'
+            'el test de CONTENIDO no ha caido al cambiar la frase de la que %s '
+            'depende. O sea que la comprobacion de contenido no vigila: '
+            'puede estar certificada por la huella sin serlo.\n\nSalida:\n%s'
             % (nombre, r.stdout.decode('utf-8', 'replace')[-900:]))
 
         # (b) rotura de HUELLA: una palabra que no cambia el significado
+        # (b) rotura de HUELLA: el TEXTO cambia y el SENTIDO no. Se cambia
+        #     la primera palabra suelta, que es lo mas seguro: ninguna
+        #     afirmacion del contrato la contiene.
+        #
+        # Y aqui no hay problema de parcialidad: «el» esta en casi todas las
+        # frases, y cambiarlo no altera ninguna afirmacion. Lo que tiene que
+        # caer es la huella, y solo la huella.
+        primera = texto.find('el')
+        assert primera > 0, 'no se ha encontrado la palabra a cambiar'
         with io.open(ruta, 'w', encoding='utf-8', newline='') as f:
-            f.write(texto.replace('el', 'EL', 1))
+            f.write(texto[:primera] + 'EL' + texto[primera + 2:])
+        # Y aqui SOLO el de la huella. Un cambio cosmetico no altera ninguna
+        # afirmacion, asi que el de contenido NO tiene por que caer: lo que
+        # tiene que caer es el de la huella.
         r = subprocess.run(
             [sys.executable, '-m', 'pytest',
-             os.path.join(ROOT, 'tools', 'test_contratos_firmados.py'),
+             os.path.join(ROOT, 'tools',
+                          'test_contratos_firmados.py')
+             + '::test_los_contratos_no_cambian_sin_que_se_sepa',
              '-q', '--no-header', '-p', 'no:cacheprovider'],
             cwd=ROOT, env=env, stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT)
         assert r.returncode != 0, (
-            'los tests NO han caido al cambiar una palabra sin significado. '
-            'Y eso es lo que hace la huella: un contrato firmado que cambia '
-            'en silencio no esta firmado, ni siquiera si el cambio es '
-            'cosmetico. Salida:\n%s'
+            'el test de HUELLA no ha caido al cambiar una palabra sin '
+            'significado. Y eso es lo que hace la huella: un contrato '
+            'firmado que cambia en silencio no esta firmado, ni siquiera si '
+            'el cambio es cosmetico.\n\nSalida:\n%s'
             % r.stdout.decode('utf-8', 'replace')[-900:])
+        # y el de contenido NO tiene que caer: si caiase, seria porque mira
+        # algo que no es una afirmacion, que es justo lo que la huella cubre
+        r2 = subprocess.run(
+            [sys.executable, '-m', 'pytest',
+             os.path.join(ROOT, 'tools',
+                          'test_contratos_firmados.py')
+             + '::test_los_contratos_dicen_lo_que_el_proyecto_les_pide',
+             '-q', '--no-header', '-p', 'no:cacheprovider'],
+            cwd=ROOT, env=env, stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT)
+        assert r2.returncode == 0, (
+            'el test de CONTENIDO tambien ha caido con un cambio cosmetico. '
+            'No deberia: un cambio de redaccion no altera ninguna '
+            'afirmacion. Y si lo hace, el mecanismo se solapan y no son dos '
+            'mecanismos sino uno.')
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

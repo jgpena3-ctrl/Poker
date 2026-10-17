@@ -245,43 +245,88 @@ def test_el_limite_de_cobertura_esta_escrito_aqui():
 
 
 # ==================== y la estrategia textual, que R2 tambien senala
-def test_la_orbita_aguanta_variantes_de_formato():
-    """R2: `_orbita_de_la_tesis()` delimita por puntuacion y saltos de linea, y
-    eso depende de la estructura textual elegida. Los casos deberian cubrir las
-    variantes que el documento considera legitimas.
+def test_la_orbita_aguanta_las_cuatro_variantes_documentadas():
+    """Las CUATRA, y construidas con las cadenas que el docstring declara.
 
-    Y hay cuatro que son legitimas y que la version inicial no cubria:
+    R2 lo senalo:
 
-        **El filtro es el CORRECTO.** Eso **no** esta demostrado
-        **El filtro es el CORRECTO**.
-        Eso **no** esta demostrado
-        **El filtro es el CORRECTO** — Eso **no** esta demostrado
-        El filtro es el CORRECTO. Eso **no** esta demostrado
+        la documentacion enumera cuatro variantes, pero los casos
+        construidos no reproducen exactamente las cuatro
 
-    La clave es que la tesis y su polaridad esten EN LA MISMA ORACION, y en
-    las cuatro lo estan. Si alguien las separase con un punto —la tesis
-    cerrada y la negacion en otra frase— la orbita no la alcanzaria, y eso
-    si seria un problema, porque la negacion tiene que ser de la tesis."""
+    Y tiene razon: las construidas eran cuatro CIERRES sueltos, no las cuatro
+    frases. Un test que dice «cuatro variantes» y prueba cuatro cadenas que no
+    son las documentadas esta probando algo, y no es lo que dice que prueba.
+
+    Y faltaba la cuarta de verdad: la SIN marcado Markdown, que no estaba
+    representada en absoluto.
+
+    O sea: un caso de formato que no se cubre es un caso que nadie sabe que
+    existe. Y el de la sin marcado es el mas comun.
+    """
     from test_causa_no_validez import _orbita_de_la_tesis
-    # Y los textos llevan encabezado `### 4.3`, porque la orbita se busca POR
-    # ESTRUCTURA y no por offset. Una version anterior los construia sin
-    # encabezado, la busqueda devolvia -1, y la orbita salia vacia en los
-    # cuatro casos — o sea, el test pasaba por un motivo que no era el que
-    # decia comprobar.
-    variantes = (
-        ('.** Eso **no** esta demostrado', 'no'),
-        ('**\nEso **no** esta demostrado', 'no'),
-        ('** — Eso **no** esta demostrado', 'no'),
-        ('.** Eso **no** esta demostrado, y no lo puede', 'no'),
+
+    # (nombre, texto completo de la frase, polaridad que debe verse)
+    VARIANTES = (
+        ('punto y prosa seguida',
+         '**El filtro es el CORRECTO.** Eso **no** esta demostrado', 'no'),
+        ('punto, thesis sola',
+         '**El filtro es el CORRECTO**.\nEso **no** esta demostrado', 'no'),
+        ('raya, misma frase',
+         '**El filtro es el CORRECTO** - Eso **no** esta demostrado', 'no'),
+        ('sin marcado',
+         'El filtro es el CORRECTO. Eso **no** esta demostrado', 'no'),
+        ('punto y cola larga',
+         '**El filtro es el CORRECTO.** Eso **no** esta demostrado, y no lo '
+         'puede estar con esta prueba.', 'no'),
+        ('con la polaridad al reves, para el contraste',
+         '**El filtro es el CORRECTO.** Eso **si** esta demostrado', 'si'),
     )
+
     malas = []
-    for cierre, debe in variantes:
+    for nombre, frase, debe in VARIANTES:
         texto = ('relleno\n\n'
                  '### 4.3 Y lo que esta prueba NO demuestra\n\n'
-                 'El filtro es el correcto%s, y sigue.\n' % cierre)
+                 '%s, y sigue.\n' % frase)
         orb = _orbita_de_la_tesis(texto.lower())
-        if not orb or debe not in orb:
-            malas.append('%r -> orbita %r' % (cierre, orb))
+        if not orb:
+            malas.append('%s: orbita vacia' % nombre)
+        elif debe == 'no' and 'no' not in orb:
+            malas.append('%s: la orbita no lleva la polaridad -> %r'
+                        % (nombre, orb))
+        elif debe == 'si' and 'no' in orb:
+            malas.append('%s: la orbita dice «no» donde decia «si» -> %r'
+                        % (nombre, orb))
     assert not malas, (
-        'la orbita pierde la polaridad en estos formatos, que son todos '
-        'legitimos:\n   ' + '\n   '.join(malas))
+        'la orbita falla en estos formatos, que son todos legitimos:\n   '
+        + '\n   '.join(malas))
+
+
+def test_si_un_punto_separa_la_tesis_de_su_negacion_no_se_vigila():
+    """Y el caso que NO tiene que funcionar, porque no es un formato: es otro
+    documento.
+
+        **El filtro es el CORRECTO.**
+        Eso **no** esta demostrado.
+
+    Si el punto cierra la frase de la tesis, la negacion ya no es de la
+    tesis: es de otra cosa. Y entonces el documento AFIRMA la tesis y NIEGA
+    algo mas, que es exactamente la contradiccion 200/238 en otra forma — dos
+    afirmaciones que se parecen y no son la misma.
+
+    Y por eso merece su propio test y no una variante mas: un formato
+    ilegitimo que la orbita no cubre no es un fallo de la orbita, es una
+    cosa que el documento no deberia escribir. Y hay que poder decir eso.
+
+    O sea: la orbita es deliberadamente ESTRICTA, y esto es lo que declara su
+    limite. Un filtro laxo que aceptara este caso no detectaria el
+    documento que separa la tesis de su negacion."""
+    from test_causa_no_validez import _orbita_de_la_tesis
+    texto = ('relleno\n\n'
+             '### 4.3 Y lo que esta prueba NO demuestra\n\n'
+             '**El filtro es el CORRECTO**.\n\n'
+             'Eso **no** esta demostrado.\n')
+    orb = _orbita_de_la_tesis(texto.lower())
+    assert not orb or 'no' not in orb, (
+        'la orbita ha cogido una negacion que NO es de la tesis. Y si lo '
+        'hace, dos afirmaciones incompatibles pasan por una sola comprobacion. '
+        'Orbita: %r' % orb)

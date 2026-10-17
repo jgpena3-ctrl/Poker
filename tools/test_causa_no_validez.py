@@ -278,7 +278,27 @@ def _orbita_de_la_tesis(doc):
     #
     # Y eso se vio porque el test de formatos existia y miraba. Un caso de
     # formato que no se cubre es un caso que nadie sabe que existe.
-    while j < len(b) and b[j] in '. \t\n-*_`>':
+    while j < len(b) and b[j] in '. \t-*_`>':
+        j += 1
+    # Y AQUI ESTA LA FRONTERA: un SALTO DE PARRAFO. No se salta, y no es un
+    # matiz: es lo que separa «la negacion es de la tesis» de «la negacion
+    # es de otra cosa».
+    #
+    #     **El filtro es el CORRECTO.** Eso **no** esta demostrado
+    #     -> una frase, dos clausulas: la negacion es de la tesis
+    #
+    #     **El filtro es el CORRECTO**.
+    #
+    #     Eso **no** esta demostrado
+    #     -> dos parrafos: la negacion es de otra cosa, y el documento
+    #        AFIRMA la tesis mientras niega otra cosa. Que es la
+    #        contradiccion 200/238 en otra forma.
+    #
+    # Un salto SIMPLE si se salta, porque en Markdown un salto simple es un
+    # corte visual y no una frontera de oracion.
+    if b[j:j + 2] == '\n\n':
+        return ''
+    while j < len(b) and b[j] == '\n':
         j += 1
     m = re.search(r'[.;:\n]', b[j:])
     return b[j:j + (m.start() if m else 200)]
