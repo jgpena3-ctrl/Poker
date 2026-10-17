@@ -133,6 +133,87 @@ def parrafo_que_rodea(lineas, num):
     return '\n'.join(lineas[ini:fin + 1])
 
 
+# De que SUJETO habla una tabla, para saber si un numero suyo es el que se
+# retiro. Sin esto, `| TOTAL | 78 |` no dice si son observaciones o defectos.
+#
+# Y solo palabras que NO son ambiguas. Las que lo eran, y por que se van:
+#
+#   muestra  - "perfil con mas muestra" es un perfil con mas DATOS, no la
+#              muestra etiquetada. Salio en TECNICO.md:232, con un 236 que
+#              es el tamaño de un perfil.
+#   corte    - "un corte de cartas", "el corte del documento"
+#   observab - "observables" en un sentido que no es el de la poblacion
+#   total    - "TOTAL" no dice DE QUE total
+#
+# Es una heuristica, y hay que decirlo: un barrido que dice "esto hay que
+# mirarlo" y se equivoca la mitad no es un detector, es ruido. Pero es ruido
+# que se puede mirar, y por eso sirve. Lo que no sirve es un detector que
+# senala lineas correctas sin parar, porque entrena a no mirar ninguna.
+SUJETO_POBLACION = ('poblaci', 'observacion', 'etiqueta', 'victori',
+                    'derrota', 'positiv', 'negativ', 'auc',
+                    'preflop', 'postflop')
+
+
+def encabezado_de_tabla(texto, num):
+    """El encabezado de la tabla donde cae la linea `num`, o '' si no hay.
+
+    Una tabla Markdown se escribe:
+
+        | cabecera |
+        |---|
+        | fila     |
+
+    Y la fila no lleva el sujeto: lo lleva el encabezado. `| TOTAL | 78 |`
+    no dice si son observaciones o defectos de datos; `| defecto | ... |` si.
+    """
+    lineas = texto.split('\n')
+    if num - 1 >= len(lineas) or not lineas[num - 1].lstrip().startswith('|'):
+        return ''
+    # se sube hasta la linea de separacion `|---|`, y el encabezado es la
+    # anterior
+    i = num - 1
+    while i >= 0:
+        s = lineas[i].strip()
+        if s.startswith('|') and set(s.replace('|', '').replace(
+                '-', '').replace(':', '').replace(' ', '')) == set():
+            return lineas[i - 1] if i > 0 else ''
+        if s == '' or not s.startswith('|'):
+            return ''
+        i -= 1
+    return ''
+
+
+def habla_de_poblacion(texto, num):
+    """¿La linea `num` habla de la poblacion?
+
+    Y el sujeto puede estar en la **fila** o en el **encabezado** de su
+    tabla, y basta con que este en una de las dos:
+
+        | | |                 <- el encabezado no dice nada
+        |---|---:|
+        | con etiqueta | 78 | <- la fila si
+
+    Una version anterior miraba SOLO el encabezado, y esa tabla no la senalaba
+    nadie. Endurecer un filtro hasta que no senale nada es tan grave como no
+    endurecerlo: las dos cosas dejan pasar lo que tienen que cazar.
+
+    Con las dos, los falsos positivos siguen descartados:
+
+        | defecto | ... |        <- encabezado: sujeto que no es poblacion
+        | **TOTAL** | **78** |   <- fila: "TOTAL" no dice de que
+
+        "perfil con mas muestra ... 236 manos"  <- `muestra` no esta en la
+                                                    lista, y no es la muestra
+    """
+    lineas = texto.split('\n')
+    fila = lineas[num - 1] if num - 1 < len(lineas) else ''
+    cab = encabezado_de_tabla(texto, num)
+    for trozo in (fila, cab):
+        if any(w in trozo.lower() for w in SUJETO_POBLACION):
+            return True
+    return False
+
+
 def en_retiracion(texto, num):
     """¿La linea `num` esta dentro de un parrafo que RETIRA algo?
 
@@ -197,6 +278,23 @@ def _oracion_que_rodea(unido, pos):
     return unido[corte + 1:fin]
 
 
+# Un numero completo en estos documentos. Lleva espacios, comas o puntos como
+# separador de millares: `2 270`, `1 712 304`, `31,5`.
+UN_NUMERO = re.compile(r'\d[\d.,\u00a0 ]*\d|\d')
+# Lo que se quita para comparar dos numeros: el separador va dentro del numero
+# escrito, no del numero.
+_SEPARADORES = re.compile(r'[\s.,\u00a0%]')
+
+
+def es_frase_numerica(frase):
+    return bool(re.fullmatch(r'[\d.,%\s\u00a0]+', frase.strip())) and \
+        any(c.isdigit() for c in frase)
+
+
+def _normalizar_numero(txt):
+    return _SEPARADORES.sub('', txt)
+
+
 def _coincidencias(texto, frase):
     """[(numero_de_linea, oracion_que_la_rodea)] de cada vez que `frase`
     aparece AFIRMADA en `texto`.
@@ -204,8 +302,12 @@ def _coincidencias(texto, frase):
     Es el emparejamiento, y no el juicio: ni mira la polaridad ni la
     retraccion. Solo hace las dos cosas que hay que hacer bien una vez:
 
-      - **los numeros son tokens.** Buscar `78` encuentra `378`, y `378` es
-        un numero legitimo y distinto. Con limites de palabra, no.
+      - **los numeros se comparan ENTEROS, no por limites de palabra.** Un
+        limite de token falla con los separadores de millar: en `2 270
+        millones`, el caracter antes de `270` es un espacio, el limite pasa, y
+        se senala un numero que es dos millones doscientos setenta mil. Se
+        busca el numero COMPLETO y se compara entero contra entero.
+
       - **el texto se mira UNIDO**, no linea a linea. Un documento esta
         hard-wrapped, y `no esta\nimplementada` es `no esta implementada`.
         Una frase partida entre dos lineas no es una frase que nadie
@@ -220,22 +322,32 @@ def _coincidencias(texto, frase):
     if not pares:
         return []
     unido, offsets = _unido(pares)
-    if re.fullmatch(r'[\d.,% ]+', frase.strip()):
-        patron = r'(?<![\d.,])%s(?![\d.,])' % re.escape(frase.strip())
-    else:
-        patron = re.escape(frase.lower())
 
     salida = []
-    for m in re.finditer(patron, unido):
-        pos = m.start()
-        linea = offsets[0][1]
-        for off, num in offsets:
-            if off <= pos:
-                linea = num
-            else:
-                break
-        salida.append((linea, _oracion_que_rodea(unido, pos)))
+    if es_frase_numerica(frase):
+        objetivo = _normalizar_numero(frase.strip())
+        for m in UN_NUMERO.finditer(unido):
+            if _normalizar_numero(m.group(0)) != objetivo:
+                continue
+            salida.append((_linea_de(offsets, m.start()),
+                           _oracion_que_rodea(unido, m.start())))
+        return salida
+
+    for m in re.finditer(re.escape(frase.lower()), unido):
+        salida.append((_linea_de(offsets, m.start()),
+                       _oracion_que_rodea(unido, m.start())))
     return salida
+
+
+def _linea_de(offsets, pos):
+    """El numero de linea donde empieza la posicion `pos` del texto unido."""
+    linea = offsets[0][1]
+    for off, num in offsets:
+        if off <= pos:
+            linea = num
+        else:
+            break
+    return linea
 
 
 def afirmada(texto, frase):
@@ -311,25 +423,38 @@ def afirmada_sin_negar(texto, frase):
 
 
 # ------------------------------------------------------ el fichero entero
-def frases_retiradas(nombre):
-    """(frases_retiradas_afirmadas, frases_retiradas_citadas) de un
-    documento. Vacio en la primera si el documento esta bien."""
-    texto = leer(nombre)
+def frases_retiradas_en(texto, frases=None):
+    """(afirmadas, citadas) de un TEXTO. Vacio en la primera si esta bien.
+
+    La regla, en un solo sitio. `frases_retiradas()` la llama sobre un
+    fichero, y el barrido de todos los `.md` la llama sobre lo que lee. Lo
+    contrario —que el barrido tenga su propio filtro— ya paso una vez: el
+    barrido senalaba un 78 legitimo porque su copia del filtro era la de
+    antes del encabezado de tabla.
+    """
+    if frases is None:
+        frases = RETIRADAS
     malas, citadas = [], []
-    for frase, _ctx in RETIRADAS:
+    for frase, _ctx in frases:
         for i in afirmada_sin_negar(texto, frase):
             linea = texto.split('\n')[i - 1]
             # una cifra suelta es ruido; lo que importa es que se afirme
             # como una poblacion
-            if re.fullmatch(r'[\d.,% ]+', frase.strip()):
-                if not re.search(r'(poblaci|observacion|observaciones'
-                                 r'|etiqueta|victori|derrota|total|corte)',
-                                 linea, re.IGNORECASE):
+            if es_frase_numerica(frase):
+                # El sujeto va en la FILA o en el ENCABEZADO de la tabla. Sin
+                # eso, `| TOTAL | 78 |` de una tabla de DEFECTOS se lee como
+                # 78 observaciones.
+                if not habla_de_poblacion(texto, i):
                     continue
             malas.append((i, frase, linea.strip()[:64]))
         if citada(texto, frase):
             citadas.append(frase)
     return malas, citadas
+
+
+def frases_retiradas(nombre):
+    """Lo mismo, sobre el fichero `nombre` de DOCS."""
+    return frases_retiradas_en(leer(nombre))
 
 
 # Las frases y cifras que la cuarta correccion retira. El segundo elemento es
