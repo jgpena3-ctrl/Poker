@@ -75,8 +75,57 @@ VERSION = 2
 # El nombre del estimador va en la cache. Sin el, dos procedimientos
 # distintos con la misma VERSION serian indistinguibles, y eso ya paso.
 ESTIMADOR = 'iid-media-simple'
+
+
+def huella_de(hero, ids, wl, semilla, n, y):
+    """Huella determinista de lo que DETERMINA la equity agregada.
+
+    Se calcula sobre los objetos que se usan, no sobre constantes que
+    alguien tenga que acordarse de subir. Concretamente:
+
+      hero      las dos cartas del heroe: el enumerado legal sale de ahi
+      ids       el enumerado legal, no solo su longitud
+      wl        los pesos del rango sobre ese enumerado
+      semilla   el generador: sin esto dos resultados son incomparables
+      n         cuantos se muestrearon de verdad
+      y         la ETIQUETA, que no viene del rango y por eso hay que
+                meterla a mano
+
+    Y el rango carries la base de datos sin nombrarla: si `hands_db.jsonl`
+    cambia y eso cambia el rango de este villano, `wl` cambia y la huella
+    cambia. Lo que no cambia este rango no puede cambiar esta equity.
+
+    `revision_2` §1: la condicion de reutilizacion exigia version, estimador,
+    semilla, n_combos, villano, spot y hero. Siete campos, y ninguno era
+    esto. Medido: `dfef471` cambio la base, HANDS_DB_SHA256 cambio, y los
+    siete campos siguieron coincidiendo.
+    """
+    h = hashlib.sha256()
+    h.update(('|'.join((str(VERSION), ESTIMADOR, hero, str(semilla),
+                        str(n), repr(y)))).encode('utf-8'))
+    h.update(np.ascontiguousarray(ids, dtype=np.intp).tobytes())
+    h.update(np.ascontiguousarray(wl, dtype=np.float64).tobytes())
+    return h.hexdigest()[:16]
 CACHE = os.path.join(ROOT, 'data',
                      '_cache_equity_observable.json.v%d.json' % VERSION)
+
+# Lo que hace el heroe en EL CORTE. El corte es su ULTIMA accion
+# (`corte_de_decision`), y eso incluye los folds.
+#
+# La poblacion del AUC es B: "el hero CONTINUA o CHECKEA"
+# (`CONTRATO_L_SEC.md` §8). Un fold no es ninguna de las dos cosas, y
+# ademas tiene y = 0 por construccion: el que foldea no puede ganar. Con
+# estas dentro, el AUC no mide la equity: mide la regla de seleccion.
+#
+# MEDIDO en la ventana de 877 manos: la ultima accion del heroe cae en
+# preflop 637 veces — 554 folds, 81 jugables, 2 checks — y de las 81
+# jugables NINGUNA tiene etiqueta. Las 98 con etiqueta son todas folds.
+ACCIONES_JUGADAS = ('b', 'c', 'r', 'x')
+
+# Clave estable del descarte por fold. El informe la busca por NOMBRE: una
+# clave que hay que reconstruir adivinando una cadena es una clave que se
+# rompe sin avisar.
+CLAVE_FOLD = 'el heroe FOLDEA en el corte'
 
 # Las acciones MUTUAMENTE EXCLUYENTES de cada spot. Son dos: el villano O
 # llama O sube. El rango es la union de las dos.
@@ -268,6 +317,18 @@ def id_desconocido(hid, por_id):
         'puede saber cual de las dos es.' % (hid,))
 
 
+def porque_no_reutilizable(entrada, version, estimador, t, n_combos, huella):
+    """La lista de lo que NO coincide. Para no tener que releer el codigo."""
+    if not isinstance(entrada, dict):
+        return 'no es una entrada'
+    esperado = (('version', version), ('estimador', estimador),
+                ('semilla', t['semilla']), ('n_combos', n_combos),
+                ('villano', t['villano']), ('spot', t['spot']),
+                ('hero', t['hero']), ('huella', huella))
+    return ', '.join('%s=%r != %r' % (k, entrada.get(k), v)
+                     for k, v in esperado if entrada.get(k) != v)
+
+
 def seleccionar_manos(etiqueta, por_id, model):
     """Las manos preflop que el camino preflop mete, con el recuento POR
     ETAPA y por spot.
@@ -301,13 +362,36 @@ def seleccionar_manos(etiqueta, por_id, model):
         if calle != 'preflop':
             continue
 
-        # ETAPA 1: el corte es preflop y el spot es uno de los tres.
+        # El SPOT se cuenta ANTES de mirar lo que hace el heroe, porque el
+        # corte existe aunque luego se caiga. Si se cuentan las etapas
+        # primero, la tabla enseña ceros donde hay manos, y una tabla de
+        # ceros parece una poblacion vacia en vez de una poblacion
+        # descartada. Que se vea DONDE se pierde es justamente el motivo de
+        # que la tabla exista.
         spot = mano_del_spot(h, calle, hero, idx)
         sp_cortes[spot] += 1
         if spot is None or spot not in ACCIONES_SPOT:
             sin_rango['spot sin alternativas declaradas'] += 1
             continue
         _pasa(spot, '1_corte_preflop')
+
+        # ETAPA 0: lo que el heroe HACE en el corte. Decide si la mano
+        # pertenece a la poblacion del AUC, y va aqui y no antes porque el
+        # corte tiene que estar CONTADO para que el descarte se vea.
+        acts = ((h.get('streets') or {}).get(calle) or {}).get('actions') or []
+        accion = acts[idx]['action'] if idx is not None \
+            and idx < len(acts) else None
+        if accion not in ACCIONES_JUGADAS:
+            sin_rango[CLAVE_FOLD if accion == 'f' else
+                      'el heroe hace %s, fuera de la poblacion B'
+                      % (accion or 'nada')] += 1
+            continue
+        # DESPUES del descarte, como las demas: el contador dice las que
+        # PASAN, no las que llegan. Ponerlo antes contaba 23 jugadas y
+        # descartaba 23 por no jugar, en la misma fila.
+        _pasa(spot, '0_accion_jugada')
+
+        # ETAPA 1: el corte es preflop y el spot es uno de los tres.
 
         # ETAPA 2: las dos cartas del hero son legibles.
         mc = cartas_de(h, hero)
@@ -367,15 +451,25 @@ def main():
     print('   cortes preflop con todo listo : %d' % len(trabajo))
     for k, n in sin_rango.most_common():
         print('      sin computo: %-44s %3d' % (k, n))
+    n_fold = sin_rango.get(CLAVE_FOLD, 0)
+    if n_fold:
+        print()
+        print('   %d cortes preflop quedan FUERA porque el heroe FOLDEA en el'
+              % n_fold)
+        print('   corte. Un fold tiene y = 0 por construccion —el que foldea')
+        print('   no puede ganar—, asi que esas manos NO SON de la poblacion B')
+        print('   del AUC. Meterlas mediria la regla de seleccion, no la')
+        print('   equity. Es lo que pasaba antes de este filtro: 23 de 23 con')
+        print('   y = 0, y las 75 de calibracion tambien.')
     print()
     print('   POR SPOT Y POR ETAPA. Cada etapa es un filtro DISTINTO y')
     print('   acumulado, asi que las columnas pueden bajarse: ahi se ve')
     print('   donde se pierde la poblacion.')
     print()
-    print('      %-14s %6s %7s %7s %7s %8s %9s'
-          % ('spot', 'corte', 'cartas', 'rival', 'perfil', 'ADMIT.',
+    print('      %-14s %6s %8s %7s %7s %7s %8s %9s'
+          % ('spot', 'corte', 'juega', 'cartas', 'rival', 'perfil', 'ADMIT.',
              'calculada'))
-    print('      ' + '-' * 66)
+    print('      ' + '-' * 75)
     hechos = cache_abrir()
 
     def calculadas_para(spot):
@@ -405,19 +499,22 @@ def main():
     for spot in sorted(ACCIONES_SPOT):
         adm = sum(1 for x in trabajo if x['spot'] == spot)
         n_calc = calculadas_para(spot)
-        print('      %-14s %6d %7d %7d %7d %8d %9d'
+        print('      %-14s %6d %8d %7d %7d %7d %8d %9d'
               % (spot, sp_cortes.get(spot, 0),
+                 etapas['0_accion_jugada'][spot],
                  etapas['2_cartas_hero'][spot], etapas['3_rival'][spot],
                  etapas['4_perfil'][spot], adm, n_calc))
-    print('      %-14s %6d %7d %7d %7d %8d %9d'
+    print('      %-14s %6d %8d %7d %7d %7d %8d %9d'
           % ('TOTAL', sum(sp_cortes.values()),
+             etapas['0_accion_jugada']['__total__'],
              etapas['2_cartas_hero']['__total__'],
              etapas['3_rival']['__total__'],
              etapas['4_perfil']['__total__'], len(trabajo),
              total_calc))
     print()
-    print('   ADMIT. son las que pasan las CUATRO etapas. calculada es lo')
-    print('   que ya esta en la cache de esta VERSION.')
+    print('   ADMIT. son las que pasan las CINCO etapas. juega = el heroe no')
+    print('   foldea en el corte, que es la condicion de la poblacion B.')
+    print('   calculada es lo que ya esta en la cache de esta VERSION.')
     print()
     extras = [k for k in sp_cortes if k not in ACCIONES_SPOT]
     if extras:
@@ -462,20 +559,8 @@ def main():
         # La equity POR COMBO, en cambio, se reutiliza sin comprobar nada:
         # `equity_preflop_contra_combo` es una funcion pura de las dos
         # manos, no depende del estimador ni de la VERSION.
-        entrada = cache.get(hid)
-        if isinstance(entrada, dict) and 'equity' in entrada:
-            if entrada.get('version') == VERSION \
-                    and entrada.get('estimador') == ESTIMADOR \
-                    and entrada.get('semilla') == t['semilla'] \
-                    and entrada.get('n_combos') == N_COMBOS \
-                    and entrada.get('villano') == t['villano'] \
-                    and entrada.get('spot') == t['spot'] \
-                    and entrada.get('hero') == t['hero']:
-                continue
-            # no coincide: se recalcula y se AVISA, no se reutiliza en
-            # silencio
-            print('   %s: la entrada en cache es de otra version o de otro '
-                  'estimador; se recalcula.' % hid)
+        # El rango se calcula ANTES de decidir nada. Es lo que hace posible
+        # la huella: comparar la identidad del rango exige tenerlo delante.
         try:
             w = rango_del_villano(model, t['villano'], t['spot'])
         except Exception as exc:                       # pragma: no cover
@@ -497,8 +582,27 @@ def main():
         if not np.isfinite(tot) or tot <= 0:
             print('   %s: el rango no tiene masa legal' % hid)
             continue
-
         n = int(min(N_COMBOS, len(ids)))
+        huella = huella_de(t['hero'], ids, wl, t['semilla'], n, t['y'])
+
+        entrada = cache.get(hid)
+        if isinstance(entrada, dict) and 'equity' in entrada:
+            if entrada.get('version') == VERSION \
+                    and entrada.get('estimador') == ESTIMADOR \
+                    and entrada.get('semilla') == t['semilla'] \
+                    and entrada.get('n_combos') == N_COMBOS \
+                    and entrada.get('villano') == t['villano'] \
+                    and entrada.get('spot') == t['spot'] \
+                    and entrada.get('hero') == t['hero'] \
+                    and entrada.get('huella') == huella:
+                continue
+            # no coincide: se recalcula y se AVISA, no se reutiliza en
+            # silencio. Y se dice POR QUE, que es lo que hace falta para
+            # arreglarlo sin volver a leer todo el codigo.
+            print('   %s: la entrada en cache no es reutilizable (%s); '
+                  'se recalcula.'
+                  % (hid, porque_no_reutilizable(entrada, VERSION, ESTIMADOR,
+                                                 t, N_COMBOS, huella)))
         rng = np.random.default_rng(t['semilla'])
         elegidos = rng.choice(len(ids), size=n, replace=True, p=wl / tot)
 
@@ -517,11 +621,24 @@ def main():
                 nuevos += 1
             acc += eq
 
-        cache[hid] = {'equity': acc / n, 'n_combos': n,
+        if n != N_COMBOS:
+            # No es un error: el rango legal puede tener menos de N_COMBOS
+            # combos. Lo que era un error es que la entrada guardara el
+            # efectivo y la condicion comparara con el pedido, con lo que
+            # una mano asi no se reutilizaba NUNCA. Se guardan los dos, con
+            # sus nombres, y el aviso para que no pase por el dato previsto.
+            print('   %s: el rango legal tiene %d combos y se han muestreado '
+                  '%d, no %d (N_COMBOS). Se guarda el efectivo aparte.'
+                  % (hid, len(ids), n, N_COMBOS))
+        cache[hid] = {'equity': acc / n,
+                      # lo PEDIDO, que es lo comparable entre versiones
+                      'n_combos': N_COMBOS,
+                      # lo EFECTIVO, que es lo que se divide de verdad
+                      'n_muestreados': n,
                       'villano': t['villano'], 'spot': t['spot'],
                       'y': t['y'], 'hero': t['hero'],
                       'semilla': t['semilla'], 'version': VERSION,
-                      'estimador': ESTIMADOR}
+                      'estimador': ESTIMADOR, 'huella': huella}
         hechos += 1
         mins = (time.time() - t0) / 60.0
         print('   [%3d/%3d] %-9s %-4s vs %-14s %-14s eq %.4f  '

@@ -185,10 +185,14 @@ def test_la_entrada_de_cache_lleva_la_version(ins):
     """`calculada` cuenta solo si la VERSION coincide, y eso exige que la
     entrada la lleve."""
     texto = open(ins.__file__, encoding='utf-8').read()
-    i = texto.index("cache[hid] = {'equity'")
-    assert "'version': VERSION" in texto[i:i + 400], (
+    i = texto.index("cache[hid] = {")
+    entrada = texto[i:i + 900]
+    assert "'version': VERSION" in entrada, (
         'sin la version en la entrada, el filtro de `calculada` no puede '
         'distinguir una entrada vieja de una de ahora')
+    assert "'huella': huella" in entrada, (
+        'ni la huella, que es lo unico que detecta que la base cambio por '
+        'debajo: los otros siete campos dedos no lo notan')
 
 
 def test_la_columna_calculada_solo_cuenta_la_version_vigente(ins):
