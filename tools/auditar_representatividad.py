@@ -118,7 +118,7 @@ def sanity_de_cartas():
         lineas.append('   %-6s %-14s premium=%-5s par=%-5s suited=%-5s  %s'
                       % (s_, c or 'NO SON CARTAS', es_premium(s_), es_par(s_),
                          es_suited(s_), 'ok' if ok else '>>> MAL <<<'))
-    return fallos, lineas
+    return fallos, lineas, len(casos)
 
 
 def resto_de_muestra(cal, h):
@@ -203,10 +203,13 @@ def main():
     print('=' * 76)
     print('0.  EL DETECTOR DE CARTAS, antes de usarlo')
     print('=' * 76)
-    fallos, lineas = sanity_de_cartas()
+    fallos, lineas, n_casos = sanity_de_cartas()
     for l in lineas:
         print(l)
-    print('   fallos: %d de 7' % fallos)
+    # el total se SACA de la lista, no se escribe a mano: un "de 7" fijo
+    # pasa a mentir en silencio el dia que se anade un caso y nadie se
+    # acuerda de cambiarlo
+    print('   fallos: %d de %d' % (fallos, n_casos))
     assert fallos == 0, (
         'el detector de cartas falla en %d de 7 casos: los numeros de C3 no '
         'se publican con un detector roto' % fallos)
