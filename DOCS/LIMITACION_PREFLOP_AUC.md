@@ -173,17 +173,29 @@ Ni el argumento (2) ni el AUC dependían de él.
 dijo al principio y no es lo que falta—. Lo que falta, medido, son dos
 cosas distintas:
 
-1. **Que el registro de una mano jugada en preflop lleve las cartas de los
-   demás jugadores.** 82 de las 83 no las tienen: solo la del héroe. Sin
-   ellas no hay showdown posible, ni verificable ni por fold, y sin
-   ganador verificable no hay etiqueta. Mientras el recorder solo conserve
-   las cartas del héroe cuando la mano muere en preflop, esta población no
-   se puede construir.
+1. **Que el registro traiga las cartas de los demás jugadores** — pero solo
+   como condición de los **showdowns**, no como condición de todo.
+
+   > **Se corrige.** Este documento decía antes que sin las cartas de los
+   > demás «no hay showdown posible, ni verificable ni por fold». Eso es
+   > falso, y está medido: **`gano_por_fold()` verifica la victoria por
+   > fold sin ellas**, y funciona en **77 de las 83**. Las cartas de los
+   > demás hacen falta para el camino de **showdown**, y nada más.
+   >
+   > En la población medida hay **una sola** mano con showdown verificable,
+   > `H_0485`, y es precisamente la que sí trae las cartas de los demás.
+   > Las otras 82 no las tienen, y 77 de ellas se etiquetan igual.
 
 2. **Que los dos sitios donde vive el board sean uno solo.** En 2 de las 83
    el board está en `streets.*.board` y `comunitarias` está vacío, y
    `board_completo()` lee el que no se rellena. Dos representaciones del
    mismo campo, y el filtro depende de cuál se rellene.
+
+> Y una lectura que cambia el diagnóstico: de las 83, **5 siguen sin
+> etiqueta posible aunque se salten los dos filtros** —4 por fold no
+> verificable y 1 por showdown sin las cartas de los demás—, y 1 de esas 4
+> tiene dos jugadores sin foldear, o sea un registro incompleto y no una
+> límite de información.
 
 El punto 1 es un cambio de recorder. El punto 2 es una inconsistencia del
 registro y se arregla decidiendo cuál de las dos representaciones es la
