@@ -20,6 +20,28 @@ Lo que NO se prueba aqui, y se dice explicitamente:
   · que el OCR lea bien. Eso necesita una imagen.
   · que `BET_ROIS` cubra el elemento correcto. Tambien una imagen.
   · que `pot` y `pot_wide` sean la misma magnitud. Hace falta el codigo origen.
+
+EL HALLAZGO QUE CORRIGE TODO LO ANTERIOR
+---------------------------------------
+La seccion (1) de este fichero ejecutaba `record_hand.HandRecorder`. Al
+comprobar de donde sale el campo `allin` resulto que **`record_hand.py` no lo
+escribe**: lo escribe `recorder_live.py`. Los dos grabadores apuntan a la
+MISMA ruta (`data/hands_db.jsonl`), y en la base el campo esta en 1185 de 1258
+manos.
+
+O sea: **la base es una mezcla de dos grabadores**, y las pruebas de la
+seccion (1) describen el que solo produjo 73 manos. Peor: `amount` no tiene una
+semantica, tiene TRES, y cada una con la suya:
+
+  · `record_hand.py:200`  -> la CAJA del jugador (`state[pid_bet]`)
+  · `recorder_live.py:670` -> `prev_stake + prev_bet` (rama de all-in)
+  · `recorder_live.py:699` -> `prev_stake - cur_stake`, el DELTA del stack,
+                             redondeado por `_round_bet` (rama normal, ~98 %)
+
+La tercera es la que explica casi todo, y es la que habria que usar. Las
+pruebas de la seccion (1) siguen valiendo como caracterizacion de ESE codigo,
+pero no como descripcion de la base. Por eso ahora se dizca cual de las tres
+semanticas esta modelando cada caso sintetico.
 """
 import collections
 import os
@@ -65,6 +87,10 @@ def estado(bets, estados=None):
 
 # ---------------------------------------------------------------------------
 # (1) LA REGLA DE LA LETRA, EJECUTANDO EL CODIGO
+#
+# ATENCION: esta seccion modela `record_hand.py`, que produjo 73 de las 1258
+# manos. La letra que se ve aqui NO es la letra de la base. Ver
+# `test_la_base_son_dos_grabadores` y la cabecera del fichero.
 # ---------------------------------------------------------------------------
 
 def test_primera_apuesta_sin_apuesta_viva_previa_es_b():
@@ -273,23 +299,79 @@ def test_una_call_corta_sin_accion_previa_es_indeterminada():
         '0, esta afirma que el jugador no puso nada.')
 
 
-def test_alcanzar_la_viva_no_basta_para_ser_calculable():
-    """La regla que el encargo decía insuficiente, comprobada.
+def test_una_call_que_supera_la_viva_es_sospechosa():
+    """CASO A. Importe SUPERIOR a la apuesta viva.
 
-    Una call puede ALCANZAR la viva y aun asi ser sospechosa: si su caja BAJO
-    antes en la misma calle, hay una lectura obsoleta por medio, y la
-    coherencia del importe final no dice nada sobre cuando se leyó.
+    SEMANTICA MODELADA: `record_hand.py`, es decir `amount` = CAJA acumulada.
+    Solo 73 de las 1258 manos son de ese grabador. Con la semantica del otro
+    (`recorder_live.py`, `amount` = delta del stack) este caso NO es una
+    anomalia: un delta puede pasarse de la viva sin decir nada raro. La
+    prueba se queda como caracterizacion de la rama `or 0.0` del
+    clasificador, no como afirmacion sobre la base.
+
+    Qué anomalía introduce: una `c` que pasa de la viva. Una call cubre, no
+    pasa. Y si el importe cuadra con la viva vigente y no con la anterior, la
+    caja se leyó ANTES de actualizarse.
+
+    Qué da el clasificador HOY: `SOSPECHOSA`, con el motivo «supera la viva».
+
+    Lo que NO se afirma: que las dos acciones sean dos acciones reales. Con
+    la semántica acumulada, un importe que sube sin que la suba del rival es
+    exactamente lo que deja un eco del fallback (§ H_0039), pero el esquema
+    no lleva fotogramas y no se puede distinguir de dos acciones de verdad.
     """
     h = _mano([{'pos': 'BB', 'action': 'b', 'amount': 1.0},
                {'pos': 'UTG', 'action': 'r', 'amount': 5.0},
                {'pos': 'CO', 'action': 'c', 'amount': 5.0},
                {'pos': 'CO', 'action': 'c', 'amount': 9.0}])
     res = DG.clasificar_aportado(h)
-    segunda = [x for x in res if x['action'] == 'c'][1]
+    segunda = [x for x in res if x['pos'] == 'CO'][1]
     assert abs(segunda['importe'] - 9.0) < 1e-6, segunda
-    assert segunda['resultado'] != DG.CALCULABLE, (
-        'una accion cuyo importe supera a la viva por 4.0 sale CALCULABLE. '
-        'Llegar a la viva no es condicion suficiente.')
+    assert segunda['resultado'] == DG.SOSPECHOSA, segunda
+    assert 'supera la viva' in segunda['motivo'], segunda['motivo']
+
+
+def test_una_caja_que_baixa_es_sospechosa():
+    """CASO B. DISMINUCIÓN real de la caja, que el caso A no tenía.
+
+    SEMANTICA MODELADA: `record_hand.py` (`amount` = caja acumulada). Y aqui
+    hay que avisar de algo importante: **con la semantica de `recorder_live.py`
+    (`amount` = delta del stack) esta prueba no tiene sentido**. Alli dos
+    acciones del mismo jugador SI pueden bajar, porque cada importe es un
+    delta independiente, no un acumulado. Marcar un delta descendente como
+    sospechoso seria un falso positivo sistematico sobre el 94 % de la base.
+
+    Lo que NO se afirma: que esto caracterice la base. Caracteriza la rama del
+    clasificador que trata la caja como acumulada.
+
+    Qué anomalía introduce: la caja del MISMO jugador BAJA entre dos acciones
+    suyas en la misma calle. Con la semántica acumulada eso no puede ocurrir,
+    así que o hay una lectura obsoleta o los dos registros no son dos acciones
+    reales.
+
+    Por qué esta prueba estaba mal antes: la anterior se llamaba
+    `test_alcanzar_la_viva_no_basta_para_ser_calculable` y su comentario
+    hablaba de «la caja bajó antes», pero sus datos iban de **5.0 a 9.0**, que
+    es una subida. La prueba no demostraba lo que su nombre y su comentario
+    decían. Se separa en A y B, y cada una construye la anomalía que dice.
+
+    Qué da el clasificador HOY: las dos acciones de la bajada salen
+    `SOSPECHOSA`, y la segunda con `aportado` **negativo**.
+    """
+    h = _mano([{'pos': 'BB', 'action': 'b', 'amount': 1.0},
+               {'pos': 'UTG', 'action': 'r', 'amount': 5.0},
+               {'pos': 'CO', 'action': 'c', 'amount': 5.0},
+               {'pos': 'CO', 'action': 'r', 'amount': 9.0},
+               {'pos': 'CO', 'action': 'c', 'amount': 5.0}])
+    res = DG.clasificar_aportado(h)
+    ultima = [x for x in res if x['pos'] == 'CO'][2]
+    assert abs(ultima['importe'] - 5.0) < 1e-6, ultima
+    assert ultima['resultado'] == DG.SOSPECHOSA, ultima
+    assert ultima['aportado'] == -4.0, ultima
+    # [DEFECTO CONOCIDO] una aportacion NEGATIVA sale SOSPECHOSA y no
+    # INDETERMINADA. Nadie aporta fichas negativas: un negativo aqui es la
+    # senal de que la caja se leyo antes de tiempo, que es un dato que no se
+    # puede usar, no uno que se puede usar con signo. Propuesto, no aplicado.
 
 
 def test_un_duplicado_da_aportado_cero_y_se_marca_sospechoso():
@@ -320,17 +402,358 @@ def test_un_redondeo_no_se_declara_sospechoso():
     assert co['resultado'] == DG.CALCULABLE, co
 
 
-def test_un_allin_corto_no_se_declara_sospechoso():
-    """Igualar el stack es una all-in legitima, no una lectura mala."""
+def _mano_un_importe(importe, accion='c', stacks=None, base=1.0):
+    """Una mano minima con UNA accion cuyo `amount` es el valor pedido.
+
+    `importe` se pasa tal cual: si es la cadena `'AUSENTE'` no se escribe la
+    clave, y si es `None` se escribe con valor None. Asi se puede distinguir
+    «no esta la clave» de «esta y vale None», que el clasificador NO.
+    """
+    acs = [{'pos': 'BB', 'action': 'b', 'amount': base}]
+    if accion == 'c':
+        acs += [{'pos': 'UTG', 'action': 'r', 'amount': 5.0},
+                {'pos': 'CO', 'action': accion}]
+    else:
+        acs += [{'pos': 'UTG', 'action': accion}]
+    if importe == 'AUSENTE':
+        # la clave `c` no la trae de serie; pop con default para no reventar
+        acs[-1].pop('amount', None)
+    else:
+        acs[-1]['amount'] = importe
+    return _mano(acs, stacks=stacks)
+
+
+def test_importe_ausente_se_confunde_con_cero():
+    """[DEFECTO] La clave `amount` AUSENTE se lee como 0.0.
+
+    `float(a.get('amount') or 0.0)` no distingue tres cosas que son tres:
+
+      · la clave no existe          -> sale 0.0
+      · la clave existe con None    -> sale 0.0
+      · la clave existe con 0.0     -> sale 0.0
+
+    Y de ahi sale un motivo INVENTADO: un importe ausente se reporta como
+    «c 0.0: el grabador traduce un check a call», que es una explicacion
+    sobre el grabador hecha con un dato que no existe. Si el campo se perdio,
+    no sabemos nada de ese importe; no sabemos que fuera un check.
+
+    En la base actual hay 0 importes ausentes entre las 5974 de b/c/r, asi
+    que esto NO ha contaminado los conteos. Es un defecto latente, no un
+    error de datos. Se fija el comportamiento, no se corrige.
+    """
+    h = _mano_un_importe('AUSENTE')
+    res = DG.clasificar_aportado(h)
+    co = [x for x in res if x['pos'] == 'CO'][0]
+    assert co['resultado'] == DG.SOSPECHOSA, co
+    assert 'traduce un check' in co['motivo'], (
+        'el motivo prohibido aparece con un importe AUSENTE: %s' % co['motivo'])
+
+
+def test_importe_none_tambien_se_confunde():
+    """[DEFECTO] `amount: None` explicitado sale igual que ausente.
+
+    Y sale por el mismo motivo inventado. Aqui la diferencia con el caso
+    anterior es que el dato se LOSTO de forma explicita: el grabador sabe que
+    no lo tiene, y el diagnostico lo cuenta igual que si fuera un cero.
+    """
+    h = _mano_un_importe(None)
+    res = DG.clasificar_aportado(h)
+    co = [x for x in res if x['pos'] == 'CO'][0]
+    assert co['resultado'] == DG.SOSPECHOSA, co
+    assert co['importe'] == 0.0, (
+        'un None deberia llegar como None, no convertido a 0.0: %s' % co)
+
+
+def test_importe_cero_legitimo_no_se_confunde_con_ausente():
+    """Un 0.0 REAL no es lo mismo que un 0.0 inventado.
+
+    Una call de 0.0 es un check, y el diagnostico lo trata distinto. El
+    problema no es ese camino: es que los tres casos anteriores caen en el
+    mismo. Aqui se deja constancia de que el camino del 0.0 real funciona.
+    """
+    h = _mano_un_importe(0.0)
+    res = DG.clasificar_aportado(h)
+    co = [x for x in res if x['pos'] == 'CO'][0]
+    assert co['resultado'] == DG.SOSPECHOSA, co
+    assert co['importe'] == 0.0, co
+
+
+def test_importe_no_convertible_es_indeterminada():
+    """Un importe que no es numero NO se puede usar, y sale como tal.
+
+    Este es el unico de los cinco que esta bien, y conviene que lo este: es el
+    criterio que las otras dos rutas deberian seguir.
+    """
+    h = _mano_un_importe('no-es-un-numero')
+    res = DG.clasificar_aportado(h)
+    co = [x for x in res if x['pos'] == 'CO'][0]
+    assert co['resultado'] == DG.INDETERMINADA, co
+    assert co['importe'] is None, co
+
+
+def test_apuesta_viva_descarta_lo_ilegible():
+    """El filtro tambien se come los importes ilegibles, pero sin avisar.
+
+    `apuesta_viva` hace `continue` sobre lo que no convierte. Eso esta bien
+    como decision (una viva ilegible no se puede comparar), pero el efecto es
+    que la lista sale MAS CORTA que la calle. Quien la use para indexar por
+    posicion tiene que saber eso, y hoy no hay ninguna asercion que lo fije.
+    """
+    h = _mano([{'pos': 'BB', 'action': 'b', 'amount': 1.0},
+               {'pos': 'UTG', 'action': 'r', 'amount': 5.0},
+               {'pos': 'CO', 'action': 'c', 'amount': 'ilegible'},
+               {'pos': 'CO', 'action': 'c', 'amount': 3.0}])
+    eventos, n_vivas = DG.apuesta_viva(h, 'preflop')
+    assert len(eventos) < 4, 'la calle tiene 4 acciones con dinero'
+    assert all(e['viva_antes'] >= 0 for e in eventos), eventos
+
+
+def test_un_allin_corto_es_calculable():
+    """All-in aparente, caso 1: sin otras anomalías.
+
+    Qué anomalía introduce: el jugador iguala con todo su stack y su caja no
+    llega a la viva porque no pudo. Es una jugada legítima.
+
+    Qué da HOY: `CALCULABLE`.
+
+    Lo que se sigue SIN poder afirmar: que sea un all-in confirmado. Lo que
+    hay es una **coincidencia aritmética** entre `amount` y `stack`, y que los
+    dos campos sean comparables —que midan lo mismo y en el mismo instante—
+    no está demostrado. Ver `test_el_allin_no_esta_confirmado`.
+
+    Y en el caso de `recorder_live.py` la comparacion es ademas numericamente
+    sucia: en la rama de all-in el importe es `prev_stake + prev_bet`, o sea
+    que ya lleva la apuesta dentro, mientras `stack` es el stack del jugador.
+    Que coincidan no es ni siquiera una igualdad entre cosas homogeneas.
+    """
     h = _mano([{'pos': 'BB', 'action': 'b', 'amount': 1.0},
                {'pos': 'UTG', 'action': 'r', 'amount': 5.0},
                {'pos': 'CO', 'action': 'c', 'amount': 3.0}],
               stacks={'CO': 3.0})
     res = DG.clasificar_aportado(h)
     co = [x for x in res if x['pos'] == 'CO'][0]
-    assert co['resultado'] == DG.CALCULABLE, (
-        'una all-in corta es legitima. Si sale sospechosa, el diagnostico '
-        'esta marcando como defecto algo que es una jugada.')
+    assert co['resultado'] == DG.CALCULABLE, co
+    assert co['aportado'] == 3.0, co
+
+
+def test_allin_con_accion_repetida_sale_calculable():
+    """All-in aparente, caso 2: ACCIÓN REPETIDA con importe == stack.
+
+    Y aquí está el defecto más serio del clasificador: la rama del all-in
+    devuelve `CALCULABLE` **sin mirar las demás sospechas**. Una acción
+    repetida con aportación 0 sale `CALCULABLE`, y una repetición es
+    justamente lo que NO se puede usar como dato.
+
+    Se fija el comportamiento ACTUAL, no el deseado. La corrección propuesta
+    está en el informe y **no se aplica aquí**, porque cambiaría los tres
+    conteos publicados.
+    """
+    h = _mano([{'pos': 'BB', 'action': 'b', 'amount': 1.0},
+               {'pos': 'UTG', 'action': 'c', 'amount': 3.0},
+               {'pos': 'SB', 'action': 'r', 'amount': 5.0},
+               {'pos': 'UTG', 'action': 'c', 'amount': 3.0}],
+              stacks={'UTG': 3.0})
+    res = DG.clasificar_aportado(h)
+    utg = [x for x in res if x['pos'] == 'UTG']
+    assert len(utg) == 2
+    for x in utg:
+        # [DEFECTO CONOCIDO] las dos salen CALCULABLE, incluida la repetida,
+        # cuya aportacion es 0. Una repeticion con aporte 0 no es un dato.
+        assert x['resultado'] == DG.CALCULABLE, x
+    assert utg[1]['aportado'] == 0.0, utg[1]
+
+
+def test_allin_con_caja_incoherente_sale_calculable():
+    """All-in aparente, caso 3: CAJA PREVIA INCOHERENTE, ultimo importe == stack.
+
+    La caja del jugador fue 5.0, luego 9.0, y la última acción vuelve a 4.0.
+    Eso es imposible con la semántica acumulada. Y como 4.0 coincide con su
+    stack, la rama del all-in lo declara `CALCULABLE` con **aportado −5.0**.
+
+    Nadie aporta fichas negativas. Un negativo no es un dato con signo: es la
+    señal de que la caja se leyó antes de tiempo.
+    """
+    h = _mano([{'pos': 'BB', 'action': 'b', 'amount': 1.0},
+               {'pos': 'UTG', 'action': 'r', 'amount': 5.0},
+               {'pos': 'CO', 'action': 'c', 'amount': 5.0},
+               {'pos': 'CO', 'action': 'r', 'amount': 9.0},
+               {'pos': 'CO', 'action': 'c', 'amount': 4.0}],
+              stacks={'CO': 4.0})
+    res = DG.clasificar_aportado(h)
+    co = [x for x in res if x['pos'] == 'CO']
+    ultima = co[-1]
+    # [DEFECTO CONOCIDO] las dos primeras si se marcan; la ultima sale
+    # CALCULABLE con un aporte negativo.
+    assert ultima['resultado'] == DG.CALCULABLE, ultima
+    assert ultima['aportado'] == -5.0, ultima
+
+
+def test_sin_stack_la_allin_no_se_puede_detectar():
+    """All-in aparente, caso 4: la posición no tiene stack.
+
+    Sin stack **no hay con qué comparar**, así que la rama del all-in no
+    puede dispararse. Es lo correcto: un all-in es una afirmación sobre el
+    stack del jugador.
+
+    Y el efecto secundario es que la acción cae en `INDETERMINADA` si tampoco
+    hay acción previa. Que es correcto por otra razón: sin referencia
+    anterior y sin llegar a la viva, no hay forma de saber cuánto puso.
+    """
+    h = _mano([{'pos': 'BB', 'action': 'b', 'amount': 1.0},
+               {'pos': 'UTG', 'action': 'r', 'amount': 5.0},
+               {'pos': 'CO', 'action': 'c', 'amount': 2.0}],
+              stacks={'BB': 1.0, 'UTG': 100.0})
+    res = DG.clasificar_aportado(h)
+    co = [x for x in res if x['pos'] == 'CO'][0]
+    assert co['resultado'] == DG.INDETERMINADA, co
+    assert co['aportado'] is None, co
+
+
+def test_la_base_son_dos_grabadores():
+    """La regresion mas importante de este fichero.
+
+    `data/hands_db.jsonl` esta escrito por DOS programas distintos:
+
+      · 1185 manos de `recorder_live.py`, que pone el campo `allin`;
+      · 73 manos de `record_hand.py`, que no lo pone.
+
+    Y son exactamente H_0001..H_0073, contiguas desde el principio. Lo que
+    parece un bloque inicial de captura es un bloque de otro grabador.
+
+    Por que importa: todo lo que se mida sobre la base sin separar los dos
+    grupos esta mezclando dos instrumentos con semanticas de `amount`
+    distintas. Y el grupo pequeno es el que tiene TODAS las rarezas que se
+    ven Rarezas (SIN_ALLIN, la letra rara de la apertura).
+
+    Se fija el reparto como regresion. Si alguien normaliza la base y mete el
+    campo que falta en las 73, esta prueba se rompe y obliga a volver a
+    pensar el resto.
+    """
+    import json
+    import io
+    ruta = os.path.join(ROOT, 'data', 'hands_db.jsonl')
+    con, sin = [], []
+    for linea in io.open(ruta, encoding='utf-8'):
+        if not linea.strip():
+            continue
+        # sobre el dict parseado, no sobre el texto: `allin` puede aparecer
+        # como valor de una clave cualquiera y daria un falso positivo
+        (con if 'allin' in json.loads(linea) else sin).append(linea)
+    assert len(con) == 1185, 'manos de recorder_live: %d' % len(con)
+    assert len(sin) == 73, 'manos de record_hand: %d' % len(sin)
+
+    ids = sorted(int(json.loads(x)['hand_id'].split('_')[-1]) for x in sin)
+    assert ids == list(range(1, 74)), (
+        'las 73 sin `allin` ya no son H_0001..H_0073: %s..%s' % (ids[0], ids[-1]))
+
+
+def test_la_apertura_no_tiene_la_misma_forma_en_los_dos():
+    """La mezcla se ve tambien en la LETRA, sin mirar ningun campo raro.
+
+    `record_hand.py` decide la letra con `street_has_bet`, asi que la primera
+    apuesta con ciega viva sale `c`. `recorder_live.py` decide con `has_bet` de
+    la calle y una tolerancia de 0.15, asi que casi todo sale `b`.
+
+    Las dos distribuciones son incompatibles, y por eso el corte por el campo
+    `allin` no es una casualidad: es una medida.
+    """
+    import collections
+    import io
+    import json
+
+    ruta = os.path.join(ROOT, 'data', 'hands_db.jsonl')
+    c = collections.defaultdict(collections.Counter)
+    for linea in io.open(ruta, encoding='utf-8'):
+        if not linea.strip():
+            continue
+        h = json.loads(linea)
+        grupo = 'live' if 'allin' in h else 'hand'
+        acs = (h.get('streets', {}).get('preflop', {}) or {}).get('actions', [])
+        for a in acs:
+            if a.get('action') in ('b', 'c', 'r'):
+                c[grupo][a['action']] += 1
+                break
+    assert c['live']['b'] > 1000, dict(c['live'])
+    # en record_hand la apertura reparte casi a partes iguales; en
+    # recorder_live es un `b` por cada siete. Medido, no supuesto.
+    assert dict(c['hand']) == {'b': 40, 'c': 26, 'r': 2}, dict(c['hand'])
+    assert dict(c['live']) == {'b': 1019, 'c': 100, 'r': 47}, dict(c['live'])
+    prop_live = c['live']['b'] / max(1, sum(c['live'].values()))
+    prop_hand = c['hand']['b'] / max(1, sum(c['hand'].values()))
+    assert prop_live > 0.85 and prop_hand < 0.65, (prop_live, prop_hand)
+
+
+def test_el_allin_no_esta_confirmado():
+    """Lo que la coincidencia aritmética NO demuestra.
+
+    `amount == stack` dice que los dos números coinciden. NO dice que los dos
+    campos midan lo mismo, ni que sean del mismo instante, ni que la acción
+    sea real.
+
+    El campo `allin` es el que declara el all-in, y lo escribe
+    `recorder_live.py:1040` a partir de una condicion CONCRETA y legible:
+    el stack del jugador paso a `None` sin que estuviera difuminado
+    (`recorder_live.py:669`). Eso si es una senal de all-in. La coincidencia
+    de `amount` con `stack` solo es **compatible** con una.
+
+    Y hay un problema mas: `allin` solo existe en una parte de la base.
+    """
+    import io
+    codigo = io.open(os.path.join(ROOT, 'recorder', 'recorder_live.py'),
+                     encoding='utf-8').read()
+
+    # la condicion que DECLARA el all-in: el stack pasa a None y el jugador
+    # no esta difuminado
+    i = codigo.find('cur_stake is None and not dimmed')
+    assert i != -1, (
+        'no se encuentra la condicion de all-in de recorder_live.py. Si ha '
+        'cambiado, esta prueba tiene que cambiar con ella: es la unica fuente '
+        'documentada de que un allin sea un allin y no una cuenta.')
+    rama = codigo[i:i + 600]
+    assert '_allin_players.add(pid)' in rama, (
+        'la rama de all-in ya no marca al jugador. El campo `allin` se '
+        'vaciaria y las 1185 manos que lo tienen perderian su unica senal.')
+    # y la lista final filtra por activo, que es el defecto INC-002 / H_0851
+    j = codigo.find("out['allin']")
+    assert j != -1
+    assert "p['active']" in codigo[j:j + 300], (
+        'la lista `allin` vuelve a no filtrar por `active`.INC-002 / H_0851 '
+        'vuelve: un jugador que se compromete y foldea sale en `allin`.')
+
+    # [P] follow-up importante: en esa rama el importe es
+    #     round((prev_stake or 0) + prev_bet, 2), o sea STACK ANTES + CAJA.
+    #     Compararlo con `stack` compara contra una cantidad que ya lleva la
+    #     apuesta dentro. La coincidencia no es ni siquiera numericamente
+    #     limpia; ver el informe.
+
+
+def test_el_campo_allin_no_lo_escribe_record_hand():
+    """Por que `SIN_ALLIN` NO significa «pos vacia = no jogo».
+
+    `record_hand.py` y `recorder_live.py` escriben a la MISMA ruta
+    (`data/hands_db.jsonl`). Uno pone el campo `allin` y el otro no. Asi que
+    la ausencia del campo es la HUELLA de que esa mano la escribio el otro
+    grabador.
+
+    Mi explicacion anterior («`allin` vacio significa que el jugador no
+    llego a jugar») era COMPATIBLE con los datos y FALSA en el mecanismo.
+    Esta prueba es la que la desmonta.
+    """
+    import io
+    rh = io.open(os.path.join(ROOT, 'recorder', 'record_hand.py'),
+                 encoding='utf-8').read()
+    rl = io.open(os.path.join(ROOT, 'recorder', 'recorder_live.py'),
+                 encoding='utf-8').read()
+    assert 'allin' not in rh, (
+        'record_hand.py ha pasado a escribir `allin`. Si los dos escriben el '
+        'campo, la huella de que grabador produjo cada mano desaparece y esta '
+        'prueba pierde su sentido.')
+    assert 'allin' in rl, 'recorder_live.py debe seguir escribiendo `allin`'
+    # y los dos escriben a la misma ruta: por eso se mezclaron
+    assert 'hands_db.jsonl' in rh and 'hands_db.jsonl' in rl, (
+        'los dos grabadores tienen que seguir apuntando a la misma ruta. Si '
+        'alguno cambia OUTPUT_PATH, la mezcla historica deja de poder '
+        'reconstruirse con el campo `allin`.')
 
 
 # ---------------------------------------------------------------------------
@@ -387,6 +810,71 @@ def test_la_clasificacion_sobre_la_base():
     assert tot[DG.CALCULABLE] == 5433, dict(tot)
     assert tot[DG.SOSPECHOSA] == 445, dict(tot)
     assert tot[DG.INDETERMINADA] == 96, dict(tot)
+
+
+def test_el_desglose_por_accion_por_resultado_es_coherente():
+    """La prueba 2D, en UNA sola pasada.
+
+    Antes el informe traia dos desgloses: uno por resultado (5433/445/96) y
+    otro por accion (1852/6/0, 2032/430/96, 1009/9/0), y **no cuadraban entre
+    si**: 2398+2558+1018 = 5974, pero el desglose por accion era de 5981. La
+    fila de las `c` era de una version anterior del clasificador y nadie se
+    dio cuenta, porque cada desglose se comprobaba por separado.
+
+    Aqui se calcula la matriz entera en una pasada, y se exige que:
+
+      1. las filas sumen el total de la matriz;
+      2. las columnas sumen el total de la matriz;
+      3. las columnas sumen exactamente los totales absolutos published.
+
+    Si alguna vez el clasificador cambia, esto se rompe en vez de dejar dos
+    numeros que ya no hablan entre si.
+    """
+    manos = DG.cargar()
+    matriz = collections.defaultdict(collections.Counter)
+    for h in manos.values():
+        for x in DG.clasificar_aportado(h):
+            matriz[x['action']][x['resultado']] += 1
+
+    esperado = {'b': {DG.CALCULABLE: 2392, DG.SOSPECHOSA: 6, DG.INDETERMINADA: 0},
+                'c': {DG.CALCULABLE: 2032, DG.SOSPECHOSA: 430, DG.INDETERMINADA: 96},
+                'r': {DG.CALCULABLE: 1009, DG.SOSPECHOSA: 9, DG.INDETERMINADA: 0}}
+    assert {k: dict(v) for k, v in matriz.items()} == {
+        k: {r: n for r, n in v.items() if n} for k, v in esperado.items()}, (
+        {k: dict(v) for k, v in matriz.items()})
+
+    total_matriz = sum(sum(f.values()) for f in matriz.values())
+    assert total_matriz == 5974, total_matriz
+    for accion, fila in matriz.items():
+        assert sum(fila.values()) == sum(esperado[accion].values()), accion
+    assert (sum(matriz['b'][r] for r in matriz['b'])
+            + sum(matriz['c'][r] for r in matriz['c'])
+            + sum(matriz['r'][r] for r in matriz['r'])) == total_matriz
+
+    col = collections.Counter()
+    for fila in matriz.values():
+        col.update(fila)
+    assert col[DG.CALCULABLE] == 5433, dict(col)
+    assert col[DG.SOSPECHOSA] == 445, dict(col)
+    assert col[DG.INDETERMINADA] == 96, dict(col)
+
+
+def test_el_reparto_por_accion_suma_el_total_de_la_base():
+    """Que el total de la matriz sea el de las acciones que aportan.
+
+    `f` y `x` no aportan y quedan fuera a proposito; que el total cuadre con
+    2398+2558+1018 es la comprobacion de que la exclusion es la que se cree
+    que es.
+    """
+    manos = DG.cargar()
+    tot = collections.Counter()
+    for h in manos.values():
+        for x in DG.clasificar_aportado(h):
+            tot[x['action']] += 1
+    assert tot['b'] == 2398, dict(tot)
+    assert tot['c'] == 2558, dict(tot)
+    assert tot['r'] == 1018, dict(tot)
+    assert sum(tot.values()) == 5974, dict(tot)
 
 
 def test_las_repeticiones_no_son_consecutivas():
