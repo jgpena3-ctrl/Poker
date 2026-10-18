@@ -395,42 +395,90 @@ PUERTA_COMUN = ('correr', 'crudo', 'afirmar_caida', 'afirmar_verde')
 RECEPTORES = ('ep', 'ejecutar_pytest')
 
 
-def _llamada_de_la_puerta(valor):
-    """El nombre de la llamada de la puerta comun que hay en un valor, o None.
+PUERTA = 'ejecutar_pytest'
+RECEPTORES = ('ep', 'ejecutar_pytest')
 
-    Y dos cosas, ambas medidas:
 
-    (1) `[0]`. `codigo = ep.correr(F, 't')[0]` tiene un `ast.Subscript` con
-        la llamada DEBAJO. Antes solo se miraba el `Call` mas exterior, asi
-        que esa forma —que es la segunda que se le ocurre a cualquiera que no
-        quiera desestructurar una tupla— no se detectaba.
+def _ligados_por_import(fuente):
+    """Los nombres que este modulo ha ligado a la puerta comun.
 
-    (2) EL RECEPTOR. `otro.correr(F, 't')` se detectaba, porque se miraba el
-        atributo y no quien lo tiene. Ahora el receptor tiene que ser `ep` o
-        `ejecutar_pytest`, o la llamada tiene que ser suelta —traida con
-        `from ejecutar_pytest import correr`—, que es la otra forma real de
-        importar.
+    Y son DOS preguntas, no una:
 
-    Y lo que NO se acepta, a proposito: un ALIAS. `from ejecutar_pytest
-    import correr as c` no se ve. Detectar el alias exigiria seguir el
-    `import`, y ese analisis no se sabe mantener y aqui no compensa: un
-    detector mas grande detecta mas y avisa mas, y el que avisa de mas es
-    ruido. El hueco esta DECLARADO, que es lo que lo hace buscable —un hueco
-    declarado se busca, uno no declarado se tropieza tres meses despues por
-    alguien que no lo sabe."""
+      - `from ejecutar_pytest import correr`  -> 'correr' queda ligado
+      - `import ejecutar_pytest as e`         -> 'e' queda ligado
+
+    Que es lo que una version anterior mezclaba: preguntaba solo por la
+    segunda y por el atributo, y por eso rechazaba dos casos legitimos —
+    `from ejecutar_pytest import correr as puerta` + `puerta(...)`, e
+    `import ejecutar_pytest` + `ejecutar_pytest.correr(...)`—.
+
+    Un `import` es una SENTENCIA, no un camino de datos. Por eso esto es
+    barato y por eso tapa el hueco en vez de desplazarlo.
+
+    Y EL HUECO QUE APARECE AL AFINARLO, DECLARADO: `from ejecutar_pytest
+    import X` liga `X` para TODO el modulo. O sea que si mas adelante hay un
+    `def X` local, o el import esta en una rama que no se ejecuta, el
+    detector lo sigue aceptando. El detector comprueba que el modulo
+    MENCIONE el import, no que lo USE en esa linea — que es analisis de
+    flujo, y no se hace —."""
+    arbol = ast.parse(fuente)
+    ligados = set()
+    for nodo in ast.walk(arbol):
+        if isinstance(nodo, ast.ImportFrom) and nodo.module == PUERTA:
+            for alias in nodo.names:
+                ligados.add(alias.asname or alias.name)
+        elif isinstance(nodo, ast.Import):
+            for alias in nodo.names:
+                if alias.name == PUERTA:
+                    ligados.add(alias.asname or alias.name)
+    return ligados
+
+
+def _llamada_de_la_puerta(fuente, valor):
+    """El NOMBRE LIGADO de la llamada de la puerta, o None.
+
+    Y «nombre ligado», no «nombre de la puerta», y la diferencia es toda:
+    `from ejecutar_pytest import correr as c` devuelve `'c'`, que NO esta en
+    `PUERTA_COMUN` y por tanto no se senala. El alias queda como hueco, y se
+    queda porque la LISTA lo para, no porque el helper lo rechace — dos
+    mecanismos, cada uno haciendo lo suyo, que es mejor que uno haciendo
+    las dos cosas.
+
+    Y lo que se corrige con esto es un FALSO POSITIVO real, medido:
+
+        def correr(f, t): ...            -> se tomaba por la puerta
+        from otra_cosa import correr    -> se tomaba por la puerta
+
+    Los dos son llamadas sueltas con un nombre que no sale de la puerta, y
+    las dos se aceptaban. Y el primero es el caso que R2 senala.
+
+    Con esto:
+
+        una llamada SUELTA `X(...)`   -> X tiene que salir de un
+                                          `from ejecutar_pytest import X`
+        una llamada `R.correr(...)`   -> R es `ep`/`ejecutar_pytest`, o esta
+                                          ligado por `import ejecutar_pytest
+                                          as R`
+    """
     while isinstance(valor, ast.Subscript):
-        valor = valor.value                       # `ep.correr(...)[0]`
+        valor = valor.value               # `ep.correr(...)[0]`
     if not isinstance(valor, ast.Call):
         return None
+    ligados = _ligados_por_import(fuente)
     func = valor.func
     if isinstance(func, ast.Attribute):
         receptor = func.value
         nombre_receptor = (receptor.attr if isinstance(receptor, ast.Attribute)
                            else getattr(receptor, 'id', ''))
-        if nombre_receptor not in RECEPTORES:
+        if (nombre_receptor not in RECEPTORES
+                and nombre_receptor not in ligados):
             return None
         return func.attr
-    return getattr(func, 'id', '') or None
+    # SUELTA. Y el nombre tiene que VENIR de la puerta: una `def` local con
+    # el mismo nombre no cuenta, porque es una definicion, no una
+    # importacion. MEDIDO: antes se aceptaba.
+    nombre = getattr(func, 'id', '')
+    return nombre if (nombre and nombre in ligados) else None
 
 
 def _variables_de_la_puerta(fuente):
@@ -449,7 +497,7 @@ def _variables_de_la_puerta(fuente):
     for nodo in ast.walk(arbol):
         if not isinstance(nodo, ast.Assign):
             continue
-        llamada = _llamada_de_la_puerta(nodo.value)
+        llamada = _llamada_de_la_puerta(fuente, nodo.value)
         if llamada is None or llamada not in PUERTA_COMUN:
             continue
         for t in nodo.targets:
@@ -1033,7 +1081,34 @@ ALCANCE = (
      'from ejecutar_pytest import correr' + chr(10)
      + "codigo, salida = correr(F, 't')" + chr(10) + 'if codigo != 0:'
      + chr(10) + '    pass' + chr(10), True),
-    ('reasignada: la variable vuelve a usarse para otra cosa',
+    # Y esta mide PROCEDENCIA, NO VALOR. Que es un FALSO POSITIVO REAL y
+    # declarado, no una forma que la regla cubra:
+    #
+    #     codigo, salida = ep.correr(F, 't')
+    #     codigo = len(salida)
+    #     if codigo != 0:      <-- compara una LONGITUD, no un codigo
+    #
+    # El detector senala porque `codigo` SALIO de la puerta, no porque su
+    # valor siga siendo el codigo de salida. Y la fila anterior se llamaba
+    # «la variable vuelve a usarse para otra cosa», que suena a una forma
+    # cubierta y no a un falso positivo.
+    #
+    # Y no se arregla porque arreglarlo es SEGUIR la variable, que es
+    # analisis de flujo de datos — lo unico que este detector no hace, y lo
+    # que este bloque ha decidido no hacer, por el mismo motivo que no sigue
+    # alias —.
+    #
+    # Y de las dos salidas posibles, la que se elige es la de DECIRLO. La
+    # otra —dejar de senalar una variable reasignada— perderia un caso real:
+    # `codigo, salida = correr(...)` + `otro, codigo = f()` + `codigo != 0`
+    # seguira senalandose, porque en algun momento SI hubo un codigo ahi.
+    #
+    # Y esta es la QUINTA vez con la misma forma, y en la DIRECCION OPUESTA
+    # a las otras cuatro, que median menos de lo que decian. Y medir mas de
+    # lo que se dice es PEOR: un detector que mide de mas CONVENCE de que
+    # mide bien. El que mide menos se ve como fallo; el que mide mas se lleva
+    # una impresion que es justo lo que tiene que prevenir.
+    ('REASIGNADA — mide PROCEDENCIA, no valor: FALSO POSITIVO declarado',
      "codigo, salida = ep.correr(F, 't')" + chr(10) + 'codigo = len(salida)'
      + chr(10) + 'if codigo != 0:' + chr(10) + '    pass' + chr(10), True),
     # --- y las que la regla NO promete, DECLARADAS ---
@@ -1041,9 +1116,39 @@ ALCANCE = (
      'from ejecutar_pytest import correr as c' + chr(10)
      + "codigo, salida = c(F, 't')" + chr(10) + 'if codigo != 0:'
      + chr(10) + '    pass' + chr(10), False),
-    ('ALIAS del modulo: `ejecutar_pytest as e`',
+    # Y una que la version anterior ponia aqui, en las que NO promete, y que
+    # ahora se detecta — y es CORRECTO: `import ejecutar_pytest as e` liga
+    # el MISMO modulo, solo que con otro nombre.
+    #
+    # O sea que el rechazo anterior era un artefacto de no seguir ningun
+    # alias, no una decision. Y ahora sigue el alias del MODULO porque el
+    # receptor es una pregunta SOBRE EL MODULO, y un alias del modulo no
+    # cambia la respuesta.
+    #
+    # Y el alias de la FUNCION sigue siendo hueco, y esa asimetria no es
+    # arbitraria: renombrar la FUNCION es salirse del contrato de la puerta,
+    # que es una lista de nombres CANONICOS, mientras que renombrar el modulo
+    # no cambia lo que se pregunta.
+    #
+    # Y R1 lo prohibe explicitamente: «no amplies el detector para tapar el
+    # alias. Esta declarado a proposito». O sea que la asimetria es la
+    # DECISION, y lo que faltaba era declararla.
+    ('ALIAS del MODULO: `ejecutar_pytest as e` — el mismo modulo, otro nombre',
      'import ejecutar_pytest as e' + chr(10)
      + "codigo, salida = e.correr(F, 't')" + chr(10) + 'if codigo != 0:'
+     + chr(10) + '    pass' + chr(10), True),
+    ('`def correr` local JUNTO a un import legitimo: hueco DECLARADO',
+     'from ejecutar_pytest import correr' + chr(10)
+     + 'def correr(f, t):' + chr(10) + '    return 1, 2' + chr(10) + chr(10)
+     + "codigo, salida = correr(F, 't')" + chr(10) + 'if codigo != 0:'
+     + chr(10) + '    pass' + chr(10), True),
+    ('`def correr` local SIN import: no es la puerta',
+     'def correr(f, t):' + chr(10) + '    return 1, 2' + chr(10) + chr(10)
+     + "codigo, salida = correr(F, 't')" + chr(10) + 'if codigo != 0:'
+     + chr(10) + '    pass' + chr(10), False),
+    ('`correr` de otro modulo, importado sin alias',
+     'from otra_cosa import correr' + chr(10)
+     + "codigo, salida = correr(F, 't')" + chr(10) + 'if codigo != 0:'
      + chr(10) + '    pass' + chr(10), False),
     ('`correr` de OTRO modulo: no es la puerta comun',
      'import otro' + chr(10) + "codigo, salida = otro.correr(F, 't')"
@@ -1081,7 +1186,16 @@ def test_el_alcance_de_la_regla_es_el_declarado():
     y `sin_probar()` sin ambito que decia «nada pendiente».
 
     Y con el codigo entero, si una fila esta mal escrita el fallo lo dice EN
-    LA FILA, y no en un numero de la suma."""
+    LA FILA, y no en un numero de la suma.
+
+    Y una fila se ha MOVIDO de grupo al afinar el detector, y no es un fallo
+    de la tabla: `import ejecutar_pytest as e` + `e.correr(...)` esta ahora
+    entre las que se detectan, porque ese `e` es el MISMO modulo de la
+    puerta. El rechazo anterior era un artefacto de no seguir ningun alias.
+
+    Y el alias de la FUNCION se queda en el grupo de las que NO, y esa
+    asimetria es la decision — R1 prohibe tapar el alias —, asi que la fila
+    lo dice para que dentro de seis meses no se lea como un fallo."""
     for nombre, fuente, debe in ALCANCE:
         detectado = bool(_comparaciones_inequivocas(fuente))
         assert detectado == debe, (
@@ -1207,35 +1321,77 @@ def test_el_recorrido_de_la_regla_cubre_todos_los_ficheros_de_prueba():
     envoltorio: la excepcion que no es la que se esperaba pasa por el
     camino de la que si.
     """
-    en_disco = [f for f in os.listdir(os.path.join(ROOT, 'tools'))
-                if f.startswith('test_') and f.endswith('.py')]
-    recorrido = _ficheros_de_prueba()
-    assert len(recorrido) == len(en_disco), (
-        'el recorrido ha encontrado %d ficheros de prueba y en disco hay '
-        '%d.\n\nEn disco:  %s\nRecorridos: %s\n\nUn filtro que no casa con '
-        'algun fichero deja ese fichero SIN MIRAR, y la regla sigue en '
-        'verde.'
-        % (len(recorrido), len(en_disco), sorted(en_disco),
-           sorted(os.path.basename(r) for r in recorrido)))
+    en_disco = sorted(
+        os.path.join(ROOT, 'tools', f)
+        for f in os.listdir(os.path.join(ROOT, 'tools'))
+        if f.startswith('test_') and f.endswith('.py'))
+    recorrido = sorted(os.path.normpath(r) for r in _ficheros_de_prueba())
+
+    # IDENTIDADES, NO CANTIDADES. MEDIDO: con `len(recorrido) ==
+    # len(en_disco)`, un recorrido que omite un fichero e incluye otro dos
+    # veces tiene los MISMOS numeros y no son los mismos ficheros:
+    #
+    #     en disco:   ['a', 'b', 'c']
+    #     recorrido: ['a', 'b', 'b']
+    #     len == len:  True     <- la comprobacion de antes pasa
+    #     son los mismos: False
+    #
+    # Que es el fallo de la lista de dos ficheros un nivel mas abajo: aquella
+    # comprobaba SI/NO sobre dos nombres, esta comprobaba CUANTOS sobre todos.
+    # Ninguna mira SI SON LOS MISMOS.
+    #
+    # Y `normpath`, porque en Windows `tools\\x.py` y `.\\tools\\x.py` son el
+    # mismo fichero y sin normalizar son dos.
+    #
+    # Y POR QUE HACE FALTA UN SEGUNDO CHECK PARA LOS DUPLICADOS: porque
+    # `set()` los borra. Un recorrido con un duplicado tiene el mismo
+    # conjunto, y los dos numeros pueden coincidir. O sea que comprobar solo
+    # el conjunto tambien deja pasar el duplicado. Son dos comprobaciones
+    # porque son dos fallos.
+    assert len(recorrido) == len(set(recorrido)), (
+        'el recorrido tiene DUPLICADOS: %d entradas, %d distintas. Un '
+        'duplicado no lo ve un `set()`, de modo que comparar conjuntos no '
+        'basta por si solo.\n\nRecorrido: %s'
+        % (len(recorrido), len(set(recorrido)), recorrido))
+
+    assert recorrido == en_disco, (
+        'el recorrido no cubre EXACTAMENTE los ficheros de prueba.\n\n'
+        'en disco:    %d\n%s\n\nrecorridos: %d\n%s\n\nsolo en disco:     '
+        '%s\nsolo en recorrido: %s\n\nUn filtro que no casa deja un '
+        'fichero SIN MIRAR y la regla sigue en verde.'
+        % (len(en_disco), chr(10).join('   ' + os.path.basename(f)
+                                       for f in en_disco),
+           len(recorrido),
+           chr(10).join('   ' + os.path.basename(f) for f in recorrido),
+           sorted(os.path.basename(f) for f in set(en_disco)
+                  - set(recorrido)) or 'ninguno',
+           sorted(os.path.basename(f) for f in set(recorrido)
+                  - set(en_disco)) or 'ninguno'))
 
     # Y que ABRIR cada uno no falle en silencio
     for ruta in recorrido:
         with io.open(ruta, encoding='utf-8') as f:
             f.read()
 
-    # Y que abrir algo ROTO falle, en vez de devolver «no senala»
     with tempfile.TemporaryDirectory() as tmp:
+        # (a) sintaxis rota, por el DETECTOR
         roto = os.path.join(tmp, 'roto.py')
         io.open(roto, 'w', encoding='utf-8', newline='').write(
             'def f(:' + chr(10))
         with pytest.raises(SyntaxError):
             _lanza_pytest_propio(roto)
 
-        # Y una codificacion que NO es utf-8. En Windows, `open` sin
-        # `encoding` lee `cp1252`; un fichero de test escrito asi no lo
-        # abriria `encoding='utf-8'`, y el fallo tiene que salir.
+        # (b) codificacion incompatible, POR EL DETECTOR
+        #
+        # Y no comprobando `io.open(...)`, que es lo que hacia antes. Es
+        # comprobar que `open` falla, no que falle el detector: la prueba
+        # tiene que ejercitar la FUNCION que se audita, o no audita nada.
+        #
+        # Y el caso no es teorico en Windows, donde `open` sin `encoding`
+        # lee `cp1252`. Un test nuevo escrito con la codificacion por defecto
+        # entraria por ahi sin que nadie lo note.
         otro = os.path.join(tmp, 'cp1252.py')
         with io.open(otro, 'w', encoding='cp1252', newline='') as f:
             f.write('# acento: n' + chr(241) + chr(32) + chr(10))
         with pytest.raises(UnicodeDecodeError):
-            io.open(otro, encoding='utf-8').read()
+            _lanza_pytest_propio(otro)
