@@ -57,7 +57,7 @@ def _m(nombre):
     return m
 
 
-# el comprobador de fuga vive en uditar_auc.py y se USA desde aqui, no
+# el comprobador de fuga vive en auditar_auc.py y se USA desde aqui, no
 # se copia: un solo sitio donde puede fallar
 _auc = _m('auditar_auc.py')
 comprobar_solo_validacion = _auc.comprobar_solo_validacion

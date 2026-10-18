@@ -1944,6 +1944,25 @@ def test_no_se_recorre_de_mas_y_las_paradas_son_las_declaradas():
 # que comprueba esta lista lo dijo en la primera pasada — que es justo para
 # lo que esta ahi.
 #
+# Y POR QUE ESTA LISTA, Y POR QUE MARCA LOS QUE NO ALCANZA
+#
+# MEDIDO, por lo que hace la derivacion: un fragmento inalcanzable aporta
+# exactamente lo mismo al conjunto derivado que si no existiera — `body` y
+# `orelse` ya estan por otros—, y ademas deja escrito que se comprueba. O sea
+# que el corpus DECLARA una cobertura que no tiene.
+#
+# Y por eso es PEOR QUE NO ESTAR: un fragmento ausente del corpus no promete
+# nada, y se nota al leer la lista; uno inalcanzable promete, esta ahi, se lee
+# y parece comprobar. Lo que se puede cubrir sin cubrir esta como
+# infracubierto; lo que parece cubierto y no lo esta es peor.
+#
+# Y por eso la lista marca los tres, y no los quita del corpus — que es lo que
+# haria la opcion que R2 dejo abierta de «documentar que las asincronas
+# comparten los campos»: quitar un fragmento del corpus borra el recordatorio,
+# y marcarlo lo conserva. Y las dos cosas se necesitan: el recordatorio para
+# el que lee, y la comprobacion de CAMPOS —`PARES_ASINCRONOS`— para el que la
+# derivacion no puede alcanzar.
+#
 # Y que una lista de estas sea una DECLARACION COMPROBADA, y no una lista
 # escrita: porque una lista escrita a mano que se compara contra otra lista
 # escrita a mano no se comprueba, se leen las dos y se ve que dicen lo mismo.
@@ -2051,8 +2070,8 @@ def test_las_asincronas_tienen_los_mismos_campos_que_las_sincronas():
             'NO se puede cubrir con el corpus, de modo que si desaparece no '
             'queda nada que la compruebe' % (asincrona, sincrona))
         assert a._fields == b._fields, (
-            '`%s` y `%s` tienen campos distintos:%n'
-            '    %-16s %s%n    %-16s %s%n'
+            '`%s` y `%s` tienen campos distintos:\n'
+            '    %-16s %s\n    %-16s %s\n'
             'Y el corpus cubre la sincrona, de modo que de la asincrona no se '
             'sigue nada. Es decir: la cobertura de la sincrona NO es la '
             'cobertura de la asincrona, y por eso hacen falta dos.'
@@ -2089,3 +2108,631 @@ def test_el_corpus_declara_que_no_alcanza():
             'la derivacion no lo alcanza. O sea que no comprueba nada. Y un '
             'fragmento escrito que no comprueba es PEOR que uno ausente: '
             'deja escrito que se comprueba.' % etiqueta)
+
+
+# ============================ 17. LAS RUTAS QUE SOLO SE EJECUTAN AL FALLAR
+#
+# R2, punto 1:
+#
+#     Python no admite %n como especificador de formato de cadenas. Si alguna
+#     pareja tiene campos distintos, la construcción del mensaje puede lanzar
+#     ValueError en vez de mostrar la discrepancia que hizo fallar la prueba.
+#
+# Cierto, y medido — con el TIPO DE EXCEPCION que de verdad sale, que no es el
+# que dice R2:
+#
+#     '`%s` y `%s` tienen campos distintos:%n' % ('For', 'AsyncFor')
+#     -> TypeError: not enough arguments for format string
+#
+# R2 decia ValueError y sale TypeError, porque los dos `%s` se han comido los
+# argumentos y el `%n` se queda sin ellos. Y eso da PEOR que un ValueError: el
+# mensaje dice «not enough arguments», que no menciona ni el `%n` ni las
+# clases. O sea que el fallo borra la causa Y ademas confunde sobre la causa.
+#
+# Y POR QUE NO SE VE NUNCA
+#
+# Porque el mensaje se construye SOLO cuando la asercion falla. O sea que este
+# bloque entero de codigo vive en un camino que la suite NUNCA recorre
+# mientras todo va bien.
+#
+# Y la prueba en la que estaba, `test_las_asincronas_tienen_los_mismos_campos_
+# que_las_sincronas`, existe PRECISAMENTE para detectar un cambio futuro del
+# AST. O sea que su unico trabajo es hablar cuando algo va mal, y no puede
+# hablar. Que es la peor combinacion posible.
+#
+# Y EL TIPO DE HUECO, QUE NO SE HABIA CERRADO EN ESTE BLOQUE
+#
+# Las siete «la comprobacion no mide lo que dice medir» han sido sobre rutas
+# QUE SE EJECUTAN: un invariante que devuelve la lista vacia, un filtro que
+# nunca casa, una lista de dos ficheros, un limite que nunca corta, una lista
+# de campos con dos copias iguales.
+#
+# Y esta es la primera sobre una ruta QUE NO SE EJECUTA: el mensaje de error.
+#
+# O sea: hay codigo cuyo unico trabajo es hablar cuando algo va mal, y no hay
+# nada que lo compruebe. Y un fallo ahi es doble — no sale el diagnostico, y
+# sale otro fallo que no menciona el problema—, de modo que es PEOR que no
+# tener fallo ahi.
+#
+# Y POR QUE NO SE CIERRA MIRANDO LOS MENSAJES
+#
+# Porque un mensaje de asercion hay que METERLO en un fallo para verlo. Y eso
+# se puede hacer sin que nada falle de verdad: se construye el mensaje con
+# argumentos DE MENTIRA y se ve si revienta. Que es un test que falla a
+# proposito para poder leerse.
+#
+# Y LA FORMA DE QUE NO CUENTE MAL: NO CUENTA NADA
+#
+# La idea obvia es contar los especificadores de la plantilla con una
+# expresion regular y dar tantos argumentos falsos como haya. MEDIDO: eso es
+# exactamente el error que se busca detectar —contar mal un formato—, y
+# ponerlo en el comprobador que existe para detectar eso es meter el defecto
+# dentro del detector.
+#
+# La forma que no cuenta nada es PREGUNTAR:
+#
+#     '%s' % ()       -> TypeError: not enough arguments for format string
+#     '%s' % (x, y)   -> TypeError: not all arguments converted
+#
+# O sea que con `%` solo hay un numero de argumentos que funciona, y se
+# encuentra probando. Y asi el comprobador no sabe nada de formatos: no puede
+# equivocarse al contarlos porque no los cuenta.
+#
+# Y MENTRAS LO MEDIA, EL DEFECTO ENCONTRO A QUIEN LO BUSCABA
+#
+# MEDIDO, tres veces, en el propio script que media: `'... (`cadena % algo`):
+# %d' % n` revienta, y `'... % algo ...' % n` revienta, y
+# `'... `algo + % + algo`: %d' % n` revienta. Las tres por escribir un `%`
+# literal en una cadena que se despues se formatea, donde hace falta `%%`.
+#
+# O sea que el fallo no es raro: es facil, y se cuela en el fichero que existe
+# para buscarlo. Que es la mejor noticia posible sobre el valor de buscarlo.
+
+# Donde mira el comprobador, y MEDIDO antes de decidirlo:
+#
+#     tools     109 ficheros   290 plantillas   1 rota
+#     motor      68 ficheros    85 plantillas   0 rotas
+#     recorder    4 ficheros     1 plantilla    0 rotas
+#     .           1 fichero      0 plantillas   0 rotas
+#
+# O sea que la unica rota esta en `tools/`, que es mio. Y el alcance es
+# `tools/` porque `motor/`, `data/` y `asistente_live.py` no son mios — no
+# porque se banquen, sino porque no se tocan. Y se declara porque un
+# comprobador que mira de mas no es riguroso: es un boiled que espera a que
+# alguien toque lo que no debe.
+CARPETA_DE_MENSAJES = 'tools'
+
+# El suelo del numero de plantillas que el barrido tiene que encontrar.
+#
+# Y POR QUE HACE FALTA: porque un barrido que devuelve la lista vacia pasa
+# igual que uno que encuentra 290. Y esa es la version de este bloque del
+# «una comprobacion que no mide nada da verde»: si el patron deja de casar
+# —porque se toco el arbol, porque se cambio una comilla, porque alguien
+# reescribio el mensaje con f-string— el comprobador se quedaria callado y en
+# verde.
+#
+# MEDIDO: 290 en `tools/`. El suelo esta por debajo a proposito, para que un
+# cambio que borre la mitad de los mensajes no lo tumbe.
+PLANTILLAS_MINIMAS = 200
+
+
+class _Mentira(object):
+    """Un valor que se deja formatear de cualquier manera.
+
+    Y MEDIDO, que es lo que obliga a esto: el repo usa `%s` x180, `%d` x99,
+    `%r` x98, `%f` x21 y `%n` x3.
+
+    Un dummy de cadena revienta en `%f`, porque `%f` llama a `float()`, y
+    `%c` exige un entero de 0 a 255. O sea que un dummy de cadena daria
+    fallos que NO son del mensaje, y un test que falla por culpa de su propio
+    instrumento es un test que no sirve.
+
+    MEDIDO, y por eso existen los dos metodos:
+
+        %s -> 'x'      %d -> '0'      %r -> 'x'      %f -> '0.000000'
+        %c -> '\x00'   %x -> '0'      %e -> '0.000000e+00'
+
+    Y `%n` NO aparece en la lista, porque no se puede construir: es el
+    defecto."""
+
+    def __float__(self):
+        return 0.0
+
+    def __index__(self):
+        return 0
+
+
+def _sin_percent_escapado(plantilla):
+    """La plantilla con los `%%` YA INTERPRETADOS.
+
+    Y por que hace falta, MEDIDO: `'%(' in '%%(nombre)s'` es True, porque la
+    subcadena aparece en la segunda posicion. O sea que una comprobacion que
+    busca `%(` sin quitar antes los `%%` ve una especificacion con nombre donde
+    lo unico que hay es un percent escrito dos veces.
+
+    Y no es un detalle de esta comprobacion: es del LENGUAJE. `%%` no consume
+    argumento y no abre especificacion, asi que buscar especificadores sobre
+    una plantilla donde hay `%%` escaped es buscar sobre el texto equivocado.
+
+    Y la tercera vez en este bloque que hay que hacer esto —la primera en el
+    texto, la segunda en el barrido de las 290 plantillas, esta en el
+    comprobador—, y las tres se olvidaron la primera. O sea que no es un
+    descuido: es que `%%` es una cosa del lenguaje que se olvida.
+
+    Y por eso es una FUNCION y no un `.replace` en cada sitio: para que el
+    cuarto sitio la use sin volver a decidir si hay que hacerlo."""
+    return plantilla.replace('%%', '')
+
+
+def _argumentos_para(plantilla, tope=16):
+    """Cuantos argumentos hay que darle a `plantilla` para construirla.
+
+    Y None si no se puede construir con ninguno — que es lo que significa
+    «esta plantilla esta rota».
+
+    Y NO PARSEA EL FORMATO, que es lo importante: pregunta. Y por eso no
+    puede equivocarse al contar, porque no cuenta.
+
+    Y el `tope` de 16 es un suelo de seguridad, no una cortina: con mas de
+    16 especificadores el comprobador dira que la plantilla esta rota, y
+    dira MAL. MEDIDO: el maximo del repo esta muy por debajo, asi que el
+    suelo no se ha tocado nunca. Y si algún dia se tocara, el fallo seria
+    visible — un mensaje que si se construyediria que esta roto—, y visible
+    es mejor que silencioso."""
+    for cuantos in range(tope):
+        try:
+            plantilla % tuple(_Mentira() for _ in range(cuantos))
+        except (TypeError, ValueError):
+            continue
+        return cuantos
+    return None
+
+
+def _mensajes_plantilla():
+    """Los mensajes de asercion que son `CADENA % argumentos`.
+
+    MEDIDO: 290 en `tools/`, y 345 mensajes que son una CADENA LITERAL — que
+    no son plantillas y ya estan construidos.
+
+    Y el alcance son SOLO los `assert`. Un `raise ...(...)` con formato tiene
+    el mismo defecto y no se mira. Que es un hueco declarado, no uno que se
+    haya olvidado."""
+    carpeta = os.path.join(ROOT, CARPETA_DE_MENSAJES)
+    assert os.path.isdir(carpeta), (
+        'la carpeta de mensajes tiene que existir, y no existe: %s. Un barrido '
+        'sobre una carpeta que no esta encuentra cero plantillas, CERO, y con '
+        'cero todo pasa. O sea que el fallo de esta comprobacion es el verde.'
+        % carpeta)
+    encontrados = []
+    for nombre in sorted(os.listdir(carpeta)):
+        if not nombre.endswith('.py'):
+            continue
+        ruta = os.path.join(carpeta, nombre)
+        try:
+            arbol = ast.parse(io.open(ruta, encoding='utf-8').read())
+        except (SyntaxError, UnicodeDecodeError) as e:
+            raise AssertionError(
+                '%s no se ha podido NI LEER (%s). Un fichero que no se lee no '
+                'se mira, y un fichero que no se mira no aparece en el '
+                'barrido, y eso es verde por no mirar. Por eso aqui no se '
+                'salta: se para.' % (nombre, e))
+        for nodo in ast.walk(arbol):
+            if not isinstance(nodo, ast.Assert) or nodo.msg is None:
+                continue
+            msg = nodo.msg
+            if not (isinstance(msg, ast.BinOp) and isinstance(msg.op, ast.Mod)):
+                continue
+            izquierda = msg.left
+            if not (isinstance(izquierda, ast.Constant)
+                    and isinstance(izquierda.value, str)):
+                continue
+            if '%' not in izquierda.value:
+                continue
+            encontrados.append((nombre, nodo.lineno, izquierda.value))
+    return encontrados
+
+
+def test_los_mensajes_de_fallo_se_pueden_construir():
+    """El camino que no se ejecuta, ejecutado de mentira.
+
+    Y POR QUE UN TEST QUE NO FALLA NUNCA NO ENSEÑA NADA sobre esto: porque
+    el mensaje se construye solo cuando la asercion falla. O sea que la
+    pregunta «¿este mensaje se puede construir?» no tiene a que hacer NADIE
+    que falle para responderse, y esa es la gracia de la comprobacion.
+
+    Y no solo se mira `tools/test_ejecutar_pytest.py`: se mira todo `tools/`,
+    que es lo mio. Un unico fichero seria una regla de un fichero, y esa ha
+    sido una de las del bloque: la regla que parecia de todo el repo y
+    miraba dos nombres."""
+    sin_diccionario = []
+    rotas = []
+    for nombre, linea, plantilla in _mensajes_plantilla():
+        if '%(' in _sin_percent_escapado(plantilla):
+            # MEDIDO: CERO en el repo. Y no se puede construir con una tupla
+            # de mentiras, porque `%(nombre)s` pide un DICCIONARIO. O sea
+            # que si aparece uno, el comprobador lo declararia roto sin
+            # serlo — y por eso se cuenta aqui, para que la lista de lo que
+            # no se mira no crezca en silencio.
+            sin_diccionario.append((nombre, linea))
+            continue
+        if _argumentos_para(plantilla) is None:
+            rotas.append((nombre, linea, plantilla))
+    assert not sin_diccionario, (
+        'aparecen %d mensajes con `%%(nombre)s`, que necesitan un DICCIONARIO '
+        'y no una tupla. MEDIDO: no habia ninguno hasta que aparecio este. O '
+        'sea que el comprobador tiene que aprender a construirlos antes de '
+        'que se cuele uno: un comprobador que declara roto lo que no lo esta '
+        'es peor que uno que no mira.'
+        % len(sin_diccionario))
+    assert not rotas, (
+        'hay %d mensajes de asercion que NO se pueden construir, y son la '
+        'razon de existir de este bloque:%s\n\n'
+        'Que es lo que hace un fallo en un mensaje: en vez del diagnostico, '
+        'otro fallo que no menciona el problema. Y en el caso de una prueba '
+        'que existe para detectar un cambio futuro del AST, es la razon por '
+        'la que no podria hacer su trabajo.\n\n'
+        'MEDIDO, el tipo de excepcion importa: un `%%n` con dos `%%s` delante '
+        'da TypeError y no ValueError, porque los dos `%%s` se han comido los '
+        'argumentos. Y el mensaje de ese error dice «not enough arguments», '
+        'que no menciona ni el especificador ni las clases.'
+        % (len(rotas),
+           chr(10).join('    %s:%d  %s' % (n, l, t.replace(chr(10), ' ')[:70])
+                        for n, l, t in rotas)))
+
+
+def test_el_comprobador_de_mensajes_tiene_dientes():
+    """Que `_argumentos_para` distinga de verdad, y no solo con lo que hay.
+
+    Y POR QUE HACE FALTA, que es lo importante: MEDIDO, el barrido de
+    `tools/` encuentra UNA plantilla rota, y es la que R2.signaló. O sea que
+    un comprobador que encuentra exactamente el defecto para el que se
+    escribio no tiene NINGUNA evidencia de que encontraria otro mañana.
+
+    Y esa es la septima vez con la forma, en su version mas debil: no es que
+    la comprobacion mida mal, es que no se ha visto medir NADA MAS que lo
+    previsto.
+
+    Y por eso este test: le da plantillas rotas A PROPOSITO y comprueba que las
+    ve. Que es lo que hay que hacer con un detector: darle un caso que lo
+    mate, y comprobar que lo ve."""
+    rotas = ('%n', '%s %n', '%.3q', '%d %r %s %n')
+    for plantilla in rotas:
+        assert _argumentos_para(plantilla) is None, (
+            '`_argumentos_para(%r)` ha dicho que se puede construir con %d '
+            'argumentos. O sea que el comprobador que existe para encontrar '
+            'formatos rotos no los ve. Y eso no es un fallo de la plantilla '
+            'de ejemplo: es un fallo del comprobador, que es lo unico que '
+            'esta en juego.'
+            % (plantilla, _argumentos_para(plantilla)))
+    buenas = ('%s', '%d y %r', '%%', '%s%%', '%f', '%.3f', '%s y %s',
+              'no hay nada que formatear')
+    for plantilla in buenas:
+        assert _argumentos_para(plantilla) is not None, (
+            '`_argumentos_para(%r)` ha dicho que NO se puede construir. Y '
+            'esa plantilla se construye, de sobra. O sea que el comprobador '
+            'daria un fallo sobre un mensaje que esta bien, y eso lo hace '
+            'inutil: un comprobador que tambien falla cuando todo va bien '
+            'enseña a no fiarse de el.' % plantilla)
+
+
+def test_el_comprobador_de_mensajes_no_puede_devolver_nada():
+    """Y que el barrido no pueda quedarse vacio en verde.
+
+    Y esta es la version MAS DEBIL de la septima vez, y por eso va aparte: las
+    otras seis comprobaciones fallaban cuando la condicion se cumplia mal.
+    Esta podria pasar sin comprobar NADA, y pasaria si el patron dejara de
+    casar — porque se haya cambiado una comilla, porque el mensaje se haya
+    pasado a f-string, porque el arbol haya cambiado.
+
+    MEDIDO: 290. El suelo es 200, por debajo a proposito, para que un cambio
+    que borre la mitad de los mensajes lo tumbe y no lo deje pasar."""
+    encontrados = _mensajes_plantilla()
+    assert len(encontrados) >= PLANTILLAS_MINIMAS, (
+        'el barrido ha encontrado %d plantillas y el suelo es %d. MEDIDO: '
+        'eran 290. O sea que el barrido ha dejado de encontrar mensajes, y '
+        'un barrido que no encuentra nada no falla: es exactamente el caso '
+        'para el que hace falta el suelo, porque en verde no se distingue '
+        '«no hay ninguno» de «no se miró ninguno».'
+        % (len(encontrados), PLANTILLAS_MINIMAS))
+
+
+# ============================ 18. LA CONSTANTE, EN LAS DOS DIRECCIONES
+#
+# R2, punto 2: la lista de la produccion y la lista que valida la prueba
+# tienen que dejar de ser dos fuentes independientes. Y R1 lo dicta como
+# cuatro comprobaciones:
+#
+#     La implementación usa CAMPOS_RECORRIDOS, no un literal propio.
+#     No hay dos listas idénticas en test_ejecutar_pytest.py.
+#     Si se añade un campo a CAMPOS_RECORRIDOS, la implementación lo recorre.
+#     Si se quita un campo, la implementación deja de recorrerlo.
+#
+# Y LAS DOS ULTIMAS, MEDIDAS, Y NO SON LO QUE PARECEN
+#
+# Lo facil — y lo que haria el_array de siempre— es comprobar que la
+# implementacion MENCIONA la constante. MEDIDO: eso ya se cumple, y en efecto
+# no la menciona porque usa la constante. Y un test que comprueba que se
+# menciona una constante es un test que pasaria igual que si la usara con la
+# palabra puesta delante: porque mencionarla es lo mas facil que hay.
+#
+# O sea que el test tiene que distinguir USARLA de MENCIONARLA, y la unica
+# forma es cambiar la constante y ver si el COMPORTAMIENTO cambia.
+#
+# Y LA DIRECCION DE QUITAR UN CAMPO TIENE CASO REAL; LA DE ANADIR, NO
+#
+# MEDIDO: en `ast` no hay ningun campo fuera de los cinco que guarde
+# sentencias. Los que podrian —Match, match_case, ExceptHandler, Module,
+# Expression— guardan sentencias en `cases`, `body`, `finalbody` o `handlers`,
+# que ya estan. Y los de ambito son PARADAS.
+#
+# O sea que con `ast` de verdad NO HAY CASO donde anadir un campo cambie una
+# respuesta. Y eso es, de rebote, la confirmacion de que la derivacion
+# acertaba: los cinco campos son los cinco.
+#
+# Y por eso la direccion de anadir necesita un nodo SINTETICO, y hay que
+# decirlo con nombre. Un nodo `ast` con un campo que `ast` no define en
+# ninguna clase:
+#
+#     sin el campo    -> 0 import(s)    no lo encuentra
+#     CON el campo    -> 1 import(s)    LO ENCUENTRA
+#
+#     con `cases`     -> 1 import(s)    LO ENCUENTRA
+#     sin `cases`     -> 0 import(s)    no lo encuentra
+#
+# Y las dos direcciones se distinguen POR COMPORTAMIENTO. Que es lo unico que
+# no puede pasar por «se menciona la constante».
+
+
+class _NodoConCampoPropio(ast.AST):
+    """Un nodo de `ast` con un campo que `ast` no define en ninguna clase.
+
+    Y esto NO es un truco para hacer pasar un test: es la unica forma de
+    comprobar la direccion de «anadir un campo», porque MEDIDO no existe en
+    `ast` ningun campo de sentencias fuera de los cinco.
+
+    Y el nombre lo dice, para que nadie lo lea dentro de un dia como si fuera
+    un caso real del detector: `_NodoConCampoPropio`, y aqui."""
+    _fields = ('body', 'instruccion')
+
+
+def _arbol_con_campo_propio():
+    """Un modulo con un nodo que tiene un campo `instruccion` con un import."""
+    importacion = ast.Import(names=[ast.alias(name='ejecutar_pytest',
+                                              asname=None)])
+    nodo = _NodoConCampoPropio()
+    nodo.body = []
+    nodo.instruccion = [importacion]
+    return ast.fix_missing_locations(ast.Module(body=[nodo], type_ignores=[]))
+
+
+def _imports_de_modulo(arbol):
+    """Los `ast.Import` que el recorrido encuentra en `arbol`."""
+    return [nodo for nodo in _imports_de_nivel_de_modulo(arbol)
+            if isinstance(nodo, ast.Import)]
+
+
+def test_anadir_un_campo_a_la_constante_hace_que_la_implementacion_lo_recorra(
+        monkeypatch):
+    """La primera de las dos direcciones, y la que necesita el nodo sintetico."""
+    original = CAMPOS_RECORRIDOS
+    monkeypatch.setitem(globals(), 'CAMPOS_RECORRIDOS', original)
+    sin_campo = len(_imports_de_modulo(_arbol_con_campo_propio()))
+    monkeypatch.setitem(globals(), 'CAMPOS_RECORRIDOS',
+                        original + ('instruccion',))
+    con_campo = len(_imports_de_modulo(_arbol_con_campo_propio()))
+
+    assert sin_campo == 0, (
+        'sin `instruccion` en la constante, el recorrido deberia ignorar ese '
+        'campo, y encuentra %d. O sea que la implementacion esta recorriendo '
+        'un campo que la constante no declara — que es el otro sentido del '
+        'mismo fallo: no es que las dos listas se separen, es que la '
+        'implementacion tiene su propia lista dentro.' % sin_campo)
+    assert con_campo == 1, (
+        'con `instruccion` en la constante, el recorrido deberia encontrar el '
+        'import que hay en ese campo, y encuentra %d. O sea que la '
+        'implementacion NO esta leyendo la constante: la menciona y sigue '
+        'con su propia lista. Y es exactamente el defecto que este bloque '
+        'arranco arreglando, en la direccion contraria.' % con_campo)
+
+
+def test_quitar_un_campo_de_la_constante_hace_que_la_implementacion_lo_olvide(
+        monkeypatch):
+    """La segunda direccion, y aqui si hay un caso REAL de `ast`.
+
+    MEDIDO: con `cases` en la constante, el import dentro de un `case` de
+    `match` se encuentra; sin `cases`, no. Y `match` no abre ambito — es una
+    condicion mas—, de modo que ese import SI liga el nombre en el modulo y
+    perderlo es perder un enlace de verdad."""
+    match = ast.parse('match x:' + chr(10)
+                      + '    case 1:' + chr(10)
+                      + '        import ejecutar_pytest' + chr(10))
+    monkeypatch.setitem(globals(), 'CAMPOS_RECORRIDOS', CAMPOS_RECORRIDOS)
+    con_cases = len(_imports_de_modulo(match))
+    monkeypatch.setitem(globals(), 'CAMPOS_RECORRIDOS',
+                        tuple(c for c in CAMPOS_RECORRIDOS if c != 'cases'))
+    sin_cases = len(_imports_de_modulo(match))
+
+    assert con_cases == 1, (
+        'con `cases` en la constante, el import dentro del `case` tiene que '
+        'aparecer, y aparecen %d. O sea que el caso de `match/case` ha '
+        'dejado de cubrirse, y no porque `match` haya cambiado: porque la '
+        'constante ya no dice que se recorra.' % con_cases)
+    assert sin_cases == 0, (
+        'sin `cases` en la constante, el recorrido deberia ignorar `cases`, y '
+        'encuentra %d. O sea que quitar un campo de la constante no quita el '
+        'campo del recorrido, que es la forma de que las dos listas vuelvan a '
+        'ser dos — y ahi la separacion seria SILENCIOSA, porque el '
+        'comprobador seguiria mirando la constante y el codigo seguiria '
+        'mirando la suya.' % sin_cases)
+
+
+def test_no_hay_dos_listas_identicas():
+    """Y que no quede una segunda lista de campos escrita a mano.
+
+    MEDIDO, ANTES del arreglo de este bloque:
+
+        implementacion: for atributo in ('body', 'orelse', 'finalbody',
+                                          'handlers', 'cases'):
+        constante:      CAMPOS_RECORRIDOS = ('body', 'orelse', 'finalbody',
+                                              'handlers', 'cases')
+
+    DOS LITERALES IGUALES. Y esa era la sexta vez con la forma, y la primera
+    en que las dos listas eran iguales: en las otras cinco se diferenciaban en
+    el contenido y aqui se diferencian en que son dos, lo cual es peor porque
+    a simple vista es indistinguible.
+
+    Y por eso este test mira el TEXTO, aunque los otros dos de esta seccion
+    miran el COMPORTAMIENTO: porque lo que se quiere comprobar aqui es
+    literally que no exista una segunda COPIA, y una copia es una cosa de
+    texto. El comportamiento no la ve — una copia produce el mismo
+    comportamiento—, y es por eso que este caso necesita el otro metodo y no
+    el de al lado.
+
+    Y el limite: se mira ESTE fichero. Una copia en otro fichero no se ve,
+    y es un hueco declarado."""
+    cuerpo = io.open(__file__, encoding='utf-8').read()
+    # Y POR EL ARBOL Y NO POR EL TEXTO, que es lo que hacia antes y fallaba.
+    #
+    # MEDIDO, el fallo: el patron de texto encontraba 3 y hay 1. Los otros
+    # dos eran el bloque 18 CITANDO el defecto, y una cita de un defecto es
+    # texto igual que el defecto. Que es la novena vez con la misma forma, y
+    # con un matiz que no tenian las otras ocho: las otras contaban la cosa
+    # mala por error; esta contaba la cosa BUENA por error.
+    #
+    # Y lo que las distingue es la ESTRUCTURA: una frase citada en un
+    # docstring es un `ast.Constant`; una copia de la lista es una
+    # `ast.Tuple` de cinco valores, en ese orden.
+    #
+    # Y de rebote el arreglo cubre el caso multilinea, que el patron de
+    # texto no cogia — MEDIDO, uno de los tres literales estaba partido en dos
+    # lineas—, porque el arbol tiene la concatenacion implicita ya hecha.
+    copia = [nodo.lineno for nodo in ast.walk(ast.parse(cuerpo))
+             if isinstance(nodo, ast.Tuple)
+             and len(nodo.elts) == len(CAMPOS_RECORRIDOS)
+             and all(isinstance(e, ast.Constant) for e in nodo.elts)
+             and tuple(e.value for e in nodo.elts) == CAMPOS_RECORRIDOS]
+    assert len(copia) == 1, (
+        'hay %d literales con la lista de campos completa. MEDIDO, antes: '
+        'habia dos, y eran IGUALES, que es la forma peor porque a simple '
+        'vista no se distinguen. O sea que la comprobacion de que la '
+        'derivacion es correcta y la implementacion pueden separarse sin que '
+        'nada lo note. El arreglo no es sincronizarlas: es que solo haya una.\n\n'
+        'MEDIDO, y la cuenta que sale es sobre el ARBOL y no sobre el texto: '
+        'una frase que cita el defecto es un `Constant`, y una copia de la '
+        'lista es una `Tuple` de cinco. Por eso el numero de ahora no es el '
+        'de antes.'
+        % len(copia))
+    assert 'CAMPOS_RECORRIDOS' in cuerpo, (
+        'esto solo puede pasar si la constante ha desaparecido del fichero')
+
+
+# ============================ 19. LOS CARACTERES DE CONTROL
+#
+# Y el defecto que cierra es del bloque anterior, y MEDIDO por que existe.
+#
+# En una cadena de PowerShell con comillas DOBLES el backtick es el caracter
+# de escape, y ``` `X ``` produce el caracter de control ASCII de esa letra.
+#
+#     cadena normal      "x`ay"   ->  78 07 79    x, BEL, y
+#     aqui-string        "x`ay"   ->  78 07 79    x, BEL, y
+#     comillas simples   'x`ay'   ->  78 60 61 79 x, `, a, y
+#
+# Y MEDIDO, los cuatro casos del repo, y los cuatro empiezan por una letra que
+# es un escape de PowerShell:
+#
+#     tools/test_ejecutar_pytest.py:1707     `ast -> 0x07   ast.FunctionDef
+#     tools/auditar_preflop_varianza.py:60  `a   -> 0x07   auditar_auc.py
+#     tools/equity_preflop.py:159           `b   -> 0x08   board
+#     tools/test_revision2_cierre.py:41     `v   -> 0x0b   villano_del_corte
+#
+# Que no es casualidad: los cuatro son la MISMA causa. Y el bloque anterior
+# solo arreglo uno, porque solo miro UN FICHERO — y luego escribio que no
+# habia mas.
+#
+# Y ESO es lo que estaba mal, y no el guardia: el guardia era correcto y su
+# ALCANCE decia «el repo» cuando decia «un fichero». Que es la misma forma por
+# septima vez, y con un matiz que no tienen las otras seis: las otras contaban
+# mal lo que miraban; esta miraba poco y decia que era mucho.
+#
+# Y POR QUE LEE BYTES Y NO TEXTO
+#
+# Un guardia que abre el fichero como texto y busca caracteres de control
+# tiene un fallo: si el fichero no esta en UTF-8 la lectura revienta, y hay que
+# saltarselo — y saltar un fichero es no mirarlo, que es verde por no mirar.
+#
+# Leyendo BYTES no hay ese fallo: no hay decodificacion que pueda fallar, y
+# un byte menor de 0x20 que no sea tabulador, salto de linea ni retorno es un
+# caracter de control, se mire como se mire.
+#
+# Y EL ALCANCE, Y POR QUE ES SOLO `.py` — y aqui esta MEDIDO, no supuesto
+#
+# Porque se podria pensar que el alcance es por comodidad, y no lo es.
+#
+# MEDIDO: cuatro ficheros de `DOCS/` tienen bytes de control, y NINGUNO es un
+# defecto:
+#
+#     DOCS/AUDIT_NOPUEDE_ACTUAR.txt   0x00 en 3    empieza por ff fe
+#     DOCS/CORRELACION_CAPTURAS.txt   0x00 en 3    empieza por ff fe
+#     DOCS/baseline_folds_900.txt      0x00 en 3    empieza por ff fe
+#     DOCS/INVENTARIO_MULTIWAY_HEAD.txt  0x00 en 3  empieza por ff fe
+#
+# Son ficheros UTF-16LE leidos como bytes: cada caracter ASCII va seguido de
+# `0x00`, y el `0x14` que sale en tres de ellos es la mitad BAJA de U+2014 —la
+# raya—, no un caracter de control. MEDIDO en el contexto: `1<0x14>  todo lo
+# clasifico`, que es donde una raya aparece en un informe.
+#
+# O sea que en un `.txt` «byte menor de 0x20» y «caracter de control» NO son
+# lo mismo, y un guardia que los confunda daria siete falsos positivos sobre
+# ficheros que estan bien.
+#
+# En un `.py` SI son lo mismo: el codigo fuente de Python no puede estar en
+# UTF-16 —el interprete no lo leeria—, de modo que ahi un byte de control es
+# siempre un caracter de control.
+#
+# Y ese es el criterio del alcance: no «lo que me da la gana mirar», sino
+# exactamente donde las dos cosas coinciden. Y el resto del repo se mide
+# igualmente: los tres que quedaban estaban en `tools/`, y no hay ni uno en
+# `motor/`, `recorder/` ni en la raiz.
+
+CARPETAS_QUE_NO_SE_MIRAN = ('.git', '__pycache__', 'node_modules', '.pytest_cache')
+BYTES_DE_CONTROL = tuple(b for b in range(0x20)
+                         if chr(b) not in (chr(9), chr(10), chr(13)))
+
+
+def test_no_hay_caracteres_de_control_en_ningun_fichero():
+    """Lo que un guardia de UN FICHERO deja pasar, y por que esta no.
+
+    Y la lectura por BYTES es la parte importante, y no un detalle: es lo que
+    hace que el guardia no pueda saltarse un fichero sin darse cuenta. Un
+    `io.open(..., encoding='utf-8')` que falla es un fichero que no se mira, y
+    un fichero que no se mira es un fichero que no falla."""
+    encontrados = []
+    for carpeta, directorios, ficheros in os.walk(ROOT):
+        directorios[:] = [d for d in directorios
+                          if d not in CARPETAS_QUE_NO_SE_MIRAN]
+        for nombre in sorted(ficheros):
+            if not nombre.endswith('.py'):
+                continue
+            ruta = os.path.join(carpeta, nombre)
+            crudo = io.open(ruta, 'rb').read()
+            for byte in BYTES_DE_CONTROL:
+                if byte not in crudo:
+                    continue
+                numero = crudo[:crudo.index(byte)].count(b'\n') + 1
+                encontrados.append(
+                    (os.path.relpath(ruta, ROOT).replace('\\', '/'),
+                     numero, '0x%02X' % byte))
+    assert not encontrados, (
+        'caracteres de control en %d sitio(s):%s\n\n'
+        'Y todos vienen del mismo sitio, MEDIDO: el backtick de una cadena de '
+        'PowerShell con comillas dobles es un caracter de escape, y ``` `X ``` '
+        'produce el control de esa letra. O sea que un `ast` se convierte en '
+        'BEL, un `board` en BS y un `villano` en VT, sin avisar.\n\n'
+        'MEDIDO: cadena normal, aqui-string y comillas dobles se comportan '
+        'igual; las comillas SIMPLES dejan el backtick como backtick. O sea '
+        'que hay una forma de escribirlo que no rompe nada, y es no usar '
+        'comillas dobles cuando el texto lleva backticks.\n\n'
+        'Y el guardia del bloque anterior era correcto: lo que no era correcto '
+        'era su alcance, que decia «el repo» y miraba un fichero.'
+        % (len(encontrados),
+           chr(10).join('    %s:%d  %s' % t for t in encontrados[:12])))

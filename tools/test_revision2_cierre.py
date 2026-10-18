@@ -38,7 +38,7 @@ def he():
 
 # ------------------------------------------------- §2 el spot inalcanzable
 def _mano(acciones, hero='SB'):
-    # los NOMBRES importan: illano_del_corte busca por puesto y luego
+    # los NOMBRES importan: villano_del_corte busca por puesto y luego
     # saca el nombre del jugador. Una mano sin nombres devuelve (None, pos).
     return {'players': [{'pos': hero, 'name': 'Jarduan'},
                         {'pos': 'BB', 'name': 'DominoSaurio'},

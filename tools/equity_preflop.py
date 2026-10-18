@@ -156,7 +156,7 @@ def equity_preflop(hero, villain, verbose=False):
     boards = boards_completos(resto)
     n = boards.shape[0]
 
-    # evaluate_batch NO sirve aqui: su oard es 1-D y compartido por
+    # evaluate_batch NO sirve aqui: su board es 1-D y compartido por
     # todas las filas, y lo que hace falta es un board DISTINTO por fila.
     # Se construye (N, 7) = 2 del jugador + 5 del sorteo y se llama a
     # evaluate_n_batch, que acepta n en (5, 6, 7). Con 7 cartas es
