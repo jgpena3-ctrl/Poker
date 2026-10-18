@@ -399,8 +399,46 @@ PUERTA = 'ejecutar_pytest'
 RECEPTORES = ('ep', 'ejecutar_pytest')
 
 
+def _imports_de_nivel_de_modulo(arbol):
+    """Las sentencias de nivel de modulo, y lo que hay dentro de ellas.
+
+    Y «de nivel de modulo» significa: se BAJA dentro de `if`, `try`, `with`,
+    `for` y `while` — que son condiciones, no?— y NO dentro de `def`, `class`
+    ni `lambda`.
+
+    Que es justo la diferencia entre dos cosas que se confundian:
+
+      `try: from ejecutar_pytest import correr` a nivel de modulo
+          -> el nombre queda ligado en el modulo CUANDO el import se ejecuta.
+             Y que se ejecute o no es la limitacion ya documentada —
+             presencia, no ejecucion —, que es aceptable.
+
+      `def auxiliar(): from ejecutar_pytest import correr`
+          -> el nombre queda ligado SOLO dentro de `auxiliar`. Y una
+             llamada a `correr` FUERA de `auxiliar` es un `NameError`, no una
+             llamada a la puerta.
+
+    Y la segunda es lo que R2 senala, y es un problema DISTINTO del primero:
+    no es que el detector no sepa si el import corre, es que el nombre no
+    existe en ese punto del programa.
+
+    MEDIDO, antes de arreglarlo, cinco falsos positivos: los tres con
+    receptor anidado y dos con import de ambito local."""
+    pendientes = list(getattr(arbol, 'body', []))
+    while pendientes:
+        nodo = pendientes.pop()
+        yield nodo
+        if isinstance(nodo, (ast.FunctionDef, ast.AsyncFunctionDef,
+                              ast.ClassDef, ast.Lambda)):
+            continue                      # un ambito NUEVO: no se hereda
+        for atributo in ('body', 'orelse', 'finalbody', 'handlers'):
+            hijo = getattr(nodo, atributo, None)
+            if isinstance(hijo, list):
+                pendientes.extend(hijo)
+
+
 def _ligados_por_import(fuente):
-    """Los nombres que este modulo ha ligado a la puerta comun.
+    """Los nombres que este modulo ha ligado a la puerta comun, EN ESTE AMBITO.
 
     Y son DOS preguntas, no una:
 
@@ -415,15 +453,22 @@ def _ligados_por_import(fuente):
     Un `import` es una SENTENCIA, no un camino de datos. Por eso esto es
     barato y por eso tapa el hueco en vez de desplazarlo.
 
-    Y EL HUECO QUE APARECE AL AFINARLO, DECLARADO: `from ejecutar_pytest
-    import X` liga `X` para TODO el modulo. O sea que si mas adelante hay un
-    `def X` local, o el import esta en una rama que no se ejecuta, el
-    detector lo sigue aceptando. El detector comprueba que el modulo
-    MENCIONE el import, no que lo USE en esa linea — que es analisis de
-    flujo, y no se hace —."""
+    Y SOLO de nivel de modulo. Un import dentro de una funcion no liga nada
+    fuera de ella, y contarlo como si ligara es un falso positivo que no es
+    de flujo sino de AMBITO: el nombre sencillamente no existe ahi.
+
+    Y EL HUECO QUE ESTA DECLARACION CREA, que es el precio:
+
+        def auxiliar():
+            from ejecutar_pytest import correr
+            codigo, salida = correr(F, 't')      <-- SI es la puerta
+
+    Eso deja de detectarse. Y es un hueco en la direccion CONTRARIA —se
+    detecta menos— que es la buena: un detector que mide de menos se ve como
+    fallo; uno que mide de mas convence de que mide bien."""
     arbol = ast.parse(fuente)
     ligados = set()
-    for nodo in ast.walk(arbol):
+    for nodo in _imports_de_nivel_de_modulo(arbol):
         if isinstance(nodo, ast.ImportFrom) and nodo.module == PUERTA:
             for alias in nodo.names:
                 ligados.add(alias.asname or alias.name)
@@ -467,11 +512,28 @@ def _llamada_de_la_puerta(fuente, valor):
     ligados = _ligados_por_import(fuente)
     func = valor.func
     if isinstance(func, ast.Attribute):
+        # Y el receptor tiene que ser un `ast.Name` DIRECTO. MEDIDO: con
+        # `receptor.attr if isinstance(receptor, ast.Attribute)` se sacaba el
+        # ULTIMO atributo de una cadena, y eso hacia pasar tres casos que no
+        # son la puerta:
+        #
+        #     obj.ep.correr(...)                 -> 'ep'   -> la aceptaba
+        #     obj.e.correr(...)  con `e` ligado  -> 'e'    -> la aceptaba
+        #     modulo.ejecutar_pytest.correr(...) -> '...'  -> la aceptaba
+        #
+        # Y `obj.ep` no es el modulo de la puerta: es un atributo `ep` de un
+        # objeto `obj`, que puede ser cualquier cosa. La pregunta correcta es
+        # «¿este NOMBRE, en este punto, es el modulo?», y un atributo anidado
+        # no es un nombre.
+        #
+        # Y es la misma asimetria que con el alias: un atributo anidado no
+        # cambia lo que se pregunta, igual que un alias de funcion. La puerta
+        # se importa como nombre, no como atributo de nada.
         receptor = func.value
-        nombre_receptor = (receptor.attr if isinstance(receptor, ast.Attribute)
-                           else getattr(receptor, 'id', ''))
-        if (nombre_receptor not in RECEPTORES
-                and nombre_receptor not in ligados):
+        if not isinstance(receptor, ast.Name):
+            return None
+        if (receptor.id not in RECEPTORES
+                and receptor.id not in ligados):
             return None
         return func.attr
     # SUELTA. Y el nombre tiene que VENIR de la puerta: una `def` local con
@@ -1165,6 +1227,50 @@ ALCANCE = (
     ('`==` en vez de `!=`: no es la infraccion',
      "codigo, salida = ep.correr(F, 't')" + chr(10) + 'if codigo == 0:'
      + chr(10) + '    pass' + chr(10), False),
+    # --- los tres de R2, mas uno que salio al medirlos ---
+    #
+    # Y que el TERCERO no lo senale R2 y saliera aqui, al medir, es lo de
+    # siempre: los casos que se escriben sin pensar son los que encuentran
+    # los fallos de la pregunta. El caso sin pensar es «y si el modulo esta
+    # dentro de un atributo mas?».
+    ('RECEPTOR ANIDADO: `obj.ep.correr` — `obj.ep` no es el modulo',
+     'import ejecutar_pytest' + chr(10) + 'obj = algo()' + chr(10)
+     + "codigo, salida = obj.ep.correr(F, 't')" + chr(10) + 'if codigo != 0:'
+     + chr(10) + '    pass' + chr(10), False),
+    ('RECEPTOR ANIDADO: `obj.e.correr`, con `e` ligado por el modulo',
+     'import ejecutar_pytest as e' + chr(10) + 'obj = algo()' + chr(10)
+     + "codigo, salida = obj.e.correr(F, 't')" + chr(10) + 'if codigo != 0:'
+     + chr(10) + '    pass' + chr(10), False),
+    ('RECEPTOR ANIDADO: `modulo.ejecutar_pytest.correr`',
+     "codigo, salida = modulo.ejecutar_pytest.correr(F, 't')" + chr(10)
+     + 'if codigo != 0:' + chr(10) + '    pass' + chr(10), False),
+    ('import de ambito LOCAL + llamada FUERA: el nombre no esta ligado',
+     'def auxiliar():' + chr(10)
+     + '    from ejecutar_pytest import correr' + chr(10) + chr(10) + chr(10)
+     + "codigo, salida = correr(F, 't')" + chr(10) + 'if codigo != 0:'
+     + chr(10) + '    pass' + chr(10), False),
+    # Y esta es un CAMBIO DE CONTRATO, no una perdida por descuido: para que
+    # el nombre quede ligado EN EL MODULO los imports tienen que ser de nivel
+    # de modulo, y uno de nivel de funcion liga el nombre solo ahi dentro.
+    #
+    # Y es un hueco en la direccion CONTRARIA, que es la buena:
+    #
+    #     se detecta menos -> se ve como fallo
+    #     se detecta mas   -> convence de que esta bien
+    #
+    # Un detector que mide de menos ensena a mirar; uno que mide de mas
+    # ensena a no mirar. Y por eso el precio vale la pena y por eso el
+    # nombre de la fila lo DECLARA.
+    ('import LOCAL + llamada DENTRO de la misma funcion: hueco DECLARADO',
+     'def auxiliar():' + chr(10)
+     + '    from ejecutar_pytest import correr' + chr(10) + chr(10)
+     + "    codigo, salida = correr(F, 't')" + chr(10) + '    if codigo != 0:'
+     + chr(10) + '        pass' + chr(10), False),
+    ('`try/except ImportError` de nivel de modulo: la presencia es la regla',
+     'try:' + chr(10) + '    from ejecutar_pytest import correr' + chr(10)
+     + 'except ImportError:' + chr(10) + '    pass' + chr(10) + chr(10)
+     + "codigo, salida = correr(F, 't')" + chr(10) + 'if codigo != 0:'
+     + chr(10) + '    pass' + chr(10), True),
 )
 
 
