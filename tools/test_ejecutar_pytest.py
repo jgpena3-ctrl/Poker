@@ -1580,3 +1580,299 @@ def test_una_asignacion_distractora_no_cambia_el_resultado():
             '`_variables_de_la_puerta` recorra con `ast.walk`, que hoy '
             'recorre todo y le da igual el orden — y por eso la invariancia '
             'es una CONSECUENCIA y no una PROPIEDAD—.')
+
+
+# ============================ 15. LA LISTA DE CAMPOS, DERIVADA Y COMPROBADA
+#
+# Y esta es la respuesta a R2, que pedia dos cosas:
+#
+#   - descender por if, try, for, while, with y match/case
+#   - no descender por def, async def, class ni lambda
+#   - y que haya un test que verifique que la lista esta COMPLETA
+#
+# La tercera es la importante, y es la misma leccion que la lista de dos
+# ficheros de hace tres bloques: una lista escrita a mano que declara cubrir
+# un conjunto y no lo cubre. `cases` se le olvido, y nadie lo noto porque la
+# lista es correcta para todo lo que el diagnostico senalo.
+#
+# Y «completa» no se puede decir escribiendo la lista. Se puede decir
+# DERIVANDOLA de una pregunta sobre el propio arbol:
+#
+#     ¿descender por este campo PUEDE LLEGAR a una sentencia?
+#
+# Y esa pregunta es distinta de «este campo guarda sentencias», y la
+# diferencia importa:
+#
+#   - `handlers` no guarda sentencias: guarda `ast.ExceptHandler`, que no es
+#     un `ast.stmt` — es de la rama `excepthandler`—. Y sin embargo por ahi
+#     se llega a un `try`.
+#   - `cases` tampoco: guarda `match_case`, que tampoco es un `stmt`. Y sin
+#     bajar por `cases` no se llega al `body` que ese `match_case` si tiene.
+#
+# O sea que los dos atributos que mas importaban eran los dos que el filtro
+# «los elementos son stmt» descartaba. Y hay que distinguir «lo que guarda
+# una sentencia» de «lo que POR DONDE se llega a una».
+#
+# Y DOS LISTAS, POR DOS RAZONES DISTINTAS
+#
+#   los CAMPOS que hay que recorrer   -> si faltan, se pierde cobertura
+#   las PARADAS donde no hay que bajar -> si sobran, se accepts de mas
+#
+# Y son dos porque una lista con los dos no dice nada: `body` esta en las dos,
+# y no se podria decir por que lado cae. Que es la misma razon por la que la
+# tabla de ALCANCE separa «promete» de «no promete».
+
+# ============================================ el corpus, aqui y legible
+CORPUS_CONSTRUCCIONES = (
+    ('module', ''),
+    ('if/else', 'if x:\n    pass\nelse:\n    pass\n'),
+    ('for/else', 'for x in y:\n    pass\nelse:\n    pass\n'),
+    ('async for/else', 'async def f():\n    async for x in y:\n        pass\n'
+                       '    else:\n        pass\n'),
+    ('while/else', 'while x:\n    pass\nelse:\n    pass\n'),
+    ('with', 'with a as b:\n    pass\n'),
+    ('async with', 'async def f():\n    async with a as b:\n        pass\n'),
+    ('try/except/else/finally',
+     'try:\n    pass\nexcept E as e:\n    pass\nelse:\n    pass\n'
+     'finally:\n    pass\n'),
+    ('try* (except*)', 'try:\n    pass\nexcept* E:\n    pass\n'),
+    ('match/case', 'match x:\n    case 1:\n        pass\n'
+                   '    case _:\n        pass\n'),
+    ('def', 'def f():\n    pass\n'),
+    ('async def', 'async def f():\n    pass\n'),
+    ('class', 'class C:\n    pass\n'),
+    ('lambda', 'lambda: 1'),
+)
+
+# Los campos por los que el recorrido TIENE que bajar.
+CAMPOS_RECORRIDOS = ('body', 'orelse', 'finalbody', 'handlers', 'cases')
+
+# Los tipos donde NO se baja, y son ambitos nuevos.
+PARADAS = ('FunctionDef', 'AsyncFunctionDef', 'ClassDef', 'Lambda')
+
+
+def _hijos(valor):
+    """Los hijos de un campo de `ast`, como lista.
+
+    Y en UN solo sitio, porque `ast` da tres formas y hay que mirar las tres:
+
+      - una lista      -> la lista
+      - un nodo suelto -> [nodo]
+      - `None`         -> []   <- y este es el que revienta
+
+    MEDIDO: sin el caso de `None`, `orelse=None` entra en la cola como
+    `[None]` y `iter_fields(None)` revienta en `node._fields`. Que es un
+    `AttributeError` sobre `'NoneType'`, o sea un fallo MUY visible —y por
+    eso no es peligroso—. Los peligrosos son los que devuelven un valor.
+
+    Y el filtro de `ast.AST` es lo que hace que no se bajen a las
+    EXPRESIONES —`test`, `subject`, `pattern`—, que son campos pero no
+    llevan a ninguna sentencia.
+
+    Y UN solo sitio, y no tres expresiones repetidas: repetir «es una lista,
+    o un nodo, o nada» tres veces es la via corta a tener tres versiones que
+    divergen. Y ya ha pasado en este bloque con cuatro ficheros de prueba
+    casi iguales."""
+    if valor is None:
+        return []
+    if isinstance(valor, list):
+        return [v for v in valor if isinstance(v, ast.AST)]
+    return [valor] if isinstance(valor, ast.AST) else []
+
+
+def _llega_a_sentencia(nodo, paradas=PARADAS, profundidad=0):
+    """¿Algun camino desde `nodo` llega a una sentencia SIN pasar por un
+    ambito nuevo?
+
+    Y el limite de profundidad, porque `ast` es un grafo dirigido sin ciclos
+    hacia statements pero con caminos larguisimos —una comprehension dentro
+    de un `if` dentro de un `try`— y aqui no interesa la longitud sino si hay
+    camino."""
+    # Y EL ORDEN IMPORTA, y en el sentido contrario al que parece.
+    #
+    # MEDIDO: st.FunctionDef ES un st.stmt — hereda de stmt—, de modo
+    # que con el isinstance primero la funcion se contaba como sentencia
+    # ALCANZABLE y la parada no paraba. El fallo era del sanity check entero.
+    #
+    # Que es la misma leccion del bloque, en su forma mas fina: dos
+    # comprobaciones que ambas son ciertas, y el ORDEN decide. Con el orden
+    # equivocado el resultado es un verde que no significa nada, y no hay
+    # ningun error que lo delate.
+    if type(nodo).__name__ in paradas:
+        return False                      # un ambito nuevo: aqui no se llega
+    if isinstance(nodo, ast.stmt):
+        return True
+    if profundidad > 8 or not isinstance(nodo, ast.AST):
+        return False
+    for _, valor in ast.iter_fields(nodo):
+        for hijo in _hijos(valor):
+            if _llega_a_sentencia(hijo, paradas, profundidad + 1):
+                return True
+    return False
+
+
+def _sin_ambitos(arbol, paradas=PARADAS):
+    """Los nodos alcanzables SIN cruzar un ambito nuevo.
+
+    Y esto es lo que le faltaba a la primera version: usaba `ast.walk`, que
+    visita el arbol entero, y preguntaba sobre el `FunctionDef` — que la
+    implementacion nunca llega a mirar—. O sea que la derivacion se
+    preguntaba sobre mas cosas que la implementacion, y por eso decia que
+    las paradas no paraban.
+
+    MEDIDO, antes del arreglo:
+
+        por debajo de `FunctionDef` hay sentencias y el recorrido las ve:
+        body
+
+    Que era verdad de `ast.walk` y falso de la regla. Y la tension que
+    introduce es REAL y hay que decirla: a partir de aqui, la derivacion y la
+    implementacion comparten la REGLA DE VISITA.
+
+    Lo que sigue siendo independiente —y es lo que sostiene la
+    comprobacion— son las dos cosas que se COMPARAN:
+
+        lo que el CODIGO recorre    -> `CAMPOS_RECORRIDOS`, escrito a mano
+        lo que hace FALTA recorrer  -> derivado del corpus
+
+    Si el codigo recorre de mas sale «sobran»; si de menos, «falta». Y en los
+    dos casos se compara contra algo que nadie escribio a mano.
+
+    Lo que se pierde es detectar que la REGLA DE VISITA este mal — y eso se
+    acepta a conciencia, porque «no bajes dentro de un ambito nuevo» es una
+    DECISION, y las decisiones no se derivan: se argumentan. Y ya esta
+    argumentada, con la razon de que un import dentro de `def` liga el
+    nombre solo ahi dentro."""
+    vistos, pendientes = [], [arbol]
+    while pendientes:
+        nodo = pendientes.pop()
+        if type(nodo).__name__ in paradas:
+            continue                      # un ambito nuevo: no se entra
+        vistos.append(nodo)
+        for _, valor in ast.iter_fields(nodo):
+            pendientes.extend(_hijos(valor))
+    return vistos
+
+
+def _campos_necesarios(fuente, paradas=PARADAS):
+    """Los campos por los que hay que bajar para alcanzar una sentencia.
+
+    Y sobre los nodos que se ven SIN CRUZAR un ambito nuevo, que es lo que
+    hace la implementacion. Antes usaba `ast.walk` —todo el arbol— y por eso
+    decia que las paradas no paraban."""
+    necesarios = set()
+    for padre in _sin_ambitos(ast.parse(fuente), paradas):
+        for campo, valor in ast.iter_fields(padre):
+            if campo.startswith('_'):
+                continue
+            for hijo in _hijos(valor):
+                if _llega_a_sentencia(hijo, paradas, 1):
+                    necesarios.add(campo)
+                    break
+    return necesarios
+
+
+def test_los_campos_recorridos_son_los_que_hacen_falta():
+    """R1, tarea 5, y R2: «hay que asegurarse de que la lista de atributos
+    recorridos incluya todos los nodos de control que pueden contener
+    sentencias de nivel de modulo».
+
+    Y eso NO se dice escribiendo la lista: se dice DERIVANDOLA de una
+    pregunta sobre el arbol.
+
+    Y hay dos intentos previos que no valian, y los dos produceron una
+    respuesta que parecia buena:
+
+      - mirar `vars(clase)` buscando listas: en CPython los campos de `ast`
+        no son listas, son slots. NINGUN atributo pasaba el filtro y la
+        diferencia salia «ninguno» — la lista esta completa —. Una
+        comprobacion que dice «no falta nada» porque no ha encontrado nada
+        que comparar.
+
+      - exigir que los elementos fUESEN `ast.stmt`: eso descarta `handlers`
+        — `ExceptHandler` no es un `stmt` — y descarta `cases` — `match_case`
+        tampoco —. O sea que los dos atributos que mas importaban eran los dos
+        que el filtro rechazaba.
+
+    Y la pregunta que si funciona es «¿descender por este campo puede LLEGAR
+    a una sentencia?», que no es lo mismo que «este campo guarda
+    sentencias»: `handlers` y `cases` no guardan sentencias, pero son por
+    donde se llega a ellas.
+
+    Y el CORPUS esta escrito aqui, pieza por pieza, y se puede LEER. Que es
+    la diferencia con una lista de atributos opaca: mirando el corpus, la
+    pregunta «¿falta `async for`?» tiene respuesta. Una lista no la tiene.
+    """
+    necesarios = _campos_necesarios(chr(10).join(
+        fuente for _, fuente in CORPUS_CONSTRUCCIONES))
+    faltan = sorted(necesarios - set(CAMPOS_RECORRIDOS))
+    assert not faltan, (
+        'descender por estos campos PUEDE llevar a una sentencia, y el '
+        'recorrido no lo hace:\\n%s\\n\\nnecesarios: %s\\nrecorridos:  %s\\n\\n'
+        'O sea: hay un sitio donde un import de nivel de modulo se esconde y '
+        'la regla no lo ve. Y eso es un hueco que no se nota, porque lo que '
+        'falta no produce ningun fallo: produce una regla mas debil.'
+        % (chr(10).join('   - %s' % c for c in faltan),
+           ', '.join(sorted(necesarios)), ', '.join(sorted(CAMPOS_RECORRIDOS))))
+
+
+def test_no_se_recorre_de_mas_y_las_paradas_son_las_declaradas():
+    """La otra mitad, que es la que R2 no pedia y que si importa.
+
+    Si `CAMPOS_RECORRIDOS` tuviera un campo de mas, searianarian
+    INFRACCIONES que no son infracciones — un detector que acusa de todo es
+    un detector que nadie mira cuando accuse de algo falso—, y no habria
+    ninguna prueba que lo dijera.
+
+    Y la segunda mitad: las PARADAS tienen que ser las de AMBITOS NUEVOS, y
+    solo esas. Un `def` para ahi porque el nombre no queda ligado fuera; un
+    `if` no, porque es una condicion.
+
+    Y se comprueba contra `ast`: si manana aparece un `async def` nuevo, o si
+    alguna de estas clases cambia de nombre, el fallo lo dice."""
+    sobran = sorted(set(CAMPOS_RECORRIDOS) - _campos_necesarios(
+        chr(10).join(fuente for _, fuente in CORPUS_CONSTRUCCIONES)))
+    assert not sobran, (
+        'estos campos se recorren y no hacen falta para ninguna construccion '
+        'del corpus:\\n%s\\n\\nO sea: se acepta de mas. Y eso no produce '
+        'ningun fallo visible, solo un detector que convence de que vigila.'
+        % chr(10).join('   - %s' % c for c in sobran))
+
+    for nombre in PARADAS:
+        assert hasattr(ast, nombre), (
+            'la parada %r no existe en `ast`: o se ha renombrado, o estaba '
+            'mal escrita. Y una parada que no existe NO PARA NADA, que es '
+            'peor que no tenerla' % nombre)
+
+    # Y que cada parada PARE DE VERDAD, que es distinto de existir.
+    #
+    # Y el `lambda` se trata aparte, y por un motivo que es el resultado de
+    # escribir mal el caso: el cuerpo de un `lambda` NO PUEDE contener
+    # sentencias, de modo que no hay fragmento que comprobar para el. Y eso
+    # mismo es la comprobacion — un `lambda` no puede contener un import, y
+    # por eso la parada sobra para el —.
+    #
+    # Y para las otras tres el fragmento es «sentencias SOLO debajo de la
+    # parada», y el resultado tiene que ser que NO HAY CAMPOS NECESARIOS. Que
+    # es lo que dice «la parada para de verdad», y no «la parada existe»:
+    # comprobar un nombre y comprobar un comportamiento son dos cosas.
+    FRAGMENTOS = {
+        'FunctionDef': 'def f():\n    import ejecutar_pytest as e\n'
+                       "    codigo, salida = e.correr(F, 't')\n",
+        'AsyncFunctionDef': 'async def f():\n'
+                            '    import ejecutar_pytest as e\n'
+                            "    codigo, salida = e.correr(F, 't')\n",
+        'ClassDef': 'class C:\n    import ejecutar_pytest as e\n'
+                    "    codigo, salida = e.correr(F, 't')\n",
+    }
+    for nombre, fragmento in FRAGMENTOS.items():
+        assert nombre in PARADAS, (
+            'el fragmento de %s existe pero no esta en las PARADAS, o al '
+            'reves. Si una parada no tiene fragmento que la compruebe, puede '
+            'no estar parando' % nombre)
+        necesarios = _campos_necesarios(fragmento)
+        assert not necesarios, (
+            'por debajo de `%s` hay sentencias y el recorrido las ve: %s. O '
+            'sea que la PARADA no para, y un import ahi liga el nombre solo '
+            'dentro — una llamada fuera seria un `NameError`.'
+            % (nombre, ', '.join(sorted(necesarios))))
