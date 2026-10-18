@@ -441,7 +441,21 @@ def _imports_de_nivel_de_modulo(arbol):
         # Y anadir `cases` mete al recorrido dentro del cuerpo de los
         # `match_case`, que es lo correcto: son del ambito que los contiene.
         # El `class` sigue siendo ambito nuevo y no se toca.
-        for atributo in ('body', 'orelse', 'finalbody', 'handlers', 'cases'):
+        # Y `CAMPOS_RECORRIDOS`, y no una tupla aqui.
+        #
+        # MEDIDO, antes: la implementacion tenia su PROPIA tupla, identica
+        # a la constante, y `CAMPOS_RECORRIDOS` no aparecia en ella. Dos
+        # literales iguales, que pueden separarse sin que nada lo note: se
+        # anade un campo a la constante, la derivacion dice que el corpus lo
+        # exige, la comprobacion pasa — y el codigo sigue sin recorrerlo.
+        #
+        # Que es la sexta vez con la misma forma, y la primera en que las dos
+        # listas son IGUALES: en las otras cinco se diferenciaban en el
+        # contenido, y aqui se diferencian en que son dos, lo cual es peor
+        # porque a simple vista es indistinguible.
+        #
+        # Y el arreglo no es sincronizarlas: es que solo haya UNA.
+        for atributo in CAMPOS_RECORRIDOS:
             hijo = getattr(nodo, atributo, None)
             if isinstance(hijo, list):
                 pendientes.extend(hijo)
@@ -1680,7 +1694,7 @@ def _hijos(valor):
     return [valor] if isinstance(valor, ast.AST) else []
 
 
-def _llega_a_sentencia(nodo, paradas=PARADAS, profundidad=0):
+def _llega_a_sentencia(nodo, paradas=PARADAS):
     """¿Algun camino desde `nodo` llega a una sentencia SIN pasar por un
     ambito nuevo?
 
@@ -1690,7 +1704,7 @@ def _llega_a_sentencia(nodo, paradas=PARADAS, profundidad=0):
     camino."""
     # Y EL ORDEN IMPORTA, y en el sentido contrario al que parece.
     #
-    # MEDIDO: st.FunctionDef ES un st.stmt — hereda de stmt—, de modo
+    # MEDIDO: `ast.FunctionDef` ES un `ast.stmt` — hereda de `stmt`—, de modo
     # que con el isinstance primero la funcion se contaba como sentencia
     # ALCANZABLE y la parada no paraba. El fallo era del sanity check entero.
     #
@@ -1702,12 +1716,57 @@ def _llega_a_sentencia(nodo, paradas=PARADAS, profundidad=0):
         return False                      # un ambito nuevo: aqui no se llega
     if isinstance(nodo, ast.stmt):
         return True
-    if profundidad > 8 or not isinstance(nodo, ast.AST):
+    if not isinstance(nodo, ast.AST):
         return False
-    for _, valor in ast.iter_fields(nodo):
-        for hijo in _hijos(valor):
-            if _llega_a_sentencia(hijo, paradas, profundidad + 1):
-                return True
+    # Y SIN limite de profundidad, con PILA y VISTOS.
+    #
+    # Y una version anterior de este comentario decia que el limite «podia
+    # contestar no a un si, con un camino de nueve niveles». MEDIDO: NO.
+    #
+    #     1..13 niveles de anidamiento: sin limite=True, con limite=True
+    #     El limite NUNCA cambio un resultado.
+    #
+    # Y la razon de no llegar: la pregunta es «¿puedo llegar a una
+    # sentencia?», y los campos de `ast` que guardan sentencias guardan
+    # `ast.stmt` DIRECTAMENTE —`With.body` es una lista de `stmt`—, asi que
+    # un nivel basta. Para necesitar nueve habria una cadena de nodos que no
+    # fueran sentencia y guardaran sentencia, y `ast` no produce eso.
+    #
+    # O sea: la afirmacion era CIERTA EN PRINCIPIO y FALSA EN LA PRACTICA, y
+    # documentarla como medida era escribir algo que no se ha medido. Que es
+    # la septima vez que una medicion contradice lo escrito, y la segunda en
+    # que la contradiccion es «es cierto pero no asi de fuerte»:
+    #
+    #     «puede pasar» != «pasa»
+    #
+    # Y se quita igual, y por el ARGUMENTO que no es el del comentario
+    # viejo: `ast` es aciclico, un conjunto de vistos termina solo, y un
+    # limite a 8 es un adorno que nunca cambia un resultado. Un adorno que
+    # no protege de nada se queda puesto porque nadie lo nota.
+    #
+    # Y la objecion de R2 SIGUE siendo valida —un corte puede responder mal
+    # en principio—, y lo que no se puede construir es el ejemplo para ESTA
+    # pregunta sobre ESTE arbol. Que es la razon de que la respuesta sea
+    # quitarlo y DECIR POR QUE, en vez de dejarlo con un comentario que
+    # afirma un dano que no se ha visto ocurrir.
+    #
+    # Y EL PARAMETRO SE QUITA, porque dejarlo invites a volver a poner un
+    # corte. El parametro era el sitio donde el limite estaba.
+    pendientes, vistos = [nodo], set()
+    while pendientes:
+        actual = pendientes.pop()
+        clave = id(actual)
+        if clave in vistos:
+            continue
+        vistos.add(clave)
+        if type(actual).__name__ in paradas:
+            continue                      # un ambito nuevo
+        if isinstance(actual, ast.stmt):
+            return True
+        if not isinstance(actual, ast.AST):
+            continue
+        for _, valor in ast.iter_fields(actual):
+            pendientes.extend(_hijos(valor))
     return False
 
 
@@ -1766,7 +1825,7 @@ def _campos_necesarios(fuente, paradas=PARADAS):
             if campo.startswith('_'):
                 continue
             for hijo in _hijos(valor):
-                if _llega_a_sentencia(hijo, paradas, 1):
+                if _llega_a_sentencia(hijo, paradas):
                     necesarios.add(campo)
                     break
     return necesarios
@@ -1876,3 +1935,157 @@ def test_no_se_recorre_de_mas_y_las_paradas_son_las_declaradas():
             'sea que la PARADA no para, y un import ahi liga el nombre solo '
             'dentro — una llamada fuera seria un `NameError`.'
             % (nombre, ', '.join(sorted(necesarios))))
+
+
+# Los fragmentos del corpus que NO puede alcanzar, y por que.
+#
+# Y son TRES, no dos. MEDIDO: `async def` tambien empieza por si misma, y
+# tambien es una PARADA, y tambien es inalcanzable. Yo decia dos, y el test
+# que comprueba esta lista lo dijo en la primera pasada — que es justo para
+# lo que esta ahi.
+#
+# Y que una lista de estas sea una DECLARACION COMPROBADA, y no una lista
+# escrita: porque una lista escrita a mano que se compara contra otra lista
+# escrita a mano no se comprueba, se leen las dos y se ve que dicen lo mismo.
+INALCANZABLES_DEL_CORPUS = (
+    # `async for` y `async with` solo existen dentro de una funcion `async`, y
+    # una funcion `async` es una PARADA. No hay fragmento que los alcance.
+    'async for/else',
+    'async with',
+    'async def',
+)
+
+
+# ============================ 16. LAS ASINCRONAS, QUE EL CORPUS NO CUBRE
+#
+# Y este es el caso PEOR de la familia, porque no es que falte una
+# construccion: es que el corpus la DECLARA y no la comprueba.
+#
+# R2, punto 2:
+#
+#     async for y async with figuran en el corpus, pero quedan detrás de una
+#     parada. _sin_ambitos() se detiene en AsyncFunctionDef.
+#
+# Cierto, y medido por la razon obvia al mirar el corpus:
+#
+#     ('async for/else', 'async def f():\n    async for x in y:\n...')
+#     ('async with',    'async def f():\n    async with a as b:\n...')
+#
+# Los dos empiezan por `async def`, que es una PARADA. O sea que
+# `_sin_ambitos` se para en el nodo RAIZ de esos dos fragmentos y no ve nada
+# de dentro.
+#
+# Y no se puede arreglar poniendolos a nivel de modulo, porque `async for` y
+# `async with` SOLO existen dentro de una funcion `async`. O sea que la
+# construccion es INACCESIBLE para una derivacion que respeta las paradas.
+#
+# Y POR QUE ES PEOR QUE NO ESTAR
+#
+# Un fragmento inalcanzable que contributes `body` y `orelse` al conjunto
+# derivado hace EXACTAMENTE lo mismo que si no existiera — y ademas deja
+# escrito que se comprueba. O sea que es la octava vez con la forma «pasa
+# por el motivo equivocado», y la mas discreta, porque el fragmento esta ahi,
+# se lee, y parece comprobar algo.
+#
+# LA COMPROBACION QUE SI FUNCIONA, Y POR QUE HACE FALTA
+#
+# MEDIDO:
+#
+#     For._fields             == AsyncFor._fields
+#     With._fields            == AsyncWith._fields
+#     FunctionDef._fields     == AsyncFunctionDef._fields
+#
+# O sea que las clases asincronas tienen los mismos campos. Y por eso hace
+# falta una comprobacion PROPIA: el corpus cubre `For`, y de ahi no se sigue
+# NADA sobre `AsyncFor` — que solo puede aparecer dentro de una funcion
+# `async`, que es una parada—.
+#
+# Y la razon de fondo: comparar CAMPOS sin mirar las CLASES es comparar
+# NOMBRES. Dos clases distintas con los mismos campos necesitan su propia
+# comprobacion o no estan cubiertas. Y eso no es un detalle de este
+# detector: es la forma de hacer las pruebas en general.
+#
+# Y QUE SE COMPRUEBA, CONCRETAMENTE
+#
+# Para cada par sincrono/asincrono, que los campos sean iguales, y que
+# ademas el `ast` TENGA las dos clases — porque si Python dejara de tener
+# `AsyncFor`, el par pasaria a comparar `None` contra `None` y dira «iguales».
+
+
+# Los pares cuya CLASE cambia con `async`, y que tienen los mismos campos.
+PARES_ASINCRONOS = (('For', 'AsyncFor'), ('With', 'AsyncWith'),
+                    ('FunctionDef', 'AsyncFunctionDef'))
+
+
+def test_las_asincronas_tienen_los_mismos_campos_que_las_sincronas():
+    """La comprobacion especifica que el corpus NO puede dar.
+
+    Y el motivo por el que el corpus no puede darla es el que hay que decir
+    primero: `async for` y `async with` solo existen dentro de una funcion
+    `async`, y una funcion `async` es una PARADA. O sea que un recorrido que
+    respeta las paradas no puede llegar a ellas NUNCA — no con un fragmento
+    mejor escrito, sino con ninguno.
+
+    Y el corpus las decia mirar. Que es la forma peor de esta familia: no es
+    que falte una construccion, es que hay una escrita que no comprueba nada.
+
+    Y la comprobacion que si funciona sale del propio `ast`, que DECLARA los
+    campos de cada clase:
+
+        For._fields         == AsyncFor._fields
+        With._fields        == AsyncWith._fields
+        FunctionDef._fields == AsyncFunctionDef._fields
+
+    Y se comprueban las dos cosas: que los campos sean iguales, y que las dos
+    CLASES existan — porque si Python dejara de tener `AsyncFor`, el par
+    compararia `None` contra `None` y diria «iguales», que es verde por no
+    mirar."""
+    for sincrona, asincrona in PARES_ASINCRONOS:
+        a, b = getattr(ast, sincrona, None), getattr(ast, asincrona, None)
+        assert a is not None, (
+            '`%s` no existe en `ast`. El corpus declara esta construccion y '
+            'la comparacion compararia `None` contra `None` y dira «iguales», '
+            'que es verde por no mirar' % sincrona)
+        assert b is not None, (
+            '`%s` no existe en `ast`. La version asincrona de `%s` es la que '
+            'NO se puede cubrir con el corpus, de modo que si desaparece no '
+            'queda nada que la compruebe' % (asincrona, sincrona))
+        assert a._fields == b._fields, (
+            '`%s` y `%s` tienen campos distintos:%n'
+            '    %-16s %s%n    %-16s %s%n'
+            'Y el corpus cubre la sincrona, de modo que de la asincrona no se '
+            'sigue nada. Es decir: la cobertura de la sincrona NO es la '
+            'cobertura de la asincrona, y por eso hacen falta dos.'
+            % (sincrona, asincrona, sincrona, a._fields, asincrona,
+               b._fields))
+
+
+def test_el_corpus_declara_que_no_alcanza():
+    """Y que el corpus NO prometa lo que no cumple.
+
+    Los dos fragmentos `async` están escritos, y se van a quedar escritos —
+    porque se pueden LEER y son la respuesta a «¿y las asincronas?», que es la
+    pregunta que se hace mirando un corpus—.
+
+    Pero un fragmento que la derivacion no alcanza tiene que estar MARCADO,
+    o vuelve a pasar lo de siempre: un caso escrito que parece comprobar.
+
+    Y la marca va en el propio corpus, no en un comentario al lado: una lista
+    de fragmentos inalcanzables se lee junto a ellos o no se lee."""
+    inalcanzables = [etiqueta for etiqueta, fuente in CORPUS_CONSTRUCCIONES
+                     if fuente.lstrip().startswith('async def')]
+    assert tuple(inalcanzables) == INALCANZABLES_DEL_CORPUS, (
+        'los fragmentos que empiezan por `async def` son %r, y la lista '
+        'INALCANZABLES dice %r.'
+        % (inalcanzables, list(INALCANZABLES_DEL_CORPUS))
+        + chr(10) + chr(10)
+        + 'MEDIDO: son TRES, no dos. Yo decia dos, y este test lo ha dicho '
+        'en la primera pasada. Un fragmento escrito que no comprueba nada es '
+        'PEOR que uno ausente, porque deja escrito que se comprueba — y esa '
+        'declaracion es la que hay que vigilar, porque es la que engaña.')
+    for etiqueta in inalcanzables:
+        assert etiqueta in INALCANZABLES_DEL_CORPUS, (
+            'el fragmento «%s» empieza por `async def`, que es una PARADA, y '
+            'la derivacion no lo alcanza. O sea que no comprueba nada. Y un '
+            'fragmento escrito que no comprueba es PEOR que uno ausente: '
+            'deja escrito que se comprueba.' % etiqueta)
