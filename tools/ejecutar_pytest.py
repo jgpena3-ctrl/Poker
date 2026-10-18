@@ -84,8 +84,120 @@ import re
 import subprocess
 import sys
 
+from retraccion_scan import DIR_DE_DOCUMENTOS
+
 CODIGO_NINGUNO_EJECUTADO = 4      # INTERRUPTED: no se ha ejecutado nada
 CODIGO_NINGUNO_ENCONTRADO = 5     # NO_TESTS_COLLECTED: no existe ese test
+
+# ============================================ escrito y no probado
+#
+# Un AMBITO —el de un test— con lo que se le ha hecho y EN ORDEN:
+#
+#     ('escrito', que)      una mutacion, por `escribir_documento`
+#     ('ejecutado', test)   un test que se ha corrido contra el
+#
+# Y la REGLA es sobre la secuencia, no sobre el estado final:
+#
+#     una escritura va seguida de una ejecucion, antes de la siguiente
+#     escritura del mismo directorio
+#
+# Y POR QUE UN REGISTRO Y NO UNA MARCA POR DIRECTORIO
+#
+# La marca era por directorio, y las tres roturas de un contrato comparten
+# directorio: la ejecucion de la rotura COSMETICA desmarcaba lo que habia
+# escrito la de AFIRMACION, y «escrito sin probar» queria decir «escrito y
+# sin probar despues» — una condicion mas debil que aqui no se cumple
+# nunca. MEDIDO: con la ejecucion del contenido borrada, daba `codigo = 0`.
+#
+# Y por que la secuencia y no un invariante de FUENTE, que es lo mismo:
+# el de fuente —«entre dos escrituras hay una ejecucion»— da CINCO falsos
+# positivos en `tools/`, y los cinco son ficheros que se CONSTRUYEN con
+# varias escrituras. Esos no pasan por `escribir_documento`, y por eso aqui
+# no cuentan.
+_ALCANCE = None
+
+
+def abrir_ambito():
+    """Empieza el ambito del test actual. Lo llama el `autouse` de
+    `conftest.py`, y no un fichero de produccion: que el ambito se abra solo
+    es lo que evita que se tenga que acordarse."""
+    global _ALCANCE
+    _ALCANCE = {}
+    return _ALCANCE
+
+
+def cerrar_ambito():
+    """Lo contrario, para que el siguiente test no encuentre lo que este
+    dejo. Sin esto el registro se pisa entre tests, que es MEDIDO."""
+    global _ALCANCE
+    _ALCANCE = None
+
+
+def _exigir_ambito(que):
+    if _ALCANCE is None:
+        raise AssertionError(
+            '%s se ha llamado FUERA de un test. Sin ambito no hay registro, '
+            'y sin registro esta comprobacion no vigila nada: devolveria '
+            '«nada pendiente» siempre, que es verde por no mirar. O se usa '
+            'dentro de un test, o no se marca.' % que)
+    return _ALCANCE
+
+
+def escribir_documento(ruta, texto, que):
+    """Escribe un documento mutado y REGISTRA que todavia no se ha probado.
+
+    Y `que` es el nombre de la mutacion: es lo unico que aparecera en el
+    fallo si llega a quedar sin probar, y un fallo que dice «falta probar»
+    sin decir que es inaccionable.
+
+    Y por `escribir_documento` y no un `f.write` a pelo: la marca es lo que
+    distingue una MUTACION de un fichero que se esta CONSTRUYENDO. Un
+    `f.write` no se marca porque no es una mutacion, y marcarlo haria que
+    el invariante contara la construccion de un fixture como un defecto."""
+    alcances = _exigir_ambito('escribir_documento()')
+    with open(ruta, 'w', encoding='utf-8', newline='') as f:
+        f.write(texto)
+    directorio = os.path.dirname(os.path.abspath(ruta))
+    alcances.setdefault(directorio, []).append(('escrito', que))
+    return directorio
+
+
+def _registrar_ejecucion(directorio, test):
+    """Un test se ha corrido contra ese directorio. Con ORDEN, que es lo que
+    hace falta: el fallo anterior venia de perder el orden.
+
+    Y va DESPUES del corte de 4 y 5, que es donde se ve si el test ha
+    corrido de verdad: desmarcar antes seria el error que este bloque lleva
+    veintiocho rondas corrigiendo —un instrumento que dice «probado» sin
+    haber probado— con otro nombre."""
+    if directorio and _ALCANCE is not None:
+        _ALCANCE.setdefault(directorio, []).append(
+            ('ejecutado', test or 'el fichero entero'))
+
+
+def sin_probar():
+    """Las escrituras que no tienen una ejecucion ANTES de la siguiente.
+
+    Y son pares `(que, directorio)`, en orden, que es como los muestra el
+    fallo. Que sea una lista y no un conjunto no es estilo: dos mutaciones
+    en el mismo directorio no son una, y contarlas como una seria el mismo
+    error del que este bloque lleva veintiocho rondas — hacer bien la
+    comprobacion sobre un objeto que no es el que hay que mirar."""
+    alcances = _exigir_ambito('sin_probar()')
+    pendientes = []
+    for directorio in sorted(alcances):
+        escritura = None
+        for tipo, que in alcances[directorio]:
+            if tipo == 'escrito':
+                if escritura is not None:
+                    pendientes.append((escritura[1], directorio))
+                escritura = (tipo, que)
+            else:                      # una ejecucion la absuelve
+                escritura = None
+        if escritura is not None:
+            pendientes.append((escritura[1], directorio))
+    return pendientes
+
 
 QUE_SIGNIFICA = {
     0: 'todo verde',
@@ -166,6 +278,14 @@ def correr(fichero, test=None, env=None, cwd=None, extra=()):
         'ejecutado nada. Un `assert != 0` sobre esto pasa en verde.\n'
         'Comando: %r\n\nSalida:\n%s'
         % (codigo, QUE_SIGNIFICA.get(codigo, '?'), cmd, salida[-900:]))
+    # Y ahora si: se ha ejecutado un test contra ese directorio, y con un
+    # codigo de veras. Lo que hubiera escrito ahi ha pasado por un test.
+    #
+    # Y va DESPUES del corte de 4 y 5, y no antes: desmarcar un directorio
+    # cuyo test no llego a ejecutarse es exactamente el error que este
+    # bloque lleva veintiocho rondas corrigiendo —un instrumento que dice
+    # «probado» sin haber probado— pero con otro nombre.
+    _registrar_ejecucion((env or {}).get(DIR_DE_DOCUMENTOS), test)
     return codigo, salida
 
 
@@ -190,19 +310,49 @@ def afirmar_caida(fichero, test=None, env=None, cwd=None, cuando=''):
         'Ninguno de los dos es «el test ha fallado».\n\nSalida:\n%s'
         % (cual, codigo, QUE_SIGNIFICA.get(codigo, '?'), salida[-1200:]))
     if test is None:
+        # Con el FICHERO ENTERO no hay un nombre mio que exigir: todos tienen
+        # que caer. Lo que se puede exigir son dos cosas, y las dos.
+        #
+        # (1) un RECUENTO de fallos MAYOR QUE CERO. Y mayor que cero, no
+        #     «presente»: `re.findall(r'(\d+) failed', '0 failed in 0.05s')`
+        #     devuelve `['0']`, o sea que `assert m` se cumplia con un cero.
+        #     MEDIDO, no supuesto.
+        #
+        # (2) al menos una linea `FAILED`. Sin ella, lo que ha caido no es un
+        #     test: es una importacion rota o un error de coleccion, que dan
+        #     el MISMO codigo de salida. Y un 1 por un `import` roto no es
+        #     «el mecanismo ha detectado la rotura»: es que no se ha podido
+        #     mirar. Que es este error, una escala mas abajo.
         m = re.findall(r'(\d+) failed', salida)
-        assert m, (
-            'el codigo 1 dice que algo fallo, pero la salida no da ningun '
-            'recuento de fallos. O sea que el fallo no es de un test: es de la '
-            'coleccion o de una importacion.\n\nSalida:\n%s' % salida[-1200:])
+        assert m and int(m[-1]) >= 1, (
+            'esperaba ver fallos de TEST en «%s» y la salida dice %s. El '
+            'codigo 1 dice que algo fallo, pero o no hubo fallos, o hubo '
+            'errores de coleccion o de importacion —que son otra cosa y dan '
+            'el mismo codigo—. Un `assert` sobre la presencia de un numero '
+            'acepta un cero, y hay que pedir el numero.\n\nSalida:\n%s'
+            % (cual, m or 'nada', salida[-1200:]))
+        caidos = re.findall(r'^FAILED \S+::', salida, re.M)
+        assert caidos, (
+            'hay recuento de fallos pero ninguna linea `FAILED fichero::test`. '
+            'O sea que lo que ha caido no son tests: es la coleccion o una '
+            'importacion. Y esto no acredita que el mecanismo haya detectado '
+            'nada, sino que no se ha podido mirar.\n\nSalida:\n%s'
+            % salida[-1200:])
     else:
-        assert '::%s' % test in salida and 'FAILED' in salida, (
-            'el codigo 1 dice que algo fallo, pero la salida no nombra %s con '
-            'FAILED. O sea que el fallo es de otro sitio —una importacion '
-            'rota, una coleccion que no encuentra nada— y no de la '
-            'comprobacion que este test cree que esta acreditando.\n'
-            '  Nota: en VERDE el nombre no sale; en ROJO si, y con `FAILED`. '
-            'Por eso son dos comprobaciones distintas.\n\nSalida:\n%s'
+        # Con un TEST concreto: su nombre, EN UNA LINEA QUE EMPIEZA POR
+        # `FAILED`. Con solo `FAILED in salida` bastaba con que la palabra
+        # apareciera por cualquier motivo —y el nombre estar en una linea
+        # suelta, que puede ser el mensaje de otro fallo—.
+        lineas = re.findall(r'^FAILED \S+::' + re.escape(test) + r'\b',
+                            salida, re.M)
+        assert lineas, (
+            'esperaba ver `FAILED ...::%s` y no esta. El codigo 1 dice que '
+            'algo fallo, pero no que fuera ESTE test: puede ser una '
+            'importacion rota, que da el mismo codigo, o un fallo de otro '
+            'sitio.\n'
+            '  MEDIDO antes: en VERDE el nombre NO sale en la salida; en ROJO '
+            'si, y precedido de `FAILED`. Por eso el nombre se exige con su '
+            'linea, y no suelto.\n\nSalida:\n%s'
             % (test, salida[-1200:]))
     return salida
 

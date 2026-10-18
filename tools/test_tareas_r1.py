@@ -18,6 +18,7 @@ que la segunda es la que cuesta.
 """
 import io
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -30,6 +31,8 @@ sys.path.insert(0, ROOT)
 sys.path.insert(0, os.path.join(ROOT, 'tools'))
 
 import ejecutar_pytest as ep                    # noqa: E402
+
+import retraccion_scan as rs                       # noqa: E402
 
 from retraccion_scan import (                              # noqa: E402
     afirmada, afirmada_sin_negar, leer)
@@ -255,65 +258,131 @@ def test_los_tests_de_los_contratos_caen_si_el_contrato_cambia(nombre):
                     % (forma, clave[0], porque))
 
         env = dict(os.environ)
-        env['POKER_DOCS_DIR'] = destino
+        env = dict(os.environ)
+        env[rs.DIR_DE_DOCUMENTOS] = destino
         env['PYTHONPATH'] = os.path.join(ROOT, 'tools')
-        with io.open(ruta, 'w', encoding='utf-8', newline='') as f:
-            f.write(cambiada)
-        # SOLO el test de CONTENIDO, y solo ese.
+        ruta_contratos = os.path.join(ROOT, 'tools',
+                                      'test_contratos_firmados.py')
+        DE_CONTENIDO = 'test_los_contratos_dicen_lo_que_el_proyecto_les_pide'
+        DE_HUELLA = 'test_los_contratos_no_cambian_sin_que_se_sepa'
+
+        # ======================================== (a) rotura de AFIRMACION
         #
-        # Y esto no es un detalle de R2, es la diferencia entre acreditar un
-        # mecanismo y acreditar el otro por descuento. Al mutar el TEXTO
-        # cambian las dos cosas —el contenido y la huella— asi que comprobar
-        # solo el exit code demuestra que «algo ha caido», no QUE.
+        # El documento mutado se escribe Y SE EJECUTA EL TEST DE CONTENIDO,
+        # antes de tocar nada mas.
         #
-        # Y el caso que haria falta para verlo: si el test de contenido no
-        # mirase el contrato, la mutacion caeria SOLO por la huella y este
-        # test pasaria igualmente.
-        # (b) rotura de HUELLA: el TEXTO cambia y el SENTIDO no. Se cambia
-        #     la primera palabra suelta, que es lo mas seguro: ninguna
-        #     afirmacion del contrato la contiene.
+        # Y esto no es una ceremonia. Una version anterior de este bloque
+        # escribia la mutacion y seguia directamente a la rotura cosmetica,
+        # que sobrescribia el fichero: el documento mutado no lo miraba
+        # NINGUN test. MEDIDO: con el mecanismo de contenido neutralizado —
+        # que pasa siempre, sin mirar el contrato— este test daba
+        # `8 passed`. En verde, con su comentario diciendo «SOLO el test de
+        # CONTENIDO, y solo ese» y ninguna llamada debajo.
         #
-        # Y aqui no hay problema de parcialidad: «el» esta en casi todas las
-        # frases, y cambiarlo no altera ninguna afirmacion. Lo que tiene que
-        # caer es la huella, y solo la huella.
-        primera = texto.find('el')
-        assert primera > 0, 'no se ha encontrado la palabra a cambiar'
-        with io.open(ruta, 'w', encoding='utf-8', newline='') as f:
-            f.write(texto[:primera] + 'EL' + texto[primera + 2:])
+        # El fallo lo causo un parche mio que, al quitar un `subprocess.run`
+        # muerto, calculo mal el final del bloque y se llevo tambien esta
+        # llamada. No fallo porque lo que se llevo hacia el trabajo y lo que
+        # se quedo hacia decoracion.
+        #
+        # Y lo grave no es el descuido: es que un test puede hacer bien todo
+        # lo que dice —mutar todas las formas, comprobar que no queda
+        # ninguna— y no mirar el objeto que dice mirar. Por eso la
+        # comprobacion que hace falta es del HUECO: entre escribir la
+        # mutacion y sobrescribirla tiene que haber una ejecucion.
+        ep.escribir_documento(
+            ruta, cambiada,
+            que='«%s» con TODAS las formas de sus afirmaciones quitadas'
+                 % nombre)
+        ep.afirmar_caida(
+            ruta_contratos, DE_CONTENIDO, env=env, cwd=ROOT,
+            cuando='el test de CONTENIDO no ha caido al cambiar la frase de '
+                    'la que %s depende. O sea que la comprobacion de '
+                    'contenido no vigila: puede estar certificada por la '
+                    'huella sin serlo.' % nombre)
+
+        # ======================================== (b) rotura de HUELLA
+        #
+        # El TEXTO cambia y el SENTIDO no. Y «una palabra suelta» se busca
+        # con LIMITES DE PALABRA, no con `find('el')`.
+        #
+        # R2 lo senala, y al medir sale que HOY `find('el')` cae en una
+        # palabra completa en los dos contratos —indice 237 y 93—, o sea que
+        # la mutacion es cosmetica de verdad y la matriz de cuatro celdas es
+        # correcta tal como esta. Aqui NO hay defecto: hay una casualidad.
+        #
+        # Y la casualidad no es una propiedad del test: depende de donde
+        # aparezca `el` por primera vez en cada documento, y eso son dos
+        # ficheros que este bloque no controla. Si mañana el primero de los
+        # «el» cayera dentro de «ello», la mutacion dejaria de ser cosmetica
+        # y la matrizaria dos cosas distintas de lo que dice sin que nada lo
+        # notara.
+        #
+        # Ademas `find('el')` puede caer dentro de cualquier palabra que lo
+        # contenga, y cambiar esas dos letras produce una palabra rota.
+        #
+        # Y se RESTAURA el texto original —no la version mutada— porque este
+        # es un segundo experimento sobre el mismo fichero, y cada uno parte
+        # del documento intacto.
+        coincidencia = re.search(r'\bel\b', texto)
+        assert coincidencia, (
+            'no se ha encontrado la palabra «el» completa en %s. Si ha '
+            'cambiado el documento, este test hay que actualizarlo: es lo que '
+            'comprueba' % nombre)
+        con_palabra = (texto[:coincidencia.start()] + 'EL'
+                       + texto[coincidencia.end():])
+        assert con_palabra != texto, 'la sustitucion no ha cambiado nada'
+        # Y la prueba de que era una PALABRA y no dos letras sueltas: lo que
+        # hay delante tiene que seguir siendo un limite de palabra.
+        assert not re.search(r'\wEL\b', con_palabra), (
+            'la sustitucion ha producido una palabra pegada: %r. O sea que '
+            '«el» no estaba como palabra, y cambiarla no es cosmetico'
+            % con_palabra[max(0, coincidencia.start() - 8):
+                          coincidencia.start() + 12])
+        ep.escribir_documento(
+            ruta, con_palabra,
+            que='«%s» con «el» cambiado por «EL» — una palabra, no dos '
+                 'letras' % nombre)
         # Y aqui SOLO el de la huella. Un cambio cosmetico no altera ninguna
         # afirmacion, asi que el de contenido NO tiene por que caer: lo que
         # tiene que caer es el de la huella.
-        r = subprocess.run(
-            [sys.executable, '-m', 'pytest',
-             os.path.join(ROOT, 'tools',
-                          'test_contratos_firmados.py')
-             + '::test_los_contratos_no_cambian_sin_que_se_sepa',
-             '-q', '--no-header', '-p', 'no:cacheprovider'],
-            cwd=ROOT, env=env, stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT)
         ep.afirmar_caida(
-            os.path.join(ROOT, 'tools', 'test_contratos_firmados.py'),
-            'test_los_contratos_no_cambian_sin_que_se_sepa',
-            env=env, cwd=ROOT,
+            ruta_contratos, DE_HUELLA, env=env, cwd=ROOT,
             cuando='el test de HUELLA no ha caido al cambiar una palabra '
                     'sin significado. Y eso es lo que hace la huella: un '
                     'contrato firmado que cambia en silencio no esta '
                     'firmado, ni siquiera si el cambio es cosmetico.')
         # y el de contenido NO tiene que caer: si caiase, seria porque mira
         # algo que no es una afirmacion, que es justo lo que la huella cubre
-        r2 = subprocess.run(
-            [sys.executable, '-m', 'pytest',
-             os.path.join(ROOT, 'tools',
-                          'test_contratos_firmados.py')
-             + '::test_los_contratos_dicen_lo_que_el_proyecto_les_pide',
-             '-q', '--no-header', '-p', 'no:cacheprovider'],
-            cwd=ROOT, env=env, stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT)
-        assert r2.returncode == 0, (
-            'el test de CONTENIDO tambien ha caido con un cambio cosmetico. '
-            'No deberia: un cambio de redaccion no altera ninguna '
-            'afirmacion. Y si lo hace, el mecanismo se solapan y no son dos '
-            'mecanismos sino uno.')
+        #
+        # Y `afirmar_verde`, no `r.returncode == 0`: el codigo es la mitad
+        # de la comprobacion. La otra mitad es que la salida diga CUANTOS han
+        # pasado, porque un 0 por otra causa no es «el mecanismo ha pasado».
+        ep.afirmar_verde(ruta_contratos, DE_CONTENIDO, env=env, cwd=ROOT)
+
+        # ======================================== (c) nada escrito sin probar
+        #
+        # Este test ha escrito dos documentos mutados en el mismo directorio.
+        # Los dos han pasado por un test. Y ESTA es la comprobacion que no
+        # existia cuando la mutacion de afirmacion no llegaba a ejecutarse:
+        # el fallo era un hueco entre dos escrituras, y ninguna de las
+        # comprobaciones que hay mira el hueco.
+        #
+        # El fallo nombra QUE se escribio, no «el directorio»: un fallo que
+        # dice «falta probar» sin decir que es inaccionable.
+        #
+        # Y va aqui y no en un modulo aparte, porque solo este test sabe
+        # cuales son SUS escrituras. Un invariante global tendria que
+        # confiar en que los demas lo hacen bien, que es justo lo que aqui
+        # se comprueba.
+        pendientes = ep.sin_probar()
+        assert not pendientes, (
+            'este test ha escrito %d documento(s) y no han llegado a ningun '
+            'test:\n%s\n\nO sea: se ha escrito una mutacion y no se ha '
+            'mirado. El mutador puede ser correcto —y lo comprueba— y aun '
+            'asi el documento mutado no lo prueba nadie. Una mutacion se '
+            'escribe para que un test la mire.'
+            % (len(pendientes),
+               chr(10).join('   - %s' % que for que, _ in pendientes)))
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
@@ -321,11 +390,27 @@ def test_los_tests_de_los_contratos_caen_si_el_contrato_cambia(nombre):
 def test_sin_romper_nada_los_tests_de_los_contratos_pasan():
     """La precondicion. Sin ella, los dos tests de arriba pueden caer por la
     razon equivocada."""
-    r = subprocess.run(
-        [sys.executable, '-m', 'pytest',
-         os.path.join(ROOT, 'tools', 'test_contratos_firmados.py'),
-         '-q', '--no-header', '-p', 'no:cacheprovider'],
-        cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    assert r.returncode == 0, (
-        'los tests de los contratos ya fallan SIN cambiar nada:\n%s'
-        % r.stdout.decode('utf-8', 'replace')[-1200:])
+    codigo, salida = ep.correr(
+        os.path.join(ROOT, 'tools', 'test_contratos_firmados.py'),
+        env=dict(os.environ, PYTHONPATH=os.path.join(ROOT, 'tools')),
+        cwd=ROOT)
+    # Y el RECUENTO, no solo el codigo. Con el fichero entero no hay un
+    # nombre mio que exigir —todos tienen que pasar—, asi que lo que se
+    # comprueba es que la salida diga cuantos han pasado.
+    #
+    # Y es la misma asimetria del modulo, del lado del verde: con `-q`, en
+    # verde, los nombres de los tests NO salen. El codigo 0 es la mitad de la
+    # comprobacion y el recuento es la otra mitad.
+    #
+    # Y `ep.correr` ya ha descartado 4 y 5 —«no se ha ejecutado nada» y «no
+    # se ha encontrado ningun test»—, que los dos son «distinto de cero» y
+    # los dos pasarian un `!= 0` en verde.
+    #
+    # Y una precondicion que no dice CUANTOS han pasado no es una
+    # precondicion: es un codigo de salida mirado.
+    m = re.findall(r'(\d+) passed', salida)
+    assert m and int(m[-1]) >= 1, (
+        'los tests de los contratos tienen que pasar SIN cambiar nada, y la '
+        'salida no dice cuantos han pasado. O no se ha ejecutado nada, o lo '
+        'que se ha ejecutado no es lo que este test creia.\n\nSalida:\n%s'
+        % salida[-1200:])
