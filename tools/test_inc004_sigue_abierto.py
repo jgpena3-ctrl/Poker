@@ -19,6 +19,7 @@ import io
 import os
 import subprocess
 import sys
+import ejecutar_pytest as ep  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEST = os.path.join(ROOT, 'motor', 'test_cm004.py')
@@ -80,15 +81,27 @@ def test_data_y_motor_no_estan_tocados():
 def test_el_test_sigue_fallando():
     """Lo ejecuta. No basta con leer que no hay xfail: hay que ver que
     FALLA."""
-    p = subprocess.run(
-        [sys.executable, '-m', 'pytest',
-         'motor/test_cm004.py::' + ALVADO, '-q', '--no-header', '-x'],
-        cwd=ROOT, capture_output=True)
-    salida = (p.stdout + p.stderr).decode('utf-8', 'replace')
-    assert p.returncode != 0, (
-        'el test PASA. O se ha arreglado la mano por otra linea, o se ha '
-        'tocado el test. En los dos casos INC-004 hay que cerrarlo y este '
-        'documento, no:\n%s' % salida[-800:])
+    # Y por `ejecutar_pytest`, no con un `subprocess.run` propio.
+    #
+    # MEDIDO, y no por estilo: un subproceso propio no corta el 4 —
+    # «no se ha ejecutado nada»—, no comprueba que la salida nombre el test
+    # que quiero, y aqui se compensa con un `!= 0` y un `H_1196` que se
+    # comprueba DESPUES. O sea que hacia el trabajo a mano, y a mano se
+    # queda.
+    #
+    # Y `afirmar_caida` exige el codigo 1 CONCRETO y que la salida traiga
+    # `FAILED ...::test_nombre`: las dos mitades de una vez, y no una de
+    # ellas mas un parche.
+    #
+    # Y `-x` se conserva aunque con UN solo test seleccionado sea inerte: si
+    # pasa no hace nada, y si falla ya no hay nada mas que parar. Quitarlo
+    # seria cambiar el comportamiento de un test que funciona, sin motivo.
+    salida = ep.afirmar_caida(
+        os.path.join(ROOT, 'motor', 'test_cm004.py'), ALVADO, cwd=ROOT,
+        extra=('-x',),
+        cuando='el test PASA. O se ha arreglado la mano por otra linea, o '
+                'se ha tocado el test. En los dos casos INC-004 hay que '
+                'cerrarlo y este documento, no.')
     assert 'H_1196' in salida, (
         'y tiene que seguir siendo H_1196, no otro:\n%s' % salida[-800:])
 

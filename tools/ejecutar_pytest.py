@@ -117,10 +117,50 @@ CODIGO_NINGUNO_ENCONTRADO = 5     # NO_TESTS_COLLECTED: no existe ese test
 _ALCANCE = None
 
 
+class _Ambito:
+    """El ambito del test actual. Y el `try/finally` va AQUI, no en el
+    fixture.
+
+    MEDIDO: pytest no deja llamar a un fixture directamente
+    (`Fixture called directly`), y este `finally` es la rama de codigo que
+    hay que comprobar — la excepcion que tira el ambito por debajo —. Si la
+    logica viviera en el fixture, la prueba no se podria escribir.
+
+    Y no la prueba reimplementando la logica, que es lo facil: seria probar
+    una COPIA, y una copia puede tener un `finally` y el original no.
+    """
+
+    def __init__(self):
+        self.anterior = None
+
+    def __enter__(self):
+        global _ALCANCE
+        self.anterior = _ALCANCE
+        _ALCANCE = {}
+        return _ALCANCE
+
+    def __exit__(self, exc_type, exc, tb):
+        global _ALCANCE
+        # Y RESTAURA el anterior, no pone None a pelo: `ambito()` anida, y
+        # sin restauracion un ambito dentro de otro deja al exterior sin
+        # registro — y el que abria el exterior creeria que tiene uno.
+        _ALCANCE = self.anterior
+        return False           # que la excepcion siga su camino
+
+
+def ambito():
+    """El ambito, como gestor de contexto.
+
+    Y lo envuelve el `autouse` de `conftest.py`, que es quien decide que se
+    abra SOLO. Que se abra solo es lo que evita que se tenga que acordarse."""
+    return _Ambito()
+
+
 def abrir_ambito():
-    """Empieza el ambito del test actual. Lo llama el `autouse` de
-    `conftest.py`, y no un fichero de produccion: que el ambito se abra solo
-    es lo que evita que se tenga que acordarse."""
+    """Sin gestor de contexto, para lo que no pueda usar `with`.
+
+    Y quien lo necesite tiene que acordarse de cerrar, que es justo lo que el
+    `ambito()` evita. Por eso el fixture usa `ambito()` y no esto."""
     global _ALCANCE
     _ALCANCE = {}
     return _ALCANCE
@@ -262,6 +302,33 @@ def construir(fichero, test=None, extra=()):
     return cmd
 
 
+def crudo(fichero, test=None, env=None, cwd=None, extra=()):
+    """El codigo de pytest, SIN cortar. Y solo para comprobar que el corte
+    funciona.
+
+    Y hay una sola excepcion a la regla del repositorio, y es esta. El
+    conflicto es real y medido: `test_el_exit_code_4_significa_que_no_se_ha_
+    ejecutado_nada` verifica que el 4 significa «no se ha ejecutado nada», y
+    `correr` corta ese 4 a proposito porque es el codigo que hace pasar en
+    verde a un `!= 0`. El test que verifica la regla no puede usar la regla.
+
+    O sea que hay dos preguntas y hacen falta dos puertas:
+
+        ¿ha corrido el test que quiero?     -> `correr`
+        ¿qué codigo ha dado pytest?          -> `crudo`
+
+    Y el nombre es lo que hace que la excepcion sea visible: en cualquier
+    sitio donde aparezca `crudo`, se lee «esto esta mirando el codigo en
+    crudo, y tiene un motivo». La comprobacion repo-wide exige ademas que el
+    fichero que lo use hable del exit code en su nombre, que es un criterio
+    tonto y estricto, y es preferible a «este fichero se lo permite» — que
+    es una excepcion que se extiende sola."""
+    cmd = construir(fichero, test, extra)
+    r = subprocess.run(cmd, cwd=cwd or os.getcwd(), env=env,
+                       stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    return r.returncode, r.stdout.decode('utf-8', 'replace')
+
+
 def correr(fichero, test=None, env=None, cwd=None, extra=()):
     """El codigo y la salida, con 4 y 5 YA DESCARTADOS.
 
@@ -289,14 +356,16 @@ def correr(fichero, test=None, env=None, cwd=None, extra=()):
     return codigo, salida
 
 
-def afirmar_caida(fichero, test=None, env=None, cwd=None, cuando=''):
+def afirmar_caida(fichero, test=None, env=None, cwd=None, cuando='',
+                 extra=()):
     """Afirma que HA CAIDO: codigo 1, y la salida lo demuestra.
 
     Las dos mitades por separado, porque son dos pruebas distintas. El 1
     dice que algo fallo; la segunda dice que fallo lo que yo queria. Con
     `test=None` —el fichero entero— la segunda es un RECUENTO de fallos,
     que es lo que esa forma de ejecucion da."""
-    codigo, salida = correr(fichero, test, env=env, cwd=cwd)
+    codigo, salida = correr(fichero, test, env=env, cwd=cwd,
+                            extra=extra)
     if cuando:
         salida = '%s\n\n%s' % (cuando, salida)
     # Y el NOMBRE del objetivo en todos los mensajes, no solo en el ultimo.
@@ -357,12 +426,13 @@ def afirmar_caida(fichero, test=None, env=None, cwd=None, cuando=''):
     return salida
 
 
-def afirmar_verde(fichero, test=None, env=None, cwd=None):
+def afirmar_verde(fichero, test=None, env=None, cwd=None, extra=()):
     """Afirma que PASA: codigo 0 y el RECUENTO de los que han pasado.
 
     Y el recuento, y no el nombre: MEDIDO, un test que pasa con `-q` imprime
     `.` y `1 passed`, y su nombre no aparece. Buscarlo seria falso siempre."""
-    codigo, salida = correr(fichero, test, env=env, cwd=cwd)
+    codigo, salida = correr(fichero, test, env=env, cwd=cwd,
+                            extra=extra)
     cual = test or 'el fichero entero %s' % fichero
     assert codigo == 0, (
         'esperaba que PASASE «%s» y ha dado %d (%s).\n\nSalida:\n%s'

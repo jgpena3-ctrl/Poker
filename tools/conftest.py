@@ -32,8 +32,14 @@ import ejecutar_pytest as ep                             # noqa: E402
 
 @pytest.fixture(autouse=True)
 def _ambito_de_lo_escrito():
-    ep.abrir_ambito()
-    try:
+    # Y `ambito()`, y no `abrir_ambito()` con un `try/finally` aqui.
+    #
+    # MEDIDO: pytest no deja llamar a un fixture directamente, asi que un
+    # `finally` escrito aqui NO SE PUEDE COMPROBAR. Y este `finally` es la
+    # rama que hay que comprobar: la excepcion que tira el ambito por
+    # debajo, que es justo la que R2 pedia y la que casi nunca se ejecuta.
+    #
+    # Y la logica esta en `ejecutar_pytest.ambito()` para que se pueda
+    # probar. Probar una copia de un mecanismo no es probar el mecanismo.
+    with ep.ambito():
         yield
-    finally:
-        ep.cerrar_ambito()

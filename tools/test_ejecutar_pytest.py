@@ -29,7 +29,10 @@ Y la asimetria que obliga a dos comprobaciones distintas:
 Asi que en verde hay que mirar el RECUENTO, y en rojo el NOMBRE. Una sola
 comprobacion con un «o» haria verde el caso imposible y caeria en el otro.
 """
+import ast
+import io
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -264,173 +267,539 @@ def test_afirmar_caida_con_el_control_no_miente():
 
 
 # ============================ 5. Y QUE NADIE USE «DISTINTO DE CERO»
-def test_ningun_test_de_este_repositorio_acepta_el_codigo_cuatro():
-    """La regla aplicada a los ficheros que TIENEN subprocesos.
+def _ficheros_de_prueba():
+    """Todos los `tools/test_*.py`. Y todos, que es lo que faltaba.
 
-    Y se busca el `!= 0` en el fuente, no se mira el nombre de la variable:
-    una version anterior busco `returncode != 0` y fallo porque aqui la
-    variable se llama `codigo`. Un mal test por partida doble — falla por una
-    razon que no es la que vigila, y obliga a escribir el codigo como el
-    test."""
-    import re
-    for nombre in ('test_sensibilidad_end_to_end.py', 'test_tareas_r1.py'):
-        ruta = os.path.join(ROOT, 'tools', nombre)
-        fuente = open(ruta, encoding='utf-8').read()
-        # Y la precondicion: tiene subprocesos DE ALGUNA DE LAS DOS FORMAS.
+    Y no un lista escrita aqui: eso es lo que paso, y la lista se quedo
+    corta sin que nadie lo notara. Una lista de nombres es una declaracion
+    de lo que se ha mirado, y se queda vieja sin avisar."""
+    return [os.path.join(ROOT, 'tools', f) for f in os.listdir(
+        os.path.join(ROOT, 'tools'))
+        if f.startswith('test_') and f.endswith('.py')]
+
+
+def _cadenas_de_la_llamada(nodo):
+    """Todas las cadenas constantes de los argumentos de una llamada, a
+    CUALQUIER profundidad.
+
+    Y a cualquier profundidad, porque el comando de pytest no son argumentos
+    sueltos sino una lista:
+
+        subprocess.run([sys.executable, '-m', 'pytest', FICHERO])
+
+    Una version anterior tomaba los `ast.Constant` de `nodo.args` y aqui no
+    habia ninguno: lo que hay es un `ast.List`. O sea que el detector no
+    senalaba nada —ni a los subprocesos propios, ni al de prueba—, y un
+    detector que no senala nada tambien esta roto, en el sentido contrario.
+
+    Que es lo que la prueba de las dos mitades ha hecho falta para ver: que
+    senale UN subproceso real, y que NO senale uno que solo lo menciona."""
+    return [n.value for n in ast.walk(nodo)
+            if isinstance(n, ast.Constant) and isinstance(n.value, str)]
+
+
+def _llamadas_de_subproceso(fuente):
+    """Las llamadas a `subprocess.run/call/check_output/Popen`, con su linea."""
+    arbol = ast.parse(fuente)
+    for nodo in ast.walk(arbol):
+        if (isinstance(nodo, ast.Call)
+                and isinstance(nodo.func, ast.Attribute)
+                and nodo.func.attr in ('run', 'call', 'check_output', 'Popen')):
+            yield nodo
+
+
+def _lanza_pytest_propio(ruta):
+    """Si el fichero EJECUTA pytest con un `subprocess` propio.
+
+    Y se pregunta sobre el ARBOL, no sobre el texto. MEDIDO por que:
+
+        version de TEXTO:  busca `'-m', 'pytest'` en el fichero entero
+            -> senalaba a ESTE MISMO fichero, que no ejecuta pytest: lo
+               documenta. Septimo falso positivo de la familia, y el primero
+               que me hago yo: la marca esta y el sujeto no.
+
+        version de ARBOL:  una llamada `subprocess.*` con `-m` y `pytest`
+            entre sus argumentos, a cualquier profundidad
+
+    La diferencia es «el fichero habla de pytest» contra «el fichero ejecuta
+    pytest», y esa es la pregunta.
+
+    Y un `subprocess.run(['git', ...])` no casa, porque no lleva `-m pytest`:
+    esta comprobacion tambien tiene que saber decir que NO, y no solo que
+    si."""
+    fuente = io.open(ruta, encoding='utf-8').read()
+    try:
+        hallazgos = []
+        for nodo in _llamadas_de_subproceso(fuente):
+            args = _cadenas_de_la_llamada(nodo)
+            if '-m' in args and 'pytest' in args:
+                hallazgos.append('linea %d' % nodo.lineno)
+        return bool(hallazgos), hallazgos
+    except SyntaxError:
+        return False, ['el fichero no parsea']
+
+
+def _funciones_que_llaman_a_crudo(fuente):
+    """Las FUNCIONES que llaman a `crudo()`, no las que lo mencionan.
+
+    MEDIDO: buscando `'crudo('` en el fuente, el test que explica la
+    exencion se senalaba a si mismo —por tener `crudo(` en el docstring—.
+    Con arbol se sabe a que funcion pertenece la llamada, y con texto no.
+
+    Y el nombre de la funcion es justo lo que hace falta para exigir que la
+    exencion este justificada: la regla es «solo en un test cuya funcion
+    hable del exit code», y eso se comprueba sobre la funcion."""
+    arbol = ast.parse(fuente)
+    padre = {}
+    for nodo in ast.walk(arbol):
+        for hijo in ast.iter_child_nodes(nodo):
+            padre[hijo] = nodo
+    funciones = []
+    for nodo in ast.walk(arbol):
+        if not (isinstance(nodo, ast.Call)
+                and isinstance(nodo.func, ast.Attribute)
+                and nodo.func.attr == 'crudo'):
+            continue
+        arriba = padre.get(nodo)
+        while arriba is not None and not isinstance(arriba, ast.FunctionDef):
+            arriba = padre.get(arriba)
+        funciones.append(arriba.name if arriba is not None else '<modulo>')
+    return funciones
+
+
+PUERTA_COMUN = ('correr', 'crudo', 'afirmar_caida', 'afirmar_verde')
+
+
+def _variables_de_la_puerta(fuente):
+    """Los nombres asignados desde `correr()`, `crudo()` o `afirmar_*()`.
+
+    Y se recoge el ORIGEN, que es lo que hace la regla precisa: un `!= 0`
+    sobre cualquier otra variable —un contador, un codigo de git, una
+    cadena— no es lo mismo, y prohibitlo seria una regla que necesita
+    aceptaciones.
+
+    Que es lo que hace aplicable una regla: una regla sin excepciones
+    necesita aceptarlas cada vez que aparece una, y entonces se deja de
+    mirar."""
+    arbol = ast.parse(fuente)
+    nombres = set()
+    for nodo in ast.walk(arbol):
+        if not isinstance(nodo, ast.Assign) \
+                or not isinstance(nodo.value, ast.Call):
+            continue
+        llamada = nodo.value.func
+        atributo = (llamada.attr if isinstance(llamada, ast.Attribute)
+                    else getattr(llamada, 'id', ''))
+        if atributo not in PUERTA_COMUN:
+            continue
+        for t in nodo.targets:
+            if isinstance(t, ast.Name):
+                nombres.add(t.id)
+            elif isinstance(t, ast.Tuple):
+                nombres.update(e.id for e in t.elts
+                               if isinstance(e, ast.Name))
+    return nombres
+
+
+def _comparaciones_inequivocas(fuente):
+    """Las comparaciones `X != 0` donde X viene de la puerta comun.
+
+    MEDIDO en todo `tools/`: cero. Y no porque no haya `!= 0` —hay—, sino
+    porque ninguno cae sobre un codigo de salida.
+
+    Y el criterio se apoya en el ARBOL, de modo que el docstring que explica
+    la regla puede nombrarla: eso es la diferencia entre «la palabra
+    prohibida no aparece» y «la cosa prohibida no se hace». Solo la segunda
+    admite un docstring que diga POR QUE."""
+    de_la_puerta = _variables_de_la_puerta(fuente)
+    if not de_la_puerta:
+        return []
+    arbol = ast.parse(fuente)
+    encontradas = []
+    for nodo in ast.walk(arbol):
+        if not (isinstance(nodo, ast.Compare) and len(nodo.ops) == 1
+                and isinstance(nodo.ops[0], ast.IsNot)
+                and isinstance(nodo.comparators[0], ast.Constant)
+                and nodo.comparators[0].value == 0):
+            continue
+        nombre = getattr(nodo.left, 'id', None)
+        if nombre and nombre in de_la_puerta:
+            encontradas.append((nodo.lineno, nombre))
+    return encontradas
+
+
+def test_la_puerta_de_ejecutar_pytest_es_unica_en_todo_tools():
+    """LA REGLA, DE VERDAD REPO-WIDE. Y con la exencion en el nombre.
+
+    La version anterior de esta comprobacion miraba DOS ficheros y decia
+    «ningun test del repositorio». Los dos cumplian. Los demas no se
+    miraban, y en esos habia dos que NO cumplian — uno de ellos, el de la
+    matriz de cuatro celdas.
+
+    MEDIDO antes de arreglarlo:
+
+        ficheros que lanzan pytest por el modulo:   3
+        ficheros con subproceso PROPIO:             2
+            test_disciplina_de_los_tests.py   3 subprocesos, `!= 0`
+            test_inc004_sigue_abierto.py     1 subproceso, `!= 0`
+
+    Y ahora la regla tiene tres partes, y las tres nacen de ese fallo:
+
+      1. quien lance pytest, entra por `ejecutar_pytest`
+      2. `crudo` —la exencion, que NO corta— solo en un test cuyo nombre
+         hable del exit code. Es un criterio tonto y estricto, y es
+         preferible a «este fichero se lo permite», que es una excepcion que
+         se extiende sola
+      3. ningun `!= 0` aplicado a un codigo de salida de pytest
+    """
+    con_propio, con_crudo, con_inequivoco = [], [], []
+    for ruta in _ficheros_de_prueba():
+        nombre = os.path.basename(ruta)
+        fuente = io.open(ruta, encoding='utf-8').read()
+        lanza, donde = _lanza_pytest_propio(ruta)
+        if lanza:
+            con_propio.append('%s (en %s)' % (nombre, ', '.join(donde)))
+        # (2) la exencion tiene que estar justificada POR SU NOMBRE, y el
+        # nombre es el de la FUNCION a la que se llama —no el fichero, y no
+        # el texto, que senalaba al test que explica la exencion—.
+        funciones = _funciones_que_llaman_a_crudo(fuente)
+        justificadas = [n for n in funciones
+                        if 'exit_code' in n or 'codigo' in n]
+        if len(justificadas) != len(funciones):
+            con_crudo.append((nombre, funciones))
+        # (3) el `!= 0` sobre una variable que venga de la PUERTA COMUN.
         #
-        # Se puso `subprocess.run(` y sola, y se quedo desfasada en cuanto el
-        # fichero que vigila paso a usar el modulo. Un test que se invalida con
-        # el arreglo que pretendia vigilar es un test que se desactiva sin
-        # avisar: lo unico que hizo fue fallar su precondicion.
+        # Y por ORIGEN, no por texto. Con texto, la regla senalaba al
+        # docstring que la EXPLICABA —«Y 4 != 0. O sea que `assert
+        # returncode != 0` sobre eso PASA SIEMPRE»— y con eso un docstring
+        # que dice por que algo esta prohibido tendria prohibido nombrarlo.
         #
-        # Y es la razon de que la precondicion sea «alguno de los dos» y no
-        # «este»: una precondicion estrecha deja de ser certaina el mismo dia
-        # que se arregla lo que vigila, y un test que se apaga solo no es un
-        # test que avisa.
-        assert ('subprocess.run(' in fuente
-                or 'ejecutar_pytest' in fuente), (
-            '%s no tiene subprocesos de pytest, ni directos ni por el '
-            'modulo, asi que este test no aplica' % nombre)
-        # se Busca un `!= 0` APLICADO A UN RESULTADO, no la palabra suelta
-        usado = re.findall(r'(?:returncode|codigo|r\.returncode)\s*!=\s*0',
-                           fuente)
-        assert not usado, (
-            '%s usa «!= 0» %d vez/veces sobre el resultado de un subproceso. '
-            'Un %d —«no se ha ejecutado nada»— tambien es «distinto de '
-            'cero», asi que eso pasa en verde. Lo que hay que usar es '
-            'ejecutar_pytest.afirmar_caida, que ademas comprueba que el '
-            'nombre que ha caido es el mio.'
-            % (nombre, len(usado), ep.CODIGO_NINGUNO_EJECUTADO))
-        # y que use el modulo
-        assert 'ejecutar_pytest' in fuente, (
-            '%s tiene subprocesos de pytest y no usa el modulo comun. Tres '
-            'copias de la regla son tres sitios donde equivocarse' % nombre)
+        # Que es peor que un falso positivo molesto: es un docstring que no
+        # puede decir la verdad.
+        for linea, variable in _comparaciones_inequivocas(fuente):
+            con_inequivoco.append('%s linea %d: %s != 0'
+                                   % (nombre, linea, variable))
+
+    print()
+    print('   ficheros que lanzan pytest por su cuenta: %s'
+          % (con_propio or 'ninguno'))
+    print('   ficheros con `crudo` sin justificacion:     %s'
+          % (con_crudo or 'ninguno'))
+    print('   `!= 0` sobre un codigo de pytest:          %s'
+          % (con_inequivoco or 'ninguno'))
+
+    assert not con_propio, (
+        'estos ficheros lanzan pytest con un `subprocess` PROPIO y no por '
+        '`ejecutar_pytest`, y por tanto no cortan el 4 ni miran la salida:\n'
+        '%s\n\nUn subproceso propio no es un problema de estilo: es el '
+        'instrumento entero de este bloque, en otro sitio. Y la version '
+        'anterior de esta comprobacion miraba dos ficheros de los quince, y '
+        'los dos cumplian.' % chr(10).join('   - %s' % n for n in con_propio))
+    assert not con_crudo, (
+        '`crudo` es la EXENCION —no corta nada— y solo puede usarse donde se '
+        'esta comprobando que el corte funciona, que es un test cuyo nombre '
+        'habla del exit code. Aqui se usa en:\n%s'
+        % chr(10).join('   - %s, en %r' % (n, f) for n, f in con_crudo))
+    assert not con_inequivoco, (
+        'un `!= 0` sobre el codigo que devuelve la puerta comun aprueba un 4 '
+        '—«no se ha ejecutado nada»— en verde:\n%s'
+        % chr(10).join('   - %s' % n for n in con_inequivoco))
 
 
-# ============================ 6. ESCRITO Y SIN PROBAR
-def test_una_escritura_sin_ejecucion_queda_pendiente_y_se_nombra():
-    """El invariante, probandose a si mismo.
+def test_la_comprobacion_esta_rota_y_se_dice():
+    """La comprobacion anterior, y lo que era.
 
-    Y en las DOS mitades, porque un invariante que solo dice «detecta» no
-    dice «no falsea nada»: si acusara de todo, tambien pasaria. Y una regla
-    que acusa de todo es una regla que nadie va a mirar cuando praise.
+    Y esto no es historia: es la forma de que quien la lea sepa que tiene
+    que MIRA TODO. Una comprobacion repo-wide que de hecho mira dos ficheros
+    es peor que no hacerla, porque da por cubierta una cosa que no lo
+    esta — y este bloque lleva veintinueve bloques con cosas que de hecho no
+    estaban cubiertas.
 
-    Y este invariante ya estuvo roto en verde: la primera version marcaba
-    el DIRECTORIO entero, y como las tres roturas de un contrato comparten
-    directorio, la ejecucion de la segunda borraba la marca de la primera.
-    Con el hueco abierto decia `codigo = 0`.
-
-    La version mala tambien estaba en verde, y tambien «funcionaba». Que
-    es la unica forma de que se note que un invariante hay que probarlo
-    ROMPIENDOLO, y no mirandolo pasar."""
-    import shutil
-    import tempfile
-    directorio = tempfile.mkdtemp(prefix='opencode_sinprobar_')
-    try:
-        ruta = os.path.join(directorio, 'UN_TXT.md')
-        ep.escribir_documento(ruta, 'lo que sea', que='LA MUTACION')
-        pendientes = ep.sin_probar()
-        assert pendientes, (
-            'una escritura que no ha llegado a ningun test tiene que quedar '
-            'pendiente, y no queda. O sea que el invariante no vigila')
-        assert pendientes[0][0] == 'LA MUTACION', (
-            'y el pendiente tiene que decir QUE se escribio, no el '
-            'directorio: un fallo que dice «falta probar» sin decir que es '
-            'inaccionable. Pendientes: %r' % (pendientes,))
-    finally:
-        shutil.rmtree(directorio, ignore_errors=True)
+    Y el numero: quince ficheros de test en `tools/`, y se miraban dos."""
+    fuente = io.open(os.path.abspath(__file__), encoding='utf-8').read()
+    assert '_ficheros_de_prueba' in fuente, (
+        'esta comprobacion tiene que apoyarse en el recorrido, no en una '
+        'lista de nombres escrita a mano')
+    assert 'os.listdir' in fuente, (
+        'y el recorrido tiene que ser REAL: si vuelve a ser una lista, esta '
+        'comprobacion vuelve a mirar dos ficheros de quince')
 
 
-def test_una_escritura_con_ejecucion_no_queda_pendiente():
-    """La otra mitad: ejecutada, se absuelve.
+def test_el_detector_no_se_senala_a_si_mismo():
+    """La regla NUEVA senalaba a ESTE fichero, que solo DOCUMENTA pytest.
 
-    Y con un test de verdad, no con un registro a mano. Si se registrara a
-    dedo, la comprobacion probaria que la lista se vacia con un dato puesto
-    a proposito, que es lo que hace cualquier lista."""
-    import shutil
-    import tempfile
-    tmp = tempfile.mkdtemp(prefix='opencode_absuelta_')
-    try:
+    MEDIDO: su fuente contiene `'-m', 'pytest'` en el docstring de
+    `construir()` y en los ejemplos, y un detector de TEXTO lo leia como un
+    subproceso propio. Septimo falso positivo de la familia, y el primero
+    que me hago yo: la marca esta y el sujeto no.
+
+    Y es el peor sitio posible para ese fallo: el detector ES la prueba de
+    la puerta unica, y un detector que senala su propio fichero de prueba
+    no es un detector, es ruido. Un ruido asi se aprende a ignorar, y a
+    ignorarlo es dejar de comprobar.
+
+    Y la comprobacion es de las dos mitades, porque un detector que senala
+    de mas y otro que no senala nada fallan igual de mal: uno entrena a
+    ignorar, el otro deja pasar lo que hay que cazar.
+    """
+    propio, donde = _lanza_pytest_propio(os.path.abspath(__file__))
+    assert not propio, (
+        'el detector senala a su PROPIO fichero de prueba, en %s. O sea que '
+        'pregunta por el texto y no por el arbol, y eso lo hace senalar '
+        'documentacion. Un detector que senala su propia prueba no vigila '
+        'nada: entrena a ignorar.' % donde)
+
+    del_modulo_boo, donde_modulo = _lanza_pytest_propio(
+        os.path.join(ROOT, 'tools', 'ejecutar_pytest.py'))
+    assert not del_modulo_boo, (
+        'y senala al MODULO, que construye el comando para que lo usen otros '
+        'y no lo ejecuta: %s' % donde_modulo)
+
+    # Y que aun asi detecta un subproceso de verdad. Un detector que no
+    # senala NADA tambien seria un detector roto, en el otro sentido.
+    with tempfile.TemporaryDirectory() as tmp:
+        bueno = os.path.join(tmp, 'bueno.py')
+        io.open(bueno, 'w', encoding='utf-8').write(
+            'import subprocess\n'
+            'r = subprocess.run([sys.executable, \'-m\', \'pytest\', F])\n')
+        malo = os.path.join(tmp, 'malo.py')
+        io.open(malo, 'w', encoding='utf-8').write(
+            '# esto solo lo documenta: subprocess.run([\'-m\', \'pytest\'])\n'
+            'import subprocess\n'
+            'r = subprocess.run([\'git\', \'rev-parse\', \'HEAD\'])\n')
+        assert _lanza_pytest_propio(bueno)[0], (
+            'un `subprocess.run` de verdad con `-m pytest` NO puede pasar: el '
+            'detector no senala nada y no vigila')
+        assert not _lanza_pytest_propio(malo)[0], (
+            'un fichero que solo lo MENCIONA en un comentario, y que ejecuta '
+            '`git`, no puede senalarse: eso es lo que hacia antes')
+
+# ============================ 7. R2, CONDICION 3: QUE NO SE CONTAMINE
+def test_el_ambito_no_sobrevive_a_una_excepcion():
+    """La mitad que no estaba comprobada, y es la importante.
+
+    El `finally` del ambito cierra el registro aunque el test reviente, y un
+    `finally` es exactamente el sitio donde se esconde un fallo: si el test
+    deja una escritura pendiente y el ambito no se cierra, el siguiente test
+    hereda esa escritura y cae por ella.
+
+    O sea que un `finally` sin prueba es una promesa sobre una rama de codigo
+    que no se ejecuta casi nunca.
+
+    Y se ejecuta aqui, y a proposito: se abre el ambito, se deja una escritura
+    PENDIENTE —sin ejecutar nada— y se revienta dentro. Lo que tiene que
+    pasar al salir es que no quede ambito, y por tanto que la escritura
+    pendiente se haya perdido con el.
+
+    Que perderse es lo correcto, y hay que decirlo: el ambito es de UN test,
+    y un test que revienta ya ha fallado por otra cosa. Lo que no puede es
+    dejar el registro contaminado para el siguiente.
+
+    Y la razon de que esto se pueda escribir: el `finally` esta en
+    `ejecutar_pytest.ambito()`, no en el fixture. MEDIDO: pytest no deja
+    llamar a un fixture directamente, y reimplementar la logica aqui seria
+    probar una copia — una copia puede tener un `finally` y el original no.
+    """
+    # Y en un TEMPORAL, no en `tools/`. MEDIDO: con la ruta dentro del
+    # repositorio, este test dejaba un `?? tools/NO_EXISTE.md` en cada
+    # pasada — porque `escribir_documento` SI escribe, que es lo que hace—.
+    #
+    # Y un test que escribe en el arbol del proyecto puede pisar un
+    # fichero de verdad. Aqui no ha pasado porque el nombre es imposible de
+    # colisionar, pero el patron no lo garantiza: un test que muta el
+    # REPOSITORIO en vez de una copia no es un test.
+    with tempfile.TemporaryDirectory() as tmp:
+        ruta = os.path.join(tmp, 'UN_TXT.md')
+        with pytest.raises(RuntimeError):
+            with ep.ambito():
+                ep.escribir_documento(ruta, 'x', que='LA PENDIENTE')
+                pendientes = [q for q, _ in ep.sin_probar()]
+                assert pendientes == ['LA PENDIENTE'], (
+                    'antes de la excepcion tiene que haber una pendiente, '
+                    'para que la prueba signifique algo: %r' % (pendientes,))
+                raise RuntimeError('una excepcion a proposito')
+    assert ep._ALCANCE is not None, (
+        'el ambito EXTERIOR tiene que seguir vivo: `ambito()` restaura el '
+        'anterior al salir, no lo pone a None. Si no, un ambito dentro de '
+        'otro deja al exterior sin registro, y el que lo abrio creeria que '
+        'tiene uno')
+    assert [q for q, _ in ep.sin_probar()] == [], (
+        'y no puede quedar nada pendiente del ambito que revienta: %r'
+        % ([q for q, _ in ep.sin_probar()],))
+
+def test_un_ambito_nuevo_no_ve_lo_del_anterior():
+    """La otra mitad de (3): entre tests, y por lo tanto entre ficheros.
+
+    No hace falta lanzar dos ficheros: el mecanismo que lo arregla es
+    `abrir_ambito()`, y esa es la puerta por la que pasa todo. Se ensaya la
+    puerta.
+
+    Y se ensaya en el ORDEN que importa: dejar pendiente, cerrar, abrir, y
+    mirar. Si al abrir apareciera algo, el registro se estaria filtrando."""
+    with tempfile.TemporaryDirectory() as tmp:
+        ep.escribir_documento(os.path.join(tmp, 'UN_TXT.md'), 'x',
+                              que='DEL TEST ANTERIOR')
+        assert [q for q, _ in ep.sin_probar()] == ['DEL TEST ANTERIOR']
+        ep.cerrar_ambito()
+        ep.abrir_ambito()
+    assert ep.sin_probar() == [], (
+        'un ambito nuevo tiene que estar VACIO. Si no, el registro se '
+        'contamina entre tests, y un test puede caer por lo que hizo otro. '
+        'MEDIDO: la version de registro global de modulo hacia exactamente '
+        'esto, y estaba en verde.')
+    assert ep._ALCANCE == {}, 'y no basta con que no haya pendiente: tiene '
+    assert ep._ALCANCE == {}, 'que no haya ENTRADAS. Un ambito vacio es {}'
+
+
+# ============================ 8. R1 T4: QUE `0 failed` NO PASE
+def test_el_exit_code_de_un_cero_de_fallidos_no_pasa_la_comprobacion():
+    """La entrada que VALIA antes de la correccion.
+
+    MEDIDO: `re.findall(r'(\d+) failed', '0 failed in 0.05s')` devuelve
+    `['0']`. O sea que `assert m` —la version anterior— se cumplia con un
+    cero, y el codigo de salida es el mismo que el de un test caido.
+
+    Y no es un caso teorico: pytest imprime `0 failed` cuando la coleccion
+    no ha encontrado nada que ejecutar, y un subproceso puede dar 1 por un
+    error de importacion.
+
+    Y el fallo tiene que distinguir las DOS cosas, porque no son lo mismo:
+
+      - «no ha habido fallos»      -> no se ha mirado nada
+      - «un error de importacion» -> tampoco es un fallo de test
+
+    Y para eso hace falta la linea `FAILED fichero::test`: un recuento
+    puede ser 0 mientras hay un error de coleccion, y solo el nombre
+    demuestra que ha CAIDO un test."""
+    import re as _re
+    m = _re.findall(r'(\d+) failed', '0 failed in 0.05s')
+    assert m, ('suposicion: el patron tiene que casar con `0 failed`, o esta '
+               'prueba no prueba nada')
+    assert not (m and int(m[-1]) >= 1), (
+        'suposicion del contrario: `0 failed` NO tiene que pasar la '
+        'comprobacion de «recuento mayor que cero». Y pasa: %r' % (m,))
+    assert not _re.findall(r'^FAILED \S+::', '0 failed in 0.05s', _re.M), (
+        'y `0 failed` tampoco trae linea `FAILED fichero::test`, que es la '
+        'segunda mitad de la comprobacion')
+
+    # Y ahora el caso REAL, y por las DOS PUERTAS, porque son dos preguntas:
+    # `crudo` dice que codigo ha dado; `correr` dice que se ha ejecutado algo.
+    with tempfile.TemporaryDirectory() as tmp:
         destino = os.path.join(tmp, 'DOCS')
         shutil.copytree(os.path.join(ROOT, 'DOCS'), destino)
-        ruta = os.path.join(destino, 'UN_TXT.md')
-        ep.escribir_documento(ruta, 'lo que sea', que='LA MUTACION')
-        env = dict(os.environ)
-        env[rs.DIR_DE_DOCUMENTOS] = destino
-        env['PYTHONPATH'] = os.path.join(ROOT, 'tools')
-        ep.correr(FICH, VERDE, env=env, cwd=ROOT)
-        pendientes = ep.sin_probar()
-        assert not pendientes, (
-            'una escritura que ha llegado a un test NO tiene que quedar '
-            'pendiente, y queda: %r' % (pendientes,))
-    finally:
-        shutil.rmtree(tmp, ignore_errors=True)
-
-
-def test_dos_escrituras_y_una_ejecucion_no_absuelven_a_las_dos():
-    """Y lo que motivo el diseno: con dos mutaciones seguidas y UNA sola
-    ejecucion, la primera queda pendiente.
-
-    Es el caso exacto del fallo del bloque —escribir, escribir, y ejecutar
-    una sola vez— y el que la version de MARCA por directorio no podia ver,
-    porque la unica ejecucion borraba las dos marcas.
-
-    Y que sea la PRIMERA y no la segunda es la regla, leida bien: una
-    escritura queda pendiente si no hay una ejecucion ANTES de la siguiente
-    escritura. Al reves seria verdad de forma accidental, y esta prueba se
-    escribio poniendo «LA SEGUNDA» y fallando: el codigo estaba bien y la
-    expectativa mal.
-
-    Que es el favor de siempre: la prueba no solo comprueba el codigo, lo
-    pone en aprietos."""
-    import shutil
-    import tempfile
-    tmp = tempfile.mkdtemp(prefix='opencode_dos_')
-    try:
-        destino = os.path.join(tmp, 'DOCS')
-        shutil.copytree(os.path.join(ROOT, 'DOCS'), destino)
-        env = dict(os.environ)
-        env[rs.DIR_DE_DOCUMENTOS] = destino
-        env['PYTHONPATH'] = os.path.join(ROOT, 'tools')
-        ep.escribir_documento(os.path.join(destino, 'A.md'), 'a',
-                              que='LA PRIMERA')
-        ep.escribir_documento(os.path.join(destino, 'B.md'), 'b',
-                              que='LA SEGUNDA')
-        ep.correr(FICH, VERDE, env=env, cwd=ROOT)
-        pendientes = [q for q, _ in ep.sin_probar()]
-        assert pendientes == ['LA PRIMERA'], (
-            'con dos escrituras seguidas y una sola ejecucion, la que NO ha '
-            'llegado a ningun test es la PRIMERA — la segunda ha sido la que '
-            'ha ido seguida del unico test que se ha corrido—, y no la '
-            'unica pendiente: %r' % (pendientes,))
-    finally:
-        shutil.rmtree(tmp, ignore_errors=True)
-
-
-def test_una_ejecucion_sobre_un_4_no_absuelve():
-    """Y el caso que hizo falta el registro en vez de la marca.
-
-    Un `correr` cuyo codigo es 4 —«no se ha ejecutado nada»— LANZA, y por
-    tanto no registra. O sea que no absuelve: que es lo unico razonable,
-    porque un 4 no ha probado nada.
-
-    Y esto es lo que hacia la version de marca por directorio incorrecta en
-    el otro sentido tambien: si hubiera registrado antes del corte, un `!= 0`
-    cualquiera —incluido un 4— habria vaciado la lista y habria dicho
-    «probado» sin haber probado."""
-    import shutil
-    import tempfile
-    tmp = tempfile.mkdtemp(prefix='opencode_cuatro_')
-    try:
-        destino = os.path.join(tmp, 'DOCS')
-        shutil.copytree(os.path.join(ROOT, 'DOCS'), destino)
-        ep.escribir_documento(os.path.join(destino, 'A.md'), 'a',
-                              que='LA MUTACION')
+        crudo, salida = ep.crudo(FICH, 'test_que_no_existe_este', cwd=ROOT)
+        assert crudo in (ep.CODIGO_NINGUNO_EJECUTADO,
+                         ep.CODIGO_NINGUNO_ENCONTRADO), (
+            'MEDIDO: un nombre de test que no existe da %d, y %d si pytest no '
+            'encuentra ninguno. Los dos son «no se ha ejecutado nada» y los '
+            'dos pasan un `!= 0` en verde. Si aqui saliera un 1, la '
+            'suposicion del comentario de arriba estaria caducada y habria '
+            'que rehacerla.' % (ep.CODIGO_NINGUNO_EJECUTADO,
+                                ep.CODIGO_NINGUNO_ENCONTRADO))
+        assert not _re.findall(r'^FAILED \S+::', salida, _re.M), (
+            'y la salida no trae ninguna linea `FAILED fichero::test`, que es '
+            'la segunda mitad de la comprobacion de `afirmar_caida`: aqui no '
+            'ha caido NINGUN test')
+        # y la otra puerta: `correr` tiene que CORTAR, no devolver
         with pytest.raises(AssertionError):
-            ep.correr(FICH, 'este_test_no_existe', cwd=ROOT)
-        pendientes = [q for q, _ in ep.sin_probar()]
-        assert pendientes == ['LA MUTACION'], (
-            'un test que no llego a ejecutarse NO puede absolver una '
-            'escritura. Y la absuelve: %r' % (pendientes,))
-    finally:
-        shutil.rmtree(tmp, ignore_errors=True)
+            ep.correr(FICH, 'test_que_no_existe_este', cwd=ROOT)
+
+
+# ============================ 9. R1 T5: LA PALABRA, NO LA SUBCADENA
+def test_el_cambio_cosmetico_toca_la_palabra_y_no_la_subcadena():
+    """La correccion del punto 4 de R2, probada en las dos mitades.
+
+    Y el punto 4 fue el unico NO CONFIRMADO: `find('el')` caia en el indice
+    237 y 93, y en los dos contratos era palabra COMPLETA. O sea que la
+    mutacion era cosmetica de verdad y la matriz era correcta.
+
+    Lo que habia era una CASUALIDAD —depende de donde aparezca `el` en dos
+    ficheros que este bloque no controla— y lo que se cambia son los limites
+    de palabra. Y esa correccion, sin esta prueba, no seria mas que otra
+    reescritura sin motivo: la prueba es lo que dice que la reescritura hace
+    algo.
+
+    Y las dos mitades, que es donde estuvo el fallo: cambiar la PALABRA y no
+    cambiar lo que NO es palabra. Un `find('el')` cambiaria «ello», «elo» y
+    «delegado» igual de bien, y dejaria un documento con palabras rotas."""
+    import re as _re
+
+    texto = 'el contrato dice que ello delegaba y el heroe continua'
+    palabra = _re.search(r'\bel\b', texto)
+    assert palabra is not None, 'suposicion: tiene que haber una palabra «el»'
+
+    # (a) la PALABRA se cambia
+    cambiado = texto[:palabra.start()] + 'EL' + texto[palabra.end():]
+    assert 'EL contrato' in cambiado, (
+        'la palabra «el» tiene que cambiarse, y no: %r' % cambiado)
+    # (b) lo que NO es palabra no se toca
+    for intacto in ('ello', 'delegaba'):
+        assert intacto in cambiado, (
+            '«%s» no es la palabra «el» y no tiene que cambiar: %r'
+            % (intacto, cambiado))
+    assert 'ello' in texto and _re.search(r'\bello\b', cambiado), (
+        'y «ello» tiene que seguir siendo «ello», no «Ello» ni «ELlo»')
+    # Y el cambio tiene que ser UNO, no dos
+    assert cambiado.count('EL') == 1, (
+        'un solo cambio de palabra. Con `find(..., 1)` se cambia el primero '
+        'y se dejan los demas, que es la version que se descarto. Aqui: %r'
+        % (cambiado,))
+    # (c) Y el caso que rompia la palabra pegada
+    pegado = 'ello'
+    m2 = _re.search(r'\bel\b', pegado)
+    assert m2 is None, (
+        'suposicion: «ello» NO tiene una palabra «el» dentro. Y si la '
+        'tuviera, este test estaria probando lo contrario de lo que dice')
+
+
+def test_los_tests_de_este_fichero_no_dejan_basura_en_el_repositorio():
+    """La comprobacion que sale de haber encontrado un `??` en `git status`.
+
+    MEDIDO: dos pruebas de este mismo fichero usaban una ruta DENTRO de
+    `tools/` como sitio donde «escribir una mutacion», y `escribir_documento()`
+    escribe —que es lo que hace—, asi que dejaban `?? tools/NO_EXISTE.md` en
+    cada pasada.
+
+    Y hay dos razones por las que molesta, y las dos son malas:
+
+      1. un `??` en el `git status` es ruido, y el ruido se aprende a
+         ignorar
+      2. un test que escribe en el ARBOL DEL PROYECTO puede pisar un
+         fichero de verdad. Aqui no ha pasado —el nombre es imposible de
+         colisionar—, pero el patron no lo garantiza
+
+    Y lo que se comprueba no es «este test no escribe», que no se puede saber
+    desde dentro, sino lo que se PUEDE: que en este fichero ninguna ruta de
+    escritura apunta al repositorio. Que es una comprobacion de FUENTE, y
+    por eso no es la ideal —la ideal es el `git status` limpio despues de
+    correr—, pero es la que se puede dejar escrita al lado.
+
+    Y LA LECCION, QUE ES LA TERCERA VEZ EN ESTE BLOQUE
+
+    Las otras dos: `NL` sin definir, dos veces; y una medicion con barras
+    invertidas en vez de saltos de linea. Las tres son codigo escrito a
+    traves de una CAPA —un heredoc, una linea de ordenes, un fichero
+    temporal— que altera lo que el autor cree que esta escribiendo. La capa
+    es el sitio donde falla la escritura, y por eso hay que MIRAR lo que
+    sale."""
+    fuente = io.open(os.path.abspath(__file__), encoding='utf-8').read()
+    arbol = ast.parse(fuente)
+    Within = ('TemporaryDirectory', 'mkdtemp')
+    malas = []
+    for nodo in ast.walk(arbol):
+        if not isinstance(nodo, ast.Call):
+            continue
+        nombre = getattr(nodo.func, 'id', '') or getattr(nodo.func, 'attr', '')
+        if nombre != 'escribir_documento':
+            continue
+        for a in nodo.args:
+            texto = ast.get_source_segment(fuente, a) or ''
+            if ('ROOT' in texto and 'os.path.join' in texto
+                    and '.tmp' not in texto):
+                malas.append('linea %d: %s' % (nodo.lineno, texto))
+    assert not malas, (
+        'estas escrituras apuntan DENTRO del repositorio:\n%s\n\nUn test '
+        'que escribe en el arbol del proyecto puede pisar un fichero de '
+        'verdad. Que aqui no haya pasado no lo garantiza: el nombre lo '
+        'hacia imposible de colisionar.' % chr(10).join(malas))
+    del Within

@@ -16,6 +16,7 @@ Y hay una razon de fondo para las tres, y es la misma: este bloque ha
 descubierto que «esta escrito» y «esta vigilado» son dos cosas distintas, y
 que la segunda es la que cuesta.
 """
+import ast
 import io
 import os
 import re
@@ -293,6 +294,28 @@ def test_los_tests_de_los_contratos_caen_si_el_contrato_cambia(nombre):
             ruta, cambiada,
             que='«%s» con TODAS las formas de sus afirmaciones quitadas'
                  % nombre)
+        # Y la afirmacion va PEGADA a la llamada, y el RAZONAMIENTO encima.
+        #
+        # Que es la estructura que este test mide, y que la disposicion
+        # anterior no tenia: la frase estaba doce lineas mas arriba, sobre la
+        # escritura del documento, y debajo no habia ninguna llamada. La
+        # llamada se habia ido con un parche mio que calculo mal el final del
+        # bloque, y el comentario se quedo —porque un comentario no rompe
+        # nada—.
+        #
+        # MEDIDO: con el mecanismo de contenido neutralizado —que pasa
+        # siempre, sin mirar el contrato— este fichero daba `8 passed`. Con
+        # doce lineas de comentario afirmando una comprobacion inexistente.
+        #
+        # Y por eso la afirmacion va sola en su linea: una ventana de cinco
+        # lineas no cabe un razonamiento de seis, y si lo metiera, el
+        # comentario acabaria otra vez lejos de lo que dice. Lo que se
+        # comprueba es que la AFIRMACION este pegada a su llamada; el porque
+        # va antes.
+        #
+        # Un comentario que dice lo que el codigo hace, sobre un codigo que
+        # no lo hace, es peor que no escribirlo.
+        # SOLO el test de CONTENIDO, y solo ese.
         ep.afirmar_caida(
             ruta_contratos, DE_CONTENIDO, env=env, cwd=ROOT,
             cuando='el test de CONTENIDO no ha caido al cambiar la frase de '
@@ -414,3 +437,72 @@ def test_sin_romper_nada_los_tests_de_los_contratos_pasan():
         'salida no dice cuantos han pasado. O no se ha ejecutado nada, o lo '
         'que se ha ejecutado no es lo que este test creia.\n\nSalida:\n%s'
         % salida[-1200:])
+
+# ============ Y EL COMENTARIO QUE NO TIENE QUE PODER MENTIR OTRA VEZ
+def test_el_comentario_del_contenido_esta_pegado_a_su_llamada():
+    """La frase «SOLO el test de CONTENIDO» tiene que estar encima de la
+    llamada que justifica.
+
+    MEDIDO: en el bloque anterior la frase estaba doce lineas mas arriba,
+    sobre la escritura del documento, y DEBAJO no habia ninguna llamada. La
+    llamada se habia ido con un parche que calculo mal el final del bloque, y
+    el comentario se quedo —porque un comentario no rompe nada—.
+
+    Y el efecto: con el mecanismo de contenido neutralizado, este fichero
+    daba `8 passed`. Doce lineas de comentario afirmando una comprobacion
+    que no existia.
+
+    Y la ventana son CINCO lineas, no una, porque la llamada se parte. Y es
+    tan estrecha a proposito: una ventana amplia deja que la llamada se vaya
+    lejos y el comentario vuelva a quedar sobre un hueco.
+
+    Y se comprueba el NOMBRE del mecanismo, no solo que haya una llamada: una
+    llamada a `afirmar_caida` con `DE_HUELLA` no justifica un comentario que
+    habla del contenido.
+    """
+    fuente = io.open(os.path.abspath(__file__), encoding='utf-8').read()
+    # Y `chr(10)`, no `NL`. Que es la TERCERA vez en este repositorio que una
+    # prueba nueva usa `NL` sin que exista en el fichero, y la segunda vez en
+    # este bloque. O sea que no es un descuido suelto: es un h\u00e1bito que se
+    # pega al escribir codigo con lineas de ordenes en vez de con el editor.
+    #
+    # Y por que `chr(10)` y no un literal `\n` dentro de la cadena: a traves de
+    # un heredoc, `\\n` produce barras LITERALES, y se acaba probando `\` `n`
+    # en vez de un salto. Ya paso en este bloque: una medicion dio «el parrafo
+    # SI propaga» porque no se probo un parrafo.
+    lineas = fuente.split(chr(10))
+    FRASE = 'SOLO el test de CONTENIDO, y solo ese'
+    donde = [i for i, l in enumerate(lineas) if FRASE in l]
+    assert donde, (
+        'el comentario «%s» ha desaparecido. Puede que ya no haga falta —y '
+        'entonces se borra la frase y esta prueba— o que se haya reescrito; '
+        'lo que no puede es cambiar de significo sin que se note, porque es '
+        'la frase que estuvo doce lineas sobre un hueco' % FRASE)
+    i = donde[0]
+    ventana = chr(10).join(lineas[i:i + 6])
+    assert 'afirmar_caida(' in ventana, (
+        'el comentario «%s» no tiene una llamada debajo en las cinco lineas '
+        'siguientes, y lo que hay es:\n%s\n\nO sea: el comentario dice lo '
+        'que el codigo hace y el codigo no lo hace. Es exactamente el fallo '
+        'del bloque anterior, y con este test no puede volver a pasar en '
+        'silencio.' % (FRASE, ventana))
+    assert 'DE_CONTENIDO' in ventana, (
+        'y la llamada tiene que ser al mecanismo de CONTENIDO. Con '
+        '`DE_HUELLA` debajo, el comentario sigue sin tener lo que dice '
+        'tener:\n%s' % ventana)
+
+    # Y la mitad que hace que no sea una comprobacion de texto: la llamada
+    # tiene que EXISTIR en el arbol, no solo aparecer en la ventana.
+    arbol = ast.parse(fuente)
+    llamadas = [(n.lineno, ast.get_source_segment(fuente, n) or '')
+                for n in ast.walk(arbol)
+                if isinstance(n, ast.Call)
+                and isinstance(n.func, ast.Attribute)
+                and n.func.attr == 'afirmar_caida']
+    sobre_ventana = [c for c in llamadas
+                     if i < c[0] <= i + 6 and 'DE_CONTENIDO' in c[1]]
+    assert sobre_ventana, (
+        'hay una cadena que parece la llamada, pero no es una llamada. Las '
+        'llamadas reales a `afirmar_caida` con DE_CONTENIDO: %r'
+        % (llamadas,))
+

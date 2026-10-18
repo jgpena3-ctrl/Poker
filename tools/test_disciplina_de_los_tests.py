@@ -99,6 +99,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 sys.path.insert(0, os.path.join(ROOT, 'tools'))
 
+import ejecutar_pytest as ep
 import retraccion_scan as rs                                   # noqa: E402
 
 # ================================================ 1. EL EXIT CODE
@@ -112,13 +113,6 @@ EXIT_QUE_SIGNIFICA = {
 }
 
 
-def _correr(args, env=None):
-    r = subprocess.run([sys.executable, '-m', 'pytest'] + args,
-                       cwd=ROOT, env=env, stdout=subprocess.PIPE,
-                       stderr=subprocess.STDOUT)
-    return r.returncode, r.stdout.decode('utf-8', 'replace')
-
-
 def test_el_exit_code_4_significa_que_no_se_ha_ejecutado_nada():
     """La precondicion de todo lo demas: que se sepa lo que se esta
     mirando.
@@ -126,9 +120,14 @@ def test_el_exit_code_4_significa_que_no_se_ha_ejecutado_nada():
     Y se mira de verdad, no de memoria: se ejecuta pytest con un selector
     mal puesto y se comprueba que da 4 y dice «no tests ran»."""
     FICH = os.path.join(ROOT, 'tools', 'test_causa_no_validez.py')
-    codigo, salida = _correr([FICH, '-q', '--no-header',
-                              '-p', 'no:cacheprovider',
-                              '::no_existe_este_test'])
+    # Y por `ep.crudo`, no por `ep.correr`: este test COMPRUEBA que el 4
+    # significa «no se ha ejecutado nada», y `correr` corta ese codigo a
+    # proposito porque es el que hace pasar en verde a un `!= 0`. El test
+    # que verifica la regla no puede usar la regla.
+    #
+    # Y que aqui aparezca `crudo` y no en ningun otro sitio es lo que hace
+    # que la excepcion sea visible en vez de estar repartida.
+    codigo, salida = ep.crudo(FICH, 'no_existe_este_test', cwd=ROOT)
     assert codigo == 4, (
         'con un selector que no existe, pytest deberia dar 4, y da %d. Si esa '
         'afirmacion falla, el 4 no significa lo que se cree que significa y '
@@ -142,9 +141,8 @@ def test_el_selector_correcto_da_0_o_1_y_nunca_4():
     """Y que el selector bien puesto ejecuta de verdad. Que es lo que evita
     el falso verde."""
     FICH = os.path.join(ROOT, 'tools', 'test_causa_no_validez.py')
-    codigo, salida = _correr(
-        [FICH + '::test_la_prueba_causal_sigue_en_pie',
-         '-q', '--no-header', '-p', 'no:cacheprovider'])
+    codigo, salida = ep.correr(FICH, 'test_la_prueba_causal_sigue_en_pie',
+                               cwd=ROOT)
     assert codigo == 0, (
         'un test que pasa deberia dar 0, y da %d (%s)'
         % (codigo, EXIT_QUE_SIGNIFICA.get(codigo, '?')))
@@ -163,15 +161,9 @@ def test_el_selector_correcto_da_0_o_1_y_nunca_4():
 # separan. Se queda la que esta junto al modulo, que es donde una regla
 # se mantiene.
 
-# Y la regla «un subproceso de pytest solo vale 0 o 1» NO esta aqui: esta
-# en `test_ejecutar_pytest.py`, junto al modulo que la aplica.
-#
-# Y no es mudanza por limpieza: la copia que estaba aqui ya se habia
-# desincronizado — exigia `subprocess.run(` en el fuente, y la version
-# cableada usa `ejecutar_pytest.correr` —. Dos copias de una regla se
-# separan. Se queda la que esta junto al modulo, que es donde una regla
-# se mantiene.
-
+# Y el comentario iba DUPLICADO dos veces. Lo puso un parche que no
+# comprobo que no estuviera ya, que es el mismo fallo del ancla que se
+# cumplia. Un comentario repetido no rompe nada, y por eso nadie lo ve.
 def test_ningun_subproceso_de_este_repositorio_acepta_el_codigo_cuatro():
     """Y el test que lo hace de verdad, no de palabra: se ejecuta una
     mutacion real y se comprueba que el codigo que sale es 1, no 4.
@@ -193,10 +185,10 @@ def test_ningun_subproceso_de_este_repositorio_acepta_el_codigo_cuatro():
         env = dict(os.environ)
         env[rs.DIR_DE_DOCUMENTOS] = destino
         env['PYTHONPATH'] = os.path.join(ROOT, 'tools')
-        codigo, salida = _correr(
-            [os.path.join(ROOT, 'tools', 'test_causa_no_validez.py')
-             + '::test_la_tesis_de_no_validez_se_afirma_como_no_demostrada',
-             '-q', '--no-header', '-p', 'no:cacheprovider'], env=env)
+        codigo, salida = ep.correr(
+            os.path.join(ROOT, 'tools', 'test_causa_no_validez.py'),
+            'test_la_tesis_de_no_validez_se_afirma_como_no_demostrada',
+            env=env, cwd=ROOT)
         assert codigo == 1, (
             'una mutacion real deberia dar 1, y da %d — que es %s. Si es 4, '
             'el selector no esta funcionando y el assert «!= 0» de mas arriba '
@@ -222,7 +214,7 @@ def test_los_dos_mecanismos_de_los_contratos_miden_cosas_distintas():
     import test_contratos_firmados as cf
     DOCS = os.path.join(ROOT, 'DOCS')
 
-    def _con(que_texto, transformacion):
+    def _con(que_texto, transformacion, etiqueta):
         tmp = tempfile.mkdtemp(prefix='opencode_matriz_')
         destino = os.path.join(tmp, 'DOCS')
         os.makedirs(destino)
@@ -234,19 +226,29 @@ def test_los_dos_mecanismos_de_los_contratos_miden_cosas_distintas():
             t = f.read()
         nuevo = transformacion(t)
         assert nuevo != t, 'la transformacion no ha cambiado nada'
-        with io.open(ruta, 'w', encoding='utf-8', newline='') as f:
-            f.write(nuevo)
+        # Y por `escribir_documento`, que la MARCA como escrita y sin probar.
+        #
+        # Y este fichero es el que hace la matriz de cuatro celdas —la que
+        # dice que el contenido y la huella son dos mecanismos— y escribia un
+        # DOCS mutado CUATRO veces sin marcar ninguna. O sea que la
+        # comprobacion que mas importa de este fichero era la unica que
+        # ningun invariante vigilaba.
+        #
+        # Y no es teorico: en el bloque anterior `test_tareas_r1.py` escribio
+        # una mutacion y la sobrescribio sin ejecutar nada, y dio `8 passed`.
+        # Si eso hubiera pasado aqui, esta matriz habria dado cuatro celdas
+        # —cuatro codigos de salida— sin haber mirado un solo documento.
+        ep.escribir_documento(ruta, nuevo,
+                              que='«%s» %s' % (que_texto, etiqueta))
         env = dict(os.environ)
         env[rs.DIR_DE_DOCUMENTOS] = destino
         env['PYTHONPATH'] = os.path.join(ROOT, 'tools')
         return tmp, env
 
     def _codigo(env, test):
-        return _correr([os.path.join(ROOT, 'tools',
-                                     'test_contratos_firmados.py')
-                        + '::' + test,
-                        '-q', '--no-header', '-p', 'no:cacheprovider'],
-                       env=env)[0]
+        return ep.correr(os.path.join(ROOT, 'tools',
+                                      'test_contratos_firmados.py'),
+                         test, env=env, cwd=ROOT)[0]
 
     CONTENIDO = 'test_los_contratos_dicen_lo_que_el_proyecto_les_pide'
     HUELLA = 'test_los_contratos_no_cambian_sin_que_se_sepa'
@@ -268,13 +270,24 @@ def test_los_dos_mecanismos_de_los_contratos_miden_cosas_distintas():
 
     for etiqueta, transformacion in (('afirmacion', rompe_afirmacion),
                                     ('cosmetica', rompe_cosmetica)):
-        tmp, env = _con(NOMBRE, transformacion)
+        tmp, env = _con(NOMBRE, transformacion, etiqueta)
         try:
             resultados[(etiqueta, 'contenido')] = _codigo(env, CONTENIDO)
             resultados[(etiqueta, 'huella')] = _codigo(env, HUELLA)
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
 
+    # Y lo escrito, probado. Las cuatro celdas son cuatro DOCS mutados, y
+    # los cuatro tienen que haber llegado a un test. Si alguno no ha
+    # llegado, su celda no dice nada —el codigo habria salido de un 4, o de
+    # nada— y entonces la matriz no es una matriz: son cuatro numeros.
+    pendientes = ep.sin_probar()
+    assert not pendientes, (
+        'la matriz ha escrito %d documento(s) mutado(s) y estos no han '
+        'llegado a ningun test:\n%s\n\nUna celda sin ejecucion no es una '
+        'medida: es un codigo de salida.'
+        % (len(pendientes),
+           chr(10).join('   - %s' % que for que, _ in pendientes)))
     print()
     print('   %-12s %-12s %-12s' % ('rotura', 'contenido', 'huella'))
     for etiqueta in ('afirmacion', 'cosmetica'):
