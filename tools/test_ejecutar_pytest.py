@@ -305,3 +305,132 @@ def test_ningun_test_de_este_repositorio_acepta_el_codigo_cuatro():
         assert 'ejecutar_pytest' in fuente, (
             '%s tiene subprocesos de pytest y no usa el modulo comun. Tres '
             'copias de la regla son tres sitios donde equivocarse' % nombre)
+
+
+# ============================ 6. ESCRITO Y SIN PROBAR
+def test_una_escritura_sin_ejecucion_queda_pendiente_y_se_nombra():
+    """El invariante, probandose a si mismo.
+
+    Y en las DOS mitades, porque un invariante que solo dice «detecta» no
+    dice «no falsea nada»: si acusara de todo, tambien pasaria. Y una regla
+    que acusa de todo es una regla que nadie va a mirar cuando praise.
+
+    Y este invariante ya estuvo roto en verde: la primera version marcaba
+    el DIRECTORIO entero, y como las tres roturas de un contrato comparten
+    directorio, la ejecucion de la segunda borraba la marca de la primera.
+    Con el hueco abierto decia `codigo = 0`.
+
+    La version mala tambien estaba en verde, y tambien «funcionaba». Que
+    es la unica forma de que se note que un invariante hay que probarlo
+    ROMPIENDOLO, y no mirandolo pasar."""
+    import shutil
+    import tempfile
+    directorio = tempfile.mkdtemp(prefix='opencode_sinprobar_')
+    try:
+        ruta = os.path.join(directorio, 'UN_TXT.md')
+        ep.escribir_documento(ruta, 'lo que sea', que='LA MUTACION')
+        pendientes = ep.sin_probar()
+        assert pendientes, (
+            'una escritura que no ha llegado a ningun test tiene que quedar '
+            'pendiente, y no queda. O sea que el invariante no vigila')
+        assert pendientes[0][0] == 'LA MUTACION', (
+            'y el pendiente tiene que decir QUE se escribio, no el '
+            'directorio: un fallo que dice «falta probar» sin decir que es '
+            'inaccionable. Pendientes: %r' % (pendientes,))
+    finally:
+        shutil.rmtree(directorio, ignore_errors=True)
+
+
+def test_una_escritura_con_ejecucion_no_queda_pendiente():
+    """La otra mitad: ejecutada, se absuelve.
+
+    Y con un test de verdad, no con un registro a mano. Si se registrara a
+    dedo, la comprobacion probaria que la lista se vacia con un dato puesto
+    a proposito, que es lo que hace cualquier lista."""
+    import shutil
+    import tempfile
+    tmp = tempfile.mkdtemp(prefix='opencode_absuelta_')
+    try:
+        destino = os.path.join(tmp, 'DOCS')
+        shutil.copytree(os.path.join(ROOT, 'DOCS'), destino)
+        ruta = os.path.join(destino, 'UN_TXT.md')
+        ep.escribir_documento(ruta, 'lo que sea', que='LA MUTACION')
+        env = dict(os.environ)
+        env[rs.DIR_DE_DOCUMENTOS] = destino
+        env['PYTHONPATH'] = os.path.join(ROOT, 'tools')
+        ep.correr(FICH, VERDE, env=env, cwd=ROOT)
+        pendientes = ep.sin_probar()
+        assert not pendientes, (
+            'una escritura que ha llegado a un test NO tiene que quedar '
+            'pendiente, y queda: %r' % (pendientes,))
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_dos_escrituras_y_una_ejecucion_no_absuelven_a_las_dos():
+    """Y lo que motivo el diseno: con dos mutaciones seguidas y UNA sola
+    ejecucion, la primera queda pendiente.
+
+    Es el caso exacto del fallo del bloque —escribir, escribir, y ejecutar
+    una sola vez— y el que la version de MARCA por directorio no podia ver,
+    porque la unica ejecucion borraba las dos marcas.
+
+    Y que sea la PRIMERA y no la segunda es la regla, leida bien: una
+    escritura queda pendiente si no hay una ejecucion ANTES de la siguiente
+    escritura. Al reves seria verdad de forma accidental, y esta prueba se
+    escribio poniendo «LA SEGUNDA» y fallando: el codigo estaba bien y la
+    expectativa mal.
+
+    Que es el favor de siempre: la prueba no solo comprueba el codigo, lo
+    pone en aprietos."""
+    import shutil
+    import tempfile
+    tmp = tempfile.mkdtemp(prefix='opencode_dos_')
+    try:
+        destino = os.path.join(tmp, 'DOCS')
+        shutil.copytree(os.path.join(ROOT, 'DOCS'), destino)
+        env = dict(os.environ)
+        env[rs.DIR_DE_DOCUMENTOS] = destino
+        env['PYTHONPATH'] = os.path.join(ROOT, 'tools')
+        ep.escribir_documento(os.path.join(destino, 'A.md'), 'a',
+                              que='LA PRIMERA')
+        ep.escribir_documento(os.path.join(destino, 'B.md'), 'b',
+                              que='LA SEGUNDA')
+        ep.correr(FICH, VERDE, env=env, cwd=ROOT)
+        pendientes = [q for q, _ in ep.sin_probar()]
+        assert pendientes == ['LA PRIMERA'], (
+            'con dos escrituras seguidas y una sola ejecucion, la que NO ha '
+            'llegado a ningun test es la PRIMERA — la segunda ha sido la que '
+            'ha ido seguida del unico test que se ha corrido—, y no la '
+            'unica pendiente: %r' % (pendientes,))
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_una_ejecucion_sobre_un_4_no_absuelve():
+    """Y el caso que hizo falta el registro en vez de la marca.
+
+    Un `correr` cuyo codigo es 4 —«no se ha ejecutado nada»— LANZA, y por
+    tanto no registra. O sea que no absuelve: que es lo unico razonable,
+    porque un 4 no ha probado nada.
+
+    Y esto es lo que hacia la version de marca por directorio incorrecta en
+    el otro sentido tambien: si hubiera registrado antes del corte, un `!= 0`
+    cualquiera —incluido un 4— habria vaciado la lista y habria dicho
+    «probado» sin haber probado."""
+    import shutil
+    import tempfile
+    tmp = tempfile.mkdtemp(prefix='opencode_cuatro_')
+    try:
+        destino = os.path.join(tmp, 'DOCS')
+        shutil.copytree(os.path.join(ROOT, 'DOCS'), destino)
+        ep.escribir_documento(os.path.join(destino, 'A.md'), 'a',
+                              que='LA MUTACION')
+        with pytest.raises(AssertionError):
+            ep.correr(FICH, 'este_test_no_existe', cwd=ROOT)
+        pendientes = [q for q, _ in ep.sin_probar()]
+        assert pendientes == ['LA MUTACION'], (
+            'un test que no llego a ejecutarse NO puede absolver una '
+            'escritura. Y la absuelve: %r' % (pendientes,))
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)

@@ -83,7 +83,7 @@ ROTURAS = (
 )
 
 
-def _docs_rotos(viejo, nuevo, todas=True):
+def _docs_rotos(viejo, nuevo, todas=True, nombre=None):
     """Copia de DOCS con una sustitucion hecha. None si el texto no estaba.
 
     `todas=True` cambia TODAS las apariciones, y por defecto.
@@ -111,8 +111,16 @@ def _docs_rotos(viejo, nuevo, todas=True):
         return None
     cambiado = texto.replace(viejo, nuevo) if todas else \
         texto.replace(viejo, nuevo, 1)
-    with io.open(ruta, 'w', encoding='utf-8', newline='') as f:
-        f.write(cambiado)
+    # Y por `escribir_documento`, que ademas la MARCA como sin probar.
+    #
+    # Y el ambito es POR TEST, no por funcion: `_docs_rotos()` se llama desde
+    # el test y el subproceso se lanza desde el mismo test. Habia escrito que
+    # este fichero no podia usar el invariante «porque escribe en una funcion
+    # y ejecuta en otra», y es verdad para un ambito por FUNCION y falso
+    # aqui. No se comprueba una limitacion antes de mirar si existe.
+    ep.escribir_documento(
+        ruta, cambiado,
+        que='«%s»' % (nombre if nombre else (viejo[:44] + '…')))
     return destino
 
 
@@ -170,7 +178,7 @@ def test_el_fichero_de_aceptacion_falla_si_se_rompe(nombre, viejo, nuevo,
     detectar la contradiccion REAL, no encontrar las palabras correctas en
     algun sitio — y la unica forma de saber si lo hace es romper el documento
     y mirar."""
-    destino = _docs_rotos(viejo, nuevo)
+    destino = _docs_rotos(viejo, nuevo, nombre=nombre)
     if destino is None:
         pytest.skip('el texto %r no esta en el documento: hay que '
                     'actualizar este test, que es lo que comprueba' % viejo)
@@ -191,6 +199,13 @@ def test_el_fichero_de_aceptacion_falla_si_se_rompe(nombre, viejo, nuevo,
                     'verde, y que este fichero NO protege esa relacion. R2 lo '
                     'dijo: un test de aceptacion puede seguir pasando por '
                     'otra ruta.' % (nombre, por_que)))
+        # Y la mutacion se ha probado: escrita y ejecutada. Un test puede
+        # escribir una rotura, comprobar que cae, y que la rotura no llegue
+        # a mirar el documento que dice estar mirando.
+        pendientes = ep.sin_probar()
+        assert not pendientes, (
+            'se ha escrito una rotura y no ha llegado a ningun test:\n%s'
+            % chr(10).join('   - %s' % que for que, _ in pendientes))
     finally:
         shutil.rmtree(os.path.dirname(destino), ignore_errors=True)
 
@@ -206,7 +221,7 @@ def test_los_tres_casos_caen_y_el_umbral_lo_exige():
     Y el fallo dice cual, porque «ha caido menos de tres» no dice cual."""
     caidas, detalle = 0, []
     for nombre, viejo, nuevo, _por_que in ROTURAS:
-        destino = _docs_rotos(viejo, nuevo)
+        destino = _docs_rotos(viejo, nuevo, nombre=nombre)
         if destino is None:
             detalle.append('%s: el texto no esta, no se puede comprobar'
                            % nombre)
@@ -225,6 +240,13 @@ def test_los_tres_casos_caen_y_el_umbral_lo_exige():
             detalle.append('%s: NO HA CAIDO (codigo %d, %s)'
                            % (nombre, codigo,
                               ep.QUE_SIGNIFICA.get(codigo, '?')))
+    # Y antes de mirar el recuento: todo lo que se ha escrito, probado.
+    # En un bucle, y el fallo tiene que decir CUAL de los tres.
+    pendientes = ep.sin_probar()
+    assert not pendientes, (
+        'de los %d casos, estos no han llegado a ningun test:\n%s'
+        % (len(ROTURAS),
+           chr(10).join('   - %s' % que for que, _ in pendientes)))
     assert caidas == len(ROTURAS), (
         'de los %d casos de rotura han caído %d:\\n   %s\\n\\nEl umbral es '
         '%d de %d, y no %d. Un umbral por debajo del numero de casos acepta '
@@ -378,3 +400,62 @@ def test_si_la_negacion_esta_en_otro_parrafo_no_se_le_atribuye():
         'la orbita ha cogido una negacion que NO es de la tesis. Y si lo '
         'hace, dos afirmaciones incompatibles pasan por una sola comprobacion. '
         'Orbita: %r' % orb)
+
+# ================ Y LA FRONTERA, QUE NO ES UNA ROTURA MAS
+def test_la_aceptacion_rechaza_la_negacion_en_otro_parrafo():
+    """La SEGUNDA mitad de la frontera, y no es un caso mas de los tres.
+
+    El otro test de la frontera —`..._en_otro_parrafo_no_se_le_atribuye`—
+    mira el HELPER: comprueba que la orbita se vacia. Y eso es una prueba
+    unitaria correcta, y R2 tiene razon en que no demuestra lo que el
+    docstring del helper afirma.
+
+    Que es: que el TEST DE ACEPTACION rechaza ese texto. El helper no es el
+    objeto que tiene que caer; el objeto es el fichero de aceptacion, que
+    tiene mas comprobaciones y podria tener alguna que siga dando verde.
+
+    Y es el MISMO fallo que el de `test_tareas_r1.py`, con distinta ropa: un
+    docstring que afirma algo cierto que nadie ha comprobado, y un comentario
+    de doce lineas sobre una funcion que no llamaba a nada.
+
+    MEDIDO, antes de escribir este test:
+
+        documento con la negacion en OTRO PARRAFO
+        -> assert ''
+        -> AssertionError: no se encuentra la orbita de la tesis
+        -> FAILED ...::test_la_tesis_de_no_validez_se_afirma_como_no_demostrada
+
+    O sea que cae por `assert orb`, que es exactamente lo que dice el
+    docstring. Y ahora esta comprobado, que es lo que no estaba.
+
+    Y POR QUE NO ES UNA CUARTA ROTURA DE LAS TRES
+
+    Los tres casos de `ROTURAS` miden SENSIBILIDAD —¿el escaner detecta
+    estas tres contradicciones concretas?— y el umbral del test que los
+    cuenta es `len(ROTURAS)`. Anadir un caso sube un numero declarado que
+    este bloque no toca sin motivo, y ademas mezcla dos preguntas: que el
+    escaner sea sensible, y que la negacion tenga que ir pegada a la tesis.
+
+    Y la segunda no la responde el escaner. La responde el fichero de
+    aceptacion, y es la que se comprueba aqui."""
+    texto = ('**El filtro es el CORRECTO.** Eso **no** está demostrado')
+    partido = ('**El filtro es el CORRECTO.**' + chr(10) + chr(10)
+               + 'Eso **no** está demostrado')
+    destino = _docs_rotos(texto, partido, nombre='la negacion en otro parrafo')
+    if destino is None:
+        pytest.skip('el texto %r no esta en el documento' % texto)
+    try:
+        env = dict(os.environ)
+        env[rs.DIR_DE_DOCUMENTOS] = destino
+        env['PYTHONPATH'] = os.path.join(ROOT, 'tools')
+        ep.afirmar_caida(
+            FICHERO_DE_ACEPTACION,
+            'test_la_tesis_de_no_validez_se_afirma_como_no_demostrada',
+            env=env, cwd=ROOT,
+            cuando='la negacion en OTRO PARRAFO no la ha hecho fallar el '
+                    'test de aceptacion. O sea que la frontera NO esta en el '
+                    'sitio que dice el docstring, y un documento puede '
+                    'afirmar una cosa y corregirla en la siguiente sin que '
+                    'nadie lo note.')
+    finally:
+        shutil.rmtree(os.path.dirname(destino), ignore_errors=True)
