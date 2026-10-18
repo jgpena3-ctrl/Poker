@@ -417,8 +417,24 @@ def _comparaciones_inequivocas(fuente):
     arbol = ast.parse(fuente)
     encontradas = []
     for nodo in ast.walk(arbol):
+        # Y `ast.NotEq`, que es `!=`. Y NO `ast.IsNot`, que es `is not`.
+        #
+        # MEDIDO: con `IsNot` el detector estaba INVERTIDO —no detectaba
+        # `codigo != 0` con `codigo` de `ep.correr`, y SI detectaba `codigo
+        # is not 0`—. Y en el repositorio entero, seis apariciones de
+        # `X != 0` en el texto y cero detectadas: con el filtro sin casar
+        # nunca, la regla se cumplia siempre. Verde por no mirar.
+        #
+        # Y `is not 0` es MAS ESTRICTO que `!= 0` —no deja pasar ningun
+        # valor raro—, o sea que el detector no solo fallaba lo que tiene que
+        # fallar: ademas senalaba algo que no es la infraccion.
+        #
+        # Y es la TERCERA vez en tres bloques que una comprobacion esta en
+        # verde porque su CONDICION nunca se cumple. Las otras dos —la regla
+        # que miraba dos ficheros de quince, y `sin_probar()` sin ambito—
+        # son la misma cosa.
         if not (isinstance(nodo, ast.Compare) and len(nodo.ops) == 1
-                and isinstance(nodo.ops[0], ast.IsNot)
+                and isinstance(nodo.ops[0], ast.NotEq)
                 and isinstance(nodo.comparators[0], ast.Constant)
                 and nodo.comparators[0].value == 0):
             continue
@@ -803,3 +819,116 @@ def test_los_tests_de_este_fichero_no_dejan_basura_en_el_repositorio():
         'verdad. Que aqui no haya pasado no lo garantiza: el nombre lo '
         'hacia imposible de colisionar.' % chr(10).join(malas))
     del Within
+
+
+# ============================ 10. CADA DETECTOR, CON UN CASO QUE LO MATA
+#
+# Y la leccion de por que estan las TRES, y no solo la que R2 senalo:
+#
+#     la prueba de que un detector no se senala a si mismo NO BASTA, porque
+#     puede pasar con un detector que no reconoce NADA. MEDIDO: pasaba, con
+#     `_comparaciones_inequivocas` sin detectar ni un `!=` del repositorio.
+#
+# Un detector se prueba con un caso que lo hace FALLAR y con uno que lo hace
+# PASAR. El que lo hace fallar demuestra que detecta; el que lo hace pasar
+# demuestra que no acusa de todo.
+#
+# Y por que las TRES, y no solo la senalada: un detector sin caso que lo mate
+# puede estar roto sin que nadie se entere. Y las tres habian estado sin el
+# suyo.
+
+CODIGO_DE_LA_PUERTA = "codigo, salida = ep.correr(F, 't')"
+CONTROL = 'contador = 3'
+
+
+def test_el_detector_de_inequivoco_detecta_y_no_detecta():
+    """R2, punto 1. Y la prueba que faltaba de verdad.
+
+    MEDIDO antes de arreglarlo, con `ast.IsNot`:
+
+        (a) `codigo != 0`, y `codigo` viene de `ep.correr`   detectado=False
+        (b) `contador != 0`, SIN puerta comun                 detectado=False
+        (c) `codigo is not 0`, con `codigo` de la puerta      detectado=True
+
+    Invertido. Y el caso (c) importa mas que el (a): `is not 0` es MAS
+    ESTRICTO que `!= 0` y no es la infraccion que se prohibe. O sea que no
+    solo no detectaba lo que tiene que detectar: ademas senalaba lo que no.
+
+    Y por que la especificidad importa tanto: un detector que accuse de todo
+    es un detector que nadie va a mirar cuando accuse de algo falso. Y ahi
+    es donde se pierde la senal."""
+    casos = (
+        ('la infraccion: `codigo != 0` con `codigo` de la puerta',
+         CODIGO_DE_LA_PUERTA + chr(10) + 'if codigo != 0:' + chr(10)
+         + '    pass' + chr(10), True),
+        ('el control: `contador != 0` sin puerta comun',
+         CONTROL + chr(10) + 'if contador != 0:' + chr(10) + '    pass'
+         + chr(10), False),
+        ('el inverso: `codigo is not 0` es mas estricto y NO es la infraccion',
+         CODIGO_DE_LA_PUERTA + chr(10) + 'if codigo is not 0:' + chr(10)
+         + '    pass' + chr(10), False),
+    )
+    for nombre, fuente, debe in casos:
+        detectado = bool(_comparaciones_inequivocas(fuente))
+        assert detectado == debe, (
+            '%s' + chr(10) + '  detectado=%s  esperado=%s' + chr(10) + chr(10)
+            + 'MEDIDO con el filtro que habia: `!=` es `ast.NotEq` y `is not` '
+            'es `ast.IsNot`, y con `IsNot` el detector no detectaba la '
+            'infraccion real y senalaba la inversa.' + chr(10) + 'Fuente:'
+            + chr(10) + '%s'
+            % (nombre, detectado, debe, fuente))
+
+    # Y que diga la LINEA y el NOMBRE, que es lo que lo hace accionable
+    (linea, variable), = _comparaciones_inequivocas(
+        CODIGO_DE_LA_PUERTA + chr(10) + 'if codigo != 0:' + chr(10)
+        + '    pass' + chr(10))
+    assert variable == 'codigo' and linea == 2, (
+        'el hallazgo tiene que decir la linea y la variable, que es lo unico '
+        'que permite arreglarlo sin leer el fichero entero. Vino %r'
+        % ((linea, variable),))
+
+
+def test_el_detector_de_pytest_propio_detecta_y_no_detecta():
+    """El primero de los tres detectores, con su caso que lo mata.
+
+    Y el positivo importa: un detector que solo tiene el negativo —«este
+    fichero no se senala»— puede no senalar NADA y seguir dando verde."""
+    with tempfile.TemporaryDirectory() as tmp:
+        positivo = os.path.join(tmp, 'positivo.py')
+        io.open(positivo, 'w', encoding='utf-8').write(
+            'import subprocess, sys' + chr(10)
+            + "r = subprocess.run([sys.executable, '-m', 'pytest', F])"
+            + chr(10))
+        negativo = os.path.join(tmp, 'negativo.py')
+        io.open(negativo, 'w', encoding='utf-8').write(
+            'import subprocess' + chr(10)
+            + "# aqui se menciona ['-m', 'pytest'] y no se ejecuta"
+            + chr(10)
+            + "r = subprocess.run(['git', 'rev-parse', 'HEAD'])" + chr(10))
+        assert _lanza_pytest_propio(positivo)[0], (
+            'un `subprocess.run` REAL de pytest tiene que senalarse')
+        assert not _lanza_pytest_propio(negativo)[0], (
+            'uno que solo lo menciona no puede senalarse')
+
+
+def test_el_detector_de_crudo_detecta_y_no_detecta():
+    """El segundo de los tres. Y el que mas facil se rompe.
+
+    `_funciones_que_llaman_a_crudo` tiene que devolver el NOMBRE de la
+    funcion —y para eso necesita el arbol, no el texto. MEDIDO: buscando
+    `'crudo('` en el fuente, el test que EXPLICABA la exencion se senalaba a
+    si mismo, por tener la palabra en el docstring.
+
+    Y el caso que lo mata: una llamada de verdad tiene que salir con el
+    nombre de su funcion, porque sin el no se puede exigir que la exencion
+    este justificada por su nombre, que es lo unico que la hace visible."""
+    fuente = ('import ejecutar_pytest as ep' + chr(10) + chr(10)
+              + 'def test_una_cosa():' + chr(10)
+              + "    ep.crudo(FICH, 't')" + chr(10) + chr(10)
+              + 'def test_otra_cosa():' + chr(10)
+              + "    ep.afirmar_caida(FICH, 't')" + chr(10))
+    funciones = _funciones_que_llaman_a_crudo(fuente)
+    assert funciones == ['test_una_cosa'], (
+        'una llamada de verdad a `crudo()` tiene que salir con el nombre de '
+        'su funcion, y sale %r. Sin el nombre no se puede exigir que la '
+        'exencion este justificada por su nombre.' % (funciones,))

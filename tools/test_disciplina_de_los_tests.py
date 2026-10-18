@@ -165,10 +165,22 @@ def test_el_selector_correcto_da_0_o_1_y_nunca_4():
 # comprobo que no estuviera ya, que es el mismo fallo del ancla que se
 # cumplia. Un comentario repetido no rompe nada, y por eso nadie lo ve.
 def test_ningun_subproceso_de_este_repositorio_acepta_el_codigo_cuatro():
-    """Y el test que lo hace de verdad, no de palabra: se ejecuta una
-    mutacion real y se comprueba que el codigo que sale es 1, no 4.
+    """Una mutacion REAL da codigo 1, y no 4.
 
-    Sin esto, «el codigo no es 4» seria una promesa."""
+    Y esto que era una comprobacion PROPIA —`ep.correr()`, `codigo == 1` y un
+    `1 failed` en la salida— ahora es `ep.afirmar_caida()`. Que es lo que R2,
+    punto 3, pedia, y la razon es de mantenimiento y no de estilo:
+
+        dos comprobaciones del mismo hecho, una mas fuerte que la otra, y la
+        debil en el sitio donde se acaba de decidir que la debilidad importa
+
+    `afirmar_caida` exige ademas la linea `FAILED fichero::test`, que esta
+    comprobacion no exigia. Y por eso la debil era peor que no tenerla: son
+    dos sitios que pueden divergir, y divergen. En un bloque cuyo objetivo es
+    que un error de importacion no se haga pasar por una mutacion detectada,
+    tener la comprobacion debil DUPLICADA es contraproducente.
+
+    Y sin esto, «el codigo no es 4» seria una promesa."""
     tmp = tempfile.mkdtemp(prefix='opencode_exit_')
     try:
         destino = os.path.join(tmp, 'DOCS')
@@ -180,28 +192,22 @@ def test_ningun_subproceso_de_este_repositorio_acepta_el_codigo_cuatro():
         roto = texto.replace('Eso **no** está demostrado, y no lo puede',
                               'Eso **sí** está demostrado, y lo puede')
         assert roto != texto, 'la mutacion no ha cambiado nada'
-        with io.open(ruta, 'w', encoding='utf-8', newline='') as f:
-            f.write(roto)
+        ep.escribir_documento(ruta, roto, que='la tesis afirmada')
         env = dict(os.environ)
         env[rs.DIR_DE_DOCUMENTOS] = destino
         env['PYTHONPATH'] = os.path.join(ROOT, 'tools')
-        codigo, salida = ep.correr(
+        ep.afirmar_caida(
             os.path.join(ROOT, 'tools', 'test_causa_no_validez.py'),
             'test_la_tesis_de_no_validez_se_afirma_como_no_demostrada',
-            env=env, cwd=ROOT)
-        assert codigo == 1, (
-            'una mutacion real deberia dar 1, y da %d — que es %s. Si es 4, '
-            'el selector no esta funcionando y el assert «!= 0» de mas arriba '
-            'pasa sin hacer nada.\n\nSalida:\n%s'
-            % (codigo, EXIT_QUE_SIGNIFICA.get(codigo, '?'), salida[-900:]))
-        assert 'no tests ran' not in salida
-        assert '1 failed' in salida, (
-            'y la salida tiene que decir «1 failed», no «2 failed» ni «0 '
-            'passed»: si dice otra cosa, el test que se ejecuto no es el que '
-            'se queria. Salida:\n%s' % salida[-600:])
+            env=env, cwd=ROOT,
+            cuando='una mutacion real deberia dar codigo 1, y no lo da. Si '
+                    'fuera un 4 —«no se ha ejecutado nada»— el selector no '
+                    'esta funcionando, y un `!= 0` pasaria sin hacer nada. Y '
+                    'si fuera un 1 sin linea `FAILED fichero::test`, el fallo '
+                    'no es de este test sino de la coleccion, que da el '
+                    'mismo codigo.')
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
-
 
 # ================================ 2. LA MATRIZ DE INDEPENDENCIA
 def test_los_dos_mecanismos_de_los_contratos_miden_cosas_distintas():
@@ -245,10 +251,42 @@ def test_los_dos_mecanismos_de_los_contratos_miden_cosas_distintas():
         env['PYTHONPATH'] = os.path.join(ROOT, 'tools')
         return tmp, env
 
-    def _codigo(env, test):
-        return ep.correr(os.path.join(ROOT, 'tools',
-                                      'test_contratos_firmados.py'),
-                         test, env=env, cwd=ROOT)[0]
+    def _resultado(env, test, debe_caer, etiqueta):
+        """El RESULTADO COMPLETO de una celda, no solo su codigo.
+
+        Y R2, punto 2, lo dice bien: «no afirmo que las cuatro celdas
+        actuales sean falsas; senalo que su fuerza probatoria depende de otra
+        funcion». Dependia de que `correr()` cortara el 4, y eso es una
+        propiedad de otra pieza, en otro fichero.
+
+        Y la consecuencia: si `correr()` dejara pasar un 4 —o si alguien lo
+        cambiara sin querer— esta matriz daria cuatro celdas y no se
+        enteraria. Una comprobacion que depende de otra tiene que decirlo, o
+        fallara cuando la otra cambie sin que nadie mire.
+
+        Asi que cada celda usa la puerta que le toca:
+
+            debe caer -> `afirmar_caida`, que exige codigo 1 Y que la salida
+                         nombre ESE test como FAILED
+            no debe   -> `afirmar_verde`, que exige codigo 0 Y el RECUENTO
+                         de los que han pasado
+
+        Y eso no es solo mas fuerte: es MENOS codigo. Las cuatro aserciones
+        sobre `== 1` y `== 0` desaparecen, porque las hace la puerta comun,
+        que ya dice QUE fallo y no solo CUANTO."""
+        ruta_contratos = os.path.join(ROOT, 'tools',
+                                      'test_contratos_firmados.py')
+        if debe_caer:
+            ep.afirmar_caida(
+                ruta_contratos, test, env=env, cwd=ROOT,
+                cuando='«%s» deberia CAER con la rotura «%s» y no cae. O '
+                        'sea que este mecanismo no detecta la rotura, y la '
+                        'matriz que dice que el contenido y la huella son '
+                        'dos mecanismos esta midiendo una sola cosa.'
+                        % (test, etiqueta))
+            return 1
+        ep.afirmar_verde(ruta_contratos, test, env=env, cwd=ROOT)
+        return 0
 
     CONTENIDO = 'test_los_contratos_dicen_lo_que_el_proyecto_les_pide'
     HUELLA = 'test_los_contratos_no_cambian_sin_que_se_sepa'
@@ -263,17 +301,47 @@ def test_los_dos_mecanismos_de_los_contratos_miden_cosas_distintas():
                 t = t.replace(forma, '§' * len(forma))
         return t
 
-    # (b) rotura COSMETICA: el texto cambia, el sentido no
+    # (b) rotura COSMETICA: el texto cambia, el sentido no.
+    #
+    # Y con LIMITES DE PALABRA, como la de `test_tareas_r1.py`. MEDIDO: el
+    # primer `el` de este contrato esta en el indice 237 y ES una palabra
+    # completa, o sea que `find('el')` hoy es cosmetico de verdad y la
+    # matriz es correcta. No hay cifra que mover.
+    #
+    # Lo que se cambia es la CASUALIDAD. Y con `find`, si el primer `el`
+    # cayera dentro de una palabra —cambiar «ello» por «Ello», que rompe el
+    # documento— la mutacion dejaria de ser cosmetica, el contenido caeria,
+    # y las cuatro celdas darian cuatro unos: una matriz que demuestra lo
+    # contrario de lo que afirma. Un fallo SILENCIOSO y en la direccion
+    # contraria, que es la peor forma de tener un detector roto.
+    #
+    # Y que la de `test_tareas_r1.py` se corrigiera y esta no, es el mismo
+    # descuido dos veces: arreglar un sitio y dejar el otro gemelo.
     def rompe_cosmetica(t):
-        i = t.find('el')
-        return t[:i] + 'EL' + t[i + 2:] if i > 0 else t
+        m = re.search(r'\bel\b', t)
+        assert m, (
+            'CONTRATO_L_SEC.md tiene que contener la palabra «el» completa, '
+            'y no la tiene. Si el documento ha cambiado, esta mutacion hay '
+            'que rehacerla, y es justo lo que comprueba')
+        nuevo = t[:m.start()] + 'EL' + t[m.end():]
+        # Y que la sustitucion no haya pegado una palabra: es la comprobacion
+        # que `find` no hacia y que hacia que no fuera cosmetica.
+        assert not re.search(r'\wEL\b', nuevo), (
+            'la sustitucion ha producido una palabra pegada: %r. O sea que '
+            '«el» no estaba como palabra, y cambiarla no es cosmetico'
+            % nuevo[max(0, m.start() - 8):m.start() + 12])
+        return nuevo
 
     for etiqueta, transformacion in (('afirmacion', rompe_afirmacion),
                                     ('cosmetica', rompe_cosmetica)):
         tmp, env = _con(NOMBRE, transformacion, etiqueta)
         try:
-            resultados[(etiqueta, 'contenido')] = _codigo(env, CONTENIDO)
-            resultados[(etiqueta, 'huella')] = _codigo(env, HUELLA)
+            # Y la huella tiene que caer SIEMPRE —ve cualquier cambio de
+            # texto— mientras que el contenido solo cae con la afirmacion.
+            resultados[(etiqueta, 'contenido')] = _resultado(
+                env, CONTENIDO, etiqueta == 'afirmacion', etiqueta)
+            resultados[(etiqueta, 'huella')] = _resultado(
+                env, HUELLA, True, etiqueta)
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
 
@@ -298,22 +366,25 @@ def test_los_dos_mecanismos_de_los_contratos_miden_cosas_distintas():
                  EXIT_QUE_SIGNIFICA.get(resultados[(etiqueta, 'huella')],
                                         '?')[:8]))
     print()
+    # Y las CUATRO celdas se leen, que es distinto de comprobarse. Lo que las
+    # hace caer o pasar lo hace la puerta comun, que ademas mira la salida; y
+    # una matriz que no lee sus propios numeros no dice nada, aunque los
+    # numeros se hayan comprobado bien.
+    #
+    # Comprobacion y lectura son cosas distintas, y una sin la otra no vale.
+    ESPERADO = {('afirmacion', 'contenido'): 1,
+                ('afirmacion', 'huella'): 1,
+                ('cosmetica', 'contenido'): 0,
+                ('cosmetica', 'huella'): 1}
+    for celda, esperado in sorted(ESPERADO.items()):
+        assert resultados[celda] == esperado, (
+            'la celda %s deberia dar %d y da %d.\n\nY no con el codigo: con '
+            'la SALIDA, que es lo que distingue un test caido de un error de '
+            'coleccion. La matriz entera dice %r'
+            % (celda, esperado, resultados[celda], resultados))
     assert len(set(resultados.values())) == 2, (
-        'los cuatro codigos tienen que ser DOS distintos, no uno. '
+        'las cuatro celdas tienen que ser DOS valores distintos, no uno. '
         'resultados: %r' % resultados)
-    # contenido: cae con afirmacion, NO cae con cosmetica
-    assert resultados[('afirmacion', 'contenido')] == 1, (
-        'el contenido tiene que caer con la rotura de afirmacion')
-    assert resultados[('cosmetica', 'contenido')] == 0, (
-        'el contenido NO tiene que caer con un cambio cosmetico. Si cae, esta '
-        'midiendo el fichero y no las afirmaciones, y entonces es el mismo '
-        'mecanismo que la huella')
-    # huella: cae con las dos, porque ve cualquier cambio de texto
-    assert resultados[('afirmacion', 'huella')] == 1, (
-        'la huella tiene que caer con cualquier cambio de texto')
-    assert resultados[('cosmetica', 'huella')] == 1, (
-        'y tambien con un cambio cosmetico. Si no, la huella estaria midiendo '
-        'lo mismo que el contenido y no serian dos mecanismos')
 
 
 # ================================ 3. EL MUTADOR ES COMPLETO
