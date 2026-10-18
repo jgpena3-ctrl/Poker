@@ -431,7 +431,17 @@ def _imports_de_nivel_de_modulo(arbol):
         if isinstance(nodo, (ast.FunctionDef, ast.AsyncFunctionDef,
                               ast.ClassDef, ast.Lambda)):
             continue                      # un ambito NUEVO: no se hereda
-        for atributo in ('body', 'orelse', 'finalbody', 'handlers'):
+        # Y `cases`, que se habia olvidado. MEDIDO: un import dentro de un
+        # `case` de `match` no se recogia, y `match` NO abre ambito — es una
+        # condicion mas— asi que el nombre queda ligado en el modulo.
+        #
+        # Y es un atributo olvidado, no una excepcion mal escrita: una lista
+        # incompleta. Y una lista incompleta se tapa escribiendo el elemento.
+        #
+        # Y anadir `cases` mete al recorrido dentro del cuerpo de los
+        # `match_case`, que es lo correcto: son del ambito que los contiene.
+        # El `class` sigue siendo ambito nuevo y no se toca.
+        for atributo in ('body', 'orelse', 'finalbody', 'handlers', 'cases'):
             hijo = getattr(nodo, atributo, None)
             if isinstance(hijo, list):
                 pendientes.extend(hijo)
@@ -1266,6 +1276,21 @@ ALCANCE = (
      + '    from ejecutar_pytest import correr' + chr(10) + chr(10)
      + "    codigo, salida = correr(F, 't')" + chr(10) + '    if codigo != 0:'
      + chr(10) + '        pass' + chr(10), False),
+    ('import dentro de un `class` + llamada fuera: `class` SI abre ambito',
+     'class Auxiliar:' + chr(10)
+     + '    from ejecutar_pytest import correr' + chr(10) + chr(10)
+     + "codigo, salida = correr(F, 't')" + chr(10) + 'if codigo != 0:'
+     + chr(10) + '    pass' + chr(10), False),
+    ('import dentro de un `case` de `match` + llamada fuera',
+     'match opcion:' + chr(10) + '    case 1:' + chr(10)
+     + '        from ejecutar_pytest import correr' + chr(10) + chr(10)
+     + "codigo, salida = correr(F, 't')" + chr(10) + 'if codigo != 0:'
+     + chr(10) + '    pass' + chr(10), True),
+    ('import dentro de un `case` de `match` + llamada DENTRO del `case`',
+     'match opcion:' + chr(10) + '    case 1:' + chr(10)
+     + '        from ejecutar_pytest import correr' + chr(10)
+     + "        codigo, salida = correr(F, 't')" + chr(10)
+     + '        if codigo != 0:' + chr(10) + '            pass' + chr(10), True),
     ('`try/except ImportError` de nivel de modulo: la presencia es la regla',
      'try:' + chr(10) + '    from ejecutar_pytest import correr' + chr(10)
      + 'except ImportError:' + chr(10) + '    pass' + chr(10) + chr(10)
@@ -1501,3 +1526,57 @@ def test_el_recorrido_de_la_regla_cubre_todos_los_ficheros_de_prueba():
             f.write('# acento: n' + chr(241) + chr(32) + chr(10))
         with pytest.raises(UnicodeDecodeError):
             _lanza_pytest_propio(otro)
+
+
+# ============================ 14. LA INVARIANTE QUE ROMPIO EL ARNES
+DISTRACTOR = (
+    'codigo = 0' + chr(10)
+    + 'salida = "nada"' + chr(10)
+    + 'obj = algo()' + chr(10)
+)
+
+
+def test_una_asignacion_distractora_no_cambia_el_resultado():
+    """R1, tarea 5, y la propiedad que de verdad se puede guardar.
+
+    El arnés que falló estaba en un script temporal, así que no hay nada que
+    guardar de él. Lo que se guarda es la PROPIEDAD que el arnés respetaba:
+
+        anteponer una asignación que no tiene que ver con la comparación no
+        cambia el resultado
+
+    Y esa es una invariante real de `_llamada_de_la_puerta`, y es lo que vino
+    a enseñar el fallo: que el detector tiene que mirar la asignación
+    CORRECTA.
+
+    Y por qué merece una prueba, cuando `_variables_de_la_puerta` ya recorre
+    el árbol entero con `ast.walk` y le da igual el orden:
+
+    Porque eso es una CONSECUENCIA de que recorra todo, y no una PROPIEDAD
+    declarada. Y una consecuencia no escrita se rompe en cuanto alguien
+    cambie el recorrido para que sea más rápido —que es la optimización
+    natural de un `ast.walk`—, y ahí esta prueba dice «ok» mientras el
+    detector ha empezado a mirar la primera.
+
+    Y esa es la forma que toman los fallos de este bloque: una consecuencia
+    que funciona, escrita como si fuera una garantía.
+
+    Y el distractor lleva `codigo = 0`, que es lo más peligroso: un detector
+    que mirase la primera asignación vería `codigo` y no tendría nada que
+    mirar. Un `obj = algo()` no estorbaría."""
+    for nombre, fuente, debe in ALCANCE:
+        limpio = bool(_comparaciones_inequivocas(fuente))
+        con_distractor = bool(_comparaciones_inequivocas(
+            DISTRACTOR + fuente))
+        assert limpio == debe, (
+            'ALCANCE NO CUMPLIDO en «%s» sin distractor: %s, esperaba %s'
+            % (nombre, limpio, debe))
+        assert con_distractor == limpio, (
+            'ALCANCE ROTO en «%s»: con una asignación distractora delante, el '
+            'resultado pasa de %s a %s.' % (nombre, limpio, con_distractor)
+            + chr(10) + chr(10)
+            + 'O sea que el detector no esta leyendo la fila sino el ARBOL, '
+            'y el orden le importa. Y eso puede venir de que '
+            '`_variables_de_la_puerta` recorra con `ast.walk`, que hoy '
+            'recorre todo y le da igual el orden — y por eso la invariancia '
+            'es una CONSECUENCIA y no una PROPIEDAD—.')
