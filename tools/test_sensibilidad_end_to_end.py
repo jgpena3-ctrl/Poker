@@ -242,6 +242,21 @@ def test_los_tres_casos_caen_y_el_umbral_lo_exige():
                               ep.QUE_SIGNIFICA.get(codigo, '?')))
     # Y antes de mirar el recuento: todo lo que se ha escrito, probado.
     # En un bucle, y el fallo tiene que decir CUAL de los tres.
+    # Y ANTES de mirar pendientes, que se ha registrado algo.
+    #
+    # Sin esta linea, «nada pendiente» no significa NADA: un `sin_probar()`
+    # vacio es lo mismo cuando todo lo escrito llego a un test y cuando este
+    # test ha dejado de escribir por la puerta. Y esa segunda es el fallo del
+    # bloque anterior, un nivel mas abajo.
+    #
+    # Que es la PRECONDICION de la comprobacion. Y que `Registrado()` exista y
+    # no lo use nadie seria un mecanismo decorativo: uno que solo existe para
+    # que una prueba lo mire.
+    assert ep.Registrado(), (
+        'este test dice que no queda nada sin probar, pero no ha registrado '
+        'NADA. O no escribio ninguna mutacion —y entonces no tiene nada que '
+        'probar—, o la escribio por la puerta equivocada, y en ese caso su '
+        '`sin_probar()` no dice nada')
     pendientes = ep.sin_probar()
     assert not pendientes, (
         'de los %d casos, estos no han llegado a ningun test:\n%s'

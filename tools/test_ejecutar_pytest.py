@@ -299,7 +299,28 @@ def _cadenas_de_la_llamada(nodo):
 
 
 def _llamadas_de_subproceso(fuente):
-    """Las llamadas a `subprocess.run/call/check_output/Popen`, con su linea."""
+    """Las llamadas a `subprocess.run/call/check_output/Popen`, con su linea.
+
+    Y si el fichero NO PARSEA, LANZA. MEDIDO: antes el `SyntaxError` lo
+    recogia el que llama y devolvia «no senala», que es lo que la regla quiere
+    oir de un fichero limpio. O sea que un fichero con un error de sintaxis
+    se contaba como LIMPIO.
+
+    Y no hay otra via que lo vea: pytest no recoge un fichero que no parsea.
+    El unico que puede detectarlo es este.
+
+    Y es la CUARTA vez en cuatro bloques que una comprobacion esta en verde
+    porque su CONDICION no se cumple — la regla de dos ficheros de quince,
+    `sin_probar()` sin ambito, el filtro `ast.IsNot`— y esta es la mas
+    oculta, porque un `try/except` que devuelve el valor tranquilo es la
+    forma mas comun de que un detector deje de mirar.
+
+    La regla que lo evita:
+
+        no senala porque no hay nada         -> correcto
+        no senala porque no he podido mirar -> INCORRECTO, y silencioso
+
+    Un booleano no distingue las dos cosas. Un fallo si."""
     arbol = ast.parse(fuente)
     for nodo in ast.walk(arbol):
         if (isinstance(nodo, ast.Call)
@@ -328,15 +349,12 @@ def _lanza_pytest_propio(ruta):
     esta comprobacion tambien tiene que saber decir que NO, y no solo que
     si."""
     fuente = io.open(ruta, encoding='utf-8').read()
-    try:
-        hallazgos = []
-        for nodo in _llamadas_de_subproceso(fuente):
-            args = _cadenas_de_la_llamada(nodo)
-            if '-m' in args and 'pytest' in args:
-                hallazgos.append('linea %d' % nodo.lineno)
-        return bool(hallazgos), hallazgos
-    except SyntaxError:
-        return False, ['el fichero no parsea']
+    hallazgos = []
+    for nodo in _llamadas_de_subproceso(fuente):
+        args = _cadenas_de_la_llamada(nodo)
+        if '-m' in args and 'pytest' in args:
+            hallazgos.append('linea %d' % nodo.lineno)
+    return bool(hallazgos), hallazgos
 
 
 def _funciones_que_llaman_a_crudo(fuente):
@@ -370,6 +388,51 @@ def _funciones_que_llaman_a_crudo(fuente):
 PUERTA_COMUN = ('correr', 'crudo', 'afirmar_caida', 'afirmar_verde')
 
 
+# Y `ejecutar_pytest` o `ep`. MEDIDO: sin esto, `otro.correr(...)` —una
+# base de datos, un cliente HTTP— se senalaba como infraccion de una regla
+# que no habla de bases de datos. Y un detector que acusa de todo es un
+# detector que nadie va a mirar cuando accuse de algo falso.
+RECEPTORES = ('ep', 'ejecutar_pytest')
+
+
+def _llamada_de_la_puerta(valor):
+    """El nombre de la llamada de la puerta comun que hay en un valor, o None.
+
+    Y dos cosas, ambas medidas:
+
+    (1) `[0]`. `codigo = ep.correr(F, 't')[0]` tiene un `ast.Subscript` con
+        la llamada DEBAJO. Antes solo se miraba el `Call` mas exterior, asi
+        que esa forma —que es la segunda que se le ocurre a cualquiera que no
+        quiera desestructurar una tupla— no se detectaba.
+
+    (2) EL RECEPTOR. `otro.correr(F, 't')` se detectaba, porque se miraba el
+        atributo y no quien lo tiene. Ahora el receptor tiene que ser `ep` o
+        `ejecutar_pytest`, o la llamada tiene que ser suelta —traida con
+        `from ejecutar_pytest import correr`—, que es la otra forma real de
+        importar.
+
+    Y lo que NO se acepta, a proposito: un ALIAS. `from ejecutar_pytest
+    import correr as c` no se ve. Detectar el alias exigiria seguir el
+    `import`, y ese analisis no se sabe mantener y aqui no compensa: un
+    detector mas grande detecta mas y avisa mas, y el que avisa de mas es
+    ruido. El hueco esta DECLARADO, que es lo que lo hace buscable —un hueco
+    declarado se busca, uno no declarado se tropieza tres meses despues por
+    alguien que no lo sabe."""
+    while isinstance(valor, ast.Subscript):
+        valor = valor.value                       # `ep.correr(...)[0]`
+    if not isinstance(valor, ast.Call):
+        return None
+    func = valor.func
+    if isinstance(func, ast.Attribute):
+        receptor = func.value
+        nombre_receptor = (receptor.attr if isinstance(receptor, ast.Attribute)
+                           else getattr(receptor, 'id', ''))
+        if nombre_receptor not in RECEPTORES:
+            return None
+        return func.attr
+    return getattr(func, 'id', '') or None
+
+
 def _variables_de_la_puerta(fuente):
     """Los nombres asignados desde `correr()`, `crudo()` o `afirmar_*()`.
 
@@ -384,13 +447,10 @@ def _variables_de_la_puerta(fuente):
     arbol = ast.parse(fuente)
     nombres = set()
     for nodo in ast.walk(arbol):
-        if not isinstance(nodo, ast.Assign) \
-                or not isinstance(nodo.value, ast.Call):
+        if not isinstance(nodo, ast.Assign):
             continue
-        llamada = nodo.value.func
-        atributo = (llamada.attr if isinstance(llamada, ast.Attribute)
-                    else getattr(llamada, 'id', ''))
-        if atributo not in PUERTA_COMUN:
+        llamada = _llamada_de_la_puerta(nodo.value)
+        if llamada is None or llamada not in PUERTA_COMUN:
             continue
         for t in nodo.targets:
             if isinstance(t, ast.Name):
@@ -932,3 +992,250 @@ def test_el_detector_de_crudo_detecta_y_no_detecta():
         'una llamada de verdad a `crudo()` tiene que salir con el nombre de '
         'su funcion, y sale %r. Sin el nombre no se puede exigir que la '
         'exencion este justificada por su nombre.' % (funciones,))
+
+# ============================ 11. EL ALCANCE, COMO TABLA EJECUTABLE
+#
+# R2, punto 1: «no necesariamente hay que cubrir todas esas variantes; sí
+# conviene delimitar qué patrones promete detectar la regla».
+#
+# Y es la peticion correcta. Y tiene dos mitades, y la segunda es la que
+# sobrevive: la tabla —que esta aqui, MEDIDA— y el ALCANCE escrito en el
+# codigo de la regla. Un informe se lee una vez; el codigo se relee cada vez
+# que alguien usa la regla.
+#
+# Y hay una forma que NO se detecta, y esta declarado a proposito: el ALIAS.
+# `from ejecutar_pytest import correr as c` no se ve. La razon de no ampliar
+# el detector para taparla es de coste: seguir un `import` es analisis de
+# flujo de nombres importados, que no se sabe mantener. Y un detector mas
+# grande detecta mas Y avisa mas, y el que avisa de mas es ruido.
+#
+# Un hueco DECLARADO se busca. Uno no declarado se tropieza tres meses
+# despues, por alguien que no lo sabe.
+
+ALCANCE = (
+    # (nombre, CODIGO COMPLETO de la forma, lo que la regla PROMETE)
+    ('desestructura de tupla',
+     "codigo, salida = ep.correr(F, 't')" + chr(10) + 'if codigo != 0:'
+     + chr(10) + '    pass' + chr(10), True),
+    ('desestructura invertida',
+     "salida, codigo = ep.correr(F, 't')" + chr(10) + 'if codigo != 0:'
+     + chr(10) + '    pass' + chr(10), True),
+    ('indice `[0]`: la llamada con un indice encima',
+     "codigo = ep.correr(F, 't')[0]" + chr(10) + 'if codigo != 0:'
+     + chr(10) + '    pass' + chr(10), True),
+    ('dentro de un `assert`',
+     "codigo, salida = ep.correr(F, 't')" + chr(10) + 'assert codigo != 0'
+     + chr(10), True),
+    ('dentro de una EXPRESION, no de una sentencia',
+     "codigo, salida = ep.correr(F, 't')" + chr(10) + 'x = (codigo != 0)'
+     + chr(10), True),
+    ('la llamada SUELTA, sin `ep.`',
+     'from ejecutar_pytest import correr' + chr(10)
+     + "codigo, salida = correr(F, 't')" + chr(10) + 'if codigo != 0:'
+     + chr(10) + '    pass' + chr(10), True),
+    ('reasignada: la variable vuelve a usarse para otra cosa',
+     "codigo, salida = ep.correr(F, 't')" + chr(10) + 'codigo = len(salida)'
+     + chr(10) + 'if codigo != 0:' + chr(10) + '    pass' + chr(10), True),
+    # --- y las que la regla NO promete, DECLARADAS ---
+    ('ALIAS de la funcion: `correr as c`',
+     'from ejecutar_pytest import correr as c' + chr(10)
+     + "codigo, salida = c(F, 't')" + chr(10) + 'if codigo != 0:'
+     + chr(10) + '    pass' + chr(10), False),
+    ('ALIAS del modulo: `ejecutar_pytest as e`',
+     'import ejecutar_pytest as e' + chr(10)
+     + "codigo, salida = e.correr(F, 't')" + chr(10) + 'if codigo != 0:'
+     + chr(10) + '    pass' + chr(10), False),
+    ('`correr` de OTRO modulo: no es la puerta comun',
+     'import otro' + chr(10) + "codigo, salida = otro.correr(F, 't')"
+     + chr(10) + 'if codigo != 0:' + chr(10) + '    pass' + chr(10), False),
+    ('desestructura de LISTA, no de tupla',
+     "[codigo, salida] = ep.correr(F, 't')" + chr(10) + 'if codigo != 0:'
+     + chr(10) + '    pass' + chr(10), False),
+    ('comparacion contra OTRO numero, no contra 0',
+     "codigo, salida = ep.correr(F, 't')" + chr(10) + 'if codigo != 1:'
+     + chr(10) + '    pass' + chr(10), False),
+    ('comparacion ENCADENADA',
+     "codigo, salida = ep.correr(F, 't')" + chr(10) + 'if 0 < codigo != 0:'
+     + chr(10) + '    pass' + chr(10), False),
+    ('`==` en vez de `!=`: no es la infraccion',
+     "codigo, salida = ep.correr(F, 't')" + chr(10) + 'if codigo == 0:'
+     + chr(10) + '    pass' + chr(10), False),
+)
+
+
+def test_el_alcance_de_la_regla_es_el_declarado():
+    """Cada forma del alcance, con SU CODIGO COMPLETO, medida.
+
+    Y el alcance esta en una CONSTANTE del fichero, no en el docstring. Que
+    es la diferencia entre «se puede comprobar que lo declarado es lo que
+    hace» y «alguien lo leo una vez».
+
+    Y CADA FILA LLEVA EL CODIGO ENTERO, no una base a la que se le anade la
+    comparacion. Una version anterior de esta tabla hacia eso, y fallaba en
+    las formas que ya traian comparacion —`assert codigo != 0`,
+    `x = (codigo != 0)`— porque encima se anadia una segunda, y sin origen.
+
+    Que es el CUARTO fallo de este bloque con la misma forma: la comprobacion
+    existe y no mide lo que dice medir. Las otras tres son el filtro
+    `ast.IsNot` que nunca casaba, el `except SyntaxError` que decia «limpio»,
+    y `sin_probar()` sin ambito que decia «nada pendiente».
+
+    Y con el codigo entero, si una fila esta mal escrita el fallo lo dice EN
+    LA FILA, y no en un numero de la suma."""
+    for nombre, fuente, debe in ALCANCE:
+        detectado = bool(_comparaciones_inequivocas(fuente))
+        assert detectado == debe, (
+            'ALCANCE NO CUMPLIDO en «%s».' % nombre + chr(10) + chr(10)
+            + '  la regla promete %s, y hace %s'
+            % ('detectar' if debe else 'NO detectar',
+               'detecta' if detectado else 'no detecta')
+            + chr(10) + chr(10) + 'Fuente:' + chr(10) + fuente)
+
+
+# ============================ 12. QUE EL INVARIANTE NO PASE POR PIEDAD
+def test_el_invariante_no_puede_pasar_por_lista_vacia():
+    """R2, punto 2, y la pregunta que hace es la fina.
+
+    `sin_probar()` devuelve `[]` en tres situaciones que NO son lo mismo:
+
+        no habia ninguna escritura pendiente        -> lo correcto
+        no habia ninguna escritura REGISTRADA      -> vacio por PIEDAD
+        se escribio con `f.write` a pelo, sin marcar -> vacio por PIEDAD
+
+    Y las dos ultimas son el mismo fallo que el filtro `ast.IsNot` y el
+    `except SyntaxError`: la comprobacion dice «nada pendiente» y lo que ha
+    pasado es «no he mirado».
+
+    Y la tercera puede pasar de verdad, por una razon que no es de estado
+    sino de API: `escribir_documento()` es una FUNCION y se puede NO
+    LLAMAR. Un test que escribe con `f.write` y despues comprueba
+    `sin_probar()` tiene un invariante que no ve su propia escritura.
+
+    Que es el fallo del bloque anterior un nivel mas abajo: la mutacion se
+    escribio por la puerta equivocada, y la puerta correcta no se entero.
+
+    Y CADA CASO CON SU AMBITO. MEDIDO: las tres partes compartian el ambito
+    del test, y la que queria comprobar «no hay nada registrado» no
+    podia, porque la anterior habia registrado.
+
+    Y la solucion no es «limpiar a mitad», es que cada caso tenga el suyo con
+    `ep.ambito()`. Que es lo que hace el `autouse` por fuera, y lo que hace
+    falta por dentro cuando un test tiene varios casos. Los ambitos se
+    anidan, y el exterior se restaura al salir.
+
+    Que es la respuesta a «pytest no deja llamar a un fixture»: los ambitos
+    se abren a mano cuando hace falta, y el que se abre a mano se puede
+    comprobar."""
+    # (a) lo correcto: se registro y llego a un test
+    with ep.ambito():
+        with tempfile.TemporaryDirectory() as tmp:
+            destino = os.path.join(tmp, 'DOCS')
+            shutil.copytree(os.path.join(ROOT, 'DOCS'), destino)
+            env = dict(os.environ)
+            env[rs.DIR_DE_DOCUMENTOS] = destino
+            env['PYTHONPATH'] = os.path.join(ROOT, 'tools')
+            ep.escribir_documento(os.path.join(destino, 'A.md'), 'a',
+                                  que='LO REGISTRADO')
+            assert ep.Registrado() == ['LO REGISTRADO'], (
+                'una escritura por la puerta tiene que verse en `Registrado()`. '
+                'Si no se ve, `sin_probar()` esta mintiendo: devolveria vacio, '
+                'y eso se lee como «todo lo escrito llego a un test». Se ve: '
+                '%r' % (ep.Registrado(),))
+            ep.correr(FICH, VERDE, env=env, cwd=ROOT)
+            assert not ep.sin_probar(), (
+                'y la escritura si llego a un test, asi que no hay pendientes')
+
+    # (b) vacio por piedad: nada registrado. Y `Registrado()` LO DICE, que
+    #     es lo unico que separa «todo probado» de «no mirado».
+    with ep.ambito():
+        assert ep.sin_probar() == [], 'el ambito nuevo esta vacio'
+        assert ep.Registrado() == [], (
+            'y `Registrado()` tiene que estar vacio. Si las dos devolvieran '
+            'lo mismo, la precondicion no serviria para nada: no habria '
+            'forma de distinguir «todo lo escrito llego a un test» de «no se '
+            'ha registrado nada»')
+
+    # (c) una escritura por la PUERTA EQUIVOCADA: el invariante no la ve
+    with ep.ambito(), tempfile.TemporaryDirectory() as tmp:
+        ruta = os.path.join(tmp, 'B.md')
+        with io.open(ruta, 'w', encoding='utf-8', newline='') as f:
+            f.write('una mutacion escrita por la puerta equivocada')
+        assert ep.sin_probar() == [], (
+            'una escritura con `f.write` NO la ve el invariante, y eso no es '
+            'un fallo suyo: es la linea del contrato. Se marca lo que es '
+            'MUTACION, no lo que es un fichero, porque marcarlo todo vuelve '
+            'al invariante de fuente que senalaba los ficheros que se '
+            'CONSTRUYEN — que era ruido')
+        assert ep.Registrado() == [], (
+            'y por eso `Registrado()` tiene que estar vacio: un test que '
+            'escribe por la puerta equivocada no tiene nada registrado, y '
+            'por eso su `sin_probar()` no significa NADA. Que es exactamente '
+            'lo que el test tiene que comprobar ANTES de mirar pendientes')
+
+# ============================ 13. LA AUDITORIA DEL ARBOL COMPLETO
+def test_el_recorrido_de_la_regla_cubre_todos_los_ficheros_de_prueba():
+    """R2, punto 3: «debe quedar verificado el recorrido de todos los
+    archivos que pretende cubrir».
+
+    Y es la peticion correcta, y es de este bloque: demostrar que un
+    detector funciona con un caso SINTETICO no es auditar un arbol. El
+    sintetico prueba que el detector funciona; el recorrido prueba que se
+    le ha dado algo que mirar.
+
+    Y las dos cosas que pueden fallar en silencio:
+
+      (1) que el FILTRO del recorrido no case con algun fichero de prueba.
+          `_ficheros_de_prueba()` filtra por `startswith('test_')` y
+          `endswith('.py')`, que es la convencion de pytest. Y aqui se
+          comprueba que el filtro no deja ninguno fuera, que es
+          exactamente el fallo de hace dos bloques —la regla que miraba dos
+          ficheros de quince— pero por el otro lado: un filtro en vez de una
+          lista, que puede fallar en la direccion contraria.
+
+      (2) que la APERTURA falle en silencio. `_lanza_pytest_propio` ya
+          LANZA con un `SyntaxError`, pero abrir un fichero puede fallar por
+          PERMISOS o por una CODIFICACION, y si eso se devuelve como «no
+          senala», es la cuarta vez que una comprobacion dice «nada».
+
+    Y el caso de la codificacion no es teorico en Windows: `open(...,
+    encoding='utf-8')` sobre un fichero escrito con otra codificacion lanza
+    `UnicodeDecodeError`, que NO es un `SyntaxError` y pasaria intacto por el
+    `except`. Y un test nuevo que se escribiera con la codificacion por
+    defecto de Windows entraria por ahi sin que nadie lo note.
+
+    Que es el mismo modo de fallo del `except SyntaxError`, con otro
+    envoltorio: la excepcion que no es la que se esperaba pasa por el
+    camino de la que si.
+    """
+    en_disco = [f for f in os.listdir(os.path.join(ROOT, 'tools'))
+                if f.startswith('test_') and f.endswith('.py')]
+    recorrido = _ficheros_de_prueba()
+    assert len(recorrido) == len(en_disco), (
+        'el recorrido ha encontrado %d ficheros de prueba y en disco hay '
+        '%d.\n\nEn disco:  %s\nRecorridos: %s\n\nUn filtro que no casa con '
+        'algun fichero deja ese fichero SIN MIRAR, y la regla sigue en '
+        'verde.'
+        % (len(recorrido), len(en_disco), sorted(en_disco),
+           sorted(os.path.basename(r) for r in recorrido)))
+
+    # Y que ABRIR cada uno no falle en silencio
+    for ruta in recorrido:
+        with io.open(ruta, encoding='utf-8') as f:
+            f.read()
+
+    # Y que abrir algo ROTO falle, en vez de devolver «no senala»
+    with tempfile.TemporaryDirectory() as tmp:
+        roto = os.path.join(tmp, 'roto.py')
+        io.open(roto, 'w', encoding='utf-8', newline='').write(
+            'def f(:' + chr(10))
+        with pytest.raises(SyntaxError):
+            _lanza_pytest_propio(roto)
+
+        # Y una codificacion que NO es utf-8. En Windows, `open` sin
+        # `encoding` lee `cp1252`; un fichero de test escrito asi no lo
+        # abriria `encoding='utf-8'`, y el fallo tiene que salir.
+        otro = os.path.join(tmp, 'cp1252.py')
+        with io.open(otro, 'w', encoding='cp1252', newline='') as f:
+            f.write('# acento: n' + chr(241) + chr(32) + chr(10))
+        with pytest.raises(UnicodeDecodeError):
+            io.open(otro, encoding='utf-8').read()

@@ -215,6 +215,64 @@ def _registrar_ejecucion(directorio, test):
             ('ejecutado', test or 'el fichero entero'))
 
 
+def Registrado():
+    """Lo que se ha escrito y REGISTRADO en este ambito.
+
+    Y existe para una pregunta que `sin_probar()` no puede responder por si
+    sola:
+
+        sin_probar() == []   ¿significa que todo lo escrito llego a un test,
+                             o que NO se ha registrado nada?
+
+    MEDIDO: las dos cosas devuelven la lista vacia. Y son distintas:
+
+        no habia ninguna escritura pendiente       -> lo correcto
+        no habia ninguna escritura REGISTRADA      -> vacio por PIEDAD
+        se escribio con `f.write` a pelo, sin marcar -> vacio por PIEDAD
+
+    Y las dos ultimas son el mismo fallo que el filtro `ast.IsNot` y el
+    `except SyntaxError`: la comprobacion dice «nada» y lo que ha pasado es
+    «no he mirado».
+
+    Y el caso (3) puede pasar de verdad, por una razon que no es de estado
+    sino de API: `escribir_documento()` es una FUNCION, y se puede NO
+    LLAMAR. Un test que escribe una mutacion con `f.write` y despues
+    comprueba `sin_probar()` tiene un invariante que no ve su propia
+    escritura, y sale verde.
+
+    Que es el fallo del bloque anterior un nivel mas abajo: se escribio la
+    mutacion por la puerta equivocada, y la puerta correcta no se entero.
+
+    Y lo que se hace con eso NO es «que toda escritura pase por aqui», que
+    es lo contrario: obligaria a marcar tambien los ficheros que se
+    CONSTRUYEN, y se volveria al invariante de fuente que senalaba fixtures
+    — que era ruido —.
+
+    La linea es el CONTRATO de la puerta: se marca lo que es MUTACION, no lo
+    que es un fichero. Y un test que escribe una mutacion sin marcar esta
+    fuera de contrato, y eso es un error visible y con nombre.
+
+    Pero la visibilidad hay que hacerla: por eso el `que` es el nombre de la
+    mutacion y no un contador. Un contador no dice que se ha escrito
+    «CONTRATO_L_SEC.md» con todas las formas quitadas; un nombre si.
+
+    Y devuelve SOLO las escrituras, en orden, y no el registro entero.
+    MEDIDO: devolviendo `{directorio: [eventos]}` la respuesta mezclaba
+    escrituras con ejecuciones, y un directorio con solo una ejecucion
+    contaba como «registrado» — que es justo lo contrario de lo que se
+    quiere distinguir—.
+
+    Que es la version minima de «la comprobacion existe y no mide lo que
+    dice medir»: no es que mida otra cosa, es que mezcla dos y solo importa
+    una."""
+    nombres = []
+    for directorio in sorted(_ALCANCE or {}):
+        for tipo, que in _ALCANCE[directorio]:
+            if tipo == 'escrito':
+                nombres.append(que)
+    return nombres
+
+
 def sin_probar():
     """Las escrituras que no tienen una ejecucion ANTES de la siguiente.
 
