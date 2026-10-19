@@ -25,8 +25,12 @@ COPIA = os.path.join(ROOT, 'trabajo', 'hands_db_edicion.jsonl')
 CANONICA = os.path.join(ROOT, 'data', 'hands_db.jsonl')
 
 # Lo que la canonica DEBE tener mientras se trabaja sobre la copia.
-# Si esto cambia, alguien edito la base sin querer y hay que pararse.
-SHA_ESPERADO = '35727961646dfaba2c67fd5ee0dbe9b0669d3156f9c6f3fa3585060a93f097e2'
+# Se lee de `motor/learn.py`, que es la unica declaracion vigente: si la base
+# cambia de forma legitima, el commit que la cambia actualiza ese valor y este
+# arranque lo hereda. Clavarlo aqui ya fallo una vez: el commit `12c7bed`
+# (H_1196) subio la base a `5ae2abd7...` y este script seguia esperando
+# `357279...`, anterior a ese commit.
+from motor.learn import HANDS_DB_SHA256 as SHA_ESPERADO
 
 
 def sha256(p):
@@ -55,7 +59,7 @@ def main():
         print('  esperado : %s' % SHA_ESPERADO)
         print('  ahora    : %s' % sha_c)
         print('Alguien la toco. NO se abre el editor: primero hay que')
-        print('saber que cambio happened y decidir si se conserva.')
+        print('saber que cambio y decidir si se conserva.')
         return 1
 
     n = _lineas(COPIA)
