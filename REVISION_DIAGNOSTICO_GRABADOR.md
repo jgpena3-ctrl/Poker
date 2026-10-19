@@ -1,5 +1,21 @@
 # DIAGNÓSTICO DEL GRABADOR
 
+> ## ⚠️ RETIRADO — leer `AUDITORIA_SEMANTICA_GRABADOR.md`
+>
+> Este documento **queda superado**. La auditoría posterior demuestra que sus
+> conclusiones centrales **no son sostenibles**, y no las reformula: las retira.
+>
+> | conclusión de aquí | estado |
+> |---|---|
+> | § 0 «la base son dos grabadores» | **retirada**. No son dos programas: son 336 manos capturadas antes de que existiera el repositorio, y las 73 sin `allin` son un subconjunto de ese grupo |
+> | § 5/6 «`amount` es un acumulado que puede leerse obsoleto» | **retirada para el 73 % de la base**. La rama mayoritaria emite un **delta de stack** |
+> | § 8 «el patrón de 1.0 del BB no es del ROI» | **retirada**. Es la comparación de un delta contra un nivel: 286 de 288 casos tienen aportación previa ≈1.0, que es la ciega |
+> | § 7 «38 compromisos que coinciden con el stack» | **retirada**. `amount == stack` se cumple en 18 de 263 acciones de all-in (6.8 %) y la comparación carece de homogeneidad dimensional |
+> | § 2 «5433 / 445 / 96» | **aritméticamente coherente, semánticamente vacía**. Ver § 3 y § 5 de la auditoría nueva |
+>
+> Los dos recuentos reconciliados (5974 exactos) siguen siendo correctos **como
+> consistency check**. No dicen nada sobre las aportaciones.
+
 **Estado:** diagnóstico. La base no se ha modificado.
 **HEAD:** `b944355` · **SHA de la base:** `35727961646dfaba` (1258 líneas, sin cambios)
 **Pruebas:** `867 passed, 1 failed, 1 skipped, 5 xfailed` · diagnóstico: `39 passed`

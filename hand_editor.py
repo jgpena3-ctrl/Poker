@@ -4,7 +4,30 @@ import hashlib
 import json, os
 import shutil
 
-DATA_PATH = os.path.join(os.path.dirname(__file__), 'data', 'hands_db.jsonl')
+# [A1] RUTA DE TRABAJO. La ruta por defecto NO cambia: sin `POKER_DB_PATH`
+# este editor sigue editando `data/hands_db.jsonl` exactamente como antes.
+# Lo que se añade es la posibilidad de apuntarlo a una COPIA, para poder
+# trabajar sobre una base de pruebas sin que un «Guardar» alcance jamas la
+# base canonica.
+#
+# Por que una variable de entorno y no un argumento: `_guardar_base` usa
+# `DATA_PATH` como valor por defecto de un parametro, y hay cinco usos mas
+# repartidos por el fichero. Un argumento habria exigido tocar los cinco; una
+# variable se resuelve una vez, aqui, y el default queda intacto.
+DATA_CANONICA = os.path.join(os.path.dirname(__file__), 'data', 'hands_db.jsonl')
+DATA_PATH = os.environ.get('POKER_DB_PATH') or DATA_CANONICA
+
+# [A1] Si la ruta activa no es la canonica, este editor NO va a escribir la
+# base que el motor lee. Los avisos que bablan de actualizar
+# `motor/learn.py` serian then incorrectos, porque el motor sigue leyendo otra.
+ES_COPIA = os.path.abspath(DATA_PATH) != os.path.abspath(DATA_CANONICA)
+
+def _etiqueta_ruta():
+    """Ruta relativa corta, para que la ventana diga QUE base se esta editando."""
+    try:
+        return os.path.relpath(DATA_PATH, os.path.dirname(__file__))
+    except Exception:
+        return DATA_PATH
 
 def _sha256_de(ruta):
     h = hashlib.sha256()
@@ -95,7 +118,10 @@ def _guardar_base(manos, ruta=DATA_PATH):
 class HandEditor:
     def __init__(self, root):
         self.root = root
-        self.root.title('Poker Hand DB Editor')
+        # [A1] El titulo dice QUE base se esta editando. Con dos bases en
+        # juego, que el titulo no lo diga es como se edita la que no es.
+        self.root.title(('Poker Hand DB Editor  [COPIA: %s]' % _etiqueta_ruta())
+                        if ES_COPIA else 'Poker Hand DB Editor')
         self.root.geometry('1100x700')
         self.root.minsize(750, 450)
         self.hands = []
@@ -686,6 +712,22 @@ class HandEditor:
         from motor.learn import HANDS_DB_SHA256
         declarada = HANDS_DB_SHA256[:16]
         if sha[:16] != declarada:
+            if ES_COPIA:
+                # [A1] Editando una COPIA: el motor sigue leyendo la
+                # canonica, asi que NO hay que actualizar nada. Decirlo
+                # seria una instruccion falsa.
+                messagebox.showwarning(
+                    'Guardado en la COPIA',
+                    'La COPIA se ha escrito y ahora tiene otro hash.\n\n'
+                    '  base canonica : %s\n'
+                    '  copia edited  : %s\n\n'
+                    'La base canonica NO se ha tocado, y `motor/learn.py`\n'
+                    'NO hay que actualizarlo: el motor sigue leyendo la\n'
+                    'canonica, y su hash sigue siendo el declarado.\n\n'
+                    'Esto es lo que se buscaba. Cuando decidas integrar, la\n'
+                    'integracion es un paso aparte.'
+                    % (DATA_CANONICA, _etiqueta_ruta()))
+                return True
             messagebox.showwarning(
                 'Guardado, pero SIN DECLARAR',
                 'La base se ha escrito y ahora tiene otro hash.\n\n'

@@ -111,3 +111,9 @@ data/_cache_equity_preflop.json
 data/_cache_equity_preflop.json.v*
 data/_cache_equity_observable.json.v*
 data/_cache_varianza_exactas*
+
+# Copias de seguridad de la base de trabajo (`trabajo/hands_db_edicion.jsonl`).
+# Mismo motivo que `data/hands_db.jsonl.bak`: son instantaneas locales con los
+# mismos hand_id y distinto contenido. La fuente es el fichero sin sufijo; los
+# respaldos se regeneran copiandolo antes de cada fase.
+trabajo/*.bak*
