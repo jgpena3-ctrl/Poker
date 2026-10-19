@@ -3642,6 +3642,38 @@ TESTS_POR_CARPETA = {'motor': 834, 'recorder': 4, 'tools': 462}
 # pero FALLA si algun dia hay tests abajo: es el unico caso en el que
 # bajaria, y bajarlo sin querer seria decir «el repo entero» sin serlo.
 FICHEROS_POR_CARPETA = {'motor': 68, 'recorder': 4, 'tools': 109}
+# Y LA MAGNITUD QUE MIDE ESTE GUARDIA, que es lo que R2 pregunta, y que hay
+# que responder por la magnitud y no solo por el numero.
+#
+# MEDIDO, y las TRES magnitudes no son la misma:
+#
+#     definiciones test_* a cualquier profundidad : 1300
+#     definiciones test_* ANIDADAS                : 0
+#     tests que pytest RECOGE                       : 1350
+#
+#     funciones con parametrize                   : 17
+#     clases que heredan de unittest.TestCase      : 0
+#
+# O sea que pytest ejecuta 50 mas de los que hay definidos, y la diferencia
+# sale de las 17 funciones parametrizadas.
+#
+# Y ESTE GUARDIA MIDE DEFINICIONES, y por que no lo que pytest recoge:
+# MEDIDO, `collect-only` tarda cuarenta segundos e importa los modulos. Un
+# guardia de cuarenta segundos no es un guardia: es un coste que acaba
+# descartado por quien lo escribio.
+#
+# Y EL PUNTO CIEGO, DICHO:
+#
+#     si a una de esas 17 funciones se le quita UN CASO de su parametrize,
+#     pytest recoge uno menos y este guardia NO se entera, porque la funcion
+#     sigue estando.
+#
+# Y lo que se puede tapar se tapa con `PARAMETRIZADOS_ABAJO`, que cuenta las
+# funciones con parametrize: si cambia el numero de funciones parametrizadas,
+# cambia ese numero. Lo que NO se puede tapar sin ejecutar pytest es el numero
+# de CASOS de cada una, y eso queda declarado como punto ciego y no como
+# garantia.
+PARAMETRIZADOS_ABAJO = 17
 
 def _tests_de(directorio):
     """Cuantos `def test_` hay en los `.py` de `directorio`, y cuantos ficheros.
@@ -3703,38 +3735,109 @@ def _tests_de(directorio):
     return total, ficheros
 
 
-def _tests_en_subcarpetas(directorio):
-    """Los tests que hay por debajo del primer nivel de `directorio`.
+def _tests_por_debajo_del_primer_nivel(directorio):
+    """Los tests que hay POR DEBAJO del primer nivel de `directorio`.
 
-    Y MEDIDO: CERO, en las tres carpetas. Y esa cifra NO esta en un comentario
-    porque no puede estar: es la que este test comprueba, y si mañana hay
-    tests abajo, la comprobacion falla y el comentario se queda viejo —que es
-    justo lo que le paso a las cifras del inventario, y por eso no hay cifras
-    aqui.
+    Y RECURSIVO, a cualquier profundidad, y eso es un cambio de este bloque.
 
-    Y `__pycache__` y los buzones de pytest quedan fuera: no tienen `.py`."""
+    MEDIDO, por que: la version anterior recorria las subcarpetas de primer
+    nivel y los `.py` de dentro, pero NO entraba en una segunda generacion. O
+    sea que un test en `tools/nueva/test_x.py` se avisaba y uno en
+    `tools/nueva/otra/test_x.py` no.
+
+    Y con nombre y mensaje precisos habria bastado —R2 ofrece las dos
+    opciones—, pero la opcion de «un nivel» deja al guardia sin cubrir
+    justo el caso para el que existe: el aviso pretende decir «alguien ha
+    puesto un test en una subcarpeta», y con un nivel, un test en un tercer
+    nivel no se avisaria.
+
+    Y el coste, MEDIDO: hoy hay CERO `.py` por debajo del primer nivel en las
+    tres carpetas —de hecho, cero subcarpetas—, de modo que recorrer mas no
+    cuesta nada y no puede dar falsos positivos.
+
+    Y aqui, y por que no se baja al REPOSITORIO entero: el alcance declarado
+    son las tres carpetas. Un `.py` en otro sitio no es de este detector.
+
+    Y `__pycache__` y los buzones de pytest quedan excluidos por nombre: no
+    tienen `.py`, pero excluirlos es mas barato que comprobarlo.
+    """
     encontrados = []
-    for nombre in sorted(os.listdir(directorio)):
-        ruta = os.path.join(directorio, nombre)
-        if not os.path.isdir(ruta) or nombre in ('__pycache__',
-                                                 '.pytest_cache'):
-            continue
-        for fichero in sorted(os.listdir(ruta)):
+    for carpeta, directorios, ficheros in os.walk(directorio):
+        directorios[:] = [d for d in directorios
+                          if d not in ('__pycache__', '.pytest_cache')]
+        if os.path.abspath(carpeta) == os.path.abspath(directorio):
+            continue                     # el primer nivel lo cuenta `_tests_de`
+        for fichero in sorted(ficheros):
             if not fichero.endswith('.py'):
                 continue
             try:
-                arbol = ast.parse(io.open(os.path.join(ruta, fichero),
+                arbol = ast.parse(io.open(os.path.join(carpeta, fichero),
                                           encoding='utf-8').read())
             except (SyntaxError, UnicodeDecodeError) as e:
-                raise AssertionError('%s/%s no se ha podido leer (%s)'
-                                     % (nombre, fichero, e))
+                raise AssertionError(
+                    '%s no se ha podido leer (%s). Un fichero que no se lee no se mira, y eso es verde por no mirar. Por eso aqui se para.' % (os.path.join(carpeta, fichero), e))
             cuenta = sum(1 for nodo in ast.walk(arbol)
                          if isinstance(nodo, (ast.FunctionDef,
                                               ast.AsyncFunctionDef))
                          and nodo.name.startswith('test_'))
             if cuenta:
-                encontrados.append(('%s/%s' % (nombre, fichero), cuenta))
+                encontrados.append(
+                    (os.path.relpath(os.path.join(carpeta, fichero),
+                                     directorio).replace('\\', '/'), cuenta))
     return encontrados
+
+
+
+def _parametrizados(directorio):
+    """Las funciones de test que llevan `@parametrize`, en `directorio`.
+
+    Y esto NO es un adorno: es la segunda medida, y sale de lo medido.
+
+    MEDIDO, y las TRES magnitudes que no son la misma:
+
+        definiciones `test_*` a cualquier profundidad : 1300
+        definiciones `test_*` ANIDADAS                : 0
+        tests que pytest RECOGE                       : 1350
+
+    O sea que pytest ejecuta 50 mas de los que hay definidos, y R2 tiene razon
+    en que son magnitudes distintas. La diferencia sale de aqui:
+
+        funciones con `@parametrize`                  : 17
+        clases que heredan de `unittest.TestCase`      : 0
+
+    De modo que el guardia mide DEFINICIONES, y eso tiene un punto ciego
+    concreto que conviene decir en voz alta:
+
+        si a una de esas 17 funciones se le quita UN CASO de su `@parametrize`,
+        pytest recoge uno menos y el guardia NO se entera, porque la funcion
+        sigue estando.
+
+    Y lo que hace ESTE contador es tapar la parte que se puede tapar: si cambia
+    el numero de funciones parametrizadas, cambia este numero. Lo que NO se
+    puede tapar sin ejecutar pytest es el numero de CASOS de cada una, y eso
+    esta declarado como punto ciego y no como garantia.
+
+    Y por que no se cuenta pytest directamente con `--collect-only`: MEDIDO,
+    tarda cuarenta segundos y ademas importa los modulos. O sea que un guardia
+    que dura cuarenta segundos no es un guardia: es un coste que se acaba
+    dejando."""
+    total = 0
+    for nombre in sorted(os.listdir(directorio)):
+        if not nombre.endswith('.py'):
+            continue
+        try:
+            arbol = ast.parse(io.open(os.path.join(directorio, nombre),
+                                      encoding='utf-8').read())
+        except (SyntaxError, UnicodeDecodeError):
+            continue
+        for nodo in ast.walk(arbol):
+            if not (isinstance(nodo, (ast.FunctionDef, ast.AsyncFunctionDef))
+                    and nodo.name.startswith('test_')):
+                continue
+            for decorador in nodo.decorator_list:
+                if 'parametrize' in ast.unparse(decorador):
+                    total += 1
+    return total
 
 def test_no_ha_desaparecido_ningun_test():
     """Y que el recuento no se pueda quedar satisfecho por una lista vacia.
@@ -3814,9 +3917,17 @@ def test_no_ha_desaparecido_ningun_test():
         % chr(10).join('    %-9s declarado %4d   medido %4d'
                        % (c, FICHEROS_POR_CARPETA[c], medido_ficheros[c])
                        for c in CARPETAS_DEL_INVENTARIO))
+    parametrizados = dict(
+        (carpeta, _parametrizados(os.path.join(ROOT, carpeta)))
+        for carpeta in CARPETAS_DEL_INVENTARIO)
+    assert sum(parametrizados.values()) == PARAMETRIZADOS_ABAJO, (
+        'el numero de funciones con parametrize es %d y el declarado es %d.%s%s'
+        % (sum(parametrizados.values()), PARAMETRIZADOS_ABAJO, chr(10),
+           chr(10).join('    %-9s medido %d' % (c, parametrizados[c])
+                        for c in CARPETAS_DEL_INVENTARIO)))
     abajo = []
     for carpeta in CARPETAS_DEL_INVENTARIO:
-        for fichero, cuenta in _tests_en_subcarpetas(os.path.join(ROOT,
+        for fichero, cuenta in _tests_por_debajo_del_primer_nivel(os.path.join(ROOT,
                                                                  carpeta)):
             abajo.append('%s/%s  %d' % (carpeta, fichero, cuenta))
     assert not abajo, (
@@ -3893,6 +4004,23 @@ def test_no_hay_docstrings_descuadrados():
     que debe tener el resto, porque el bloque va dentro de un cuerpo y lo que
     esta sangrado es el cuerpo.
 
+    Y EL ALCANCE REAL, que R2 senala mas ancho de lo que es
+
+    Este guardia detecta lineas NO VACIAS cuya sangria es MENOR que la de la
+    apertura del docstring. Y nada mas.
+
+    O sea que NO comprueba que la sangria sea multiplo de cuatro, ni tabs
+    contra espacios, ni la sangria de las lineas de codigo de al lado.
+
+    Y MEDIDO, que ese limite no es teorico: un docstring cuya apertura no sea
+    multiplo de cuatro pasaria este guardia. De modo que este test NO puede
+    sostener «todos los docstrings estan bien puestos»; solo sostiene «no hay
+    lineas que se salgan del bloque por la izquierda».
+
+    Y un alcance escrito mas ancho que el real es una afirmacion que nadie
+    puede fiscalizar, que es el motivo de escribirlo aqui y no solo en el
+    mensaje del commit.
+
     Y por que este guardia y no el `ast.parse`: porque el `parse` ya pasa con
     un docstring descuadrado. MEDIDO: 23 lineas en `_plantillas_de`, el parse
     bien, y la suite bien. O sea que el fallo era invisible, y un fallo
@@ -3924,8 +4052,22 @@ def test_no_hay_docstrings_descuadrados():
                        if lineas[k].strip()
                        and len(lineas[k]) - len(lineas[k].lstrip()) < sangria]
             if sueltas:
-                descuadrados.append('%s:%d «%s» en %d linea(s)'
-                                    % (nombre, apertura + 1,
+                # Y `apertura` y no `apertura + 1`: MEDIDO, `lineno` de
+                # Python ya es 1-based, de modo que el `+1` senalaba una linea
+                # DESPUES de la real. Y es del tipo mas discreto que lleva
+                # este bloque: un `+1` de mas no da ningun sintoma.
+                # Y la CULPABLE, que es lo que hay que ir a ver: la apertura
+                # se deduce del nombre de la funcion, y la linea suelta no.
+                # MEDIDO: el mensaje anterior senalaba la apertura, y el fallo
+                # estaba treinta lineas mas abajo.
+                #
+                # Y lo que NO se dice, y conviene: no se senala la INSEGURIDAD,
+                # que es lo que haria falta para arreglarlo. Y es porque el
+                # guardia mide sangria, y «hay tres espacios aqui» no dice «el
+                # bloque deberia tener cuatro». Que es el limite que ya declara
+                # el docstring del test, visto en accion.
+                descuadrados.append('%s:%d «%s», la primera linea suelta de %d'
+                                    % (nombre, sueltas[0] + 1,
                                        getattr(nodo, 'name', '<modulo>'),
                                        len(sueltas)))
     assert not descuadrados, (

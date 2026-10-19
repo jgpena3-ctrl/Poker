@@ -300,3 +300,90 @@ sitio, el test habría pasado sin comprobar nada.
 
 El arreglo es el de siempre: **aislar la pieza para poder darle el caso**. Un
 directorio por caso.
+## 12. Un guardia que mide una magnitud y no dice cuál
+
+MEDIDO, y las tres magnitudes no son la misma:
+
+```
+definiciones test_* a cualquier profundidad : 1300
+definiciones test_* ANIDADAS                : 0
+tests que pytest RECOGE                       : 1350
+
+funciones con parametrize                   : 17
+clases que heredan de unittest.TestCase      : 0
+```
+
+Pytest ejecuta **50 más** de los que hay definidos, y la diferencia sale de
+las 17 funciones parametrizadas.
+
+El guardia mide definiciones, y se le puede preguntar por qué:
+
+```
+MEDIDO: `--collect-only` tarda cuarenta segundos e importa los módulos.
+Un guardia de cuarenta segundos no es un guardia: es un coste que acaba
+descartado por quien lo escribió.
+```
+
+Y el **punto ciego, dicho**:
+
+> si a una de esas 17 funciones se le quita **un caso** de su
+> `@parametrize`, pytest recoge uno menos y el guardia **no se entera**, porque
+> la función sigue estando.
+
+Lo que se puede tapar se tapa con una segunda medida barata: el número de
+funciones parametrizadas. Lo que **no** se puede tapar sin ejecutar pytest es
+el número de *casos* de cada una, y eso queda declarado como punto ciego y no
+como garantía.
+
+Y la regla, que es la de todo el documento:
+
+> Un guardia que dice «no ha desaparecido ningún test» sin decir **qué magnitud
+> mide** está haciendo una afirmación sobre otra cosa.
+
+## 13. Un alcance escrito más ancho que el real
+
+MEDIDO, sobre el guardia de docstrings: detecta líneas no vacías cuya sangría es
+menor que la de la apertura. Y nada más.
+
+Lo que **no** hace, y hay que escribir:
+
+- no comprueba que la sangría sea múltiplo de cuatro
+- no comprueba tabs contra espacios
+- no comprueba la sangría de las líneas de código de al lado
+
+Y por qué el límite no es teórico: un docstring cuya apertura no sea múltiplo de
+cuatro **pasaría** este guardia. De modo que el test no puede sostener «todos los
+docstrings están bien puestos»; solo sostiene «no hay líneas que se salgan del
+bloque por la izquierda».
+
+> Un alcance escrito más ancho que el real es una afirmación que nadie puede
+> fiscalizar.
+
+## 14. Y el más discreto: un `+1` de más
+
+R2 lo señaló:
+
+```
+apertura = primero.lineno
+... % (nombre, apertura + 1, ...)
+```
+
+`lineno` de Python **ya es 1-based**. De modo que el `+1` señalaba una línea
+después de la real.
+
+Y es del tipo más discreto que lleva este documento entero:
+
+> un `+1` de más no da ningún síntoma. El mensaje sale, parece razonable, y nadie
+> lo comprueba porque no hay nada que comprobar.
+
+Corregido. Y ahora el mensaje señala la **culpable**, que es la segunda de las
+dos opciones que ofrece R2 —y la que hay que mirar: la apertura se deduce del
+nombre de la función, la línea suelta no—.
+
+MEDIDO, en `_parametrizados`: la apertura era la 3792 y la culpable la 3823.
+
+Y un detalle de la corrección: el guardia se disparó **sobre el código que él
+mismo acababa de traer**, por una línea con tres espacios en vez de cuatro.
+
+> Es lo que hace un guardia: mirar. Y mirar lo que uno acaba de escribir es lo
+> único que no se puede hacer a ojo.
