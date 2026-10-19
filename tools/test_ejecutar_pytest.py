@@ -2348,7 +2348,47 @@ def _argumentos_para(plantilla):
     intentos», que es una promesa mas debil.
 
     Y el `tope` no protege de nada: solo DEJA DE MIRAR. Que es la frase del
-    limite de profundidad, y aqui si se puede demostrar el caso, que alli no."""
+    limite de profundidad, y aqui si se puede demostrar el caso, que alli no.
+
+    Y LA PROMESA DE ESTE `None`, Y LO QUE DEPENDE
+
+    Que devuelva `None` significa «no se puede construir con NINGUN numero de
+    argumentos». Y eso son DOS afirmaciones, y solo la primera esta medida:
+
+        «el bucle no se queda corto»      -> medida, y es lo que arregla esto
+        «todo None es una plantilla rota» -> depende de lo que se capture
+
+    MEDIDO, con 23 plantillas que usan todos los especificadores y banderas que
+    acepta el operador de formato:
+
+        23 plantillas probadas
+        fugas FUERA de (TypeError, ValueError): 0
+
+    O sea que capturar solo esas dos no deja pasar nada por fuera, y por tanto
+    la afirmacion se sostiene para el alcance declarado —los mensajes de este
+    repo—, que es el unico que necesita un detector con alcance sobre
+    `tools/`.
+
+    Y LO QUE NO SE HA MEDIDO: que no exista un formato mal formado que de otra
+    excepcion. Eso es una afirmacion sobre el LENGUAJE, y aqui se ha medido el
+    REPO. Que es un limite del alcance, y los limites se declaran.
+
+    Y POR QUE LA SALIDA, SI EXISTIERA, SERIA RUIDOSA Y ESO ES LO BUENO
+
+    Una excepcion distinta se PROPAGARIA, porque el `except` es
+    `(TypeError, ValueError)` y no `Exception`, y el fallo seria `KeyError` o
+    lo que sea, en el test. O sea que no es un `None` que significara otra
+    cosa: es un fallo que se ve.
+
+    Y conviene decir POR QUE antes de que alguien lo cambie por un
+    `except Exception` para «ser mas robusto»:
+
+        un `except Exception` aqui convertiria un fallo ruidoso en un `None`,
+        y un `None` significa «plantilla rota». O sea que el arreglo de
+        robustez convertiria una verdad en una mentira, y nadie lo veria.
+
+    Que es el patron del bloque por dentro: una comprobacion que se ensancha
+    para que no falle nunca, y que deja de poder fallar."""
     for cuantos in range(len(plantilla) // 2 + 1):
         try:
             plantilla % tuple(_Mentira() for _ in range(cuantos))
@@ -2385,6 +2425,65 @@ def _plantilla_de(mensaje):
     if '%' not in izquierda.value:
         return None
     return izquierda.value
+
+
+def _plantillas_de(fuente):
+    """Los mensajes con formato de UNA fuente, CON SU CLASE.
+
+    Y la clase sale del ARBOL, y esa es toda la diferencia con la version que
+    la adivinaba por el texto.
+
+    MEDIDO, y no es un defecto latente:
+
+        hallazgos por el ARBOL:  336
+        hallazgos por el TEXTO:  336
+        DESACUERDOS:            1
+            test_ejecutar_pytest.py:3265   de verdad assert  por texto raise
+
+La linea 3265 era un `assert` cuyo MENSAJE empieza por «el barrido deberia
+encontrar al menos 20 `raise`» — de modo que la palabra «raise» estaba en la
+linea y el `assert` se contaba como un `raise`.
+
+O sea que el fallo mas incomodo posible: la comprobacion que vigila al
+clasificador estaba ella misma mal clasificada, y por eso el suelo de 20 se
+estaba comprobando con un dato contaminado. Los dos numeros reales eran 25
+`raise` y 311 `assert`, no 26 y 310.
+
+    MEDIDO, Y LA DIRECCION QUE NO EXISTE
+
+La direccion contraria —un `raise` clasificado como `assert`— NO se puede
+producir: `Raise.lineno` es la linea de la palabra `raise`, y ahi la palabra
+esta. MEDIDO con un `raise` partido en tres lineas: sigue aciertando.
+
+O sea que el fallo era de una sola direccion, y eso solo se sabe midiendo. Lo
+razonable sin medir seria decir «va en las dos direcciones», que habria sido
+la mitad de verdad.
+
+Y POR QUE UNA FUNCION Y NO UN `for` DENTRO DEL BARRIDO
+
+Porque hay que poder darle una fuente INVENTADA. `_mensajes_plantilla()` lee
+ficheros del disco y no se puede comprobar con un caso escrito a mano; esta
+recibe texto y si. Que es el mismo motivo por el que el guardia de control
+salio del test: una comprobacion que solo se puede ejecutar contra el
+repositorio tiene dientes para el repositorio y ninguno para si misma.
+
+Y MEDIDO, y por que el texto no valia: el texto de una linea contiene el
+mensaje del assert, sus comentarios, y la palabra que se le parezca. O sea que
+«¿esta linea es un raise?» tiene tres respuestas posibles y la pregunta solo
+tiene dos."""
+    salida = []
+    for nodo in ast.walk(ast.parse(fuente)):
+        if isinstance(nodo, ast.Assert) and nodo.msg is not None:
+            plantilla = _plantilla_de(nodo.msg)
+            if plantilla is not None:
+                salida.append(('assert', nodo.lineno, plantilla))
+        elif isinstance(nodo, ast.Raise) and nodo.exc is not None:
+            exc = nodo.exc
+            if isinstance(exc, ast.Call) and exc.args:
+                plantilla = _plantilla_de(exc.args[0])
+                if plantilla is not None:
+                    salida.append(('raise', nodo.lineno, plantilla))
+    return salida
 
 
 def _mensajes_plantilla():
@@ -2439,24 +2538,15 @@ def _mensajes_plantilla():
             continue
         ruta = os.path.join(carpeta, nombre)
         try:
-            arbol = ast.parse(io.open(ruta, encoding='utf-8').read())
+            fuente = io.open(ruta, encoding='utf-8').read()
         except (SyntaxError, UnicodeDecodeError) as e:
             raise AssertionError(
                 '%s no se ha podido NI LEER (%s). Un fichero que no se lee no '
                 'se mira, y un fichero que no se mira no aparece en el '
                 'barrido, y eso es verde por no mirar. Por eso aqui no se '
                 'salta: se para.' % (nombre, e))
-        for nodo in ast.walk(arbol):
-            if isinstance(nodo, ast.Assert):
-                plantilla = _plantilla_de(nodo.msg) if nodo.msg else None
-                if plantilla is not None:
-                    encontrados.append((nombre, nodo.lineno, plantilla))
-            elif isinstance(nodo, ast.Raise) and nodo.exc is not None:
-                exc = nodo.exc
-                if isinstance(exc, ast.Call) and exc.args:
-                    plantilla = _plantilla_de(exc.args[0])
-                    if plantilla is not None:
-                        encontrados.append((nombre, nodo.lineno, plantilla))
+        for clase, numero, plantilla in _plantillas_de(fuente):
+            encontrados.append((clase, nombre, numero, plantilla))
     return encontrados
 
 
@@ -2480,7 +2570,7 @@ def test_los_mensajes_de_fallo_se_pueden_construir():
           rutas mas, y son otra tarea con su propio corpus."""
     sin_diccionario = []
     rotas = []
-    for nombre, linea, plantilla in _mensajes_plantilla():
+    for _clase, nombre, linea, plantilla in _mensajes_plantilla():
         if '%(' in _sin_percent_escapado(plantilla):
             # MEDIDO: CERO en el repo. Y no se puede construir con una tupla
             # de mentiras, porque `%(nombre)s` pide un DICCIONARIO. O sea
@@ -3111,45 +3201,6 @@ def _busquedas_sobre_fuente(fuente):
 # decir «aqui no hay ninguna, y cuando haya una, sale en el fallo».
 BUSQUEDAS_ACEPTADAS = ()
 
-# El bucle de leer un fichero por linea, una vez por fichero y no una por
-# hallazgo. Y el motivo no es la velocidad: es que leerlo N veces no cambia el
-# resultado, y un detalle que no cambia el resultado se puede hacer una vez.
-_LINEAS_CACHE = {}
-
-
-def _lineas_de(nombre):
-    """Las lineas de un fichero de `CARPETA_DE_MENSAJES`, cacheadas.
-
-    Y MEDIDO, por que hace falta: `_es_raise` se llama una vez por hallazgo, y
-    hay 327. Leer el fichero entero 327 veces son 327 lecturas del mismo
-    fichero para sacar la misma linea.
-
-    Y el cache se declara global y no como diccionario por test, porque el
-    test que lo necesita y el que lo mide son el mismo, y un cache por test
-    obligaria a pasar el diccionario por parametro a un sitio donde no hace
-    falta —que es como empiezan las cosas que luego nadie recuerda por que
-    estan."""
-    if nombre not in _LINEAS_CACHE:
-        ruta = os.path.join(ROOT, CARPETA_DE_MENSAJES, nombre)
-        _LINEAS_CACHE[nombre] = io.open(ruta, encoding='utf-8').read().split(
-            chr(10))
-    return _LINEAS_CACHE[nombre]
-
-
-def _es_raise(nombre, linea):
-    """¿Ese par (fichero, linea) es un `raise` con formato?
-
-    Y es una pregunta por el TEXTO del fichero, no por el arbol, y aqui es
-    lo correcto: la pregunta es «que hay en ESTA linea», y la linea es el
-    objeto. O sea que es el sitio donde mirar el texto es lo que hay que
-    hacer, y la regla «nunca mires el texto» —que no existe, pero que este
-    bloque se ha casi convertido en una— habria sido aqui un error.
-
-    Y su limite: si un `raise` y un `assert` estuvieran en la MISMA linea, esto
-    daria una respuesta imprecisa. MEDIDO: no hay ninguno asi en `tools/`."""
-    return 'raise' in _lineas_de(nombre)[linea - 1]
-
-
 def test_no_hay_busquedas_sobre_fuente_sin_declarar():
     """Que este fichero no tenga ninguna, o que la diga.
 
@@ -3239,10 +3290,10 @@ def test_el_barrido_de_mensajes_alcanza_los_raise_y_solo_los_de_tools():
 
     Y las dos mitades importan por motivos distintos:
 
-      - que encuentre los `raise` es lo que se acaba de anadir, y sin esta
-        comprobacion el cambio seria invisible: el barrido volveria a dar
-        verde si dejara de mirar los `raise`, porque 302 sigue estando por
-        debajo del suelo de 200.
+      - que encuentre los `raise` es lo que se anadio hace dos bloques, y sin
+        esta comprobacion el cambio seria invisible: el barrido volveria a dar
+        verde si dejara de mirar los `raise`, porque 302 de `assert` siguen
+        estando por debajo del suelo de 200.
 
         O sea que ESTA es la comprobacion que hace que la ampliacion tenga
         efecto observable. Sin ella, anadir `raise` habria sido un cambio que
@@ -3253,15 +3304,30 @@ def test_el_barrido_de_mensajes_alcanza_los_raise_y_solo_los_de_tools():
         menos auditable, porque ya no se puede decir que no toca lo que no es
         suyo.
 
-    Y `_es_raise` es codigo muerto sin esta llamada — MEDIDO: se escribio tres
-    veces sin que nadie la llamara, y una funcion auxiliar sin su test es una
-    comprobacion que no se ejecuta. Que es la version mas inutil de la regla
-    del bloque: no es un test que no se ejecuta, es que no hay test."""
+    Y LA CLASE SALE DEL ARBOL, Y ANTES SALIA DEL TEXTO
+
+    MEDIDO, con la clasificacion por texto:
+
+        hallazgos por el ARBOL:  336
+        hallazgos por el TEXTO:  336
+        DESACUERDOS:            1
+
+    Y el unico desacuerdo era ESTE test: su mensaje empieza por «el barrido
+    deberia encontrar al menos 20 `raise`», de modo que la palabra «raise»
+    estaba en la linea y este `assert` se contaba como un `raise`.
+
+    O sea que el fallo mas incomodo posible: la comprobacion que vigila al
+    clasificador estaba ella misma mal clasificada. Los dos numeros reales
+    eran 25 `raise` y 311 `assert`.
+
+    Y el arreglo no es afinar la busqueda de la palabra —que dejaria el mismo
+    problema para la siguiente palabra— sino que la clase salga del nodo que la
+    encontro. Que es la regla del bloque aplicada a mi propio bloque."""
     encontrados = _mensajes_plantilla()
-    raises = [(nombre, linea) for nombre, linea, plantilla in encontrados
-              if _es_raise(nombre, linea)]
-    asserts = [(nombre, linea) for nombre, linea, plantilla in encontrados
-               if not _es_raise(nombre, linea)]
+    raises = [(nombre, linea) for clase, nombre, linea, _t in encontrados
+              if clase == 'raise']
+    asserts = [(nombre, linea) for clase, nombre, linea, _t in encontrados
+               if clase == 'assert']
     assert len(raises) >= 20, (
         'el barrido deberia encontrar al menos 20 `raise` con formato en %s y '
         'ha encontrado %d. MEDIDO: 25. O sea que el alcance declarado ya no '
@@ -3270,14 +3336,56 @@ def test_el_barrido_de_mensajes_alcanza_los_raise_y_solo_los_de_tools():
         % (CARPETA_DE_MENSAJES, len(raises)))
     assert len(asserts) >= 200, (
         'el barrido deberia encontrar al menos 200 `assert` con formato y ha '
-        'encontrado %d. MEDIDO: 302. O sea que anadir los `raise` ha tapado '
+        'encontrado %d. MEDIDO: 311. O sea que anadir los `raise` ha tapado '
         'algo en los `assert`, y dos cambios en el mismo sitio se pueden '
         'cancelar sin que ninguno se note.' % len(asserts))
-    fuera = [nombre for nombre, _, _ in encontrados
+    fuera = [nombre for _clase, nombre, _, _t in encontrados
              if os.path.sep + 'motor' + os.path.sep in os.path.join(ROOT,
                                                                      nombre)]
     assert not fuera, (
-        'el barrido ha entrado en `motor/`, que no es mio: %r. MEDIDO: `motor/` '
-        'tiene 14 `raise` con formato y ninguno se mira, y eso esta DECLARADO '
-        'en el docstring de `_mensajes_plantilla`, que es donde se declara lo '
-        'que no se comprueba.' % fuera[:3])
+        'el barrido ha entrado en `motor/`, que no es mio: %r. MEDIDO: '
+        '`motor/` tiene 14 `raise` con formato y ninguno se mira, y eso esta '
+        'DECLARADO en el docstring de `_mensajes_plantilla`, que es donde se '
+        'declara lo que no se comprueba.' % fuera[:3])
+
+
+def test_la_clase_de_un_mensaje_viene_del_arbol_no_del_texto():
+    """La direccion en la que el fallo se PRODUCIA, comprobada.
+
+    Y el caso es el que MEDIDO salio en el repo: un `assert` cuyo MENSAJE
+    contiene la palabra «raise». Con la clasificacion por texto, ese `assert`
+    se contaba como un `raise`.
+
+    Y hay un cuarto caso que el repo no tiene pero que puede aparecer: la
+    palabra en un COMENTARIO de la linea. Que es la misma Confusion con otro
+    disfraz, y por eso va en la MISMA prueba: si la arreglo solo entiende el
+    mensaje, el comentario la rompe otra vez.
+
+    Y el quinto caso es el que NO falla, y va tambien: un `raise` partido en
+    varias lineas, donde la plantilla vive en una linea que no tiene la palabra
+    `raise`. MEDIDO: la clasificacion por texto ACIERTA en ese caso, porque
+    `Raise.lineno` es la linea de la palabra `raise`. O sea que hay que
+    comprobar que sigue aciertando, no solo que deja de fallar."""
+    fuente = chr(10).join([
+        'def _f(x, y):',
+        '    assert x, "no debe hacer raise %s" % y',
+        '    assert x, "nada %s" % y  # raise por aqui',
+        '    raise E("fallo %s" % y)',
+        '    raise E(',
+        '        "otro fallo %s" % y)',
+    ])
+    clases = [clase for clase, _linea, _t in _plantillas_de(fuente)]
+    assert clases == ['assert', 'assert', 'raise', 'raise'], (
+        'MEDIDO, el caso del repo es el primero —un `assert` cuyo mensaje '
+        'contiene «raise»— y con la clasificacion por texto se contaba como '
+        'un `raise`. Y el segundo es el mismo fallo con otro disfraz: la '
+        'palabra en un comentario. Salen %r y se esperaba %r. O sea que la '
+        'clase no sale del nodo que la encontro.' % (clases, ['assert',
+                                                             'assert',
+                                                             'raise', 'raise']))
+    lineas = [linea for _c, linea, _t in _plantillas_de(fuente)]
+    assert lineas == [2, 3, 4, 5], (
+        'las lineas %r no son las de los nodos. MEDIDO: `Raise.lineno` es la '
+        'linea de la palabra `raise`, de modo que el cuarto caso —un raise '
+        'partido— se cuenta en la linea 5 y no en la 7. Y eso es lo que hay '
+        'que comprobar: que la linea tambien venga del arbol.' % lineas)
