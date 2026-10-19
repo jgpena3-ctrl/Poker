@@ -32,7 +32,7 @@ es indistinguible de un error, y nadie la va a volver a mirar.
 
 ---
 
-## 2. Corregido — 2 correcciones
+## 2. Corregido — 3 correcciones
 
 Las aplicó `tools/sanear_base.py --apply`. Backup verificado en
 `data/_backup_aplicar_correcciones/antes_sanear_31eba6e1c4824015.jsonl`.
@@ -65,6 +65,42 @@ puesta y `active: false`, y de esos 21, **solo este** tiene acciones. Los
 otros 20 son gente que se sentó y no jugó, que es justo lo que la bandera
 significa.
 
+### 2.4 `H_1196` — la subida del BB grabada como `b`
+
+La **última** violacion del invariante de CM-004 que quedaba en la base.
+La aplicó el mantenedor a mano, en el commit `12c7bed`.
+
+```
+antes:   6  BB  b  2.0
+despues: 6  BB  r  2.0
+```
+
+**Lo que lo hace evidente es la secuencia, no una suposicion.** La accion
+del indice 6 va **despues de dos limpeos** (`CO c 1.0` en el 3 y `SB c 1.0`
+en el 5), de modo que no puede ser la ciega: `_es_ciega_bb` exige
+`not voluntary_before`. Y la regla exige `act == 'b'` para reconocer una
+ciega, de modo que una subida bien grabada *nunca* se lee como ciega. Grabar
+la subida del BB como `r` es la unica forma de que las dos cosas sean
+verdad a la vez.
+
+Y el reparto de la mano cuadra: el BB postea 0.5, sube a 2.0 encima de los
+limpeos a 1.0, el CO se va y el SB iguala a 2.0. El **importe no se toca**:
+2.0 antes y 2.0 despues, de modo que la mano no cambia de pot.
+
+**Lo que se comprobo al cerrar, y por que importaba:**
+
+- la repasa que pedia el expediente: `manos_con_orden_ciega_malo()` sobre
+  las 1258 manos da `[]`. No habia una segunda mano con el mismo defecto.
+- `H_1196` esta en la linea 1172 de 1258, y la ventana fiable corta en la
+  linea `RELIABLE_HANDS`: o sea que es **posterior** a la ventana.
+- `H_1196` **no** esta en `EXCLUSIONES_VENTANA_FABLE`.
+
+De las dos ultimas sale lo que importa: **ninguna cifra publicada se
+mueve**. Y lo que si se mueve, y por una unidad, es el reparto por accion
+de la base entera: una accion deja de ser `b` y pasa a ser `r`.
+
+Ver `DOCS/INC-004_H_1196.md`.
+
 ### 2.3 Un detector que estaba mal, y se corrigió de paso
 
 `auditar_rango.accion_fantasma` usaba `active` como sinónimo de «está en la
@@ -83,6 +119,9 @@ o no— tiene esa posición.
 ---
 
 ## 3. Pendiente — con id y acción
+
+> `H_1196` salía de aquí: la sección 3.7 de este documento estaba
+> pendiente y ya no lo está. Está en §2.4, con la corrección y su motivo.
 
 ### 3.1 `ACCION_FANTASMA` — 2 manos
 
@@ -219,20 +258,6 @@ El campo `showdown` nombra a alguien que no está en `winner`:
 Lectura A: el showdown cita a más gente de la que ganó, porque es un
 desglose de lo que se vio y no una declaración del ganador — legítimo.
 Lectura B: falta un ganador en `winner`.
-
-### 3.7 `CM-004` — 1 mano, la que sigue abierta
-
-`H_1196`. El BB postea 0.5, y en el índice 6 hay un `BB b 2.0` después de dos
-limpeos.
-
-- **A — el dato está mal:** la subida del BB se grabó como `b` y debería ser
-  `r`. `_es_ciega_bb` ya avisa de esto: la regla exige `act == 'b'`, así que
-  una subida bien grabada *nunca* se lee como ciega.
-- **B — el guard es más ancho que el defecto:** la regla de CM-004 era «una
-  `BB b` tardía **sin posting previo**», y aquí el BB ya posteó en el índice 0.
-
-Mientras no se decida, `test_cm004.py::test_ninguna_mano_tiene_una_bb_b_que_no_pueda_ser_la_ciega`
-**está en rojo a propósito**.
 
 ### 3.8 Ganador múltiple — 14 manos
 

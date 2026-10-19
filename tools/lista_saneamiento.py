@@ -198,8 +198,16 @@ LOTES = (
         LECTURA_DOBLE,
         ['CM-004'],
         'una `BB b` que el motor no reconoce como ciega',
-        'La unica de este tipo que queda es `H_1196`, y tiene DOS lecturas '
+        'La unica de este tipo era `H_1196`, y tenia DOS lecturas '
         'defendibles.\n'
+        'SE HA DECIDIDO: la primera. El registro de la mano estaba mal, y la '
+        'subida del BB -que estaba grabada como `b`- se graba como `r`. Lo '
+        'corrigio el mantenedor de la base, en el commit `12c7bed`, y el '
+        'invariante es CERO en las 1258 manos.\n'
+        'Y el lote se QUEDA DECLARADO, con 0 casos, porque un lote que se '
+        'queda vacio porque su defecto se corrigio es la evidencia de que se '
+        'corrigio: borrarlo haria que la proxima vez que se cuente, volviera '
+        'a salir como si fuera nuevo.\n'
         'LECTURA A — EL DATO ESTA MAL: la subida del BB se grabo como `b` y '
         'deberia ser `r`. `_es_ciega_bb` ya avisa: la regla exige `act == '
         "'b'\", asi que una subida bien grabada NUNCA se lee como ciega. Si la "

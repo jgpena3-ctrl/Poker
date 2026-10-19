@@ -78,6 +78,13 @@ RELIABLE_HANDS = 900
 #               · jugadores `active:false` que conservan `pos`: 29 -> 20
 #               · 3 cartas del hero corregidas por OCR
 #             Ver `DOCS/CANAL_MANUAL_CERRADO.md` §4 y `DOCS/APARCADO_DB.md`.
+#   12c7bed   la `BB r` de `H_1196`: la ultima violacion del invariante de
+#             CM-004, grabada como `r` y no como `b`. MEDIDO: la violacion
+#             del invariante es CERO en toda la base, `H_1196` es POSTERIOR a
+#             la ventana fiable y NO esta en la lista de exclusiones, de modo
+#             que ninguna cifra publicada se mueve. El reparto por accion de
+#             la base entera SI se mueve, y por una unidad. Ver
+#             `DOCS/INC-004_H_1196.md`.
 #   <HEAD>    40 manos mas (H_1030 .. H_1070), misma revision manual:
 #               · `winner` con 2+ ganadores, en las 40 tocadas: 32 -> 1
 #               · `winner` con 2+ en la base entera: 179 -> 147
@@ -98,9 +105,9 @@ RELIABLE_HANDS = 900
 # no se puede reproducir no es un hash.
 #
 # Documentacion: `DOCS/CANAL_MANUAL_CERRADO.md`, `DOCS/RANGO_VIGENTE.md`.
-HANDS_DB_COMMIT = '33ab8ee'
+HANDS_DB_COMMIT = '12c7bed'
 HANDS_DB_SHA256 = (
-    '35727961646dfaba2c67fd5ee0dbe9b0669d3156f9c6f3fa3585060a93f097e2')
+    '5ae2abd71832dccd3f1d58859a05b35494de24795841682f601e873b41ce4dc1')
 HANDS_DB_LINEAS = 1258
 
 # El rango AUDITADO no es el de calibracion. Son dos cosas distintas y

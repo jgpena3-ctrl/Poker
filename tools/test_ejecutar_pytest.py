@@ -3628,7 +3628,7 @@ CARPETAS_DEL_INVENTARIO = ('tools', 'motor', 'recorder')
 # fichero de esa taille es una tabla que nadie mantiene, y una tabla que nadie
 # mantiene es decoracion.
 
-TESTS_POR_CARPETA = {'motor': 834, 'recorder': 4, 'tools': 465}
+TESTS_POR_CARPETA = {'motor': 834, 'recorder': 4, 'tools': 466}
 
 
 # Y los FICHEROS, que son OTRA medida. MEDIDO, y sin ellos el guardia

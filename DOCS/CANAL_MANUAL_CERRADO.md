@@ -1,12 +1,12 @@
 # CANAL MANUAL CERRADO — `hands_db.jsonl`
 
 **Estado:** vigente.
-**Fecha:** 2026-10-15
-**Commit del estado canónico:** `33ab8ee`
-**SHA-256:** `35727961646dfaba2c67fd5ee0dbe9b0669d3156f9c6f3fa3585060a93f097e2`
+**Fecha:** 2026-10-19
+**Commit del estado canónico:** `12c7bed`
+**SHA-256:** `5ae2abd71832dccd3f1d58859a05b35494de24795841682f601e873b41ce4dc1`
 **Líneas:** 1258
 **Revisión manual:** **terminada**. `H_0001`..`H_1282`, en tres tramos.
-**Saneamiento:** empezado. 2 correcciones; el resto documentado en
+**Saneamiento:** empezado. 3 correcciones; el resto documentado en
 `DOCS/SANEAMIENTO.md`.
 **Vigila:** `motor/test_canal_manual.py` — 16 tests
 
@@ -126,9 +126,9 @@ anterior: `H_0173` está dentro de la ventana de 877. El tramo 3 se cierra
 **antes** de recalibrar, y el plan de `DOCS/FASE_D_PLAN.md` se queda
 pendiente de rehacer contra este estado, no contra `bf60aa8`.
 
-### 4.0-b La única violation del invariante que queda: `H_1196`
+### 4.0-b La última violation del invariante: `H_1196`, ya corregida
 
-Este es el punto abierto de la revisión, y se declara en vez de esconderse.
+Este era el punto abierto de la revisión, y se declaraba en vez de esconderse.
 
 ```
   0  BB  b  0.5     la ciega
@@ -137,18 +137,18 @@ Este es el punto abierto de la revisión, y se declara en vez de esconderse.
   3  CO  c  1.0     limpeo
   4  BTN f  0.0
   5  SB  c  1.0     limpeo
-  6  BB  b  2.0     <-- el detector marca esto
+  6  BB  r  2.0     <-- la subida del BB, antes grabada como `b`
   7  CO  f  0.0
-  8  SB  c  2.0
+  8  SB  c  2.0     iguala la subida
 ```
 
-El motor **no** confunde el `BB b 2.0` con la ciega: `_es_ciega_bb` exige que
+El motor **no** confundía el `BB b 2.0` con la ciega: `_es_ciega_bb` exige que
 no haya ninguna acción voluntaria antes, y aquí hay dos limpeos, así que la
-rechaza como ciega y la trata como subida. Lo que hace
+rechazaba como ciega y la trataba como subida. Lo que hace
 `entradas_bb_rechazadas` es más ancho: registra **toda** `BB b` que el motor
 no reconoció como ciega, y le pone `CAUSA_ORDEN`.
 
-Hay dos lecturas defendibles, y **la decisión es del mantenedor, no del
+Había dos lecturas defendibles, y **la decisión es del mantenedor, no del
 motor**:
 
 1. **El dato está mal.** Una subida del BB debería grabarse como `'r'`, y
@@ -160,9 +160,36 @@ motor**:
    `BB b` tardía **sin posting previo**», no «una `BB b` tardía». Aquí el BB ya
    posteó en el índice 0.
 
-Mientras no se decida, el test `test_ninguna_mano_tiene_una_bb_b_que_no_pueda_ser_la_ciega`
-**está en rojo a propósito**. Relajar el invariante para ponerlo verde sería
-justo el error que este canal manual existe para evitar.
+**Se tomó la primera.** El mantenedor corrigió la mano en el fichero —commit
+`12c7bed`— y la corrección es de un carácter: `b` → `r`, con el **importe
+intacto** (2.0 antes y 2.0 después). De modo que la mano no cambia de pot y
+ningún número de bote se mueve.
+
+Lo que se comprobó al cerrar, y por qué importaba:
+
+| | |
+|---|---|
+| la repasa que pedía el expediente | `manos_con_orden_ciega_malo()` sobre las 1258: **`[]`**. No había una segunda mano con el mismo defecto. |
+| ¿la mano estaba en la ventana? | **No.** `H_1196` está en la línea 1172 de 1258, y la ventana fiable corta en la línea `RELIABLE_HANDS`. |
+| ¿estaba en la lista de exclusiones? | **No.** `EXCLUSIONES_VENTANA_FABLE` no la contiene. |
+
+De las dos últimas sale lo que importa: **ninguna cifra publicada se mueve**.
+Ni el AUC, ni las frecuencias, ni el rango auditado. Se comprobó midiendo, que
+es la diferencia entre «no he visto que se mueva» y «no se mueve».
+
+Y lo que **sí** se mueve, y por una unidad, es el reparto por acción de la base
+entera: una acción deja de ser `b` y pasa a ser `r`. Los totales de la matriz
+no cambian.
+
+**El invariante no se relajó.** El test
+`test_ninguna_mano_tiene_una_bb_b_que_no_pueda_ser_la_ciega` sigue en la suite,
+sin `xfail` y sin `skip`, y ahora **pasa**. Relajar el invariante para ponerlo
+verde habría sido justo el error que este canal manual existe para evitar: lo
+que se corrigió fue el dato, no la regla.
+
+El expediente, con la decisión y las mediciones, está en
+[`INC-004_H_1196.md`](INC-004_H_1196.md), y el `git show 12c7bed` está a un
+comando de distancia.
 
 ### 4.0 El segundo tramo, en detalle
 
@@ -229,7 +256,7 @@ las manos una a una y eso, por definición, es editar el fichero.
 **Y `False` no significa que la base sea correcta.** Significa que nadie la
 está mirando en este momento. Quedan 30 `IMPORTE_SUBIDA`, 15
 `SHOWDOWN_SIN_WINNER`, 3 `WINNER_FOLDEO` y 2 `ACCION_FANTASMA`, todos
-declarados en `DOCS/HALLZGOS_H0001_H1014.md`, más la mano `H_1196` de §4.0-b.
+declarados en `DOCS/HALLZGOS_H0001_H1014.md`.
 Terminar la revisión cierra un estado; no cierra los defectos que quedan, y
 confundir las dos cosas sería el error de este bloque.
 

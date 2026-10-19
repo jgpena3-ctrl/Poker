@@ -271,18 +271,39 @@ def test_el_rango_por_defecto_sigue_siendo_toda_la_base():
     assert 'H_1282' in manos
 
 
-def test_h1196_sigue_siendo_la_unica_violacion_de_cm004():
-    """La mano abierta, fijada por identidad.
+def test_la_violacion_de_cm004_es_cero_y_el_cierre_esta_escrito():
+    """La mano abierta ya no esta abierta, y el cierre esta DECIDIDO.
 
-    `H_1196` tiene dos lecturas defendibles y la decision es del mantenedor.
-    Mientras no se decida, este test la declara para que no se pierda de
-    vista: si desaparece de aqui sin que alguien lo decida, se ha decidido
-    por olvido.
+    Antes este test fijaba `H_1196` por identidad, para que no se perdiera de
+    vista mientras no se decidia. Ahora la decision esta tomada —la primera
+    de las dos ramas: el registro de la mano estaba mal, y se corrige en el
+    fichero— y el defecto es CERO en toda la base.
+
+    Y las dos mitades, porque cada una sola no dice nada:
+
+      1. que la violation sea cero, que es la MEDICION;
+      2. que el cierre este ESCRITO, que es lo que distingue «se corrigió» de
+         «se corrigió y nadie lo dejó escrito».
+
+    Y la segunda es la que importa: un defecto que desaparece sin que nadie
+    lo decida se ha decidido por olvido, y un olvido no se parece a una
+    decision solo en el resultado: se parece tambien en que no se puede
+    revertir ni explicar.
     """
     manos = LS.cargar()
     hall, _m = AR.auditar(list(manos.values()))
     cm004 = sorted(h for h, _d in hall['CM-004'])
-    assert cm004 == ['H_1196'], cm004
+    assert cm004 == [], (
+        'la violation de CM-004 es cero en toda la base, y sale %r. Si vuelve '
+        'a aparecer, la correccion de `H_1196` no era la unica.' % cm004)
+
+    doc = io.open(os.path.join(ROOT, 'DOCS', 'INC-004_H_1196.md'),
+                  encoding='utf-8').read()
+    declaracion = [l for l in doc.split('\n') if 'ESTADO:' in l.upper()]
+    assert len(declaracion) == 1, (
+        'tiene que haber UNA declaracion de estado, y no %d' % len(declaracion))
+    assert 'CERRADO' in declaracion[0].upper(), (
+        'y tiene que decir CERRADO: %r' % declaracion[0])
 
 
 # --- (4) el reparto de trabajo, que es la razon de este fichero ------------

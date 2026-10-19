@@ -421,6 +421,11 @@ python -m pytest motor -q
 (`test_cm004.py::test_ninguna_mano_tiene_una_bb_b_que_no_pueda_ser_la_ciega`,
 por `H_1196`, que sigue abierta y a propósito).
 
+> **Actualizado.** `H_1196` se corrigió después: el registro de la mano estaba
+> mal, y la subida del BB se grabó como `r` en vez de como `b`. El invariante
+> de CM-004 es cero en toda la base. Ver
+> [`INC-004_H_1196.md`](INC-004_H_1196.md).
+
 ---
 
 ## Conclusión

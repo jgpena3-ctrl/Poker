@@ -817,9 +817,16 @@ def test_el_desglose_por_accion_por_resultado_es_coherente():
 
     Antes el informe traia dos desgloses: uno por resultado (5433/445/96) y
     otro por accion (1852/6/0, 2032/430/96, 1009/9/0), y **no cuadraban entre
-    si**: 2398+2558+1018 = 5974, pero el desglose por accion era de 5981. La
-    fila de las `c` era de una version anterior del clasificador y nadie se
-    dio cuenta, porque cada desglose se comprobaba por separado.
+    si**: el total de las acciones que aportan era 5974, pero el desglose por
+    accion era de 5981. La fila de las `c` era de una version anterior del
+    clasificador y nadie se dio cuenta, porque cada desglose se comprobaba
+    por separado.
+
+    Y el REPARTO por accion se movio despues, y por una unidad: la correccion
+    de `H_1196` (`DOCS/INC-004_H_1196.md`) graba como `r` una accion que era
+    `b`, de modo que una `b` pasa a ser una `r` y el TOTAL de la matriz no
+    cambia. Por eso los totales van aparte del reparto, y no se puede
+    derivar uno del otro.
 
     Aqui se calcula la matriz entera en una pasada, y se exige que:
 
@@ -836,9 +843,9 @@ def test_el_desglose_por_accion_por_resultado_es_coherente():
         for x in DG.clasificar_aportado(h):
             matriz[x['action']][x['resultado']] += 1
 
-    esperado = {'b': {DG.CALCULABLE: 2392, DG.SOSPECHOSA: 6, DG.INDETERMINADA: 0},
+    esperado = {'b': {DG.CALCULABLE: 2391, DG.SOSPECHOSA: 6, DG.INDETERMINADA: 0},
                 'c': {DG.CALCULABLE: 2032, DG.SOSPECHOSA: 430, DG.INDETERMINADA: 96},
-                'r': {DG.CALCULABLE: 1009, DG.SOSPECHOSA: 9, DG.INDETERMINADA: 0}}
+                'r': {DG.CALCULABLE: 1010, DG.SOSPECHOSA: 9, DG.INDETERMINADA: 0}}
     assert {k: dict(v) for k, v in matriz.items()} == {
         k: {r: n for r, n in v.items() if n} for k, v in esperado.items()}, (
         {k: dict(v) for k, v in matriz.items()})
@@ -863,17 +870,17 @@ def test_el_reparto_por_accion_suma_el_total_de_la_base():
     """Que el total de la matriz sea el de las acciones que aportan.
 
     `f` y `x` no aportan y quedan fuera a proposito; que el total cuadre con
-    2398+2558+1018 es la comprobacion de que la exclusion es la que se cree
-    que es.
+    la suma de las tres acciones que aportan es la comprobacion de que la
+    exclusion es la que se cree que es.
     """
     manos = DG.cargar()
     tot = collections.Counter()
     for h in manos.values():
         for x in DG.clasificar_aportado(h):
             tot[x['action']] += 1
-    assert tot['b'] == 2398, dict(tot)
+    assert tot['b'] == 2397, dict(tot)
     assert tot['c'] == 2558, dict(tot)
-    assert tot['r'] == 1018, dict(tot)
+    assert tot['r'] == 1019, dict(tot)
     assert sum(tot.values()) == 5974, dict(tot)
 
 
