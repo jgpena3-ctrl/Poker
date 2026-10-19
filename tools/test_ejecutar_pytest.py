@@ -3628,7 +3628,7 @@ CARPETAS_DEL_INVENTARIO = ('tools', 'motor', 'recorder')
 # fichero de esa taille es una tabla que nadie mantiene, y una tabla que nadie
 # mantiene es decoracion.
 
-TESTS_POR_CARPETA = {'motor': 834, 'recorder': 4, 'tools': 462}
+TESTS_POR_CARPETA = {'motor': 834, 'recorder': 4, 'tools': 465}
 
 
 # Y los FICHEROS, que son OTRA medida. MEDIDO, y sin ellos el guardia
@@ -3789,9 +3789,9 @@ def _tests_por_debajo_del_primer_nivel(directorio):
 
 
 def _parametrizados(directorio):
-    """Las funciones de test que llevan `@parametrize`, en `directorio`.
+    """Las funciones de test de NIVEL DE MODULO con `@pytest.mark.parametrize`.
 
-    Y esto NO es un adorno: es la segunda medida, y sale de lo medido.
+    Y no es un adorno: es la segunda medida, y sale de lo medido.
 
     MEDIDO, y las TRES magnitudes que no son la misma:
 
@@ -3820,24 +3820,108 @@ def _parametrizados(directorio):
     Y por que no se cuenta pytest directamente con `--collect-only`: MEDIDO,
     tarda cuarenta segundos y ademas importa los modulos. O sea que un guardia
     que dura cuarenta segundos no es un guardia: es un coste que se acaba
-    dejando."""
+    dejando.
+
+    Y LAS DOS REGLAS, QUE ESTABAN EN TEXTO Y AHORA NO
+
+    MEDIDO, con los casos de un fichero inventado:
+
+        decorador con la palabra pero que NO es pytest   texto=1 estructural=0
+        decorador de pytest de verdad                    texto=1 estructural=1
+        funcion test_ anidada con parametrize            texto=1 estructural=1
+        nombre que CONTIENE parametrize                  texto=1 estructural=1
+
+    O sea que la regla anterior —`if 'parametrize' in ast.unparse(...)`—
+    contaba un decorador ajeno que tuviera la palabra. Y R2 lo senala, y con
+    razon: eso detecta TEXTO donde lo que hay que reconocer es IDENTIDAD.
+
+    Y ahora reconoce la forma, que son dos condiciones:
+
+        1. es una LLAMADA cuyo atributo final se llama exactamente
+           `parametrize`
+        2. y el receptor termina en `pytest.mark`
+
+    Y la segunda no es la propuesta de R2, que basta con la primera: MEDIDO, las 17
+    llamadas de este repo salen TODAS de `pytest.mark.parametrize`, de modo que
+    anadirla no cambia el numero de hoy y quita una ambiguedad que no se paga
+    hasta que aparezca el caso. Que es el mismo argumento del limite derivado
+    del bloque: una cota o una regla mas estrecha que no cuesta nada ahora y
+    evita un fallo mas adelante.
+
+    Y SOLO NIVEL DE MODULO, por una razon que no es de estilo: pytest NO
+    recoge una funcion anidada. De modo que un guardia que las contara estaria
+    contando cosas que no se ejecutan, que es justo la clase de error que este
+    bloque lleva cuarenta bloques corrigiendo.
+
+    MEDIDO: hoy hay CERO anidadas. O sea que la regla no cambia el numero, y
+    lo que cambia es que el numero significa lo que dice.
+    """
     total = 0
     for nombre in sorted(os.listdir(directorio)):
         if not nombre.endswith('.py'):
             continue
+        ruta = os.path.join(directorio, nombre)
         try:
-            arbol = ast.parse(io.open(os.path.join(directorio, nombre),
-                                      encoding='utf-8').read())
-        except (SyntaxError, UnicodeDecodeError):
-            continue
-        for nodo in ast.walk(arbol):
+            arbol = ast.parse(io.open(ruta, encoding='utf-8').read())
+        except (SyntaxError, UnicodeDecodeError) as e:
+            # Y NO un `continue`, que es lo que hacia antes.
+            #
+            # MEDIDO, y hoy no hay ningun fichero ilegible, de modo que el
+            # `continue` no estaba produciendo un recuento incorrecto. Y eso es
+            # «hoy no pasa», no «no puede pasar».
+            #
+            # Y por que importa: un `continue` que se traga un fichero
+            # convierte el recuento en una DECLARACION —«hay 17 funciones
+            # parametrizadas»— y si se tragara un fichero, la declaracion
+            # seria falsa y nadie lo veria. Que es lo contrario de lo que hace
+            # `_tests_de`, que PARA y nombra el fichero.
+            #
+            # Y el repo tiene ahora una politica sola, no dos: un fichero que
+            # no se lee, para el inventario y nombra el fichero.
+            raise AssertionError(
+                '%s no se ha podido leer ni parsear (%s). Y no se salta: un '
+                'fichero que no se lee es un fichero que no se cuenta, y un '
+                'recuento al que le falta un fichero es una DECLARACION, no '
+                'una medida.' % (nombre, e))
+        for nodo in arbol.body:
             if not (isinstance(nodo, (ast.FunctionDef, ast.AsyncFunctionDef))
                     and nodo.name.startswith('test_')):
                 continue
             for decorador in nodo.decorator_list:
-                if 'parametrize' in ast.unparse(decorador):
+                if _es_parametrize_de_pytest(decorador):
                     total += 1
     return total
+
+
+def _es_parametrize_de_pytest(decorador):
+    """¿Este decorador es un `@pytest.mark.parametrize` de verdad?
+
+    Y dos condiciones, porque las dos hacen falta:
+
+        1. es una llamada con atributo, y el atributo se llama `parametrize`
+        2. y el receptor acaba en `pytest.mark`
+
+    Y por que dos, MEDIDO: con la primera sola, un `loquesea.parametrize`
+    ajeno contaria. Con las dos, no.
+
+    Y por que no `in ast.unparse(...)`: porque eso es TEXTO, y lo que hay que
+    reconocer es IDENTIDAD. MEDIDO, con un decorador inventado que lleva la
+    palabra en un argumento:
+
+        @no_es_parametrize(parametrizacion=[1, 2])
+        def test_este_no_cuenta(): pass
+
+    con la regla de texto cuenta 1; con esta cuenta 0. Que es exactamente el
+    caso que R2 describe."""
+    if not (isinstance(decorador, ast.Call)
+            and isinstance(decorador.func, ast.Attribute)):
+        return False
+    if decorador.func.attr != 'parametrize':
+        return False
+    receptor = ast.unparse(decorador.func.value)
+    return receptor == 'pytest.mark'
+
+
 
 def test_no_ha_desaparecido_ningun_test():
     """Y que el recuento no se pueda quedar satisfecho por una lista vacia.
@@ -3997,6 +4081,58 @@ def _docstring_de(nodo):
     return None
 
 
+def _docstrings_descuadrados(texto):
+    """Los docstrings con lineas fuera de la sangria de su bloque.
+
+    Y sale del ARBOL, que sabe donde empieza y acaba cada docstring. Con
+    `grep` no se puede: unas comillas triples pueden abrir un bloque y cerrar otro, y una
+    cadena normal puede contener tres comillas dobles sin ser un delimitador.
+
+    Y DEVUELVE la linea CULPABLE, que es lo que hay que ir a ver.
+
+    Y esto es una FUNCION y no un bloque dentro del test, por el motivo que se
+    ha repetido en este bloque: una comprobacion que solo se puede ejecutar
+    contra el repositorio tiene dientes para el repositorio y ninguno para si
+    misma. Y el caso de esta necesita un fichero inventado, porque en el
+    repositorio no hay ningun docstring descuadrado.
+
+    Y DEVUELVE la linea de la primera suelta y no la de la apertura, y esa es la
+    segunda de las dos opciones que ofrece R2 sobre el diagnostico. MEDIDO, en
+    `_parametrizados`: la apertura era la 3792 y la culpable la 3823, y treinta
+    lineas de distancia se convierten en un paseo.
+
+    Y devuelve tambien CUANTAS, porque hay que saber si son tres o trescientas.
+
+    Y lo que NO hace, y esta declarado en el docstring del test que la usa:
+    no comprueba que la sangria sea multiplo de cuatro, ni tabs contra espacios,
+    ni la sangria del codigo de al lado. MEDIDO, que ese limite no es teorico:
+    un docstring cuya apertura no sea multiplo de cuatro PASARIA esta funcion.
+    """
+    arbol = ast.parse(texto)
+    lineas = texto.split(chr(10))
+    salida = []
+    for nodo in ast.walk(arbol):
+        cuerpo = getattr(nodo, 'body', None)
+        if not isinstance(cuerpo, list) or not cuerpo:
+            continue
+        primero = cuerpo[0]
+        if not (isinstance(primero, ast.Expr)
+                and isinstance(primero.value, ast.Constant)
+                and isinstance(primero.value.value, str)):
+            continue
+        apertura = primero.lineno
+        sangria = (len(lineas[apertura - 1])
+                   - len(lineas[apertura - 1].lstrip()))
+        if sangria == 0:
+            continue
+        sueltas = [k for k in range(apertura, primero.end_lineno)
+                   if lineas[k].strip()
+                   and len(lineas[k]) - len(lineas[k].lstrip()) < sangria]
+        if sueltas:
+            salida.append((getattr(nodo, 'name', '<modulo>'),
+                           sueltas[0] + 1, len(sueltas)))
+    return salida
+
 def test_no_hay_docstrings_descuadrados():
     """Que ningun docstring tenga lineas fuera de la sangria de su bloque.
 
@@ -4035,41 +4171,10 @@ def test_no_hay_docstrings_descuadrados():
     for nombre in sorted(os.listdir(base)):
         if not nombre.endswith('.py'):
             continue
-        ruta = os.path.join(base, nombre)
-        texto = io.open(ruta, encoding='utf-8').read()
-        arbol = ast.parse(texto)
-        lineas = texto.split(chr(10))
-        for nodo in ast.walk(arbol):
-            primero = _docstring_de(nodo)
-            if primero is None:
-                continue
-            apertura = primero.lineno
-            sangria = (len(lineas[apertura - 1])
-                       - len(lineas[apertura - 1].lstrip()))
-            if sangria == 0:
-                continue
-            sueltas = [k for k in range(apertura, primero.end_lineno)
-                       if lineas[k].strip()
-                       and len(lineas[k]) - len(lineas[k].lstrip()) < sangria]
-            if sueltas:
-                # Y `apertura` y no `apertura + 1`: MEDIDO, `lineno` de
-                # Python ya es 1-based, de modo que el `+1` senalaba una linea
-                # DESPUES de la real. Y es del tipo mas discreto que lleva
-                # este bloque: un `+1` de mas no da ningun sintoma.
-                # Y la CULPABLE, que es lo que hay que ir a ver: la apertura
-                # se deduce del nombre de la funcion, y la linea suelta no.
-                # MEDIDO: el mensaje anterior senalaba la apertura, y el fallo
-                # estaba treinta lineas mas abajo.
-                #
-                # Y lo que NO se dice, y conviene: no se senala la INSEGURIDAD,
-                # que es lo que haria falta para arreglarlo. Y es porque el
-                # guardia mide sangria, y «hay tres espacios aqui» no dice «el
-                # bloque deberia tener cuatro». Que es el limite que ya declara
-                # el docstring del test, visto en accion.
-                descuadrados.append('%s:%d «%s», la primera linea suelta de %d'
-                                    % (nombre, sueltas[0] + 1,
-                                       getattr(nodo, 'name', '<modulo>'),
-                                       len(sueltas)))
+        texto = io.open(os.path.join(base, nombre), encoding='utf-8').read()
+        for funcion, linea, cuenta in _docstrings_descuadrados(texto):
+            descuadrados.append('%s:%d «%s», la primera linea suelta de %d'
+                                % (nombre, linea, funcion, cuenta))
     assert not descuadrados, (
         'hay %d docstring(s) con lineas fuera de la sangria de su bloque:%s\n\n'
         'MEDIDO, por que se nota: un bloque ENTERO sin sangrar hace que un '
@@ -4079,3 +4184,178 @@ def test_no_hay_docstrings_descuadrados():
         'razon por la que hace falta esta comprobacion y no un parseo.'
         % (len(descuadrados),
            chr(10).join('    %s' % x for x in descuadrados[:10])))
+# ============================ 24. LOS GUARDIANES, CON CASOS INVENTADOS
+#
+# Y esto es lo que R1 dicta en las tareas 2, 3 y 5, y es lo mismo de siempre:
+#
+#     el test falla si hay tests en un tercer nivel
+#     el test verifica que la línea señalada es la culpable
+#     si se vuelve a poner apertura + 1, el test falla
+#     el test que verifica que un nombre viejo no está, mira el código
+#
+# Y las tres son comprobaciones sobre instrumentacion NUEVA, que hasta ahora
+# solo se comprobaba desde scripts de medicion que se descartan. O sea que
+# estaban escritas y no eran parte del proyecto.
+#
+# Y las tres se pueden dar con un caso INVENTADO, que es justo lo que las
+# tres piden.
+
+
+def test_el_guardia_de_subcarpetas_lo_ve_a_tres_niveles():
+    """Que el guardia vea un test a TRES niveles, que es lo que R2 pedia.
+
+    Y el motivo de que este caso sea necesario, y no sea un lujo:
+
+        R2, punto 1: detectaría `tools/nueva/test_x.py`, pero no
+        `tools/nueva/otra/test_x.py`.
+
+    Y MEDIDO: hoy hay CERO subcarpetas en las tres carpetas, de modo que la
+    comprobacion del repositorio pasaria con cualquier cosa —incluido un
+    guardia que NO bajara—.
+
+    O sea que sin este caso, la afirmacion «es recursivo» no la sostiene nada:
+    es una frase sobre el codigo, y las frases sobre el codigo son justo lo que
+    este bloque lleva cuarenta bloques diciendo.
+
+    Y el caso lleva TRES niveles y no uno, porque uno ya lo cubria la version
+    anterior. Y lleva tambien un `.py` LIMPIO en un cuarto nivel, para que el
+    guardia no acuse a quien no tiene nada que ver.
+
+    Y la cuenta importa: se mira el NUMERO de tests que devuelve, no que devuelva
+    algo. Un guardia que dice «he encontrado algo» pasa igual con un falso
+    positivo."""
+    with tempfile.TemporaryDirectory() as alta:
+        niveles = ('uno', os.path.join('uno', 'dos'),
+                   os.path.join('uno', 'dos', 'tres'),
+                   os.path.join('uno', 'dos', 'tres', 'cuatro'))
+        for nivel in niveles:
+            os.makedirs(os.path.join(alta, nivel))
+        # un test a DOS niveles
+        io.open(os.path.join(alta, niveles[1], 'test_dos.py'), 'w',
+                encoding='utf-8').write('def test_a_dos():' + chr(10)
+                                         + '    pass' + chr(10))
+        # un test a TRES niveles, que es el caso de R2
+        io.open(os.path.join(alta, niveles[2], 'test_tres.py'), 'w',
+                encoding='utf-8').write('def test_a_tres():' + chr(10)
+                                         + '    pass' + chr(10)
+                                         + 'def test_otro():' + chr(10)
+                                         + '    pass' + chr(10))
+        # un `.py` SIN tests a CUATRO niveles, que no debe aparecer
+        io.open(os.path.join(alta, niveles[3], 'sintest.py'), 'w',
+                encoding='utf-8').write('x = 1' + chr(10))
+        # y una cache, que esta excluida por nombre
+        os.makedirs(os.path.join(alta, '__pycache__'))
+        io.open(os.path.join(alta, '__pycache__', 'test_cache.py'), 'w',
+                encoding='utf-8').write('def test_no_debe_contar():' + chr(10))
+        hallados = dict(_tests_por_debajo_del_primer_nivel(alta))
+
+    esperados = {'uno/dos/test_dos.py': 1, 'uno/dos/tres/test_tres.py': 2}
+    assert hallados == esperados, (
+        'MEDIDO, el guardia devuelve %r y se esperaba %r.%s%s'
+        'El caso de R2 es el segundo: un test a TRES niveles. Y el `cuatro` de '
+        'mas no debe aparecer, ni el `__pycache__`. Y las CUENTAS, no solo las '
+        'claves: un guardia que dice «he encontrado algo» pasa igual con un '
+        'falso positivo.'
+        % (hallados, esperados, chr(10), chr(10)))
+
+
+def test_el_diagnostico_de_docstrings_senala_la_culpable():
+    """Que la linea que dice el diagnostico sea LA CULPABLE, y no la apertura.
+
+    Y por que el caso es inventado: MEDIDO, en el repositorio no hay ningun
+    docstring descuadrado. O sea que la comprobacion real pasaria con
+    cualquier numero, y el numero es justo lo que hay que comprobar.
+
+    Y el caso lleva las DOS COSAS:
+
+      - la apertura del docstring en la linea 2
+      - la culpable en la linea 5, con tres espacios en vez de cuatro
+
+    Y la distancia entre las dos es de tres lineas, que es pequena y suficiente:
+    si el diagnostico volviera a senalar la apertura, el numero seria 2 y no 5,
+    y la comprobacion falla.
+
+    Y con esto queda cubierto lo que R1 dicta: «si se vuelve a poner
+    `apertura + 1`, el test falla». Porque `+1` sobre la apertura daria 3, y 3
+    tampoco es 5.
+
+    Y la cuenta se mira tambien, porque «un fallo» y «cuatro fallos» no se
+    distinguen con el mismo mensaje."""
+    fuente = chr(10).join([
+        'def _ejemplo():',
+        '    """Una linea de apertura.',
+        '',
+        '    Una linea correcta.',
+        '   Una linea con tres espacios.',
+        '    Y otra correcta."""',
+        'def test_algo():',
+        '    pass',
+    ])
+    hallados = _docstrings_descuadrados(fuente)
+    assert len(hallados) == 1, (
+        'MEDIDO, se esperaba un docstring descuadrado y hay %d: %r. O sea que '
+        'el detector no ve un caso que es facil de construir.' % (len(hallados),
+                                                                   hallados))
+    nombre, linea, cuenta = hallados[0]
+    assert linea == 5, (
+        'el diagnostico senala la linea %d y la culpable es la 5.%s%s'
+        'MEDIDO: la apertura del docstring es la linea 2. O sea que senalar la '
+        'apertura daria 2 y senalar la apertura mas uno daria 3, y ninguna de '
+        'las dos es 5. Que es justo por lo que hace falta un caso: el '
+        'diagnostico puede estar mal y no saberse.'
+        % (linea, chr(10),
+           chr(10).join('      linea %-3d %r' % (k + 1, l)
+                        for k, l in enumerate(fuente.split(chr(10))))))
+    assert cuenta == 1, (
+        'la cuenta dice %d y hay una linea suelta. Y la cuenta importa porque '
+        'sin ella un diagnostico que senala la linea 5 no dice si hay tres '
+        'fallos mas abajo.' % cuenta)
+    assert nombre == '_ejemplo', 'el nombre sale como %r' % nombre
+
+
+def test_las_comprobaciones_de_este_fichero_miran_codigo_y_no_prosa():
+    """Que las dos comprobaciones que fallaron por leer prosa miren el ARBOL.
+
+    Y son dos, y las dos fallaron en el bloque anterior:
+
+      - el nombre viejo de la funcion de subcarpetas, que sigue apareciendo en
+        el comentario que EXPRICA por que se cambio;
+      - el `apertura + 1`, que sigue apareciendo en el comentario que explica
+        el error.
+
+    O sea que las dos existen como TEXTO y no como CODIGO, y una comprobacion
+    que busca texto las encuentra y dice que el problema sigue.
+
+    Y el arreglo no es quitar el texto del comentario —que esta bien que este
+    ahi—: es que la comprobacion mire el ARBOL, que distingue una definicion de
+    una mencion.
+
+    Y MEDIDO, que esto no es un detalle: la comprobacion por texto daba FALLA
+    las dos veces, con el codigo ya correcto.
+
+    Y lo que este test hace es mirar lo contrario de las dos: que en el ARBOL
+    no haya ni la definicion ni la llamada, ni la suma. Que es lo que tiene que
+    ser cierto, y no lo que el comentario diga."""
+    arbol = ast.parse(io.open(__file__, encoding='utf-8').read())
+
+    definiciones_old = [n.lineno for n in ast.walk(arbol)
+                        if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+                        and n.name == '_tests_en_subcarpetas']
+    llamadas_old = [n.lineno for n in ast.walk(arbol)
+                    if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)
+                    and n.func.id == '_tests_en_subcarpetas']
+    assert not definiciones_old and not llamadas_old, (
+        'la funcion vieja vuelve a existir o a llamarse, en las lineas %r y %r. '
+        'Y OJO: en el TEXTO esta bien que aparezca, porque el comentario que '
+        'explica el cambio la nombra. Lo que no puede es existir.'
+        % (definiciones_old, llamadas_old))
+
+    sumas = [n.lineno for n in ast.walk(arbol)
+             if isinstance(n, ast.BinOp) and isinstance(n.op, ast.Add)
+             and isinstance(n.left, ast.Name) and n.left.id == 'apertura'
+             and isinstance(n.right, ast.Constant) and n.right.value == 1]
+    assert not sumas, (
+        'hay una suma `apertura + 1` en la linea %r, que es el desfase que este '
+        'bloque acaba de corregir. Y MEDIDO, que ese `+1` senalaba una linea '
+        'DESPUES de la real: `lineno` de Python ya es 1-based. Y en el TEXTO '
+        'puede aparecer, porque el comentario lo explica.' % sumas)

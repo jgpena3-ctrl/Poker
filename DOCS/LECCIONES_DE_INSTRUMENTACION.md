@@ -387,3 +387,122 @@ mismo acababa de traer**, por una línea con tres espacios en vez de cuatro.
 
 > Es lo que hace un guardia: mirar. Y mirar lo que uno acaba de escribir es lo
 > único que no se puede hacer a ojo.
+## 15. Texto donde tenía que haber identidad
+
+MEDIDO, con un decorador inventado:
+
+```
+decorador con la palabra pero que NO es pytest   texto=1  estructural=0
+decorador de pytest de verdad                    texto=1  estructural=1
+función test_ anidada con parametrize            texto=1  estructural=1
+```
+
+La regla era `if 'parametrize' in ast.unparse(decorador)`.
+
+Eso cuenta un decorador ajeno que lleve la palabra en un argumento. Y cuenta
+una función anidada, que pytest **no recoge**.
+
+La regla nueva son dos condiciones: que sea una llamada cuyo atributo final se
+llame exactamente `parametrize`, y que el receptor termine en `pytest.mark`. Y
+solo funciones de **nivel de módulo**, por una razón que no es de estilo:
+
+> pytest no recoge una función anidada. Un guardia que las contara estaría
+> contando cosas que no se ejecutan.
+
+MEDIDO: la regla más estrecha da **el mismo 17**. Y eso es lo que hace falta
+para poder decir que el número significa lo que dice.
+
+## 16. Un `continue` que se traga un fichero
+
+MEDIDO, y hoy no hay ningún fichero ilegible en las tres carpetas. O sea que
+el `continue` **no estaba produciendo un recuento incorrecto**.
+
+Y eso es «hoy no pasa», no «no puede pasar». Y por qué importa igual:
+
+> un `continue` que se traga un fichero convierte el recuento en una
+> **declaración** —«hay 17 funciones parametrizadas»— y si se tragara uno, la
+> declaración sería falsa y nadie lo vería.
+
+Que es lo contrario de lo que hacía el hermano del mismo fichero, que **para y
+nombra el fichero**. O sea que el repositorio tenía dos políticas para «un
+fichero que no se lee», y eso hay que elegirlo, no dejarlo.
+
+## 17. Y la más útil de las tres: un guardia con el rango puesto a ojo
+
+MEDIDO: una palabra en coreano colada en un comentario de un fichero de texto.
+El barrido la dejó pasar.
+
+Y la causa no es la palabra: es que **el rango estaba escrito a mano**, y
+0x2E80–0x9FFF cubre los ideogramas chinos y **no** cubre el coreano, que
+empieza en 0xAC00.
+
+Y es la **segunda** vez que este guardia deja pasar algo, y las dos por lo
+mismo: un conjunto de valores puesto a ojo en vez de derivado.
+
+> La lista de valores que hay que mirar es la misma clase de cosa que las
+> listas de campos, que las listas de búsquedas y que los topes de argumentos:
+> **escritas a mano, pueden quedar cortas sin que nada se note.**
+
+Y el patrón del arreglo es el de la cota derivada: no «más rangos», sino una
+condición que no dependa de enumerar. Aquí, la de que un carácter sea raro de
+verdad:
+
+- no es imprimible
+- no es espacio ni tabulador ni salto
+- no es ASCII
+- y no está en el rango de la puntuación de Unicode, que sí puede aparecer
+
+Que son cuatro condiciones y ninguna lista.
+## 18. Y la que se parece más a un agujero: un «roto» que no es el roto
+
+MEDIDO, y esto es lo que más cuesta del bloque:
+
+```
+la variante ROTA que puse:   sueltas[0] + 1   ->  senala la 5   ->  el test PASA
+la variante ROTA de verdad:  apertura + 1     ->  senala la 3   ->  el test FALLA
+```
+
+La primera no era la versión anterior del código: era **otra cosa que parece la
+versión anterior**. Y el caso no la mató, porque no podía: no era el fallo que
+se suponía que cubría.
+
+Y por qué importa más de lo que parece:
+
+> un caso que no muere ante un mutante equivocado no es un caso aprobado; es un
+> caso que solo se ha probado contra lo que su autor imaginó.
+
+Y el síntoma es el peor de los posibles, porque **no da ninguno**: el caso pasa,
+el guardia está bien, y la hoja de ruta dice «cubierto». La cobertura aparente
+y la cobertura real han divergido y no hay forma de verlo desde dentro.
+
+Y de dónde sale el error, y aquí está la regla:
+
+> **el mutante tiene que salir del HISTORIAL, no de la imaginación.**
+
+Y eso se puede hacer, y es una línea: `git show` del commit que corrigió el
+defecto da la expresión exacta. Escribirla de memoria —como hice— produce algo
+plausible y falso a la vez.
+
+Y la segunda forma de la misma, medida en el mismo bloque:
+
+```
+lo que ESPERABA que hiciera:   AssertionError, porque el caso «mata»
+lo que hace el caso bueno:      no lanza nada, que es lo correcto
+```
+
+Un testigo que calla es un testigo que pasa. Confundir «no lancé nada» con «fallé»
+es el mismo error con el signo cambiado: los dos TIMES el papel de un resultado
+sin interpretarlo.
+
+### La forma que sí aguanta
+
+Los dos fallos de este bloque eran del **guardián de la medición**, no de lo que
+medía. Y esa es la misma forma de la sección 6, pero vista desde el otro lado:
+
+- la sección 6 dice: un detector que produce un diagnóstico falso sobre algo que
+  está bien es peor que uno que no mira;
+- esta dice: un caso que pasa ante algo que está mal es peor que un caso que no
+  existe.
+
+Y los dos se evitan con lo mismo, y es una sola cosa: **el resultado hay que
+compararlo con algo**. Con el valor medido, o con la versión anterior real.
