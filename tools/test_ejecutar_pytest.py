@@ -2486,9 +2486,18 @@ tiene dos."""
     return salida
 
 
-def _mensajes_plantilla():
+def _mensajes_plantilla(carpeta=None):
     """Los mensajes que se construyen SOLO cuando algo va mal. Y no solo los
     de `assert`.
+
+    Y POR QUE RECIBE UNA CARPETA, y no es comodidad
+
+    MEDIDO: sin el no hay forma de dirigir el barrido a un
+    directorio inventado, y sin eso esta comprobacion no
+    se puede ejecutar fuera del repositorio. Que es el mismo
+    hueco que el del guardia de control, y con el mismo
+    arreglo: una pieza a la que se pueda llamar con un
+    caso inventado.
 
     Y el cambio es el del punto 2 de R2, que decia: el alcance son solo los
     `assert`, y el nombre del test puede leerse mas amplio que su
@@ -2526,7 +2535,8 @@ def _mensajes_plantilla():
         - nada de `pytest.raises`, ni de `warnings.warn`, ni de `print`. Que
           son las tres rutas que quedan por mirar, y son OTRA TAREA con su
           propio corpus, no un parche de este detector."""
-    carpeta = os.path.join(ROOT, CARPETA_DE_MENSAJES)
+    if carpeta is None:
+        carpeta = os.path.join(ROOT, CARPETA_DE_MENSAJES)
     assert os.path.isdir(carpeta), (
         'la carpeta de mensajes tiene que existir, y no existe: %s. Un barrido '
         'sobre una carpeta que no esta encuentra cero plantillas, CERO, y con '
@@ -2537,15 +2547,50 @@ def _mensajes_plantilla():
         if not nombre.endswith('.py'):
             continue
         ruta = os.path.join(carpeta, nombre)
+        # Y DOS EXCEPCIONES EN DOS OPERACIONES, que es lo que R2 senala y
+        # lo que este bloque habia desincronizado.
+        #
+        # MEDIDO, antes, con un directorio inventado:
+        #
+        #     uno bien             -> NO FALLO
+        #     sintaxis invalida    -> SyntaxError de Python   nombra el
+        #                              fichero: False
+        #     no es utf-8          -> mi AssertionError       nombra el
+        #                              fichero: True
+        #
+        # O sea que de las DOS palabras del except una seguia viva y la
+        # otra era adorno: el parse se habia ido dentro de
+        # `_plantillas_de`, que se llama DESPUES del try. Y una palabra
+        # del except no sobra por vieja: sobra porque la operacion que
+        # puede darla ya no esta dentro.
+        #
+        # Y por que importa mas de lo que parece: mi mensaje dice «no se
+        # ha podido NI LEER» y escribe el nombre del fichero; el
+        # SyntaxError de Python dice «invalid syntax» y la posicion, y NO
+        # el nombre. Con 109 ficheros en el alcance, un fallo sin nombre
+        # es un fallo que obliga a buscar.
         try:
             fuente = io.open(ruta, encoding='utf-8').read()
-        except (SyntaxError, UnicodeDecodeError) as e:
+        except UnicodeDecodeError as e:
             raise AssertionError(
-                '%s no se ha podido NI LEER (%s). Un fichero que no se lee no '
-                'se mira, y un fichero que no se mira no aparece en el '
-                'barrido, y eso es verde por no mirar. Por eso aqui no se '
-                'salta: se para.' % (nombre, e))
-        for clase, numero, plantilla in _plantillas_de(fuente):
+                '%s no se ha podido LEER (%s). Un fichero que no se lee no se '
+                'mira, y un fichero que no se mira no aparece en el barrido, y '
+                'eso es verde por no mirar. Por eso aqui no se salta: se '
+                'para.' % (nombre, e))
+        try:
+            plantillas = _plantillas_de(fuente)
+        except SyntaxError as e:
+            raise AssertionError(
+                '%s tiene SINTAXIS INVALIDA (%s). MEDIDO, antes: el except de '
+                'este bloque llevaba SyntaxError junto a UnicodeDecodeError, '
+                'pero el parse estaba DENTRO de la llamada que esta despues '
+                'del try. O sea que la palabra no sobraba por vieja: sobraba '
+                'porque la operacion que puede dar esa excepcion ya no estaba '
+                'dentro. Y una lista de excepciones que no corresponde con su '
+                'bloque tiene una rama que es adorno, que es peor que un '
+                'except que falta, porque parece que hay una comprobacion.'
+                % (nombre, e))
+        for clase, numero, plantilla in plantillas:
             encontrados.append((clase, nombre, numero, plantilla))
     return encontrados
 
@@ -3389,3 +3434,192 @@ def test_la_clase_de_un_mensaje_viene_del_arbol_no_del_texto():
         'linea de la palabra `raise`, de modo que el cuarto caso —un raise '
         'partido— se cuenta en la linea 5 y no en la 7. Y eso es lo que hay '
         'que comprobar: que la linea tambien venga del arbol.' % lineas)
+
+def test_cada_excepcion_del_barrido_nombra_su_fichero():
+    """El except que ya no podia coger lo que decia coger.
+
+    Y el caso es el que MEDIDO salio: un `.py` con sintaxis invalida salia
+    como `SyntaxError` de Python, que NO nombra el fichero. Y el otro, un `.py`
+    que no es UTF-8, si llevaba mi mensaje, que si lo nombra.
+
+    O sea que de las dos ramas del except una estaba viva y la otra era
+    adorno. Y un adorno en un except es peor que un except que falta, porque
+    parece que hay una comprobacion.
+
+    Y van los DOS casos, porque el que funciona tambien puede romperse: si
+    alguien ensancha el except a `Exception` para «ser mas robusto», los dos
+    mensajes desaparecen a la vez —y este test lo veria, porque mira que el
+    NOMBRE este en el texto.
+
+    Y por que se mira el nombre y no el tipo de excepcion: porque el nombre es
+    lo que hace falta. Con 109 ficheros en el alcance, un fallo que no dice
+    cual es obliga a buscar; uno que lo dice no. Y el tipo puede cambiar sin
+    que el diagnostico empeore, que es justo lo que permite arreglar esto sin
+    reescribir la prueba."""
+    def _barrido_con(nombre, escribir):
+        # Y UN DIRECTORIO POR CASO, que es lo que hace falta.
+        #
+        # MEDIDO, el fallo de la version anterior: un solo directorio con
+        # `bien.py`, `latin.py` y `roto.py`. El barrido se para en el PRIMERO
+        # que falla, y como `sorted` los da en orden alfabetico, ese era
+        # siempre `latin.py`. O sea que el caso de `roto.py` no llegaba a
+        # existir: el test no fallaba, es que el INSTRUMENTO no sabia medir
+        # el caso que se le pedia.
+        #
+        # Y con `roto.py` y `latin.py` cambiados de nombre, el test habria
+        # pasado sin comprobar nada. Que es una forma nueva de la familia, y
+        # la mas discreta hasta ahora: un test que depende del ORDEN de los
+        # ficheros y mide uno de ellos.
+        with tempfile.TemporaryDirectory() as alta:
+            escribir(os.path.join(alta, nombre))
+            try:
+                _mensajes_plantilla(alta)
+                return 'NO FALLO'
+            except AssertionError as e:
+                return str(e)
+            except Exception as e:          # noqa: BLE001
+                return '%s de Python: %s' % (type(e).__name__, e)
+
+    def _roto(ruta):
+        io.open(ruta, 'w', encoding='utf-8').write('def f(:' + chr(10))
+
+    def _latin(ruta):
+        io.open(ruta, 'wb').write(b'x = 1' + bytes([10]) + b'y = "' + bytes([0xa1])
+            + bytes([0xa8]) + b'"')
+
+    for nombre, marca, escribir in (
+            ('roto.py', 'SINTAXIS INVALIDA', _roto),
+            ('latin.py', 'no se ha podido LEER', _latin)):
+        fallo = _barrido_con(nombre, escribir)
+        assert marca in fallo, (
+            'el fichero `%s` produce «%s», y se esperaba un mensaje que '
+            'dijera «%s». MEDIDO, antes: `roto.py` salia como `SyntaxError` de '
+            'Python, que NO nombra el fichero, porque el parse se habia ido de '
+            'dentro del try.' % (nombre, fallo[:90], marca))
+        assert nombre in fallo, (
+            'el mensaje sale de Python y no nombra el fichero: «%s». Y eso es '
+            'lo que importa: con 109 ficheros en el alcance, un fallo que no '
+            'dice cual es obliga a buscar.' % fallo[:120])
+
+    # Y que un directorio SANO no da ningun hallazgo, que es la tercera mitad.
+    with tempfile.TemporaryDirectory() as alta:
+        io.open(os.path.join(alta, 'bien.py'), 'w',
+                encoding='utf-8').write('assert x, "nada %s" % y' + chr(10))
+        assert len(_mensajes_plantilla(alta)) == 1, (
+            'un directorio con un `.py` sano y un `assert` con formato tiene '
+            'que dar UN hallazgo. MEDIDO, que es lo que confirma que el test '
+            'mide el fallo y no elalto del ruido.')
+
+
+# ============================ 22. EL GUARDIA DE LOS TESTS QUE DESAPARECEN
+#
+# Y este es el que R1 pide y que estaba en el sitio donde no se guarda: el
+# parche. MEDIDO, lo que llevo un bloque:
+#
+#     @@ -3114,170 +3164 @@ BUSQUEDAS_ACEPTADAS = ()
+#     -def test_no_hay_busquedas_sobre_fuente_sin_declarar():
+#     -def test_el_inventario_de_busquedas_detecta_una_decoracion():
+#     -def test_el_barrido_de_mensajes_alcanza_los_raise_y_solo_los_de_tools():
+#
+# TRES TESTS, y la suite no dio ni un fallo. Porque un test que desaparece no
+# rompe nada —no hay nada que ejecutar— y el parse pasa.
+#
+# Y por eso este guardia esta en un TEST y no en un parche: un parche se
+# ejecuta una vez, y esto tiene que comprobarse en cada suite.
+#
+# Y CUENTA EL REPO ENTERO, porque una regla que dice «el repo» tiene que
+# mirar el repo. Ya paso una vez que una decia «el repo» y miraba dos ficheros
+# de quince.
+#
+# Y por el ARBOL y no por `grep`: `def test_` puede aparecer en la prosa de un
+# docstring, y contarlo seria contar prosa. MEDIDO, hoy en este fichero los dos
+# dan 43 — y eso es «hoy no pasa», no «no puede pasar».
+#
+# Y lo que NO esta en el alcance, declarado: la raiz del repositorio. MEDIDO:
+# en la raiz solo hay `hand_editor.py`. Y `asistente_live.py` no esta ahi:
+# vive en `motor/`, es `motor/test_asistente_live.py`, y esta dentro del
+# alcance, con 88 tests.
+CARPETAS_DEL_INVENTARIO = ('tools', 'motor', 'recorder')
+
+# MEDIDO, en este momento:
+#
+#     tools       459 tests
+#     motor       834 tests
+#     recorder      4 tests
+#
+# Y son TRES cifras y no ochenta y nueve filas, porque un inventario por
+# fichero de 89 filas es una tabla que nadie mantiene, y una tabla que nadie
+# mantiene es decoracion.
+#
+# Y el coste de que sea el repo entero es que CUALQUIER test nuevo en
+# cualquier fichero rompe este guardia. Que es lo que se quiere: que anadir un
+# test sea una decision consciente y no un efecto colateral.
+TESTS_POR_CARPETA = {'tools': 461, 'motor': 834, 'recorder': 4}
+
+
+def _tests_de(directorio):
+    """Cuantos `def test_` hay en los `.py` de `directorio`, por el ARBOL.
+
+    Y por el arbol, y no por `grep`: `def test_` puede aparecer dentro de un
+    docstring —este mismo fichero lo menciona al explicar por que se cuenta—
+    y contarlo seria contar prosa. Que es el mismo motivo por el que el
+    inventario de campos se cuenta con `ast.Tuple` y no con un patron.
+
+    Y aqui, al reves que en el barrido de mensajes, la excepcion de Python SI
+    nombra el fichero —`SyntaxError` lleva el nombre en su mensaje—, y por eso
+    no hace falta una mia. MEDIDO, y conviene decirlo porque son dos ficheros
+    que hacen lo mismo con dos politicas distintas, y sin decir nada parece
+    incoherencia."""
+    total = 0
+    for nombre in sorted(os.listdir(directorio)):
+        if not nombre.endswith('.py'):
+            continue
+        try:
+            arbol = ast.parse(io.open(os.path.join(directorio, nombre),
+                                      encoding='utf-8').read())
+        except (SyntaxError, UnicodeDecodeError) as e:
+            raise AssertionError(
+                '%s no se ha podido leer ni parsear (%s). Y MEDIDO: aqui la '
+                'excepcion de Python SI nombra el fichero, que es lo que la '
+                'hace aceptable, mientras que en el barrido de mensajes habia '
+                'que escribir una propia.' % (nombre, e))
+        total += sum(1 for nodo in ast.walk(arbol)
+                     if isinstance(nodo, (ast.FunctionDef,
+                                          ast.AsyncFunctionDef))
+                     and nodo.name.startswith('test_'))
+    return total
+
+
+def test_no_ha_desaparecido_ningun_test():
+    """Y que el recuento no se pueda quedar satisfecho por una lista vacia.
+
+    MEDIDO: 1299 tests en 89 ficheros, en tres carpetas.
+
+    Y el suelo no es un total sino TRES cifras, una por carpeta. Porque un
+    total con una cifra magica no dice nada cuando se rompe —dice «1299 !=
+    1298» y hay que adivinar donde— y una cifra por carpeta ya lo dice.
+
+    Y el fallo que este guardia evita, MEDIDO, con el parche que lo produjo:
+
+        @@ -3114,170 +3164 @@ BUSQUEDAS_ACEPTADAS = ()
+        -def test_no_hay_busquedas_sobre_fuente_sin_declarar():
+        -def test_el_inventario_de_busquedas_detecta_una_decoracion():
+        -def test_el_barrido_de_mensajes_alcanza_los_raise_y_solo_los_de_tools():
+
+    tres tests, el parse bien, y la suite sin un fallo. Un test que desaparece
+    no rompe nada porque no hay nada que ejecutar, y ese es el motivo por el
+    que hace falta un guardia que mire el RECUENTO y no el resultado de la
+    suite: el resultado de la suite no puede notar que falta un test."""
+    medido = dict((carpeta, _tests_de(os.path.join(ROOT, carpeta)))
+                  for carpeta in CARPETAS_DEL_INVENTARIO)
+    assert medido == TESTS_POR_CARPETA, (
+        'el numero de tests por carpeta no es el declarado:%s%s\n\n'
+        'Si ha BAJADO, ha desaparecido un test, y eso no rompe nada por si '
+        'mismo —no hay nada que ejecutar— y por eso hace falta este guardia.\n'
+        '\n'
+        'Si ha SUBIDO, hay que actualizar `TESTS_POR_CARPETA` a mano, y esa es '
+        'la parte incomoda: es el precio de que anadir un test sea una decision '
+        'consciente. Un guardia que se actualiza solo no vigila nada.'
+        % (chr(10).join('    %-9s declarado %d  medido %d'
+                        % (c, TESTS_POR_CARPETA[c], medido[c])
+                        for c in CARPETAS_DEL_INVENTARIO), chr(10)))
