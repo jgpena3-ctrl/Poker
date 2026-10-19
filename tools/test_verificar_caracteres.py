@@ -284,25 +284,109 @@ def test_el_numero_de_hallazgos_es_el_declarado():
         % VC.SOSPECHOSOS_ABAJO)
 
 
-def test_los_hallazgos_estan_declarados_en_el_documento():
-    """Que cada hallazgo tenga su sitio en la declaracion.
+# -*- coding: utf-8 -*-
+"""El test que ata la declaracion, hallazgo por hallazgo."""
+import io
+import os
+import unicodedata
 
-    Y no con el CARACTER, que no se puede escribir en crudo sin contaminar el
-    fichero: con el NOMBRE Unicode, que es lo que el barrido produce y lo que
-    identifica al hallazgo sin ambiguedad.
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DOC = os.path.join(ROOT, 'DOCS', 'HALLAZGOS_DECLARADOS.md')
 
-    Y el caso del U+0435, que es el que hace falta mirar: el MISMO caracter es
-    un ejemplo INTENCIONADO en un documento y una corrupcion en otro, y la
-    excepcion es POR SITIO. De modo que el nombre aparece en el documento
-    declarado —como ejemplo— y no como hallazgo.
+
+def _filas_de_la_declaracion():
+    """Las filas de la tabla de hallazgos del documento de declaracion.
+
+    Y se PARSEAN, y no se buscan con un `in`. Y el motivo es el que R2
+    senalo: un `in` encuentra el NOMBRE en cualquier parte del documento, y
+    no dice si el hallazgo esta asociado al FICHERO correcto, al PUNTO DE
+    CODIGO correcto, y a una JUSTIFICACION concreta.
+
+    Y una declaracion en la que el nombre aparece pero el fichero es el
+    equivocado sigue siendo una declaracion falsa, y es la clase de error que
+    este bloque lleva cuarenta y seis bloques corrigiendo: una afirmacion
+    sobre una magnitud medida con otra.
     """
-    doc = io.open(os.path.join(ROOT, 'DOCS', 'HALLAZGOS_DECLARADOS.md'),
-                  encoding='utf-8').read()
-    for _ruta, c, _nombre in VC.revisar():
-        nombre = unicodedata.name(c)
-        assert nombre in doc, (
-            'el hallazgo %s no esta declarado en `DOCS/HALLAZGOS_DECLARADOS.md`. '
-            'Y un hallazgo que no se corrige y no se declara es un fallo '
-            'esperando a que alguien lo encuentre por sorpresa.' % nombre)
+    with io.open(DOC, encoding='utf-8') as f:
+        lineas = f.read().split('\n')
+    filas = []
+    dentro = False
+    for l in lineas:
+        if l.startswith('| fichero |'):
+            dentro = True
+            continue
+        if not dentro:
+            continue
+        if not l.startswith('|'):
+            break
+        celdas = [c.strip() for c in l.strip('|').split('|')]
+        if len(celdas) != 4:
+            continue
+        if set(''.join(celdas)) <= set('-: '):
+            continue
+        filas.append(celdas)
+    return filas
+
+
+def test_los_hallazgos_estan_declarados_en_el_documento():
+    """Que CADA hallazgo este declarado con su fichero, su punto de codigo y
+    su motivo. Y no solo con su nombre.
+
+    Y esto es lo que R2 senalo, y es un matiz que delimita el contrato de los
+    tests: antes, el test comprobaba que el nombre Unicode de cada hallazgo
+    apareciera EN ALGUN SITIO del documento. Eso no dice:
+
+      · que el hallazgo este asociado al FICHERO correcto;
+      · ni que el punto de codigo sea el correcto;
+      · ni que haya una justificacion concreta.
+
+    Y una declaracion en la que el nombre aparece pero el fichero es el
+    equivocado sigue siendo una declaracion falsa.
+
+    Y el modo de comprobarlo es comparar LOS CONJUNTOS: lo declarado contra lo
+    MEDIDO. Y por que conjuntos y no «cada fila esta en el fichero»: porque
+    «cada fila esta» no dice que no haya filas de mas, y una fila de mas es
+    un hallazgo declarado que no existe.
+
+    Y el motivo se comprueba que EXISTA, y no que sea bueno: que sea bueno lo
+    lee quien lo lee, y un test no puede juzgar un texto. Lo que si puede es
+    decir que no es un marcador de posicion vacio.
+    """
+    import verificar_caracteres as VC
+
+    filas = _filas_de_la_declaracion()
+    assert filas, (
+        'la tabla de hallazgos de `DOCS/HALLAZGOS_DECLARADOS.md` esta vacia, o '
+        'no tiene el formato que se espera: cuatro celdas por fila.')
+
+    declarados = {}
+    for fichero, nombre, codepoint, motivo in filas:
+        clave = (fichero.strip('`'), nombre.strip('`'), codepoint.strip())
+        declarados[clave] = motivo.strip()
+
+    medidos = {}
+    for ruta, c, _nombre in VC.revisar():
+        rel = os.path.relpath(ruta, ROOT).replace(os.sep, '/')
+        medidos[(rel, unicodedata.name(c), 'U+%04X' % ord(c))] = True
+
+    faltan = sorted(set(medidos) - set(declarados))
+    sobran = sorted(set(declarados) - set(medidos))
+    assert not faltan, (
+        'hay %d hallazgo(s) MEDIDOS que no estan declarados: %r. Y un '
+        'hallazgo que no se declara es un fallo esperando a que alguien lo '
+        'encuentre por sorpresa.' % (len(faltan), faltan))
+    assert not sobran, (
+        'hay %d fila(s) DECLARADAS que no corresponden a ningun hallazgo: %r. '
+        'Y una declaracion de un hallazgo que no existe es peor que no '
+        'declararlo: hace creer que se ha mirado algo que no se ha mirado.'
+        % (len(sobran), sobran))
+
+    for clave, motivo in sorted(declarados.items()):
+        assert motivo, (
+            'el hallazgo %r no tiene motivo escrito. Y un hallazgo sin '
+            'motivo es una lista de Ebola, no una declaracion.' % (clave,))
+        assert motivo.strip(' .') not in ('-', '—', 'TODO', '...'), (
+            'el motivo del hallazgo %r es un marcador de posicion, no un '
+            'motivo.' % (clave,))
 
 # --- y la declaracion, que es lo que hace que «preexistente» sea una cosa ---

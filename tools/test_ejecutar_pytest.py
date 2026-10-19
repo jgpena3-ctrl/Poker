@@ -3628,7 +3628,7 @@ CARPETAS_DEL_INVENTARIO = ('tools', 'motor', 'recorder')
 # fichero de esa taille es una tabla que nadie mantiene, y una tabla que nadie
 # mantiene es decoracion.
 
-TESTS_POR_CARPETA = {'motor': 834, 'recorder': 4, 'tools': 484}
+TESTS_POR_CARPETA = {'motor': 834, 'recorder': 4, 'tools': 485}
 
 
 # Y los FICHEROS, que son OTRA medida. MEDIDO, y sin ellos el guardia
@@ -4926,3 +4926,55 @@ def test_las_dos_funciones_tienen_la_misma_politica():
             assert raises, (
                 '%s no lanza nada en su manejador, y lo que tiene que hacer es '
                 'PARAR y nombrar el fichero' % nombre)
+
+
+
+# ============================ 28. LA DECLARACION, ATADA HALLAZGO POR HALLAZGO
+#
+# Y esto es el matiz que R2 senalo: que el documento que declara los hallazgos
+# este asociado a los hallazgos de verdad, y no solo a sus nombres.
+
+
+def test_el_docstring_descuadrado_declarado_esta_donde_dice():
+    """Que la declaracion apunte al docstring REAL, y no a uno inventado.
+
+    Y el motivo de que este test exista: la declaracion dice «el docstring
+    descuadrado de `motor/asistente_live.py`», y sin comprobarlo el documento
+    podria estar nombrando un desfase que ya no esta, o ninguno.
+
+    Y la LINEA se compara con la del documento, y no solo el fichero. Y es el
+    mismo patron que el hash de `CANAL_MANUAL_CERRADO.md`: una cifra
+    declarada, y un test que la compara con la medida. Y una declaracion que
+    nombra un sitio que ya no es el suyo es una declaracion falsa.
+
+    Y MEDIDO, que el desfase sigue ahi: una linea a la columna 0 dentro de un
+    docstring que esta a la columna 8.
+    """
+    with io.open(os.path.join(ROOT, 'motor', 'asistente_live.py'),
+                 encoding='utf-8') as f:
+        texto = f.read()
+    hallados = _docstrings_descuadrados(texto)
+    assert len(hallados) == 1, (
+        'MEDIDO, en `motor/asistente_live.py` hay %d docstrings descuadrados, '
+        'y la declaracion dice que hay uno: %r. O el desfase se ha corregido —y '
+        'entonces la declaracion esta vieja— o hay otro, y la declaracion esta '
+        'incompleta.' % (len(hallados), hallados))
+    _nombre, linea, _cuenta = hallados[0]
+
+    with io.open(os.path.join(ROOT, 'DOCS', 'HALLAZGOS_DECLARADOS.md'),
+                 encoding='utf-8') as f:
+        doc = f.read()
+    filas = [l for l in doc.split(chr(10))
+             if l.startswith('| `motor/asistente_live.py` |')]
+    assert len(filas) == 1, (
+        'la declaracion tiene %d filas para el docstring descuadrado, y se '
+        'espera UNA: %r' % (len(filas), filas))
+    celdas = [c.strip() for c in filas[0].strip('|').split('|')]
+    assert len(celdas) == 3, (
+        'la fila tiene %d celdas, y se esperan tres: fichero, linea y que es'
+        % len(celdas))
+    assert celdas[1] == str(linea), (
+        'la declaracion dice la linea %s y la real es la %d. Y una declaracion '
+        'que nombra un sitio que ya no es el suyo es una declaracion falsa.'
+        % (celdas[1], linea))
+    assert celdas[2], 'y la tercera celda, que es el QUE ES, esta vacia'

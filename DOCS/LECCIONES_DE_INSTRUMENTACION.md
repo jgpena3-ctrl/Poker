@@ -816,3 +816,65 @@ uno que se puede ejecutar las que haga falta. Y el motivo por el que no lo
 puse la primera vez es que **el script me servia para una vez** y no para
 repetirse: y esa es exactamente la clase de error que se paga una vez
 pagada.
+## 24. Una declaración que solo ata los NOMBRES no ata la declaración
+
+MEDIDO, y el hueco, que es lo que R2 señaló y que estaba en un test mío:
+
+> el test comprobaba que el NOMBRE Unicode de cada hallazgo apareciera **en
+> algún sitio** del documento. Eso no dice que el hallazgo esté asociado al
+> **fichero** correcto, ni al **punto de código** correcto, ni que tenga una
+> **justificación** concreta.
+
+Y una declaración en la que el nombre aparece pero el fichero es el
+equivocado sigue siendo una declaración falsa.
+
+MEDIDO, con nueve mutaciones sobre la tabla de hallazgos, una por una:
+
+```
+el fichero equivocado                  ->  el test lo nota
+el punto de codigo equivocado          ->  el test lo nota
+el nombre equivocado                   ->  el test lo nota
+una fila de mas, de un hallazgo que no existe  ->  el test lo nota
+un motivo vacio                        ->  el test lo nota
+un motivo de marcador de posicion      ->  el test lo nota
+la linea equivocada del docstring      ->  el test lo nota
+el fichero equivocado del docstring    ->  el test lo nota
+la fila del docstring que no esta      ->  el test lo nota
+```
+
+Y la FORMA que ata, que son dos cosas:
+
+> **una declaración POR HALLAZGO**, con `(fichero, nombre, punto de código,
+> motivo)`, y una comparación de **CONJUNTOS**: lo declarado contra lo medido.
+
+Y por qué conjuntos y no «cada fila está en el fichero»:
+
+> «cada fila está» **no dice que no haya filas de más**, y una fila de más es
+> un hallazgo declarado que no existe — que es peor que no declararlo, porque
+> hace creer que se ha mirado algo que no se ha mirado.
+
+Y el motivo se comprueba que **exista**, y no que sea bueno: que sea bueno lo
+lee quien lo lee, y un test no puede juzgar un texto. Lo que sí puede es
+decir que no es un marcador de posición vacío.
+
+### Y la clase general
+
+> **Una comprobación que mira el NOMBRE de una cosa no la ata a esa cosa.**
+> Nombra la manera de escribirla, no la cosa.
+
+Y el ejemplo de al lado, que es el de siempre: una lista de campos derivada
+del corpus, una lista de búsquedas, un tope de argumentos. Todas se comprueban
+por su **forma**, y por eso se pueden atar al objeto.
+
+### Y lo que R2 dijo que también es una lección
+
+> Eso no invalida el cierre; **delimita exactamente qué contrato cubren esos
+> tests**.
+
+Y eso es una regla que no estaba escrita:
+
+> **Un test debe decir qué contrato cubre.** Un test que cubre menos de lo
+> que su nombre sugiere es peor que uno que no existiera, porque su nombre
+> promete más de lo que cumple. Y el que acompaña al nombre con «y NINGUNA de
+> esas dos comprobaciones, por sí sola, garantiza que…» es exactamente la
+> clase de matiz que hace que un cierre sea un cierre y no una afirmación.

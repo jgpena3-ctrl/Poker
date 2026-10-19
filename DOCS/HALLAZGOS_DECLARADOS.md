@@ -27,11 +27,16 @@ limpieza, y una limpieza mueve cosas que nadie ha medido.
 Los hallazgos se nombran por su **nombre Unicode** y su **punto de código**, y
 **no se reproducen**. Y no es una manía: este fichero está en el alcance del
 barrido de caracteres, de modo que reproducir un carácter sospechoso aquí
-sería **meter dos hallazgos nuevos**, y DECLARA el propio documento que los
+sería **meter dos hallazgos nuevos**, y declarar el propio documento que los
 declara.
 
 > Un documento que declara los defectos no puede contenerlos. Y esa es la
 > misma clase de error que un test que se señala a sí mismo.
+
+Y las tablas de abajo **se comprueban una por una**, hallazgo por hallazgo:
+que el fichero sea el de verdad, que el punto de código sea el de verdad, y
+que el motivo esté escrito. No basta con que el nombre Unicode aparezca en
+algún sitio del documento.
 
 ## 1. Los 11 caracteres sospechosos
 
@@ -42,55 +47,39 @@ la forma que tiene el proyecto de que una cifra y su sitio no se separen.
 Y el barrido los encuentra por el **nombre Unicode** del carácter, y no por
 rangos: `DOCS/LECCIONES_DE_INSTRUMENTACION.md` §19.
 
-### 1.1 Los tres árabes — `motor/test_asistente_live.py`
-
-MEDIDO, y lo que son: `ARABIC LETTER BEH` (U+0628), `ARABIC LETTER TEH`
-(U+062A) y `ARABIC LETTER REH` (U+0631), **dentro de una palabra española**.
-O sea que no es alfabeto: es una sustitución.
-
-MEDIDO, y por qué los ve ahora y no antes: los rangos que tenía el barrido
-iban de `0x3000` a `0x9FFF`, y el árabe está entre `0x0600` y `0x06FF`. O
-sea que el barrido **no los veía**, y ahora sí.
-
-**Por qué no se tocan:** el fichero es `motor/test_asistente_live.py`, que
-está en la lista de «no tocar» de esta línea de trabajo, y la corrección —sea
-cual sea— la tiene que hacer quien mantiene ese fichero.
-
-### 1.2 Los dos BOM — `DOCS/APRENDIZAJE.md` y `DOCS/PROYECTO.md`
-
-MEDIDO: `ZERO WIDTH NO-BREAK SPACE` (U+FEFF), al principio de los dos. O sea
-un BOM, que es un byte que no se ve y que hace que el fichero se lea
-distinto.
-
-Y el barrido viejo no lo veía tampoco: de los invisibles solo cubría el
-`U+FFFD`, el carácter de reemplazo.
-
-**Por qué no se tocan:** son documentos, y un BOM al principio de un `.md` es
-inofensivo para el contenido. Se declara para que no se pierda de vista, y
-para que el día que se limpien sea una decisión y no un descuido.
-
-### 1.3 Los cinco cirílicos y la coma CJK
-
-| fichero | nombre Unicode | punto de código | qué es |
+| fichero | nombre Unicode | punto de código | por qué no se toca |
 |---|---|---|---|
-| `tools/test_disciplina_de_los_tests.py` | `CYRILLIC SMALL LETTER O` | U+043E | dentro de la palabra «hero» |
-| `motor/test_canal_manual.py` | `CYRILLIC SMALL LETTER IE` | U+0435 | dentro de «exactamente» |
-| `motor/test_canal_manual.py` | `CYRILLIC SMALL LETTER ES` | U+0441 | dentro de «exactamente» |
-| `motor/test_canal_manual.py` | `CYRILLIC SMALL LETTER TE` | U+0442 | dentro de «exactamente» |
-| `motor/test_canal_manual.py` | `CYRILLIC SMALL LETTER YA` | U+044F | dentro de «exactamente» |
-| `motor/test_auditar_rango.py` | `IDEOGRAPHIC COMMA` | U+3001 | una coma CJK colada entre dos palabras |
+| `motor/test_asistente_live.py` | `ARABIC LETTER BEH` | U+0628 | fichero de «no tocar», y la correccion la hace quien lo mantiene |
+| `motor/test_asistente_live.py` | `ARABIC LETTER TEH` | U+062A | fichero de «no tocar», y la correccion la hace quien lo mantiene |
+| `motor/test_asistente_live.py` | `ARABIC LETTER REH` | U+0631 | fichero de «no tocar», y la correccion la hace quien lo mantiene |
+| `DOCS/APRENDIZAJE.md` | `ZERO WIDTH NO-BREAK SPACE` | U+FEFF | un BOM en un `.md` es inofensivo para el contenido |
+| `DOCS/PROYECTO.md` | `ZERO WIDTH NO-BREAK SPACE` | U+FEFF | un BOM en un `.md` es inofensivo para el contenido |
+| `tools/test_disciplina_de_los_tests.py` | `CYRILLIC SMALL LETTER O` | U+043E | preexistente, y el alcance de un bloque es su cambio |
+| `motor/test_canal_manual.py` | `CYRILLIC SMALL LETTER IE` | U+0435 | fichero de «no tocar», y la correccion la hace quien lo mantiene |
+| `motor/test_canal_manual.py` | `CYRILLIC SMALL LETTER ES` | U+0441 | fichero de «no tocar», y la correccion la hace quien lo mantiene |
+| `motor/test_canal_manual.py` | `CYRILLIC SMALL LETTER TE` | U+0442 | fichero de «no tocar», y la correccion la hace quien lo mantiene |
+| `motor/test_canal_manual.py` | `CYRILLIC SMALL LETTER YA` | U+044F | fichero de «no tocar», y la correccion la hace quien lo mantiene |
+| `motor/test_auditar_rango.py` | `IDEOGRAPHIC COMMA` | U+3001 | fichero de «no tocar», y la correccion la hace quien lo mantiene |
 
-MEDIDO, y el primero está en un fichero de `tools/`, que sí es de esta línea
-de trabajo. Y **aun así no se toca**, y el motivo es el mismo que el de los
-demás: **es preexistente**, y el alcance de un bloque es el cambio que
-introduce, no la limpieza del repo entero.
+### Y por qué los tres árabes no los veía el barrido viejo
 
-> Y esto tiene un precio, y el precio se paga aquí: una `o` cirílica en un
-> comentario es indistinguible de una `o` normal para quien lee. Lo que se
-> puede hacer es **declararlo**, que es lo que hace este documento, y no fingir
-> que no existe.
+MEDIDO: los rangos que tenía el barrido iban de `0x3000` a `0x9FFF`, y el
+árabe está entre `0x0600` y `0x06FF`. O sea que el barrido **no los veía**, y
+ahora sí. Y lo mismo con el BOM: de los invisibles solo cubría el `U+FFFD`,
+el carácter de reemplazo.
 
-### 1.4 Y el que NO se toca, y es el más importante
+### Y el precio que se paga, y que se declara
+
+Una `o` cirílica en un comentario es indistinguible de una `o` normal para
+quien lee. Y el de `tools/test_disciplina_de_los_tests.py` está en un fichero
+que **sí** es de esta línea de trabajo, y aun así no se toca, porque es
+preexistente: el alcance de un bloque es el cambio que introduce, no la
+limpieza del repo entero.
+
+Lo que se puede hacer es **declararlo**, que es lo que hace esta tabla, y no
+fingir que no existe.
+
+### Y el que NO se toca, y es el más importante
 
 `DOCS/INC-003_BARRIDO_DESTRUCTIVO.md` tiene un `CYRILLIC SMALL LETTER IE`
 (U+0435) **deliberado**: es el ejemplo del incidente, y el propio documento
@@ -103,9 +92,12 @@ ejemplo ni la corrupción.
 
 ## 2. El docstring descuadrado de `motor/asistente_live.py`
 
-MEDIDO: la línea 1365 tiene sangría 0, y el bloque de su docstring está en la
-columna 8. Es un desfase real, y no un falso positivo: el guardián lo
-comprueba contra el AST, y la línea pertenece al docstring.
+| fichero | línea | qué es |
+|---|---|---|
+| `motor/asistente_live.py` | 1365 | una línea a la columna 0 dentro de un docstring a la columna 8 |
+
+MEDIDO: es un desfase real, y no un falso positivo. El guardián lo comprueba
+contra el AST, y la línea pertenece al docstring.
 
 **Por qué el guardián no lo ve:** el guardián de docstrings tiene su alcance
 en `tools/`, y está declarado. Y está declarado **a propósito**: ampliarlo a
