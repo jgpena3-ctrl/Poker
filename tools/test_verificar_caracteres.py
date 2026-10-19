@@ -328,6 +328,72 @@ def _filas_de_la_declaracion():
     return filas
 
 
+def _problemas_de_la_declaracion(filas, medidos):
+    """Los problemas de la declaracion, y POR QUE cada uno.
+
+    Y sale como FUNCION, y no dentro del test, por el motivo que este bloque
+    lleva cuarenta y siete bloques repitiendo: **una comprobacion que solo se
+    puede ejecutar contra el repositorio tiene dientes para el repositorio y
+    ninguno para si misma.** Y este caso necesita una tabla INVENTADA, con
+    una fila duplicada, porque en el repositorio no hay ninguna.
+
+    Y `medidos` es un CONJUNTO de claves, y `filas` una lista de filas. Y el
+    motivo de que las filas sean una lista y no un diccionario:
+
+    > un diccionario DEDUPLICA POR CONSTRUCCION. De modo que una fila
+    > repetida con la misma clave se sobrescribe al construirlo, y la
+    > comparacion de conjuntos no la ve.
+
+    Y el principio, que es general, y que el repo ya tenia escrito en otros
+    sitios —`len(lista) == len(set(lista))`, y `defaultdict(list)`—:
+
+    > **EL INSTRUMENTO NO PUEDE SER EL MISMO QUE LO QUE SE QUIERE
+    > COMPROBAR.** Para comprobar que no hay duplicados hace falta una lista
+    > y un conjunto, no un conjunto.
+    """
+    declarados = []
+    for fichero, nombre, codepoint, motivo in filas:
+        declarados.append(((fichero.strip('`'), nombre.strip('`'),
+                            codepoint.strip()), motivo.strip()))
+    claves = [c for c, _m in declarados]
+
+    problemas = []
+
+    repetidas = sorted(c for c in set(claves) if claves.count(c) > 1)
+    if repetidas:
+        problemas.append(
+            'hay %d fila(s) DECLARADAS con la MISMA clave: %r. Y una fila '
+            'repetida es un hallazgo declarado dos veces, que hace creer que se '
+            'ha mirado algo mas de lo que se ha mirado. Y el numero de filas, '
+            'que es %d, no se parece al de hallazgos, que es %d: esa es la '
+            'pista.' % (len(repetidas), repetidas, len(claves), len(medidos)))
+
+    faltan = sorted(set(medidos) - set(claves))
+    if faltan:
+        problemas.append(
+            'hay %d hallazgo(s) MEDIDOS que no estan declarados: %r. Y un '
+            'hallazgo que no se declara es un fallo esperando a que alguien lo '
+            'encuentre por sorpresa.' % (len(faltan), faltan))
+
+    sobran = sorted(set(claves) - set(medidos))
+    if sobran:
+        problemas.append(
+            'hay %d fila(s) DECLARADAS que no corresponden a ningun hallazgo: '
+            '%r. Y una declaracion de un hallazgo que no existe es peor que no '
+            'declararlo: hace creer que se ha mirado algo que no se ha mirado.'
+            % (len(sobran), sobran))
+
+    for clave, motivo in sorted(declarados):
+        if not motivo:
+            problemas.append(
+                'el hallazgo %r no tiene motivo escrito. Y un hallazgo sin '
+                'motivo es una lista de Ebola, no una declaracion.' % (clave,))
+        elif motivo.strip(' .') in ('-', '—', 'TODO', '...'):
+            problemas.append(
+                'el motivo del hallazgo %r es un marcador de posicion, no un '
+                'motivo.' % (clave,))
+    return problemas
+
 def test_los_hallazgos_estan_declarados_en_el_documento():
     """Que CADA hallazgo este declarado con su fichero, su punto de codigo y
     su motivo. Y no solo con su nombre.
@@ -359,34 +425,51 @@ def test_los_hallazgos_estan_declarados_en_el_documento():
         'la tabla de hallazgos de `DOCS/HALLAZGOS_DECLARADOS.md` esta vacia, o '
         'no tiene el formato que se espera: cuatro celdas por fila.')
 
-    declarados = {}
-    for fichero, nombre, codepoint, motivo in filas:
-        clave = (fichero.strip('`'), nombre.strip('`'), codepoint.strip())
-        declarados[clave] = motivo.strip()
-
-    medidos = {}
+    medidos = set()
     for ruta, c, _nombre in VC.revisar():
         rel = os.path.relpath(ruta, ROOT).replace(os.sep, '/')
-        medidos[(rel, unicodedata.name(c), 'U+%04X' % ord(c))] = True
+        medidos.add((rel, unicodedata.name(c), 'U+%04X' % ord(c)))
 
-    faltan = sorted(set(medidos) - set(declarados))
-    sobran = sorted(set(declarados) - set(medidos))
-    assert not faltan, (
-        'hay %d hallazgo(s) MEDIDOS que no estan declarados: %r. Y un '
-        'hallazgo que no se declara es un fallo esperando a que alguien lo '
-        'encuentre por sorpresa.' % (len(faltan), faltan))
-    assert not sobran, (
-        'hay %d fila(s) DECLARADAS que no corresponden a ningun hallazgo: %r. '
-        'Y una declaracion de un hallazgo que no existe es peor que no '
-        'declararlo: hace creer que se ha mirado algo que no se ha mirado.'
-        % (len(sobran), sobran))
+    problemas = _problemas_de_la_declaracion(filas, medidos)
+    assert not problemas, '\n'.join(problemas)
 
-    for clave, motivo in sorted(declarados.items()):
-        assert motivo, (
-            'el hallazgo %r no tiene motivo escrito. Y un hallazgo sin '
-            'motivo es una lista de Ebola, no una declaracion.' % (clave,))
-        assert motivo.strip(' .') not in ('-', '—', 'TODO', '...'), (
-            'el motivo del hallazgo %r es un marcador de posicion, no un '
-            'motivo.' % (clave,))
 
 # --- y la declaracion, que es lo que hace que «preexistente» sea una cosa ---
+
+def test_la_declaracion_detecta_una_fila_duplicada():
+    """Que la comprobacion de la declaracion vea una fila DUPLICADA.
+
+    Y el motivo de que este test exista, que es un agujero REAL y MEDIDO: el
+    test de la declaracion construia un DICCIONARIO, y un diccionario
+    deduplica POR CONSTRUCCION, de modo que una fila repetida con la misma
+    clave se sobrescribia al construirlo, y la comparacion de conjuntos no la
+    veia. MEDIDO: con una fila duplicada, el test PASABA.
+
+    Y aqui lo que se comprueba es que el test SIGUE viendolo, y no que la
+    declaracion este bien: que es el patron de `test_sin_duplicados.py`, que
+    comprueba que su PROPIO nombre no este declarado dos veces.
+
+    Y la leccion, que es general y que el repo ya tenia escrita en otros
+    sitios —`len(lista) == len(set(lista))`, y `defaultdict(list)`—:
+
+    > **EL INSTRUMENTO NO PUEDE SER EL MISMO QUE LO QUE SE QUIERE
+    > COMPROBAR.** Para comprobar que no hay duplicados hace falta una lista
+    > y un conjunto, no un conjunto.
+    """
+    fila = ('`motor/test_ejemplo.py`', '`ARABIC LETTER BEH`', 'U+0628',
+            'un motivo escrito')
+    medidos = {('motor/test_ejemplo.py', 'ARABIC LETTER BEH', 'U+0628')}
+    assert not _problemas_de_la_declaracion([fila], medidos), (
+        'una tabla con una sola fila bien declarada no deberia tener '
+        'problemas. Y si los tiene, el instrumento esta mirando otra cosa.')
+
+    problemas = _problemas_de_la_declaracion([fila, fila], medidos)
+    assert problemas, (
+        'una fila DUPLICADA con la misma clave no produce ningun problema. Y '
+        'eso es un agujero: con un diccionario, la fila repetida se '
+        'sobrescribia al construirlo y la comparacion no la veia. MEDIDO: el '
+        'test PASABA con una fila duplicada.')
+    assert 'MISMA clave' in problemas[0], (
+        'y el problema que sale tiene que decir que es una clave repetida, no '
+        'otra cosa: %r' % (problemas,))
+

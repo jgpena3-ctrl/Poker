@@ -878,3 +878,101 @@ Y eso es una regla que no estaba escrita:
 > promete más de lo que cumple. Y el que acompaña al nombre con «y NINGUNA de
 > esas dos comprobaciones, por sí sola, garantiza que…» es exactamente la
 > clase de matiz que hace que un cierre sea un cierre y no una afirmación.
+## 25. El instrumento no puede ser el mismo que lo que se quiere comprobar
+
+MEDIDO, y el hueco era de R2, y era real:
+
+> el test de la declaracion construia un **diccionario**, de modo que una
+> fila repetida con la misma clave se sobrescribia al construirlo, y la
+> comparacion de conjuntos no la veia.
+
+MEDIDO, y el sintoma, que es el de siempre: **ninguno**.
+
+```
+con una fila DECLARADA dos veces, con la misma clave:
+    el numero de hallazgos MEDIDOS   : 11
+    el numero de filas DECLARADAS   : 12
+    el test                          : PASA
+```
+
+Y el principio, que es general y que no es mio:
+
+> **EL INSTRUMENTO NO PUEDE SER EL MISMO QUE LO QUE SE QUIERE COMPROBAR.**
+> Para comprobar que no hay duplicados hace falta una **lista** y un
+> **conjunto**, no un conjunto.
+
+Y un diccionario deduplica **por construccion**. De modo que un diccionario
+**no puede** comprobar que no hay duplicados: no es que no mire, es que no
+puede mirar.
+
+### Y la sorpresa, que es lo que hace la leccion util
+
+MEDIDO: el repo **ya tenia la convencion escrita**, en tres sitios:
+
+```
+tools/test_auc_integridad.py    len(ids) == len(set(ids))
+tools/test_rules.py             len(set(spots)) == len(spots)
+tools/test_estimador_preflop.py len(set(alts)) == 2
+tools/test_sin_duplicados.py    defaultdict(list)  ->  len(v) > 1
+```
+
+Y mi test nuevo era **el UNICO** que usaba un diccionario para acumular claves
+y luego comparaba conjuntos. O sea que la convencion existia, y el codigo
+nuevo no la seguia.
+
+> **Una convencion del repo que ya existe es una red de seguridad. Y saltarsela
+> en codigo nuevo es el fallo, aunque el fallo se mire a si mismo y parezca
+> una decision.**
+
+Y el arreglo, que es el de siempre: **usar la convencion**, no inventar una.
+
+### Y los dientes, permanentes
+
+Y aqui esta lo que hace que esto no se repita: la comparacion sale como
+FUNCION, `_problemas_de_la_declaracion(filas, medidos)`, y hay un test que le
+pasa una tabla INVENTADA con una fila duplicada y comprueba que la ve.
+
+Y el motivo de que salga como funcion es el de siempre:
+
+> una comprobacion que solo se puede ejecutar contra el repositorio tiene
+> dientes para el repositorio y ninguno para si misma.
+
+Y el patron es el de `test_sin_duplicados.py`, que comprueba que su PROPIO
+nombre no este declarado dos veces: un detector que vigila duplicados, que
+comprueba que el detector sigue viendo duplicados.
+
+### Y la familia, que ya son cuatro
+
+Y este es el **cuarto** caso del mismo patron en cuatro bloques:
+
+| | el instrumento | lo que no puede ver |
+|---|---|---|
+| §18 | un mutante escrito de memoria | el defecto de verdad |
+| §23 | un contador de definiciones | un nombre repetido |
+| §23 | un script re-ejecutado | lo que ya habia aplicado |
+| §25 | un diccionario | una fila repetida |
+
+> **Un instrumento que no puede ver lo que dice ver no da ningun sintoma cuando
+> falla.** Y por eso hay que mirarlos uno a uno, con un caso que los mate, y
+> no por la forma del codigo.
+
+### Y un barrido, y lo que declara
+
+MEDIDO, y el barrido automatico de este patron en el repo —asignaciones
+`d[clave] = <lista o dict>`— da **46 candidatos**, y **ninguno** se ha
+tocado.
+
+Y el motivo, que es el de `DOCS/HALLAZGOS_DECLARADOS.md`: son acumuladores
+de PROPIEDADES, donde la clave es unica por construccion —un id de mano, un
+nombre de fichero, una clave de una tabla—, y en ese caso sobrescribir no
+pierde nada.
+
+Y lo que **no** puede hacer el barrido automatico es distinguir esos de un
+acumulador de CUENTAS, donde la clave SI puede repetirse. Y esa
+distincion —«¿esta clave puede repetirse?»— no se puede automatizar: hay que
+mirar la clave, y el origen de la clave, uno a uno.
+
+De modo que el alcance del barrido esta DECLARADO: **las 46 son
+acumuladores de propiedades, y la comprobacion de que la clave no pueda
+repetirse es de cada una, y no se ha hecho para ninguna.** Es un punto
+abierto, y no un cierre.
