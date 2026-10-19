@@ -956,23 +956,59 @@ Y este es el **cuarto** caso del mismo patron en cuatro bloques:
 > falla.** Y por eso hay que mirarlos uno a uno, con un caso que los mate, y
 > no por la forma del codigo.
 
-### Y un barrido, y lo que declara
+### Y un barrido, y lo que declara — CORREGIDO
 
-MEDIDO, y el barrido automatico de este patron en el repo —asignaciones
-`d[clave] = <lista o dict>`— da **46 candidatos**, y **ninguno** se ha
-tocado.
+> **CORREGIDO el 2026-10-19.** Lo que sigue estaba escrito como si la
+> revision se hubiera hecho, y no se habia hecho. MEDIDO, y R2 lo senalo: eran
+> «candidatos pendientes de revision individual», no 46 casos cuya unicidad
+> este demostrada.
 
-Y el motivo, que es el de `DOCS/HALLAZGOS_DECLARADOS.md`: son acumuladores
-de PROPIEDADES, donde la clave es unica por construccion —un id de mano, un
-nombre de fichero, una clave de una tabla—, y en ese caso sobrescribir no
-pierde nada.
+MEDIDO, y el barrido, con el ARBOL y no con un `grep`:
 
-Y lo que **no** puede hacer el barrido automatico es distinguir esos de un
-acumulador de CUENTAS, donde la clave SI puede repetirse. Y esa
-distincion —«¿esta clave puede repetirse?»— no se puede automatizar: hay que
-mirar la clave, y el origen de la clave, uno a uno.
+```
+asignaciones `d[clave] = <lista o dict>` en el repo : 46
+   de las cuales, FUERA de todo bucle                  : 38
+   de las cuales, DENTRO de un bucle                   :  8
+```
 
-De modo que el alcance del barrido esta DECLARADO: **las 46 son
-acumuladores de propiedades, y la comprobacion de que la clave no pueda
-repetirse es de cada una, y no se ha hecho para ninguna.** Es un punto
-abierto, y no un cierre.
+Y las **38 de fuera** se descartan por una razon MECANICA y no por opinion:
+
+> Sin bucle que las envuelva, la asignacion se ejecuta una vez por llamada, y
+> su clave se asigna una sola vez. Sobrescribir no puede perder nada.
+
+Y las **8 de dentro** SI pueden tener la clave repetida, y se han revisado
+UNA A UNA, y cada una lleva escrito por que esta bien. Y estan DECLARADAS en
+el codigo —`ACUMULADORES_REPETIBLES`, en `tools/test_ejecutar_pytest.py`— con
+un guardian que comprueba que no falte ninguna, que no sobre ninguna, y que
+ninguna tenga el porque vacio.
+
+Y el reparto de los ocho, que es lo que hace util la revision:
+
+| | por que esta bien |
+|---|---|
+| `tables[name]` | la clave es el NOMBRE de una tabla, y las claves de un dict son unicas |
+| `rank_pair_data[rank_key]` | la clave sale del INDICE del bucle, y un indice no se repite |
+| `streets[key]` | las tres claves son LITERALES y distintas |
+| `h['winner']` | la clave es literal, pero el bucle SALE con `break` en cuanto la asigna |
+| `cache[hid]` | la clave es un id de MANO, y un id no se repite |
+| `self.digit_templates[ch]` | la clave es una clave de un dict, y las claves de un dict son unicas |
+| `region_data[rname][v]` | la clave REPETIDA es el objetivo, y la asignacion va con una guardia `if v not in ...` |
+| `hashes[name]` | la clave es un NOMBRE de fichero, de una CONSTANTE con 7 nombres distintos |
+
+Y el septimo es el que mas merece la pena, porque es **la misma forma** del
+defecto y esta bien:
+
+> `region_data[rname][v] = []` se ejecuta con la MISMA clave muchas veces, y
+> sin la guardia `if v not in region_data[rname]` cada vez perderia la lista
+> anterior. O sea que **la forma no dice nada**: la forma es la misma que la
+> de un defecto, y lo que la salva es la guardia que la envuelve.
+
+Y ese es el limite, y queda DECLARADO: **el porque de cada uno de los ocho es
+PROSA leida por una persona, y un test no puede juzgarla.** Lo que el test
+puede es comprobar que no falte ninguno, que no sobre ninguno, y que ninguno
+sea un marcador de posicion.
+
+Y la cifra vive en una constante, `ASIGNACIONES_QUE_SOBRESCRIBEN`, y el
+guardian la compara con la medida: asi, anadir un sitio nuevo obliga a
+declararlo, y quitarlo obliga a bajar la cifra a mano. Las dos son
+decisiones.

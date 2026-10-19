@@ -3628,7 +3628,7 @@ CARPETAS_DEL_INVENTARIO = ('tools', 'motor', 'recorder')
 # fichero de esa taille es una tabla que nadie mantiene, y una tabla que nadie
 # mantiene es decoracion.
 
-TESTS_POR_CARPETA = {'motor': 834, 'recorder': 4, 'tools': 486}
+TESTS_POR_CARPETA = {'motor': 834, 'recorder': 4, 'tools': 487}
 
 
 # Y los FICHEROS, que son OTRA medida. MEDIDO, y sin ellos el guardia
@@ -4978,3 +4978,179 @@ def test_el_docstring_descuadrado_declarado_esta_donde_dice():
         'que nombra un sitio que ya no es el suyo es una declaracion falsa.'
         % (celdas[1], linea))
     assert celdas[2], 'y la tercera celda, que es el QUE ES, esta vacia'
+
+# ============================ 29. LOS ACUMULADORES DEL REPO, REVISADOS
+#
+# Y esto es el punto abierto que dejo abierto el bloque anterior, y que R2
+# senalo: las 46 asignaciones `d[clave] = <lista o dict>` del repo eran
+# «candidatos pendientes de revision individual», y yo habia escrito que eran
+# «acumuladores de propiedades». Y eso era una AFIRMACION sin medir.
+#
+# Y este bloque mide, y declara, y vigila.
+
+
+class _RastreadorDeSobrescrituras(ast.NodeVisitor):
+    """Las asignaciones que sobrescriben, y si estan dentro de un bucle.
+
+    Y una PILA de bucles, y no un `in`: lo que importa es si la asignacion se
+    puede ejecutar mas de una vez para la MISMA clave, y eso lo decide el
+    bucle mas cercano que la envuelve.
+    """
+
+    def __init__(self):
+        self.pila = []
+        self.hallados = []
+
+    def _bucle(self, nodo, iterable):
+        self.pila.append(iterable)
+        self.generic_visit(nodo)
+        self.pila.pop()
+
+    def visit_For(self, nodo):
+        self._bucle(nodo, ast.unparse(nodo.iter))
+
+    def visit_AsyncFor(self, nodo):
+        self._bucle(nodo, ast.unparse(nodo.iter))
+
+    def visit_While(self, nodo):
+        self._bucle(nodo, 'while')
+
+    def visit_Assign(self, nodo):
+        for t in nodo.targets:
+            if not isinstance(t, ast.Subscript):
+                continue
+            if not isinstance(nodo.value, (ast.List, ast.Dict)):
+                continue
+            self.hallados.append((nodo.lineno, ast.unparse(t),
+                                  bool(self.pila)))
+        self.generic_visit(nodo)
+
+
+def _asignaciones_que_sobrescriben():
+    """(todas, en_bucle) de las asignaciones `d[clave] = <lista o dict>`.
+
+    Y la forma que se busca es esa, y no cualquier `d[clave] = <valor>`,
+    porque una asignacion de un numero, o de una cadena, NO PIERDE NADA: el
+    valor es completo por definicion. Lo que pierde es una asignacion de una
+    LISTA o de un DICCIONARIO, porque entonces el valor es una ACUMULACION y
+    la anterior se pierde.
+
+    Y MEDIDO, y por que la forma del ARBOL y no un `grep`: un `grep` por
+    `] = [` encuentra tambien las asignaciones a indices de LISTAS, que no son
+    diccionarios y no deducen nada.
+
+    Y devuelve DOS listas, y la segunda es la que importa: las que estan
+    dentro de un bucle, que son las UNICAS que pueden tener la clave
+    repetida. Las demas se ejecutan una vez por llamada, y su clave se
+    asigna una sola vez por construccion.
+    """
+    todas = []
+    en_bucle = []
+    for carpeta in CARPETAS_DEL_INVENTARIO:
+        base = os.path.join(ROOT, carpeta)
+        if not os.path.isdir(base):
+            continue
+        for sub, directorios, ficheros in os.walk(base):
+            directorios[:] = [d for d in directorios
+                              if d not in CARPETAS_QUE_NO_SE_MIRAN]
+            for nombre in sorted(ficheros):
+                if not nombre.endswith('.py'):
+                    continue
+                ruta = os.path.join(sub, nombre)
+                rel = os.path.relpath(ruta, ROOT).replace(os.sep, '/')
+                rastreador = _RastreadorDeSobrescrituras()
+                rastreador.visit(ast.parse(
+                    io.open(ruta, encoding='utf-8').read()))
+                for linea, clave, dentro in rastreador.hallados:
+                    todas.append((rel, linea, clave))
+                    if dentro:
+                        en_bucle.append((rel, linea, clave))
+    return todas, en_bucle
+
+
+# Los 8 sitios donde la clave puede REPETIRSE, y por que cada uno esta bien.
+#
+# Y MEDIDO, el barrido: 46 asignaciones `d[clave] = <lista o dict>` en el
+# repo, de las que 38 estan FUERA de todo bucle —y ahi la clave se asigna una
+# sola vez por construccion, de modo que sobrescribir no puede perder nada— y
+# 8 dentro. Y esas 8 son las unicas que hay que mirar.
+#
+# Y el formato es (fichero, clave) -> porque. Y el PORQUE es lo que hace que
+# esto sea una DECLARACION y no una lista: un test no puede juzgar un texto,
+# pero si puede comprobar que NO FALTA ninguno.
+ACUMULADORES_REPETIBLES = {
+    ('motor/preflop.py', 'tables[name]'):
+        'la clave es el NOMBRE de una tabla, y las claves de un dict son '
+        'unicas',
+    ('motor/test_ranges.py', 'rank_pair_data[rank_key]'):
+        'la clave sale del INDICE del bucle, y un indice no se repite',
+    ('motor/test_stats.py', 'streets[key]'):
+        'las tres claves son LITERALES y distintas: flop, turn y river',
+    ('tools/auditar_defectos_vs_denominadores.py', "h['winner']"):
+        'la clave es LITERAL, pero el bucle SALE con `break` en cuanto la '
+        'asigna, de modo que se asigna una sola vez',
+    ('tools/equity_preflop_observables.py', 'cache[hid]'):
+        'la clave es un id de MANO, y un id no se repite',
+    ('tools/lector_estado.py', 'self.digit_templates[ch]'):
+        'la clave es una clave de un dict, y las claves de un dict son unicas',
+    ('tools/lector_estado.py', 'region_data[rname][v]'):
+        'la clave REPETIDA es el objetivo: agrupa los ficheros que muestran el '
+        'mismo valor. Y la asignacion va con una guardia `if v not in '
+        'region_data[rname]`, que es lo que hace que sea un ACUMULADOR y no '
+        'una sobrescritura',
+    ('tools/reconstruir_derivados.py', 'hashes[name]'):
+        'la clave es un NOMBRE de fichero, y la lista de nombres es una '
+        'CONSTANTE con 7 nombres distintos',
+}
+
+# Y el total, que es una cifra y por lo tanto vive en una constante.
+ASIGNACIONES_QUE_SOBRESCRIBEN = 46
+
+
+def test_las_asignaciones_que_sobrescriben_estan_revisadas():
+    """Que las 46 asignaciones del repo estan REVISADAS, y no supuestas.
+
+    Y el cierre de un punto que el bloque anterior dejo ABIERTO, y que R2
+    senalo: yo habia escrito que las 46 eran «acumuladores de propiedades», y
+    eso era una afirmacion sin medir. MEDIDO: 46 en total, 38 fuera de todo
+    bucle, y 8 dentro.
+
+    Y las 38 de fuera se descartan por una razon MECANICA y no por opinion:
+    sin bucle que las envuelva, la asignacion se ejecuta una vez por llamada,
+    y su clave se asigna una sola vez. Sobrescribir no puede perder nada.
+
+    Y las 8 de dentro SI pueden tener la clave repetida, de modo que cada una
+    lleva escrito POR QUE esta bien. Y el motivo es PROSA leida por una
+    persona, y un test no puede juzgarla: lo que el test puede es comprobar
+    que NO FALTA ninguna, y que ninguno es un marcador de posicion.
+
+    Y el reparto de las dos mitades, y por que el test compara CONJUNTOS: si
+    un sitio nuevo aparece en un bucle, tiene que aparecer en la declaracion,
+    y si uno sale, tiene que salir. Y la comparacion es de conjuntos porque
+    lo que se mira es la IGUALDAD, no la pertenencia.
+    """
+    todas, en_bucle = _asignaciones_que_sobrescriben()
+    assert len(todas) == ASIGNACIONES_QUE_SOBRESCRIBEN, (
+        'hay %d asignaciones que sobrescriben, y el declarado es %d. Si se ha '
+        'añadido una, hay que declararla; y si se ha quitado una, hay que '
+        'bajar la cifra a mano. Las dos cosas son decisiones.'
+        % (len(todas), ASIGNACIONES_QUE_SOBRESCRIBEN))
+
+    medidos = set((f, c) for f, _l, c in en_bucle)
+    declarados = set(ACUMULADORES_REPETIBLES)
+    faltan = sorted(medidos - declarados)
+    sobran = sorted(declarados - medidos)
+    assert not faltan, (
+        'hay %d sitio(s) donde la clave puede repetirse y NO estan '
+        'declarados: %r. Y un sitio sin revisar es un sitio donde nadie ha '
+        'mirado.' % (len(faltan), faltan))
+    assert not sobran, (
+        'hay %d sitio(s) declarados que ya no estan: %r. Y una declaracion de '
+        'algo que ya no esta es una declaracion falsa.' % (len(sobran), sobran))
+
+    for clave, porque in sorted(ACUMULADORES_REPETIBLES.items()):
+        assert porque.strip(), (
+            'el sitio %r no tiene porque escrito. Y un sitio sin porque es una '
+            'lista, no una declaracion.' % (clave,))
+        assert porque.strip(' .') not in ('-', '—', 'TODO', '...'), (
+            'el porque de %r es un marcador de posicion.' % (clave,))
