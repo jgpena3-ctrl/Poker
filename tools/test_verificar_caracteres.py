@@ -19,6 +19,7 @@ dice que es el caracter, y no por donde cae.
 """
 import io
 import os
+import unicodedata
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -250,3 +251,58 @@ def test_ningun_hallazgo_es_del_cambio():
         'hay %d hallazgo(s) DEL CAMBIO: %r. O sea que un caracter sospechoso ha '
         'entrado ahora, y hay que decidir si se queda o se quita.'
         % (len(nuevos), nuevos))
+
+# --- y la declaracion, que es lo que hace que «preexistente» sea una cosa ---
+
+def test_el_numero_de_hallazgos_es_el_declarado():
+    """Que el numero de hallazgos sea el declarado, y no uno de memoria.
+
+    Y por que un NUMERO y no una lista de ficheros: lo que se vigila es que
+    no CREZCAN, y una lista de ficheros seria una lista escrita a mano, que se
+    queda corta sin que nada se note. Y el detalle esta en
+    `DOCS/HALLAZGOS_DECLARADOS.md`.
+
+    Y lo que se comprueba aqui es que el numero y el documento NO SE SEPAREN:
+    un test que solo mira el numero no dice nada de si el documento dice el
+    mismo, y un documento que dice un numero que ya no es el del codigo es
+    una declaracion falsa.
+    """
+    hallazgos = VC.revisar()
+    assert len(hallazgos) == VC.SOSPECHOSOS_ABAJO, (
+        'hay %d hallazgos y el declarado es %d. Si se ha ARREGLADO uno, el '
+        'numero baja y hay que subir la constante a mano: quitar un defecto '
+        'tiene que ser una decision. Y si se ha METIDO uno, hay que '
+        'declararlo con su motivo.'
+        % (len(hallazgos), VC.SOSPECHOSOS_ABAJO))
+
+    doc = io.open(os.path.join(ROOT, 'DOCS', 'HALLAZGOS_DECLARADOS.md'),
+                  encoding='utf-8').read()
+    assert str(VC.SOSPECHOSOS_ABAJO) in doc, (
+        'el documento de hallazgos no menciona el numero declarado (%d). Y un '
+        'documento que dice un numero que ya no es el del codigo es una '
+        'declaracion falsa.'
+        % VC.SOSPECHOSOS_ABAJO)
+
+
+def test_los_hallazgos_estan_declarados_en_el_documento():
+    """Que cada hallazgo tenga su sitio en la declaracion.
+
+    Y no con el CARACTER, que no se puede escribir en crudo sin contaminar el
+    fichero: con el NOMBRE Unicode, que es lo que el barrido produce y lo que
+    identifica al hallazgo sin ambiguedad.
+
+    Y el caso del U+0435, que es el que hace falta mirar: el MISMO caracter es
+    un ejemplo INTENCIONADO en un documento y una corrupcion en otro, y la
+    excepcion es POR SITIO. De modo que el nombre aparece en el documento
+    declarado —como ejemplo— y no como hallazgo.
+    """
+    doc = io.open(os.path.join(ROOT, 'DOCS', 'HALLAZGOS_DECLARADOS.md'),
+                  encoding='utf-8').read()
+    for _ruta, c, _nombre in VC.revisar():
+        nombre = unicodedata.name(c)
+        assert nombre in doc, (
+            'el hallazgo %s no esta declarado en `DOCS/HALLAZGOS_DECLARADOS.md`. '
+            'Y un hallazgo que no se corrige y no se declara es un fallo '
+            'esperando a que alguien lo encuentre por sorpresa.' % nombre)
+
+# --- y la declaracion, que es lo que hace que «preexistente» sea una cosa ---

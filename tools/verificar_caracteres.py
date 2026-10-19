@@ -79,6 +79,24 @@ EXCEPCIONES = (
     ('DOCS/INC-003_BARRIDO_DESTRUCTIVO.md', chr(0x435)),
 )
 
+
+# Los hallazgos que YA se sabian, y que se DECLARAN en vez de tocarse.
+#
+# Y el motivo de que esto sea un NUMERO y no una lista de ficheros: lo que se
+# vigila es que no CREZCAN, y una lista de ficheros seria una lista escrita a
+# mano, que se queda corta sin que nada se note. Y el detalle —que caracter,
+# en que fichero, y por que no se toca— esta en
+# `DOCS/HALLAZGOS_DECLARADOS.md`, que es donde esta la DECLARACION.
+#
+# Y el numero no es de este bloque: es el que hay. MEDIDO, y la regla es la
+# de `DOCS/HALLAZGOS_DECLARADOS.md`: lo preexistente se declara y se
+# reporta, y no se toca; lo del cambio se arregla.
+#
+# Y un hallazgo que se ARREGLA baja este numero, y el test falla, y hay que
+# subir la constante a mano. Y eso es lo que se quiere: que quitar un
+# defecto sea una decision, y no un efecto secundario.
+SOSPECHOSOS_ABAJO = 11
+
 # La UNICA correccion automatica, y por SECUENCIA DE CARACTERES.
 #
 # Antes era `{'Normalized': 'normalizado'}`: una sustitucion de texto ASCII

@@ -524,6 +524,45 @@ Un testigo que calla es un testigo que pasa. Confundir «no lancé nada» con «
 es el mismo error con el signo cambiado: los dos TIMES el papel de un resultado
 sin interpretarlo.
 
+
+### Y el otro medio: cómo se BUSCA en el historial
+
+Y aquí está lo que el bloque anterior dio por bueno y era más flojo de lo que
+parecía.
+
+MEDIDO, las dos búsquedas, sobre el mismo fichero y el mismo defecto:
+
+```
+git log -S'apertura + 1'            ->  3 commits, y el de la CORRECCION NO ESTA
+git log -S'% (nombre, apertura + 1,' ->  3 commits, y el de la CORRECCION SI ESTA
+```
+
+Y la razón de que la frase suelta **no** encuentre el commit que corrigió el
+fallo es la que hace la lección útil:
+
+> Al borrar el código se **AÑADIÓ** el comentario que lo explica. Y `git log
+> -S` cuenta las apariciones de una cadena: una entró y otra salió, el
+> recuento **no cambió**, y el commit no sale.
+
+O sea que la búsqueda por la prosa no es «menos precisa»: es que **el commit
+que importa es invisible**.
+
+Y la regla, que es la misma de las dos mitades de leer el código:
+
+> **Para preguntar al historial hay que usar el CÓDIGO, no la PROSA.** Y no
+> porque la prosa sea menos exacta, sino porque la prosa y el código cambian
+> a la vez, y un contador de apariciones no ve ese intercambio.
+
+Y el detalle que hace que la regla no dependa de un texto escrito a mano: el
+código tiene una FORMA —una llamada con un argumento con ese nombre—, y esa
+forma se puede buscar sin ambigüedad. MEDIDO, el texto del código da tres
+candidatos, y de los tres el correcto se distingue porque **en su padre está
+la suma y en él no**.
+
+> Y ese es el mismo «por el árbol, nunca por una ventana de texto» de la
+> sección 4, aplicado al HISTORIAL. Y la misma razón: un `grep` por una frase
+> encuentra la frase, y no sabe qué es lo que la frase dice.
+
 ### La forma que sí aguanta
 
 Los dos fallos de este bloque eran del **guardián de la medición**, no de lo que
@@ -742,3 +781,38 @@ paró el script antes de que hiciera daño.
 
 Que es, otra vez, lo de siempre: **el resultado hay que compararlo con
 algo**. Con el valor medido, o con la version anterior real.
+
+### Y la recurrencia, que es la parte que hay que escribir
+
+MEDIDO, y esto paso **OTRA VEZ, en el mismo bloque**, y con el mismo script:
+
+```
+el script se ejecuto dos veces
+la segunda vuelvo a escribir el bloque entero
+y quedaron: una constante duplicada y DOS TESTS DUPLICADOS
+```
+
+Y el detalle que hace la leccion mas util de lo que parece: **el guardiano de
+inventario no lo pillo**. Un `def test_` repetido con el MISMO nombre es UNA
+definicion para pytest, de modo que el recuento de tests **no cambia**, y una
+constante repetida con el MISMO valor no la ve nadie.
+
+> **La idempotencia de un script no la vigila ningun guardian del repo.** Es
+> una propiedad del SCRIPT, y hay que mirarla a mano. Y un guardiano que
+> cuenta definiciones no puede distinguir «dos definiciones» de «una
+> definicion y un nombre repetido».
+
+Y el patron del fallo, que es siempre el mismo: **el paso que escribe tiene
+que ser idempotente por si mismo, o el script tiene que decir si ya lo ha
+hecho.** Y la forma mas simple de decirlo:
+
+```python
+if MARCA not in s:
+    s = s.replace(MARCA, NUEVO, 1)
+```
+
+Que es una linea, y que convierte un script que se puede ejecutar una vez en
+uno que se puede ejecutar las que haga falta. Y el motivo por el que no lo
+puse la primera vez es que **el script me servia para una vez** y no para
+repetirse: y esa es exactamente la clase de error que se paga una vez
+pagada.

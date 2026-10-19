@@ -3628,7 +3628,7 @@ CARPETAS_DEL_INVENTARIO = ('tools', 'motor', 'recorder')
 # fichero de esa taille es una tabla que nadie mantiene, y una tabla que nadie
 # mantiene es decoracion.
 
-TESTS_POR_CARPETA = {'motor': 834, 'recorder': 4, 'tools': 482}
+TESTS_POR_CARPETA = {'motor': 834, 'recorder': 4, 'tools': 484}
 
 
 # Y los FICHEROS, que son OTRA medida. MEDIDO, y sin ellos el guardia
@@ -4807,6 +4807,14 @@ def test_un_mutante_de_memoria_no_mata_nada():
     cuerpo = chr(10).join(lineas[funcion_actual.lineno - 1:
                                  funcion_actual.end_lineno])
     mutante = cuerpo.replace(expresion, expresion + ' + 0')
+    assert mutante != cuerpo, (
+        'el mutante de memoria es IGUAL al codigo de hoy, de modo que aqui no '
+        'se ha montado nada. Y la conclusion del test —«un mutante de memoria '
+        'no mata nada»— seria la de un mutante que no existe. Que es el mismo '
+        'hueco que el del mutante escrito a mano, un nivel mas adentro: no '
+        'basta con que el mutante no mate, hay que que sea EL mutante.')
+    assert expresion + ' + 0' in mutante, (
+        'y el mutante no lleva la expresion que deberia: %r' % expresion)
     espacio = {'ast': ast, '_docstring_de': _docstring_de}
     exec(compile(mutante, '<mutante-de-memoria>', 'exec'), espacio)
 
