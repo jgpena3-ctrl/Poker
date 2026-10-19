@@ -2264,22 +2264,92 @@ def _sin_percent_escapado(plantilla):
     return plantilla.replace('%%', '')
 
 
-def _argumentos_para(plantilla, tope=16):
+# ============================ 20. EL TOPE, EL ALCANCE, Y LOS SITIOS VIVOS
+#
+# R2, punto 1, y es real:
+#
+#     for cuantos in range(tope):
+#
+#     Con tope=16 el bucle prueba de 0 a 15 argumentos. Una plantilla válida
+#     que necesite exactamente 16 argumentos nunca se probará con el número
+#     correcto y se declarará rota.
+#
+#     plantilla = ' '.join(['%s'] * 16)
+#
+# MEDIDO, con la version que estaba en el repo:
+#
+#      1 especificadores: -> 1
+#     15 especificadores: -> 15
+#     16 especificadores: -> None    <<< PLANTILLA VALIDA DECLARADA ROTA
+#     17 especificadores: -> None
+#
+# Y ES PEOR QUE EL LIMITE DE PROFUNDIDAD DEL BLOQUE ANTERIOR, por una razon que
+# conviene decir porque son los dos limites y solo uno puede constructirse:
+#
+#     el limite de profundidad contestaba «no hay camino» —una respuesta FALSA
+#     sobre una pregunta que con otro limite era CIERTA—.
+#
+#     el `tope` contesta «esta rota» —una respuesta FALSA sobre una plantilla
+#     que esta BIEN—.
+#
+# O sea que produce exactamente lo que busca el detector: un diagnostico que
+# no describe el problema. Salvo que aqui el diagnostico sale del DETECTOR, y
+# por tanto se leeria como si el fallo fuera real.
+
+
+def _argumentos_para(plantilla):
     """Cuantos argumentos hay que darle a `plantilla` para construirla.
 
-    Y None si no se puede construir con ninguno — que es lo que significa
-    «esta plantilla esta rota».
+    Y None si no se puede construir con NINGUN numero — que es lo que significa
+    «esta plantilla esta rota», y es una afirmacion MAS FUERTE que la que hacia
+    antes: antes queria decir «no se pudo con hasta 16».
 
-    Y NO PARSEA EL FORMATO, que es lo importante: pregunta. Y por eso no
-    puede equivocarse al contar, porque no cuenta.
+    LA COTA SE DERIVA, Y POR QUE NO PUEDE QUEDAR CORTA
 
-    Y el `tope` de 16 es un suelo de seguridad, no una cortina: con mas de
-    16 especificadores el comprobador dira que la plantilla esta rota, y
-    dira MAL. MEDIDO: el maximo del repo esta muy por debajo, asi que el
-    suelo no se ha tocado nunca. Y si algún dia se tocara, el fallo seria
-    visible — un mensaje que si se construyediria que esta roto—, y visible
-    es mejor que silencioso."""
-    for cuantos in range(tope):
+    Un especificador ocupa POR LO MENOS dos caracteres —`%s`— y `%%` ocupa dos
+    sin consumir argumento. O sea que una plantilla de longitud L no puede
+    tener mas de L // 2 especificadores, y por tanto
+
+        range(L // 2 + 1)
+
+    es una cota que no puede quedar corta. Y se deriva de la propia plantilla,
+    que es lo unico que se puede derivar sin escribir un numero a mano.
+
+    MEDIDO, y no solo en el borde de 16 —que es donde se ve el fallo— sino en
+    ocho, para que no sea un caso elegido:
+
+          1 espec. (L=  2)   tope=16 -> 1        derivada -> 1
+          2 espec. (L=  5)   tope=16 -> 2        derivada -> 2
+          5 espec. (L= 14)   tope=16 -> 5        derivada -> 5
+         16 espec. (L= 47)   tope=16 -> None     derivada -> 16
+         17 espec. (L= 50)   tope=16 -> None     derivada -> 17
+         40 espec. (L=119)   tope=16 -> None     derivada -> 40
+        100 espec. (L=299)   tope=16 -> None     derivada -> 100
+        250 espec. (L=749)   tope=16 -> None     derivada -> 250
+
+    MEDIDO, el coste: 302 plantillas. 4832 intentos con el tope y 14543 con
+    la cota derivada. Los dos barren el fichero entero en 1.0 ms.
+
+    O sea que la cota no cuesta nada, que es lo que hace falta para que no
+    haya excusa de dejar el numero puesto a mano.
+
+    Y EL ARREGLO MINIMO DE R2, Y POR QUE NO BASTA
+
+        for cuantos in range(tope + 1)
+
+    MEDIDO:
+
+        16 especificadores con tope=16:  antes -> None    con `+1` -> 16
+        17 especificadores con tope=16:  antes -> None    con `+1` -> None
+
+    O sea que quita UN numero y deja el problema donde estaba: un numero
+    puesto a mano que puede volver a quedar corto. Y el comentario pasaria a
+    decir «hasta 16» cuando lo que el codigo garantiza es «lo que quepa en 16
+    intentos», que es una promesa mas debil.
+
+    Y el `tope` no protege de nada: solo DEJA DE MIRAR. Que es la frase del
+    limite de profundidad, y aqui si se puede demostrar el caso, que alli no."""
+    for cuantos in range(len(plantilla) // 2 + 1):
         try:
             plantilla % tuple(_Mentira() for _ in range(cuantos))
         except (TypeError, ValueError):
@@ -2288,15 +2358,75 @@ def _argumentos_para(plantilla, tope=16):
     return None
 
 
+def _plantilla_de(mensaje):
+    """La CADENA de un mensaje con formato, o None si no es un mensaje.
+
+    Y hay una funcion y no dos, porque `assert x, 'a %s' % y` y
+    `raise E('a %s' % y)` son la MISMA cosa —una plantilla— en dos sintaxis
+    distintas, y tratarlas por separado es como tratar por separado las dos
+    ramas de una misma condicion.
+
+    Y el alcance de esta funcion, medido:
+
+        `assert`      -> `msg` es un `BinOp %`
+        `raise E(...)` -> `exc.args[0]` es un `BinOp %`
+
+    Y lo demas se queda fuera a proposito: un `raise 'texto' % x` no es Python
+    valido, de modo que la plantilla de un `raise` solo puede estar en el
+    primer argumento de la llamada. No es una limitacion que se imponga: es la
+    unica forma que hay."""
+    if not (isinstance(mensaje, ast.BinOp)
+            and isinstance(mensaje.op, ast.Mod)):
+        return None
+    izquierda = mensaje.left
+    if not (isinstance(izquierda, ast.Constant)
+            and isinstance(izquierda.value, str)):
+        return None
+    if '%' not in izquierda.value:
+        return None
+    return izquierda.value
+
+
 def _mensajes_plantilla():
-    """Los mensajes de asercion que son `CADENA % argumentos`.
+    """Los mensajes que se construyen SOLO cuando algo va mal. Y no solo los
+    de `assert`.
 
-    MEDIDO: 290 en `tools/`, y 345 mensajes que son una CADENA LITERAL — que
-    no son plantillas y ya estan construidos.
+    Y el cambio es el del punto 2 de R2, que decia: el alcance son solo los
+    `assert`, y el nombre del test puede leerse mas amplio que su
+    implementacion. MEDIDO antes de decidirlo:
 
-    Y el alcance son SOLO los `assert`. Un `raise ...(...)` con formato tiene
-    el mismo defecto y no se mira. Que es un hueco declarado, no uno que se
-    haya olvidado."""
+        tools     raise: 39    con formato: 25   rotas: 0
+        motor     raise: 72    con formato: 14   rotas: 0
+        recorder  raise:  2    con formato:  0   rotas: 0
+
+    Y aqui esta la razon de cerrarlo. Un `raise` con formato es la MISMA clase
+    de ruta que un `assert` con formato: codigo que solo se ejecuta cuando algo
+    va mal. O sea que la exclusion no era una distincion de CLASE, era una
+    distincion de SINTAXIS.
+
+    Y una distincion de sintaxis se sostiene en una sola cosa: que no haya
+    ningun caso. MEDIDO: hay 25 en `tools/`, que es mio.
+
+    O sea que el hueco estaba declarado y VACIO, y «vacio» no es «no puede
+    pasar»: es «hoy no pasa». Y con 25 sitios, «hoy» es un tecnicismo.
+
+    Y el alcance se queda en `tools/`, por la razon de siempre: `motor/`,
+    `data/` y `asistente_live.py` no son mios. Sus 14 raises con formato se
+    declaran, no se comprueban — y declarar un hueco que existe es distinto de
+    dejar de mirar un hueco que existe: el primero esta escrito, el segundo
+    se Vera cuando alguien lo rompa.
+
+    Y el nombre. `test_los_mensajes_de_fallo_se_pueden_construir` sigue igual,
+    y ahora dice lo que dice: mensajes de fallo, de `assert` y de `raise`, de
+    `tools/`. Lo que NO garantiza —y hay que decirlo porque R2 tiene razon en
+    que el nombre se prestaba a leer mas— es:
+
+        - que la plantilla se construya con MENTIRAS, no con los valores
+          reales. Una plantilla bien formada que al ejecutarse lance por otra
+          cosa —un `%s` sobre un objeto sin `__str__`— no se ve aqui.
+        - nada de `pytest.raises`, ni de `warnings.warn`, ni de `print`. Que
+          son las tres rutas que quedan por mirar, y son OTRA TAREA con su
+          propio corpus, no un parche de este detector."""
     carpeta = os.path.join(ROOT, CARPETA_DE_MENSAJES)
     assert os.path.isdir(carpeta), (
         'la carpeta de mensajes tiene que existir, y no existe: %s. Un barrido '
@@ -2317,33 +2447,37 @@ def _mensajes_plantilla():
                 'barrido, y eso es verde por no mirar. Por eso aqui no se '
                 'salta: se para.' % (nombre, e))
         for nodo in ast.walk(arbol):
-            if not isinstance(nodo, ast.Assert) or nodo.msg is None:
-                continue
-            msg = nodo.msg
-            if not (isinstance(msg, ast.BinOp) and isinstance(msg.op, ast.Mod)):
-                continue
-            izquierda = msg.left
-            if not (isinstance(izquierda, ast.Constant)
-                    and isinstance(izquierda.value, str)):
-                continue
-            if '%' not in izquierda.value:
-                continue
-            encontrados.append((nombre, nodo.lineno, izquierda.value))
+            if isinstance(nodo, ast.Assert):
+                plantilla = _plantilla_de(nodo.msg) if nodo.msg else None
+                if plantilla is not None:
+                    encontrados.append((nombre, nodo.lineno, plantilla))
+            elif isinstance(nodo, ast.Raise) and nodo.exc is not None:
+                exc = nodo.exc
+                if isinstance(exc, ast.Call) and exc.args:
+                    plantilla = _plantilla_de(exc.args[0])
+                    if plantilla is not None:
+                        encontrados.append((nombre, nodo.lineno, plantilla))
     return encontrados
 
 
 def test_los_mensajes_de_fallo_se_pueden_construir():
     """El camino que no se ejecuta, ejecutado de mentira.
 
-    Y POR QUE UN TEST QUE NO FALLA NUNCA NO ENSEÑA NADA sobre esto: porque
-    el mensaje se construye solo cuando la asercion falla. O sea que la
-    pregunta «¿este mensaje se puede construir?» no tiene a que hacer NADIE
-    que falle para responderse, y esa es la gracia de la comprobacion.
+    Y ahora `raise` tambien, y la razon por la que antes no estaba es que no
+    habia motivo — no que fuera otra clase de ruta. MEDIDO: `tools/` tiene 25
+    `raise` con formato, y un `raise` con formato es exactamente lo mismo que
+    un `assert` con formato: codigo que solo se ejecuta cuando algo va mal.
 
-    Y no solo se mira `tools/test_ejecutar_pytest.py`: se mira todo `tools/`,
-    que es lo mio. Un unico fichero seria una regla de un fichero, y esa ha
-    sido una de las del bloque: la regla que parecia de todo el repo y
-    miraba dos nombres."""
+    Y el alcance se queda en `tools/`: `motor/` tiene 14 mas, y no son mios.
+
+    Y lo que este test NO garantiza, que es lo que R2 tiene razon en que el
+    nombre prestaba a leer mas:
+
+        - que la plantilla se construya con MENTIRAS, no con los valores
+          reales. Una plantilla bien formada que al ejecutarse lance por otra
+          cosa no se ve aqui.
+        - nada de `pytest.raises`, `warnings.warn` ni `print`. Que son tres
+          rutas mas, y son otra tarea con su propio corpus."""
     sin_diccionario = []
     rotas = []
     for nombre, linea, plantilla in _mensajes_plantilla():
@@ -2583,7 +2717,7 @@ def test_no_hay_dos_listas_identicas():
 
     Y por eso este test mira el TEXTO, aunque los otros dos de esta seccion
     miran el COMPORTAMIENTO: porque lo que se quiere comprobar aqui es
-    literally que no exista una segunda COPIA, y una copia es una cosa de
+    literalmente que no exista una segunda COPIA, y una copia es una cosa de
     texto. El comportamiento no la ve — una copia produce el mismo
     comportamiento—, y es por eso que este caso necesita el otro metodo y no
     el de al lado.
@@ -2702,37 +2836,448 @@ BYTES_DE_CONTROL = tuple(b for b in range(0x20)
 def test_no_hay_caracteres_de_control_en_ningun_fichero():
     """Lo que un guardia de UN FICHERO deja pasar, y por que esta no.
 
-    Y la lectura por BYTES es la parte importante, y no un detalle: es lo que
-    hace que el guardia no pueda saltarse un fichero sin darse cuenta. Un
-    `io.open(..., encoding='utf-8')` que falla es un fichero que no se mira, y
-    un fichero que no se mira es un fichero que no falla."""
-    encontrados = []
-    for carpeta, directorios, ficheros in os.walk(ROOT):
+    Y que el numero de ficheros salga del MISMO recorrido que busca, no de otro
+    en paralelo: un testigo que comparte el recorrido comparte el fallo.
+
+    Y que el guardia se llame a una PIEZA y no este escrito entero aqui, que
+    es lo que faltaba para que tuviera dientes: escrito entero, la unica
+    forma de darle un caso es tocar el repositorio."""
+    encontrados, mirados = _caracteres_de_control_en(ROOT)
+    assert mirados >= 100, (
+        'el recorrido ha mirado %d ficheros .py. MEDIDO: 109 en `tools/` y mas '
+        'en el resto del repo. O sea que el recorrido no esta viendo todo, y '
+        '«no ha encontrado nada» ha vuelto a significar «no ha mirado».'
+        % mirados)
+    assert not encontrados, (
+        'caracteres de control en %d sitio(s):%s\n\n'
+        'Y todos vienen del mismo sitio, MEDIDO: el backtick de una cadena de '
+        'PowerShell con comillas dobles es un caracter de escape, y `` `X `` '
+        'produce el control de esa letra. O sea que un `ast` se convierte en '
+        'BEL, un `board` en BS y un `villano` en VT, sin avisar.\n\n'
+        'MEDIDO: cadena normal, aqui-string y comillas dobles se comportan '
+        'igual; las comillas SIMPLES dejan el backtick como backtick. O sea '
+        'que hay una forma de escribirlo que no rompe nada.\n\n'
+        'Y ESTA ES UNA POLITICA, no una propiedad del lenguaje: cero bytes de '
+        'control en codigo fuente. Y es razonable en `.py` y no en general, '
+        'MEDIDO: cuatro ficheros de `DOCS/` tienen bytes de control y ninguno '
+        'es un defecto, son UTF-16LE leidos como bytes.\n\n'
+        'Y el guardia del bloque anterior era correcto: lo que no era correcto '
+        'era su alcance, que decia «el repo» y miraba un fichero.'
+        % (len(encontrados),
+           chr(10).join('    %s:%d  %s' % t for t in encontrados[:12])))
+
+
+def test_el_guardia_de_control_encuentra_un_fichero_inventado():
+    """La tarea 4 de R1: «si se añade un .py con control, el test falla».
+
+    Y se comprueba con un DIRECTORIO INVENTADO, que es lo que hace posible
+    dar el caso sin tocar el repositorio — y que es justo lo que antes no
+    habia: el guardia estaba escrito dentro del test, de modo que la unica
+    forma dedarle el caso era meter un fichero malo de verdad en el repo y
+    borrarlo despues, que es una forma de romper el repo para probar que se
+    rompe.
+
+    Y el caso lleva TRES cosas a proposito, y cada una mira una parte distinta:
+
+      - un `.py` con BEL, que es el defecto real;
+      - un `.py` LIMPIO al lado, que comprueba que el recorrido no dice que
+        todo esta mal porque un fichero este mal;
+      - y un `.txt` con BEL, que comprueba el ALCANCE: el guardia no mira los
+        `.txt`, y si los mirara daria un falso positivo sobre los UTF-16 que
+        hay en `DOCS/`."""
+    with tempfile.TemporaryDirectory() as alta:
+        os.makedirs(os.path.join(alta, 'sub'))
+        bueno = os.path.join(alta, 'limpio.py')
+        malo = os.path.join(alta, 'sub', 'malo.py')
+        fuera = os.path.join(alta, 'no_mirado.txt')
+        io.open(bueno, 'w', encoding='utf-8').write('x = 1' + chr(10) + 'y = 2' + chr(10))
+        io.open(malo, 'w', encoding='utf-8').write('z = 3' + chr(10) + chr(7) + 'w = 4')
+        io.open(fuera, 'w', encoding='utf-8').write('a = 1' + chr(10) + chr(7))
+
+        encontrados, mirados = _caracteres_de_control_en(alta)
+        assert mirados == 2, (
+            'el recorrido ha mirado %d ficheros y esperaba 2. MEDIDO, el caso '
+            'es un `.py` limpio y un `.py` con BEL, y un `.txt` con BEL que '
+            'esta FUERA del alcance. O sea que si el numero no es 2, o se '
+            'estan mirando cosas que no, o no se estan mirando cosas que si.'
+            % mirados)
+        assert len(encontrados) == 1, (
+            'MEDIDO: hay exactamente un control que el guardia debe ver, y se '
+            'han encontrado %d: %r. Y el `.txt` con BEL no cuenta, porque el '
+            'alcance son los `.py` — que es lo que impide el falso positivo '
+            'sobre los cuatro ficheros UTF-16 de `DOCS/`.' % (
+                len(encontrados), encontrados))
+        assert encontrados[0][0].endswith('malo.py'), (
+            'el hallazgo dice %r y el fichero con el control se llama '
+            '`malo.py`. O sea que el recorrido ha atribuido el control al '
+            'fichero equivocado, que es la version silenciosa de un guardia '
+            'que mira de mas.' % encontrados[0][0])
+        assert encontrados[0][1] == 2, (
+            'el control esta en la linea 2 y el guardia dice la %d. MEDIDO: '
+            'cuenta `\n` antes del byte, y eso da la linea donde ESTA el '
+            'control, que no es la linea donde empieza el fichero.'
+            % encontrados[0][1])
+
+
+# ============================ 21. EL GUARDIA, CON DIENTES, Y LOS SITIOS VIVOS
+#
+# Y R1 lo dicta asi, en la tarea 4:
+#
+#     El guardia nuevo recorre solo .py.
+#     Hay un test que verifica que recorre todos los .py (no solo uno).
+#     Si se añade un .py con \x07, el test falla.
+#
+# Y las tres son MEDIBLES, y las tres necesitan lo mismo: separar el guardia
+# en piezas, para que la PIEZA se pueda probar con un fichero inventado.
+#
+# Y ESO ES LO QUE FALTA, y es un hueco de la forma que ya se ha visto siete
+# veces: el guardia esta escrito entero dentro del test, de modo que no hay
+# forma de darle un caso sin tocar el repositorio. O sea que el test tiene
+# dientes para el repositorio y ninguno para si mismo.
+#
+# Y LA SEGUNDA PIEZA ES OTRA COSA, Y ES LA TAREA 5 DE R1
+#
+#     Hay un test que verifica que las seis están bien.
+#     Si se vuelve a mirar el objeto equivocado, el test falla.
+#
+# Y las seis fallidas eran de MI VERIFICACION, que vive en `%TEMP%` y se
+# descarta. O sea que un test del repo que verifique «las seis de aquella
+# verificacion» seria un test de algo que no existe.
+#
+# La pregunta permanente no es «estan las seis bien» sino:
+#
+#     ¿quedan SITOS VIVOS en el repo donde una de esas clases pueda volver a
+#     pasar?
+#
+# Y MEDIDO, las cuatro clases de las seis, y en este fichero:
+#
+#     (a) texto que contiene la palabra y no es la cosa
+#         MEDIDO: CERO usos como condicion. `profundidad` aparece 5 veces en
+#         el fichero —en comentarios que explican el arreglo— y se usa como
+#         condicion 0 veces.
+#
+#     (b) la ventana equivocada
+#         MEDIDO: no queda sitio. El unico `rfind` vivo es el del comentario
+#         de la constante, y ya sube por el bloque linea a linea.
+#
+#     (c) decoracion en una subcadena estable
+#         MEDIDO: 0 llamadas a `find`, `rfind`, `index`, `finditer` o
+#         `splitlines` con una cadena constante en el argumento. La que sufrio
+#         buscaba una cabecera con su fila de `=`, y estaba en el script
+#         desechable.
+#
+#     (d) la codificacion que hace que un fichero se salte en silencio
+#         MEDIDO: CERRADA POR CONSTRUCCION. El guardia abre en BINARIO, y las
+#         dos aperturas de texto son de `.py` del repo, que no pueden estar en
+#         UTF-16.
+#
+# O sea que NO quedan sitios vivos. Y aqui esta el punto de este bloque:
+#
+#     una tabla con CERO filas no puede fallar, asi que no sirve como prueba.
+#
+# Y la solucion no es mas reglas: es que el instrumento se pruebe con un caso
+# INVENTADO. Que es lo que hacen las pruebas siguientes, y sin ellas el
+# inventario seria decoracion — que es, precisamente, lo que la clase (c)
+# detecta: texto que parece una comprobacion y no comprueba nada.
+
+
+def _bytes_de_control(crudo):
+    """Los bytes de control de un fichero, con la linea de cada uno.
+
+    Y lee BYTES, y por que: un guardia que abre el fichero como texto y busca
+    caracteres de control tiene un fallo — si el fichero no esta en UTF-8 la
+    lectura revienta, hay que saltarselo, y saltar un fichero es no mirarlo, que
+    es verde por no mirar.
+
+    Leyendo BYTES no hay ese fallo: no hay decodificacion que pueda fallar, y
+    un byte menor de 0x20 que no sea tabulador, salto de linea ni retorno es
+    un caracter de control, se mire como se mire.
+
+    Y una cosa que esto NO es, que R2 tiene razon en que conviene decir:
+
+        NO es una prueba de que cualquier fichero con un byte de control sea
+        invalido. Es una POLITICA —cero bytes de control en codigo fuente de
+        Python—.
+
+    Y la politica es mas debil que la propiedad, y declararla es la unica forma
+    de que nadie la lea como una propiedad. Que es la misma diferencia que hay
+    entre «esto no se puede» y «esto no lo hacemos»: lo primero se demuestra,
+    lo segundo se decide.
+
+    Y MEDIDO, por que la politica es razonable en `.py` y no en general:
+
+        DOCS/AUDIT_NOPUEDE_ACTUAR.txt     0x00    empieza por ff fe
+        DOCS/CORRELACION_CAPTURAS.txt     0x00    empieza por ff fe
+        DOCS/baseline_folds_900.txt        0x00    empieza por ff fe
+        DOCS/INVENTARIO_MULTIWAY_HEAD.txt 0x00    empieza por ff fe
+
+    Son UTF-16LE leidos como bytes, y el `0x14` de tres de ellos es la mitad
+    BAJA de U+2014 —la raya—, no un control. O sea que en un `.txt` «byte
+    menor de 0x20» y «caracter de control» no son lo mismo, y la politica
+    tendria que ser distinta ahi. En un `.py` si son lo mismo, porque el
+    codigo fuente de Python no puede estar en UTF-16."""
+    salida = []
+    for byte in BYTES_DE_CONTROL:
+        posicion = crudo.find(bytes([byte]))
+        if posicion < 0:
+            continue
+        salida.append((byte, crudo[:posicion].count(b'\n') + 1))
+    return salida
+
+
+def _caracteres_de_control_en(directorio):
+    """Los bytes de control de TODOS los `.py` de `directorio` y subcarpetas.
+
+    Y devuelve dos cosas: los hallazgos y CUANTOS ficheros ha mirado. Y las
+    dos hacen falta, y por que:
+
+      - los hallazgos, que es lo que se comprueba;
+      - el numero de ficheros, que es lo que demuestra que no se miraron solo
+        algunos.
+
+    Y el numero lo da el MISMO recorrido que busca, no otro. MEDIDO, el
+    argumento para que no sea el mismo: un testigo que comparte el recorrido
+    comparte el fallo. Y aqui no es hipotetico — el guardia anterior miraba UN
+    fichero y decia «el repo»—, pero hay un caso en que compartir es lo
+    correcto y conviene nombrarlo: cuando lo que se quiere comprobar es «este
+    recorrido va a este sitio», el recorrido tiene que ser el que se prueba.
+    Por eso el numero va DENTRO del return y no en un segundo recorrido.
+
+    Y que devuelva DONDE y no un booleano: un guardia que devuelve «hay un
+    control» obliga a abrir el fichero a mano para saber cual; uno que devuelve
+    la ruta y la linea se puede comprobar entero."""
+    hallazgos = []
+    mirados = 0
+    for carpeta, directorios, ficheros in os.walk(directorio):
         directorios[:] = [d for d in directorios
                           if d not in CARPETAS_QUE_NO_SE_MIRAN]
         for nombre in sorted(ficheros):
             if not nombre.endswith('.py'):
                 continue
+            mirados += 1
             ruta = os.path.join(carpeta, nombre)
             crudo = io.open(ruta, 'rb').read()
-            for byte in BYTES_DE_CONTROL:
-                if byte not in crudo:
-                    continue
-                numero = crudo[:crudo.index(byte)].count(b'\n') + 1
-                encontrados.append(
-                    (os.path.relpath(ruta, ROOT).replace('\\', '/'),
-                     numero, '0x%02X' % byte))
-    assert not encontrados, (
-        'caracteres de control en %d sitio(s):%s\n\n'
-        'Y todos vienen del mismo sitio, MEDIDO: el backtick de una cadena de '
-        'PowerShell con comillas dobles es un caracter de escape, y ``` `X ``` '
-        'produce el control de esa letra. O sea que un `ast` se convierte en '
-        'BEL, un `board` en BS y un `villano` en VT, sin avisar.\n\n'
-        'MEDIDO: cadena normal, aqui-string y comillas dobles se comportan '
-        'igual; las comillas SIMPLES dejan el backtick como backtick. O sea '
-        'que hay una forma de escribirlo que no rompe nada, y es no usar '
-        'comillas dobles cuando el texto lleva backticks.\n\n'
-        'Y el guardia del bloque anterior era correcto: lo que no era correcto '
-        'era su alcance, que decia «el repo» y miraba un fichero.'
-        % (len(encontrados),
-           chr(10).join('    %s:%d  %s' % t for t in encontrados[:12])))
+            for byte, numero in _bytes_de_control(crudo):
+                hallazgos.append((os.path.relpath(ruta, directorio), numero,
+                                  '0x%02X' % byte))
+    return hallazgos, mirados
+
+
+def _busquedas_sobre_fuente(fuente):
+    """Los sitios donde el codigo busca TEXTO en el codigo fuente de si mismo.
+
+    Y es el inventario de la tarea 5 de R1: las clases de «mirar el objeto
+    equivocado» que fallaron en la verificacion del bloque anterior.
+
+    Y sale del ARBOL y no de un `grep`, por una razon que es la del bloque
+    entero: hay que distinguir USAR una busqueda de ESCRIBIR una cadena que
+    contiene un metodo. Un `grep` las ve iguales; el arbol no.
+
+    Y el alcance, medido: llamadas a `find`, `rfind`, `index`, `finditer` y
+    `splitlines` cuyo PRIMER ARGUMENTO es una cadena constante. Que es donde
+    puede aparecer una decoracion —«buscar una cabecera con su fila de =»—,
+    que es la clase (c).
+
+    Y MEDIDO, lo que hay hoy en este fichero: CERO. O sea que la tabla
+    declarada tiene cero filas, y una tabla con cero filas no puede fallar.
+
+    Y por eso esta funcion existe igual: no para vigilar, sino para PODER
+    PROBAR EL INSTRUMENTO con un caso inventado. Que es lo que hace
+    `test_el_inventario_de_busquedas_detecta_una_decoracion`.
+
+    Y por que el alcance no incluye `x in texto`, que es la clase (a):
+    MEDIDO, hay comparaciones de esa forma y no hay ninguna viva. Declararla
+    sin sitio es declarar un hueco que no existe, que es lo contrario de
+    declarar."""
+    encontrados = []
+    METODOS = ('find', 'rfind', 'index', 'finditer', 'splitlines')
+    for nodo in ast.walk(ast.parse(fuente)):
+        if not (isinstance(nodo, ast.Call)
+                and isinstance(nodo.func, ast.Attribute)):
+            continue
+        if nodo.func.attr not in METODOS or not nodo.args:
+            continue
+        arg = nodo.args[0]
+        if not (isinstance(arg, ast.Constant) and isinstance(arg.value, str)):
+            continue
+        encontrados.append((nodo.lineno, nodo.func.attr, arg.value[:50]))
+    return encontrados
+
+
+# Las busquedas sobre fuente que este fichero ACEPTA, y por que.
+#
+# MEDIDO: la lista esta vacia. Y una lista vacia no es una regla: es una
+# medida de hoy. O sea que el valor de tenerla escrita no es vigilar, es poder
+# decir «aqui no hay ninguna, y cuando haya una, sale en el fallo».
+BUSQUEDAS_ACEPTADAS = ()
+
+# El bucle de leer un fichero por linea, una vez por fichero y no una por
+# hallazgo. Y el motivo no es la velocidad: es que leerlo N veces no cambia el
+# resultado, y un detalle que no cambia el resultado se puede hacer una vez.
+_LINEAS_CACHE = {}
+
+
+def _lineas_de(nombre):
+    """Las lineas de un fichero de `CARPETA_DE_MENSAJES`, cacheadas.
+
+    Y MEDIDO, por que hace falta: `_es_raise` se llama una vez por hallazgo, y
+    hay 327. Leer el fichero entero 327 veces son 327 lecturas del mismo
+    fichero para sacar la misma linea.
+
+    Y el cache se declara global y no como diccionario por test, porque el
+    test que lo necesita y el que lo mide son el mismo, y un cache por test
+    obligaria a pasar el diccionario por parametro a un sitio donde no hace
+    falta —que es como empiezan las cosas que luego nadie recuerda por que
+    estan."""
+    if nombre not in _LINEAS_CACHE:
+        ruta = os.path.join(ROOT, CARPETA_DE_MENSAJES, nombre)
+        _LINEAS_CACHE[nombre] = io.open(ruta, encoding='utf-8').read().split(
+            chr(10))
+    return _LINEAS_CACHE[nombre]
+
+
+def _es_raise(nombre, linea):
+    """¿Ese par (fichero, linea) es un `raise` con formato?
+
+    Y es una pregunta por el TEXTO del fichero, no por el arbol, y aqui es
+    lo correcto: la pregunta es «que hay en ESTA linea», y la linea es el
+    objeto. O sea que es el sitio donde mirar el texto es lo que hay que
+    hacer, y la regla «nunca mires el texto» —que no existe, pero que este
+    bloque se ha casi convertido en una— habria sido aqui un error.
+
+    Y su limite: si un `raise` y un `assert` estuvieran en la MISMA linea, esto
+    daria una respuesta imprecisa. MEDIDO: no hay ninguno asi en `tools/`."""
+    return 'raise' in _lineas_de(nombre)[linea - 1]
+
+
+def test_no_hay_busquedas_sobre_fuente_sin_declarar():
+    """Que este fichero no tenga ninguna, o que la diga.
+
+    Y MEDIDO: cero. Y por eso `BUSQUEDAS_ACEPTADAS` esta vacia, que es una
+    medida de hoy y no una regla.
+
+    Y el fallo sale aqui y no en el de la funcion, para que el nombre del test
+    sea lo que hay que leer cuando algo se rompa."""
+    encontradas = _busquedas_sobre_fuente(io.open(__file__,
+                                                 encoding='utf-8').read())
+    declaradas = tuple(sorted(BUSQUEDAS_ACEPTADAS))
+    assert tuple(sorted(encontradas)) == declaradas, (
+        'este fichero busca texto en su propia fuente en %d sitio(s), y hay %d '
+        'declarado(s) en BUSQUEDAS_ACEPTADAS.%s\n\n'
+        'O una busqueda nueva se declara y se explica —que es lo que hay que '
+        'hacer si es correcta—, o se quita: una busqueda sobre el fuente es '
+        'siempre una oportunidad de mirar el objeto equivocado, porque el '
+        'texto contiene la palabra Y el comentario que explica el arreglo.%s\n'
+        'MEDIDO, las cuatro clases que fallaron: texto con la palabra que no '
+        'es la cosa, ventana que empieza donde acaba el bloque, decoracion en '
+        'la subcadena, y codificacion que hace saltar el fichero. La ultima '
+        'esta cerrada por construccion —el guardia abre en binario—.'
+        % (len(encontradas), len(declaradas),
+           chr(10).join('      linea %-5d %s(%r)' % t for t in encontradas),
+           chr(10)))
+
+
+def test_el_inventario_de_busquedas_detecta_una_decoracion():
+    """Y que el instrumento del inventario FUNCIONE, aunque la lista este vacia.
+
+    Y esto es lo que faltaba, y es la respuesta a la tarea 5 de R1. Una tabla
+    con cero filas no puede fallar, asi que no prueba nada; lo que prueba es
+    que el instrumento que contaria las filas las cuenta.
+
+    Y el caso es la clase (c) exacta que fallo: buscar una cabecera de seccion
+    con su decoracion, que es una fila de `=` que cambia con cada edicion.
+
+    Y el contraejemplo va en la MISMA prueba, porque el remedio para una cosa
+    parece arreglar la otra: buscar la palabra estable —la que NO es
+    decoracion— sigue encontrandola aunque cambien los `=`. O sea que el
+    arreglo no es «no uses decoraciones», que es una regla sin motivo, sino
+    «busca la parte que no es decoracion», que se puede probar."""
+    con_decoracion = chr(10).join([
+        '# ==================== 20. EL TOPE',
+        'def _algo():',
+        '    s = "texto"',
+        "    return s.find('# ==================== 20. EL TOPE')",
+    ])
+    assert _busquedas_sobre_fuente(con_decoracion), (
+        'una fuente con `s.find(«# ==== 20. EL TOPE»)` —una decoracion dentro '
+        'de la subcadena— no aparece en el inventario. O sea que el '
+        'instrumento no cuenta lo que dice contar, y la tabla de aceptadas, '
+        'aunque este vacia, no estaria vigilando nada.')
+
+    solo_palabra = chr(10).join([
+        '# ==================== 20. EL TOPE',
+        'def _algo():',
+        '    s = "texto"',
+        "    return s.find('20. EL TOPE')",
+    ])
+    assert len(_busquedas_sobre_fuente(solo_palabra)) == 1, (
+        'una fuente con una sola busqueda por palabra estable tiene que dar '
+        'un hallazgo, y no lo da. O sea que el inventario cuenta de mas o de '
+        'menos, y un inventario que cuenta mal no vigila nada.')
+
+    limpio = chr(10).join(['def _otro(x):', '    return x'])
+    assert _busquedas_sobre_fuente(limpio) == [], (
+        'una fuente sin busqueda de texto tiene que dar lista vacia, y no la '
+        'da. O sea que el inventario tiene un falso positivo, y una lista con '
+        'falsos positivos obliga a mirar cada vez que sale uno —que es como '
+        'deja de vigilarse.')
+
+    dos = chr(10).join([
+        'def _otro():',
+        "    return 'texto'.index('texto')",
+    ])
+    assert len(_busquedas_sobre_fuente(dos)) == 1, (
+        '`index` tambien es una busqueda, y una que devuelve indice en vez de '
+        'posicion. MEDIDO: el inventario lo declara, y si no lo declarara el '
+        'test que acabas de leer no habria detectado la diferencia entre '
+        '«buscar» y «buscar de otra manera».')
+
+
+def test_el_barrido_de_mensajes_alcanza_los_raise_y_solo_los_de_tools():
+    """El alcance, en las DOS direcciones: entra en lo que tiene que entrar y
+    no entra en lo que no.
+
+    Y las dos mitades importan por motivos distintos:
+
+      - que encuentre los `raise` es lo que se acaba de anadir, y sin esta
+        comprobacion el cambio seria invisible: el barrido volveria a dar
+        verde si dejara de mirar los `raise`, porque 302 sigue estando por
+        debajo del suelo de 200.
+
+        O sea que ESTA es la comprobacion que hace que la ampliacion tenga
+        efecto observable. Sin ella, anadir `raise` habria sido un cambio que
+        no se puede ver.
+
+      - que NO entre en `motor/` es lo que hace que el alcance siga siendo
+        auditable. Un detector que se sale de su sitio no es mas preciso: es
+        menos auditable, porque ya no se puede decir que no toca lo que no es
+        suyo.
+
+    Y `_es_raise` es codigo muerto sin esta llamada — MEDIDO: se escribio tres
+    veces sin que nadie la llamara, y una funcion auxiliar sin su test es una
+    comprobacion que no se ejecuta. Que es la version mas inutil de la regla
+    del bloque: no es un test que no se ejecuta, es que no hay test."""
+    encontrados = _mensajes_plantilla()
+    raises = [(nombre, linea) for nombre, linea, plantilla in encontrados
+              if _es_raise(nombre, linea)]
+    asserts = [(nombre, linea) for nombre, linea, plantilla in encontrados
+               if not _es_raise(nombre, linea)]
+    assert len(raises) >= 20, (
+        'el barrido deberia encontrar al menos 20 `raise` con formato en %s y '
+        'ha encontrado %d. MEDIDO: 25. O sea que el alcance declarado ya no '
+        'es el alcance real, y esa es la unica forma de que un alcance se '
+        'vuelva falso: que el codigo cambie sin que cambie el comentario.'
+        % (CARPETA_DE_MENSAJES, len(raises)))
+    assert len(asserts) >= 200, (
+        'el barrido deberia encontrar al menos 200 `assert` con formato y ha '
+        'encontrado %d. MEDIDO: 302. O sea que anadir los `raise` ha tapado '
+        'algo en los `assert`, y dos cambios en el mismo sitio se pueden '
+        'cancelar sin que ninguno se note.' % len(asserts))
+    fuera = [nombre for nombre, _, _ in encontrados
+             if os.path.sep + 'motor' + os.path.sep in os.path.join(ROOT,
+                                                                     nombre)]
+    assert not fuera, (
+        'el barrido ha entrado en `motor/`, que no es mio: %r. MEDIDO: `motor/` '
+        'tiene 14 `raise` con formato y ninguno se mira, y eso esta DECLARADO '
+        'en el docstring de `_mensajes_plantilla`, que es donde se declara lo '
+        'que no se comprueba.' % fuera[:3])
