@@ -373,7 +373,7 @@ def test_la_prueba_causal_sigue_en_pie():
 
     Un documento que corrige una cosa y quita la otra esta peor que uno que
     no corrige ninguna: ha perdido una prueba buena para ganar una
-   prueba. Eso tiene que comprobarse."""
+    prueba. Eso tiene que comprobarse."""
     doc = leer('QUE_REPRESENTA_LA_PREDICCION.md')
     assert '0,8308' in doc, 'el numero malo'
     assert '0,7667' in doc, 'el numero bueno'

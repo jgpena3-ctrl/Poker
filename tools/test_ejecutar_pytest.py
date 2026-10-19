@@ -2440,37 +2440,64 @@ def _plantillas_de(fuente):
         DESACUERDOS:            1
             test_ejecutar_pytest.py:3265   de verdad assert  por texto raise
 
-La linea 3265 era un `assert` cuyo MENSAJE empieza por «el barrido deberia
-encontrar al menos 20 `raise`» — de modo que la palabra «raise» estaba en la
-linea y el `assert` se contaba como un `raise`.
+    La linea 3265 era un `assert` cuyo MENSAJE empieza por «el barrido deberia
+    encontrar al menos 20 `raise`» — de modo que la palabra «raise» estaba en la
+    linea y el `assert` se contaba como un `raise`.
 
-O sea que el fallo mas incomodo posible: la comprobacion que vigila al
-clasificador estaba ella misma mal clasificada, y por eso el suelo de 20 se
-estaba comprobando con un dato contaminado. Los dos numeros reales eran 25
-`raise` y 311 `assert`, no 26 y 310.
+    O sea que el fallo mas incomodo posible: la comprobacion que vigila al
+    clasificador estaba ella misma mal clasificada, y por eso el suelo de 20 se
+    estaba comprobando con un dato contaminado. Los dos numeros reales eran 25
+    `raise` y 311 `assert`, no 26 y 310.
 
     MEDIDO, Y LA DIRECCION QUE NO EXISTE
 
-La direccion contraria —un `raise` clasificado como `assert`— NO se puede
-producir: `Raise.lineno` es la linea de la palabra `raise`, y ahi la palabra
-esta. MEDIDO con un `raise` partido en tres lineas: sigue aciertando.
+    La direccion contraria —un `raise` clasificado como `assert`— NO se puede
+    producir: `Raise.lineno` es la linea de la palabra `raise`, y ahi la palabra
+    esta. MEDIDO con un `raise` partido en tres lineas: sigue aciertando.
 
-O sea que el fallo era de una sola direccion, y eso solo se sabe midiendo. Lo
-razonable sin medir seria decir «va en las dos direcciones», que habria sido
-la mitad de verdad.
+    O sea que el fallo era de una sola direccion, y eso solo se sabe midiendo. Lo
+    razonable sin medir seria decir «va en las dos direcciones», que habria sido
+    la mitad de verdad.
 
-Y POR QUE UNA FUNCION Y NO UN `for` DENTRO DEL BARRIDO
+    Y POR QUE UNA FUNCION Y NO UN `for` DENTRO DEL BARRIDO
 
-Porque hay que poder darle una fuente INVENTADA. `_mensajes_plantilla()` lee
-ficheros del disco y no se puede comprobar con un caso escrito a mano; esta
-recibe texto y si. Que es el mismo motivo por el que el guardia de control
-salio del test: una comprobacion que solo se puede ejecutar contra el
-repositorio tiene dientes para el repositorio y ninguno para si misma.
+    Porque hay que poder darle una fuente INVENTADA. `_mensajes_plantilla()` lee
+    ficheros del disco y no se puede comprobar con un caso escrito a mano; esta
+    recibe texto y si. Que es el mismo motivo por el que el guardia de control
+    salio del test: una comprobacion que solo se puede ejecutar contra el
+    repositorio tiene dientes para el repositorio y ninguno para si misma.
 
-Y MEDIDO, y por que el texto no valia: el texto de una linea contiene el
-mensaje del assert, sus comentarios, y la palabra que se le parezca. O sea que
-«¿esta linea es un raise?» tiene tres respuestas posibles y la pregunta solo
-tiene dos."""
+    Y LA PREGUNTA DE R2: ¿PASARLE `filename` A `ast.parse`?
+
+    MEDIDO: con `filename` el `SyntaxError` de Python SI nombra el fichero.
+
+        sin filename   -> invalid syntax (<unknown>, line 1)
+        con filename   -> invalid syntax (ruta/roto.py, line 1)
+
+    O sea que la via que describe R2 es real, y funciona.
+
+    Y NO se anade, por un motivo MEDIDO y no supuesto: los dos unicos
+    llamadores de esta funcion son el barrido —que captura el `SyntaxError` y
+    escribe su mensaje, que empieza por el nombre del fichero— y el test de los
+    disfraces, que pasa texto en memoria y no tiene nombre que dar.
+
+    O sea que no hay llamador de produccion a quien `filename` le aportase
+    algo: el mensaje propio ya dice cual es el fichero, que es el dato que con
+    109 ficheros en el alcance importa.
+
+    Y lo que SI seria motivo para volver a mirarlo: que aparezca un llamador que
+    pase texto de un fichero y NO capturare el `SyntaxError`. O sea, un
+    criterio y no una intencion — que es la diferencia entre «no se anade» y
+    «no se anade aun».
+
+    Y que la decision estuviera tomada en un script de medicion es la misma
+    forma que las cifras duplicadas del inventario: algo que el codigo hace,
+    dicho en un sitio al que nadie vuelve.
+
+    Y MEDIDO, y por que el texto no valia: el texto de una linea contiene el
+    mensaje del assert, sus comentarios, y la palabra que se le parezca. O sea que
+    «¿esta linea es un raise?» tiene tres respuestas posibles y la pregunta solo
+    tiene dos."""
     salida = []
     for nodo in ast.walk(ast.parse(fuente)):
         if isinstance(nodo, ast.Assert) and nodo.msg is not None:
@@ -3478,7 +3505,26 @@ def test_cada_excepcion_del_barrido_nombra_su_fichero():
             except AssertionError as e:
                 return str(e)
             except Exception as e:          # noqa: BLE001
-                return '%s de Python: %s' % (type(e).__name__, e)
+                # Y aqui, la distincion que R2 senala, y es de dos
+                # clases y no de una.
+                #
+                # MEDIDO: _mensajes_plantilla lanza AssertionError
+                # para los DOS fallos que sabe explicar —no leer, no
+                # parsear—, y propaga cualquier otra cosa. O sea que si
+                # aqui aparece otra excepcion, NO es un caso del que el
+                # test sepa: es el instrumento fallando de una forma no
+                # prevista.
+                #
+                # Y el texto lo dice, porque R2 tiene razon en que un
+                # except Exception que convierte todo en el mismo texto
+                # puede esconder la distincion. El arreglo no es propagar
+                # —que haria el test menos util—: es que el mensaje diga de
+                # donde viene.
+                return ('NO ES EL MENSAJE PROPIO DE LA '
+                        'COMPROBACION: ha salido una %s, que el '
+                        'instrumento no previó (%s). O sea que este fallo '
+                        'no es un caso del detector: es el detector roto.'
+                        % (type(e).__name__, e))
 
     def _roto(ruta):
         io.open(ruta, 'w', encoding='utf-8').write('def f(:' + chr(10))
@@ -3541,24 +3587,90 @@ def test_cada_excepcion_del_barrido_nombra_su_fichero():
 # alcance, con 88 tests.
 CARPETAS_DEL_INVENTARIO = ('tools', 'motor', 'recorder')
 
-# MEDIDO, en este momento:
+# Y LAS CIFRAS, EN UN SOLO SITIO
 #
-#     tools       459 tests
-#     motor       834 tests
-#     recorder      4 tests
+# Y este comentario NO lleva cifras, y antes las llevaba, y era un defecto.
+# MEDIDO, lo que habia:
+#
+#     el comentario:      tools 459, motor 834, recorder 4      suma 1297
+#     la constante:       {'tools': 461, 'motor': 834, ...}    suma 1299
+#
+# O sea que habia DOS copias de la misma medicion y no coincidian. Y R2 lo
+# senalo, y con razon: las cifras son el OBJETO del guardia, de modo que si
+# estan dos veces, hubo un momento en que una era la buena y la otra no, y no
+# hay forma de saber cual.
+#
+# Y eso no es cosmetico aunque lo parezca: un comentario con una cifra
+# desactualizada en otro sitio es inocuo. Aqui no, porque una cifra
+# desactualizada al lado de la cifra buena es una medicion que no se puede
+# repetir —no dice de cuando es—.
+#
+# 459 era la medicion de ANTES de anadir dos tests. O sea que el que estaba
+# desactualizado era el comentario, y la constante era la buena.
+#
+# Y EL ARREGLO NO ES PONERLAS AL DIA: es que solo haya una
+#
+#     la CONSTANTE tiene las cifras, porque es lo que el test compara
+#     este COMENTARIO no tiene cifras, porque no se compara con nada
+#
+# Que es la leccion de «dos listas identicas» con otras palabras: dos copias de
+# la misma cosa se ven iguales y pueden divergir, y el arreglo es que solo haya
+# una.
+#
+# Y EN LUGAR DE LAS CIFRAS, LA ORDEN QUE LAS REPRODUCE
+#
+#     python -m pytest tools/test_ejecutar_pytest.py -k no_ha_desaparecido
+#
+# y el fallo del test imprime, por carpeta, la cifra declarada y la medida, una
+# al lado de otra. O sea que la medicion esta donde se ve y no en una copia.
 #
 # Y son TRES cifras y no ochenta y nueve filas, porque un inventario por
-# fichero de 89 filas es una tabla que nadie mantiene, y una tabla que nadie
+# fichero de esa taille es una tabla que nadie mantiene, y una tabla que nadie
 # mantiene es decoracion.
-#
-# Y el coste de que sea el repo entero es que CUALQUIER test nuevo en
-# cualquier fichero rompe este guardia. Que es lo que se quiere: que anadir un
-# test sea una decision consciente y no un efecto colateral.
-TESTS_POR_CARPETA = {'tools': 461, 'motor': 834, 'recorder': 4}
 
+TESTS_POR_CARPETA = {'motor': 834, 'recorder': 4, 'tools': 462}
+
+
+# Y los FICHEROS, que son OTRA medida. MEDIDO, y sin ellos el guardia
+# fijaba una cifra de funciones y no podia decir si habia mirado todos
+# los ficheros o solo algunos — que es lo que R2 senala, y lo mismo que
+# hacia el guardia de caracteres de control con su `mirados`.
+#
+# Y el alcance, DICHO y VIGILADO: el PRIMER NIVEL de estas tres carpetas.
+# MEDIDO: hay CERO tests en subcarpetas, de modo que hoy «el repo entero»
+# es cierto. Y «hoy» no es una propiedad. O sea que el guardia no baja,
+# pero FALLA si algun dia hay tests abajo: es el unico caso en el que
+# bajaria, y bajarlo sin querer seria decir «el repo entero» sin serlo.
+FICHEROS_POR_CARPETA = {'motor': 68, 'recorder': 4, 'tools': 109}
 
 def _tests_de(directorio):
-    """Cuantos `def test_` hay en los `.py` de `directorio`, por el ARBOL.
+    """Cuantos `def test_` hay en los `.py` de `directorio`, y cuantos ficheros.
+
+    Y devuelve DOS cosas, que son DOS medidas distintas. MEDIDO, y el motivo es
+    que R2 senalo que el guardia fijaba funciones y no decia si habia mirado
+    todos los ficheros: un `.py` con un solo test sigue siendo un fichero, y sin
+    contarlos no hay forma de distinguir «he mirado el arbol entero» de «he
+    mirado parte».
+
+    Que es la misma forma del hueco que cerraba el guardia de caracteres de
+    control, que devuelve `(hallazgos, mirados)` justamente para poder decir
+    que ha mirado todos.
+
+    Y NO BAJA A SUBCARPETAS, y eso es DECLARADO y VIGILADO
+
+    MEDIDO: hay CERO tests en subcarpetas de las tres carpetas, de modo que hoy
+    «el repo entero» es cierto.
+
+    Y «hoy» no es una propiedad. O sea que esta funcion no baja, y el test
+    FALLA si algun dia hay tests abajo — que es el unico caso en el que
+    bajaria. Bajarlo sin querer seria decir «el repo entero» sin serlo, que es
+    el fallo que ya se cometio una vez en este bloque: una regla que decia «el
+    repo» y miraba dos ficheros de quince.
+
+    Y `_tests_en_subcarpetas` es la que mira, y el test la llama. Que es
+    preferible a bajar por una razon concreta: un `.py` en una subcarpeta puede
+    no ser un modulo de este repo, y bajar obligaria a decidir eso. Midiendo
+    primero, la decision solo hace falta el dia que haya algo que decidir.
 
     Y por el arbol, y no por `grep`: `def test_` puede aparecer dentro de un
     docstring —este mismo fichero lo menciona al explicar por que se cuenta—
@@ -3567,13 +3679,14 @@ def _tests_de(directorio):
 
     Y aqui, al reves que en el barrido de mensajes, la excepcion de Python SI
     nombra el fichero —`SyntaxError` lleva el nombre en su mensaje—, y por eso
-    no hace falta una mia. MEDIDO, y conviene decirlo porque son dos ficheros
-    que hacen lo mismo con dos politicas distintas, y sin decir nada parece
+    no hace falta una mia. MEDIDO, y conviene decirlo porque son dos sitios que
+    hacen lo mismo con dos politicas distintas, y sin decir nada parece
     incoherencia."""
-    total = 0
+    total = ficheros = 0
     for nombre in sorted(os.listdir(directorio)):
         if not nombre.endswith('.py'):
             continue
+        ficheros += 1
         try:
             arbol = ast.parse(io.open(os.path.join(directorio, nombre),
                                       encoding='utf-8').read())
@@ -3587,17 +3700,81 @@ def _tests_de(directorio):
                      if isinstance(nodo, (ast.FunctionDef,
                                           ast.AsyncFunctionDef))
                      and nodo.name.startswith('test_'))
-    return total
+    return total, ficheros
 
+
+def _tests_en_subcarpetas(directorio):
+    """Los tests que hay por debajo del primer nivel de `directorio`.
+
+    Y MEDIDO: CERO, en las tres carpetas. Y esa cifra NO esta en un comentario
+    porque no puede estar: es la que este test comprueba, y si mañana hay
+    tests abajo, la comprobacion falla y el comentario se queda viejo —que es
+    justo lo que le paso a las cifras del inventario, y por eso no hay cifras
+    aqui.
+
+    Y `__pycache__` y los buzones de pytest quedan fuera: no tienen `.py`."""
+    encontrados = []
+    for nombre in sorted(os.listdir(directorio)):
+        ruta = os.path.join(directorio, nombre)
+        if not os.path.isdir(ruta) or nombre in ('__pycache__',
+                                                 '.pytest_cache'):
+            continue
+        for fichero in sorted(os.listdir(ruta)):
+            if not fichero.endswith('.py'):
+                continue
+            try:
+                arbol = ast.parse(io.open(os.path.join(ruta, fichero),
+                                          encoding='utf-8').read())
+            except (SyntaxError, UnicodeDecodeError) as e:
+                raise AssertionError('%s/%s no se ha podido leer (%s)'
+                                     % (nombre, fichero, e))
+            cuenta = sum(1 for nodo in ast.walk(arbol)
+                         if isinstance(nodo, (ast.FunctionDef,
+                                              ast.AsyncFunctionDef))
+                         and nodo.name.startswith('test_'))
+            if cuenta:
+                encontrados.append(('%s/%s' % (nombre, fichero), cuenta))
+    return encontrados
 
 def test_no_ha_desaparecido_ningun_test():
     """Y que el recuento no se pueda quedar satisfecho por una lista vacia.
 
-    MEDIDO: 1299 tests en 89 ficheros, en tres carpetas.
+    Y aqui NO hay cifras, ni en este docstring ni en el comentario de las
+    constantes, y antes si las habia. MEDIDO, lo que habia:
+
+        el comentario:      tools 459, motor 834, recorder 4     suma 1297
+        la constante:       {'tools': 461, 'motor': 834, ...}   suma 1299
+
+    Y eso es un defecto, no cosmetico: las cifras son el OBJETO del guardia, y
+    dos copias que no coinciden significan que hubo un momento en que una era
+    la buena y la otra no. Una cifra al lado de la cifra buena es una medicion
+    que no se puede repetir.
+
+    Y en su lugar, la ORDEN que produce la medicion:
+
+        python -m pytest tools/test_ejecutar_pytest.py -k no_ha_desaparecido
+
+    Y el fallo de este test imprime, por carpeta, la cifra declarada y la
+    medida, una al lado de otra. O sea que la medicion esta donde se ve.
 
     Y el suelo no es un total sino TRES cifras, una por carpeta. Porque un
-    total con una cifra magica no dice nada cuando se rompe —dice «1299 !=
-    1298» y hay que adivinar donde— y una cifra por carpeta ya lo dice.
+    total con una cifra magica no dice nada cuando se rompe —dice «una de mas»
+    y hay que adivinar donde— y una cifra por carpeta ya lo dice. Y ahora hay
+    SEIS: tres de tests y tres de ficheros, que son dos medidas distintas. R2
+    lo senala, y con razon: un `.py` con un solo test sigue siendo un fichero,
+    y sin contarlos no hay forma de distinguir «he mirado el arbol entero» de
+    «he mirado parte».
+
+    Y EL ALCANCE, DICHO Y VIGILADO
+
+    MEDIDO: hay CERO tests en subcarpetas, de modo que hoy «el repo entero» es
+    cierto. Y «hoy» no es una propiedad, de modo que el guardia no baja pero
+    FALLA si algun dia hay tests abajo.
+
+    Y eso es preferible a bajar, y el motivo es concreto: un `.py` en una
+    subcarpeta puede no ser un modulo de este repo, y bajar obligaria a
+    decidirlo. Midiendo primero, la decision solo hace falta el dia que haya
+    algo que decidir.
 
     Y el fallo que este guardia evita, MEDIDO, con el parche que lo produjo:
 
@@ -3610,16 +3787,153 @@ def test_no_ha_desaparecido_ningun_test():
     no rompe nada porque no hay nada que ejecutar, y ese es el motivo por el
     que hace falta un guardia que mire el RECUENTO y no el resultado de la
     suite: el resultado de la suite no puede notar que falta un test."""
-    medido = dict((carpeta, _tests_de(os.path.join(ROOT, carpeta)))
-                  for carpeta in CARPETAS_DEL_INVENTARIO)
+    medido = {}
+    medido_ficheros = {}
+    for carpeta in CARPETAS_DEL_INVENTARIO:
+        total, ficheros = _tests_de(os.path.join(ROOT, carpeta))
+        medido[carpeta] = total
+        medido_ficheros[carpeta] = ficheros
     assert medido == TESTS_POR_CARPETA, (
-        'el numero de tests por carpeta no es el declarado:%s%s\n\n'
+        'el numero de TESTS por carpeta no es el declarado:%s\n\n'
         'Si ha BAJADO, ha desaparecido un test, y eso no rompe nada por si '
         'mismo —no hay nada que ejecutar— y por eso hace falta este guardia.\n'
         '\n'
         'Si ha SUBIDO, hay que actualizar `TESTS_POR_CARPETA` a mano, y esa es '
         'la parte incomoda: es el precio de que anadir un test sea una decision '
         'consciente. Un guardia que se actualiza solo no vigila nada.'
-        % (chr(10).join('    %-9s declarado %d  medido %d'
-                        % (c, TESTS_POR_CARPETA[c], medido[c])
-                        for c in CARPETAS_DEL_INVENTARIO), chr(10)))
+        % chr(10).join('    %-9s declarado %4d   medido %4d'
+                       % (c, TESTS_POR_CARPETA[c], medido[c])
+                       for c in CARPETAS_DEL_INVENTARIO))
+    assert medido_ficheros == FICHEROS_POR_CARPETA, (
+        'el numero de FICHEROS por carpeta no es el declarado:%s\n\n'
+        'Y esto es OTRA medida que la de tests, que es lo que R2 senala: un '
+        '`.py` con un solo test sigue siendo un fichero. Sin esta comprobacion '
+        'no hay forma de distinguir «he mirado el arbol entero» de «he mirado '
+        'parte». Que es lo mismo que hace el guardia de caracteres de control '
+        'con su `mirados`.'
+        % chr(10).join('    %-9s declarado %4d   medido %4d'
+                       % (c, FICHEROS_POR_CARPETA[c], medido_ficheros[c])
+                       for c in CARPETAS_DEL_INVENTARIO))
+    abajo = []
+    for carpeta in CARPETAS_DEL_INVENTARIO:
+        for fichero, cuenta in _tests_en_subcarpetas(os.path.join(ROOT,
+                                                                 carpeta)):
+            abajo.append('%s/%s  %d' % (carpeta, fichero, cuenta))
+    assert not abajo, (
+        'hay %d fichero(s) con tests POR DEBAJO del primer nivel:%s\n\n'
+        'MEDIDO, hasta ahora no habia ninguno, y por eso el guardia no baja. '
+        'O sea que el alcance «el repo entero» era cierto DE HOY, y «hoy» no '
+        'es una propiedad.\n\n'
+        'Y el arreglo NO es bajar sin mas: un `.py` en una subcarpeta puede no '
+        'ser un modulo de este repo. El arreglo es decidir cual de las dos '
+        'cosas es esta, y eso ya se puede decidir porque hay un caso.'
+        % (len(abajo), chr(10).join('    %s' % x for x in abajo)))
+
+
+# ============================ 23. LOS DOCSTRINGS DESCUADRADOS
+#
+# Y este es un tipo de incoherencia que no ha salido hasta ahora, y que es la
+# clase de siempre con una razon nueva:
+#
+#     no es que la comprobacion mida mal. Es que NO HAY COMPROBACION.
+#
+# MEDIDO, con el AST —que sabe donde empieza y acaba cada docstring— y no con
+# `grep`:
+#
+#     lineas de docstring sin la sangria de su bloque: 23, todas en
+#     `_plantillas_de`, y alternando con nueve que si la tienen
+#
+# O sea que NO era un bloque entero sin sangrar. Y eso es PEOR, y el motivo es
+# concreto: con un bloque entero sin sangrar un lector ve «esto no es codigo»
+# y se para; con lineas alternadas el bloque parece codigo a medias, y el ojo
+# lo acepta como algo raro sin pararse.
+#
+# Y NO ROMPE NADA: el parse pasa, la suite pasa, el fichero funciona. O sea que
+# no hay nada que detecte el fallo salvo una comprobacion expresa.
+#
+# Y POR QUE EL GUARDIA VA CON EL AST Y NO CON `grep`
+#
+# MEDIDO, constantes con tres comillas dobles dentro, en este fichero: 0. O
+# sea que hoy unas tres comillas dobles no son ambiguas. Y eso es «hoy no pasa»: manana puede haber
+# una cadena normal que lo contenga, y un guardia por texto empezaria a contar
+# delimitadores donde no los hay.
+#
+# El AST ya sabe cual es el delimitador —`ast.Expr` sobre una `Constant` de
+# cadena ES el docstring—, de modo que no depende de que no haya casos raros.
+# Y esa es la razon por la que en este bloque el texto se ha dejado de usar
+# para esto.
+#
+# Y EL ALCANCE: `tools/`, que es lo mio. MEDIDO: los docstrings descuadrados
+# estaban todos en `tools/`. Y `motor/` y la raiz quedan fuera, y eso esta
+# escrito aqui y no solo en el mensaje del commit.
+CARPETA_DE_DOCSTRINGS = 'tools'
+
+
+def _docstring_de(nodo):
+    """El docstring de un nodo, o None. Y por el AST.
+
+    Y MEDIDO, el motivo de no hacerlo por texto: en este fichero hay 733
+    constantes de cadena y NINGUNA contiene tres comillas dobles, de modo que
+    un guardia por texto funcionaria hoy. Y «hoy» no es una propiedad."""
+    cuerpo = getattr(nodo, 'body', None)
+    if not isinstance(cuerpo, list) or not cuerpo:
+        return None
+    primero = cuerpo[0]
+    if (isinstance(primero, ast.Expr)
+            and isinstance(primero.value, ast.Constant)
+            and isinstance(primero.value.value, str)):
+        return primero
+    return None
+
+
+def test_no_hay_docstrings_descuadrados():
+    """Que ningun docstring tenga lineas fuera de la sangria de su bloque.
+
+    Y el criterio es la COLUMNA, no el texto: la sangria de la apertura es la
+    que debe tener el resto, porque el bloque va dentro de un cuerpo y lo que
+    esta sangrado es el cuerpo.
+
+    Y por que este guardia y no el `ast.parse`: porque el `parse` ya pasa con
+    un docstring descuadrado. MEDIDO: 23 lineas en `_plantillas_de`, el parse
+    bien, y la suite bien. O sea que el fallo era invisible, y un fallo
+    invisible necesita una comprobacion, no un parseo.
+
+    Y el alcance es `tools/`, que es lo mio. Y esta declarado aqui y no en el
+    mensaje del commit, que es donde se quedan las cosas que nadie vuelve a
+    leer."""
+    base = os.path.join(ROOT, CARPETA_DE_DOCSTRINGS)
+    assert os.path.isdir(base), 'la carpeta tiene que existir: %s' % base
+    descuadrados = []
+    for nombre in sorted(os.listdir(base)):
+        if not nombre.endswith('.py'):
+            continue
+        ruta = os.path.join(base, nombre)
+        texto = io.open(ruta, encoding='utf-8').read()
+        arbol = ast.parse(texto)
+        lineas = texto.split(chr(10))
+        for nodo in ast.walk(arbol):
+            primero = _docstring_de(nodo)
+            if primero is None:
+                continue
+            apertura = primero.lineno
+            sangria = (len(lineas[apertura - 1])
+                       - len(lineas[apertura - 1].lstrip()))
+            if sangria == 0:
+                continue
+            sueltas = [k for k in range(apertura, primero.end_lineno)
+                       if lineas[k].strip()
+                       and len(lineas[k]) - len(lineas[k].lstrip()) < sangria]
+            if sueltas:
+                descuadrados.append('%s:%d «%s» en %d linea(s)'
+                                    % (nombre, apertura + 1,
+                                       getattr(nodo, 'name', '<modulo>'),
+                                       len(sueltas)))
+    assert not descuadrados, (
+        'hay %d docstring(s) con lineas fuera de la sangria de su bloque:%s\n\n'
+        'MEDIDO, por que se nota: un bloque ENTERO sin sangrar hace que un '
+        'lector vea «esto no es codigo» y se pare; lineas alternadas hacen que '
+        'el bloque parezca codigo a medias, y el ojo lo acepta sin pararse.\n\n'
+        'Y nada de esto rompe nada —el parse pasa y la suite pasa—, que es la '
+        'razon por la que hace falta esta comprobacion y no un parseo.'
+        % (len(descuadrados),
+           chr(10).join('    %s' % x for x in descuadrados[:10])))

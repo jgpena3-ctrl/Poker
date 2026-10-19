@@ -259,7 +259,7 @@ def test_lo_retirado_en_el_documento_esta_marcado():
 
 def test_el_documento_separa_las_tres_afirmaciones():
     """
-evision_2 §3: coherencia, discriminacion y decision son cosas
+    evision_2 §3: coherencia, discriminacion y decision son cosas
     distintas, y confundirlas es lo que hace que una decision de ingenieria
     parezca una demostracion."""
     d = io.open(os.path.join(ROOT, 'DOCS', 'QUE_ES_MATRIX.md'),

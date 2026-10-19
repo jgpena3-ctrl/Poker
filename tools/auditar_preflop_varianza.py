@@ -74,7 +74,7 @@ def _es_validacion(h):
     Antes esta funcion reimplementaba el sha256 aqui. Dos copias de la
     misma regla pueden divergir sin que nadie se entere, que es justo lo
     que 
-evision_2 §1 pidio unificar.
+    evision_2 §1 pidio unificar.
     """
     return cal.es_validacion(h['hand_id'])
 

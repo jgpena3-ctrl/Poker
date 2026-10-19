@@ -22,7 +22,7 @@ s = s[:i].rstrip() + NL + NL + s[j:]
 El corte anterior ya había borrado `_es_raise`, así que `j` era `-1` y
 `s[j:]` era `s[-1:]`: **el último carácter**.
 
-Lo que se llevó:
+Lo que se llevó, MEDIDO en el `git diff`:
 
 ```
 @@ -3114,170 +3164 @@ BUSQUEDAS_ACEPTADAS = ()
@@ -64,6 +64,10 @@ señalando la línea equivocada.
 
 ## 2. La regla que sale de los tres
 
+> **Esto es razonamiento, no una medición.** Sale de las tres de
+> arriba, que sí tienen medición, y no tiene una propia: es una regla
+> sobre ellas.
+
 ```
 cuando algo falla en un parche,
 IMPRIMIR lo que se va a escribir.
@@ -79,6 +83,8 @@ Y hay dos casos distintos, con arreglo distinto:
 - **el parche rompe la estructura** → el fallo imprime la región
 
 ## 3. El guardia que faltaba en los tres
+
+MEDIDO, antes y después de un parche:
 
 ```
 def test_ antes: 42
@@ -122,7 +128,8 @@ buscaba `SYNTAXIS INVALIDA`. Una `y` de diferencia, y el test caía.
 
 ## 5. Cuatro familias de «no mide lo que dice»
 
-Todas medidas, todas con el arreglo al lado:
+MEDIDO, todas: cada fila es su propia medición. Y todas con el arreglo
+al lado.
 
 | # | La comprobación | Por qué no mide | El arreglo |
 |---|---|---|---|
@@ -166,9 +173,10 @@ regla, y la siguiente palabra la rompe.
 2. **existe y mide mal** — se ve al leer el resultado
 3. **existe y no mide nada** — verde, y es la peligrosa
 
-La tercera es la que se ha buscado en este proyecto, once veces, y siempre con
-la misma pregunta al principio: **¿se ha ejecutado alguna vez la condición que
-dice comprobar?**
+MEDIDO: la tercera se ha buscado en este proyecto once veces. Y siempre con
+la misma pregunta al principio:
+
+> **¿se ha ejecutado alguna vez la condición que dice comprobar?**
 
 ## 8. Y la que solo se ve al fallar
 
@@ -204,3 +212,91 @@ Y para que el dummy no rompa el instrumento: MEDIDO, el repo usa `%s` ×180,
 `%d` ×99, `%r` ×98, `%f` ×21. Una cadena de mentira revienta en `%f`, porque
 `%f` llama a `float()`. Un comprobador que falla por culpa de su propio
 instrumento es un comprobador que no sirve.
+
+## 9. Dos copias de la misma medición
+
+R2 lo señaló sobre un guardia de recuentos:
+
+`
+el comentario:      tools 459, motor 834, recorder 4     suma 1297
+la constante:       {'tools': 461, 'motor': 834, ...}   suma 1299
+`
+
+Dos copias de la misma cifra, MEDIDO, y no coincidían.
+
+> No es cosmético aunque lo parezca. Las cifras eran **el objeto** del guardia,
+> así que si están dos veces, hubo un momento en que una era la buena y la otra
+> no — y no hay forma de saber cuál.
+
+Una cifra al lado de la cifra buena es **una medición que no se puede
+repetir**, porque no dice de cuándo es.
+
+Y el arreglo no es ponerlas al día:
+
+`
+la CONSTANTE tiene las cifras, porque es lo que el test compara
+el COMENTARIO no tiene cifras, porque no se compara con nada
+`
+
+Es la misma leccion de las dos listas idénticas, con otras palabras: **dos
+copias de la misma cosa se ven iguales y pueden divergir, y el arreglo es que
+solo haya una**.
+
+Y en lugar de las cifras, la orden que las produce:
+
+`
+python -m pytest tools/test_ejecutar_pytest.py -k no_ha_desaparecido
+`
+
+que no se puede quedar vieja, porque se ejecuta. Y el fallo del test imprime
+la declarada y la medida, una al lado de otra: la medición está donde se ve.
+
+## 10. Un alcance que se declara y se vigila
+
+Un guardia que decía «el repo entero»usaba os.listdir, que no baja a
+subcarpetas.
+
+MEDIDO: hay **cero** tests en subcarpetas. O sea que hoy «el repo entero» es
+cierto.
+
+Y «hoy» no es una propiedad. El arreglo no fue bajar, y el motivo es
+concreto: **un .py en una subcarpeta puede no ser un módulo de este repo**,
+y bajar obligaría a decidir eso.
+
+El arreglo fue:
+
+- el alcance se declara como **el primer nivel**, y
+- el guardia **falla si algún día hay tests abajo**
+
+Que es la diferencia entre «el alcance es el repo» —que es una frase— y «el
+alcance es el primer nivel, y hay un guardia que dice cuándo eso deja de ser
+verdad».
+
+Y una segunda medida, que R2 señaló: el guardia fijaba **funciones** y no
+decía si había mirado **todos los ficheros**. Un .py con un solo test sigue
+siendo un fichero. Ahora hay dos cifras y dos comprobaciones, que es lo mismo
+que hace el guardia de caracteres de control con su mirados.
+
+## 11. Y una reflexión sobre el orden
+
+MEDIDO, lo que abrió este bloque, y que no estaba en ninguna tarea:
+
+`
+sintaxis invalida  -> SyntaxError de Python   nombra el fichero: False
+no es utf-8        -> mi AssertionError      nombra el fichero: True
+`
+
+De las dos palabras de un except, **una seguía viva y la otra era adorno**.
+
+Y la cuarta forma de la familia, con un disfraz que no se había visto:
+
+`
+un test que depende del ORDEN de los ficheros y mide uno de ellos
+`
+
+Con tres ficheros en un directorio, sorted decide cuál falla primero — el
+alfabético — y el caso pedido nunca se mide. Con dos nombres cambiados de
+sitio, el test habría pasado sin comprobar nada.
+
+El arreglo es el de siempre: **aislar la pieza para poder darle el caso**. Un
+directorio por caso.
