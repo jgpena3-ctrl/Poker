@@ -3628,7 +3628,7 @@ CARPETAS_DEL_INVENTARIO = ('tools', 'motor', 'recorder')
 # fichero de esa taille es una tabla que nadie mantiene, y una tabla que nadie
 # mantiene es decoracion.
 
-TESTS_POR_CARPETA = {'motor': 834, 'recorder': 4, 'tools': 466}
+TESTS_POR_CARPETA = {'motor': 834, 'recorder': 4, 'tools': 482}
 
 
 # Y los FICHEROS, que son OTRA medida. MEDIDO, y sin ellos el guardia
@@ -3641,7 +3641,7 @@ TESTS_POR_CARPETA = {'motor': 834, 'recorder': 4, 'tools': 466}
 # es cierto. Y «hoy» no es una propiedad. O sea que el guardia no baja,
 # pero FALLA si algun dia hay tests abajo: es el unico caso en el que
 # bajaria, y bajarlo sin querer seria decir «el repo entero» sin serlo.
-FICHEROS_POR_CARPETA = {'motor': 68, 'recorder': 4, 'tools': 109}
+FICHEROS_POR_CARPETA = {'motor': 68, 'recorder': 4, 'tools': 110}
 # Y LA MAGNITUD QUE MIDE ESTE GUARDIA, que es lo que R2 pregunta, y que hay
 # que responder por la magnitud y no solo por el numero.
 #
@@ -3883,46 +3883,98 @@ def _parametrizados(directorio):
                 'fichero que no se lee es un fichero que no se cuenta, y un '
                 'recuento al que le falta un fichero es una DECLARACION, no '
                 'una medida.' % (nombre, e))
+        modulos, marcas = _nombres_de_pytest(arbol)
         for nodo in arbol.body:
             if not (isinstance(nodo, (ast.FunctionDef, ast.AsyncFunctionDef))
                     and nodo.name.startswith('test_')):
                 continue
             for decorador in nodo.decorator_list:
-                if _es_parametrize_de_pytest(decorador):
+                if _es_parametrize_de_pytest(decorador, modulos, marcas):
                     total += 1
     return total
 
 
-def _es_parametrize_de_pytest(decorador):
-    """¿Este decorador es un `@pytest.mark.parametrize` de verdad?
+def _nombres_de_pytest(arbol):
+    """Los nombres con los que ESTE FICHERO se refiere a `pytest` y a `pytest.mark`.
 
-    Y dos condiciones, porque las dos hacen falta:
+    Y sale del ARBOL, y no de un patron: `import pytest as pt` liga `pt`, y
+    `from pytest import mark` liga `mark`. Y el decorador se puede escribir con
+    cualquiera de los dos.
+
+    MEDIDO, por que esto hace falta: con la regla de la forma canonica
+    (`receptor == 'pytest.mark'`) el detector NO contaba `@pt.mark.parametrize`,
+    y ese no contar es un FALLO SILENCIOSO — un recuento que se equivoca en
+    silencio y nadie lo ve, que es la clase de error que este bloque lleva
+    cuarenta bloques corrigiendo.
+    """
+    modulos = set()
+    marcas = set()
+    for nodo in ast.walk(arbol):
+        if isinstance(nodo, ast.Import):
+            for alias in nodo.names:
+                if alias.name == 'pytest':
+                    modulos.add(alias.asname or 'pytest')
+        elif isinstance(nodo, ast.ImportFrom):
+            if nodo.module == 'pytest' and not nodo.level:
+                for alias in nodo.names:
+                    if alias.name == 'mark':
+                        marcas.add(alias.asname or 'mark')
+    return modulos, marcas
+
+
+def _es_parametrize_de_pytest(decorador, modulos=frozenset(), marcas=frozenset()):
+    """¿Este decorador es un `@pytest.mark.parametrize`?
+
+    Y la FORMA, que son tres condiciones:
 
         1. es una llamada con atributo, y el atributo se llama `parametrize`
-        2. y el receptor acaba en `pytest.mark`
+        2. y el receptor es `pytest.mark` — la forma CANONICA
+        3. o el receptor es un alias que este fichero declara de `pytest`, o
+           de `pytest.mark`
 
-    Y por que dos, MEDIDO: con la primera sola, un `loquesea.parametrize`
-    ajeno contaria. Con las dos, no.
+    Y por que la segunda y la tercera van separadas y no juntas: la forma
+    canonica no se puede confundir con nada —el nombre `pytest` no puede ser
+    otra cosa—, y los alias si. Por eso la canonica se acepta SIEMPRE, y un
+    alias SOLO si el propio fichero lo declara.
 
-    Y por que no `in ast.unparse(...)`: porque eso es TEXTO, y lo que hay que
-    reconocer es IDENTIDAD. MEDIDO, con un decorador inventado que lleva la
-    palabra en un argumento:
+    Y MEDIDO, con casos inventados:
 
-        @no_es_parametrize(parametrizacion=[1, 2])
-        def test_este_no_cuenta(): pass
+        decorador con la palabra pero que NO es pytest   texto=1 estructural=0
+        decorador de pytest de verdad                     texto=1 estructural=1
+        funcion test_ anidada con parametrize             texto=1 estructural=1
+        `import pytest as pt` + `@pt.mark.parametrize`    NO lo cuenta (fallo)
+        `from pytest import mark` + `@mark.parametrize`    NO lo cuenta (fallo)
 
-    con la regla de texto cuenta 1; con esta cuenta 0. Que es exactamente el
-    caso que R2 describe."""
+    Y los dos ultimos son los que R2 senalo, y el arreglo no cuesta nada
+    hoy: MEDIDO, las 17 llamadas del repo salen TODAS de
+    `pytest.mark.parametrize`, de modo que reconocer los alias no cambia el
+    numero de hoy y quita una clase de fallo silencioso que no se paga hasta
+    que aparezca el caso.
+
+    Y el CONTRATO, que es lo que el nombre promete. Antes el nombre decia
+    «de verdad», que no es una propiedad: ahora dice lo que hace, que es la
+    forma canonica MAS los alias que el fichero declara.
+    """
     if not (isinstance(decorador, ast.Call)
             and isinstance(decorador.func, ast.Attribute)):
         return False
     if decorador.func.attr != 'parametrize':
         return False
-    receptor = ast.unparse(decorador.func.value)
-    return receptor == 'pytest.mark'
-
-
-
+    receptor = decorador.func.value
+    # la forma canonica: `pytest.mark.parametrize`
+    if (isinstance(receptor, ast.Attribute) and receptor.attr == 'mark'
+            and isinstance(receptor.value, ast.Name)
+            and receptor.value.id == 'pytest'):
+        return True
+    # `import pytest as pt`  ->  `pt.mark.parametrize`
+    if (isinstance(receptor, ast.Attribute) and receptor.attr == 'mark'
+            and isinstance(receptor.value, ast.Name)
+            and receptor.value.id in modulos):
+        return True
+    # `from pytest import mark`  ->  `mark.parametrize`
+    if isinstance(receptor, ast.Name) and receptor.id in marcas:
+        return True
+    return False
 def test_no_ha_desaparecido_ningun_test():
     """Y que el recuento no se pueda quedar satisfecho por una lista vacia.
 
@@ -4064,12 +4116,35 @@ def test_no_ha_desaparecido_ningun_test():
 CARPETA_DE_DOCSTRINGS = 'tools'
 
 
+# Los nodos que PUEDEN tener docstring, y la lista no es decorativa.
+#
+# MEDIDO, el motivo por el que esta lista existe: un `if` tambien tiene
+# `body`, y su primera sentencia puede ser una expresion de cadena, y esa
+# cadena NO es un docstring. El detector anterior la senalaba, y el nombre de
+# la funcion miente: decia «docstrings descuadrados» de algo que no es un
+# docstring.
+#
+# Y en Python un docstring es, exactamente, la primera expresion de cadena de
+# un MODULO, una CLASE o una FUNCION. Y nada mas.
+NODOS_CON_DOCSTRING = (ast.Module, ast.ClassDef, ast.FunctionDef,
+                        ast.AsyncFunctionDef)
+
+
 def _docstring_de(nodo):
     """El docstring de un nodo, o None. Y por el AST.
 
-    Y MEDIDO, el motivo de no hacerlo por texto: en este fichero hay 733
-    constantes de cadena y NINGUNA contiene tres comillas dobles, de modo que
-    un guardia por texto funcionaria hoy. Y «hoy» no es una propiedad."""
+    Y SOLO para los nodos que pueden tenerlo, que son los de
+    `NODOS_CON_DOCSTRING`. Y esa restriccion no es un detalle de estilo: es lo
+    que separa «un docstring descolocado» de «una cadena en un bloque de
+    control que el detector confundio con un docstring».
+
+    Y MEDIDO, el motivo de no hacerlo por texto: en este fichero hay
+    constantes de cadena que contienen comillas dobles, y NINGUNA contiene
+    tres. De modo que un guardia por texto funcionaria hoy. Y «hoy» no es una
+    propiedad.
+    """
+    if not isinstance(nodo, NODOS_CON_DOCSTRING):
+        return None
     cuerpo = getattr(nodo, 'body', None)
     if not isinstance(cuerpo, list) or not cuerpo:
         return None
@@ -4079,8 +4154,6 @@ def _docstring_de(nodo):
             and isinstance(primero.value.value, str)):
         return primero
     return None
-
-
 def _docstrings_descuadrados(texto):
     """Los docstrings con lineas fuera de la sangria de su bloque.
 
@@ -4107,18 +4180,34 @@ def _docstrings_descuadrados(texto):
     no comprueba que la sangria sea multiplo de cuatro, ni tabs contra espacios,
     ni la sangria del codigo de al lado. MEDIDO, que ese limite no es teorico:
     un docstring cuya apertura no sea multiplo de cuatro PASARIA esta funcion.
+
+    Y LO QUE YA NO HACE, y es lo que R2 senalo: ya NO mira cualquier nodo
+    que tenga un `body`. Mira SOLO los nodos que pueden tener un docstring, que
+    son los de `NODOS_CON_DOCSTRING`.
+
+    Y por que importa, y no es una mania de R2: el detector produce un
+    DIAGNOSTICO sobre un fichero. Si se equivoca de grupo, el nombre de la
+    funcion miente, y quien lo lea buscara un docstring donde no hay ninguno.
+
+    MEDIDO, con un caso inventado:
+
+        cadena al principio de un `if`    ->  la senalaba  (no es un docstring)
+        cadena al principio de un `for`   ->  la senalaba  (no es un docstring)
+        cadena al principio de un `with`  ->  la senalaba  (no es un docstring)
+        docstring de una funcion          ->  la senala    (si es lo que es)
+        docstring de una clase            ->  la senala    (si es lo que es)
+
+    Y el docstring de un MODULO no se comprueba, y por que: su bloque esta en
+    la columna 0, de modo que la regla «menos sangrado que la apertura» no
+    puede tener lugar nunca. No es un hueco del detector: es que la regla no
+    aplica ahi.
     """
     arbol = ast.parse(texto)
     lineas = texto.split(chr(10))
     salida = []
     for nodo in ast.walk(arbol):
-        cuerpo = getattr(nodo, 'body', None)
-        if not isinstance(cuerpo, list) or not cuerpo:
-            continue
-        primero = cuerpo[0]
-        if not (isinstance(primero, ast.Expr)
-                and isinstance(primero.value, ast.Constant)
-                and isinstance(primero.value.value, str)):
+        primero = _docstring_de(nodo)
+        if primero is None:
             continue
         apertura = primero.lineno
         sangria = (len(lineas[apertura - 1])
@@ -4132,7 +4221,6 @@ def _docstrings_descuadrados(texto):
             salida.append((getattr(nodo, 'name', '<modulo>'),
                            sueltas[0] + 1, len(sueltas)))
     return salida
-
 def test_no_hay_docstrings_descuadrados():
     """Que ningun docstring tenga lineas fuera de la sangria de su bloque.
 
@@ -4359,3 +4447,474 @@ def test_las_comprobaciones_de_este_fichero_miran_codigo_y_no_prosa():
         'bloque acaba de corregir. Y MEDIDO, que ese `+1` senalaba una linea '
         'DESPUES de la real: `lineno` de Python ya es 1-based. Y en el TEXTO '
         'puede aparecer, porque el comentario lo explica.' % sumas)
+
+# ============================ 25. LOS DOS HALFOS DE R2
+#
+# Y R2 senalo dos cosas, y las dos son de la misma familia: el detector
+# reconocia MENOS de lo que dice reconocer, y en los dos casos por el mismo
+# motivo —una forma concreta en vez de una identidad—.
+
+
+def test_un_docstring_en_un_bloque_de_control_no_es_un_docstring():
+    """Que una cadena al principio de un `if` no se senale como docstring.
+
+    Y el caso es el de R2, literal:
+
+        def ejemplo():
+            if True:
+                \"\"\"Una cadena que no es un docstring.
+           Esta linea podria activar el detector.\"\"\"
+
+    Y lo que se mide es que NO sale. MEDIDO, con el detector anterior, esa
+    cadena SI salia, y con el nombre `<modulo>`, que es la pista: un modulo
+    no tiene docstring dentro de un `if`.
+
+    Y las dos mitades, porque solo con la primera el test pasaria con un
+    detector que no mirase nada:
+
+      1. la cadena en un bloque de control NO se senala;
+      2. y el docstring de verdad, en el MISMO fichero, se senala.
+
+    Y por que la segunda importa: un detector que no senala nada tambien
+    cumple la primera. Y esa es la clase de verde que no dice nada.
+    """
+    fuente = chr(10).join([
+        'def ejemplo():',
+        '    if True:',
+        '        """Una cadena que no es un docstring.',
+        '   Esta linea podria activar el detector."""',
+        '        return 1',
+        '    return 2',
+        '',
+        '',
+        'def otro():',
+        '    """Una linea de apertura.',
+        '',
+        '    Una linea correcta.',
+        '   Una linea con tres espacios.',
+        '    Y otra correcta."""',
+        '    return 3',
+    ])
+    hallados = _docstrings_descuadrados(fuente)
+    nombres = [n for n, _l, _c in hallados]
+    assert 'ejemplo' not in nombres, (
+        'la cadena de un `if` se ha senalado como docstring: %r. Y no lo es: '
+        'un docstring es la primera expresion de cadena de un modulo, una '
+        'clase o una funcion, y nada mas.' % hallados)
+    assert 'otro' in nombres, (
+        'y el docstring de verdad NO se senala: %r. O sea que el detector ha '
+        'dejado de mirar, que es un verde que no dice nada.' % hallados)
+
+
+def test_una_cadena_en_un_for_o_en_un_with_tampoco_es_un_docstring():
+    """Los otros dos bloques de control, porque el caso de R2 era el `if`.
+
+    Y el motivo de no dejar solo el `if`: un detector que se corrige para UN
+    caso y se deja los otros dos es un detector con una lista de casos
+    exentos, que es la misma trampa que el rango de caracteres escrito a mano.
+    """
+    for cabecera in ('for i in (1, 2):', 'with open("x") as f:'):
+        fuente = chr(10).join([
+            'def ejemplo():',
+            '    ' + cabecera,
+            '        """Cadena dentro de un bloque de control.',
+            '   Linea suelta."""',
+            '        pass',
+        ])
+        hallados = _docstrings_descuadrados(fuente)
+        assert not hallados, (
+            'una cadena dentro de `%s` se ha senalado como docstring: %r'
+            % (cabecera, hallados))
+
+
+def test_los_alias_de_pytest_se_reconocen():
+    """Que `@pt.mark.parametrize` y `@mark.parametrize` cuentan.
+
+    Y por que importa mas de lo que parece: un NO contar es un FALLO
+    SILENCIOSO. El recuento bajaria sin que nadie lo notase, y el recuento es
+    una AFIRMACION que se publica.
+
+    Y R2 lo senalo como una cuestion de contrato, no como un defecto: «reconoce
+    la forma canonica, no todas las formas validas». Y hay dos salidas:
+    restringir el contrato a la forma canonica, o reconocer los alias. La
+    segunda es la que se ha tomado, porque MEDIDO las 17 llamadas del repo
+    salen todas de la forma canonica —de modo que reconocer los alias NO
+    cambia el numero de hoy— y quita una clase de fallo silencioso.
+
+    Y el caso inventado es la prueba: sin el, el detector podria seguir sin
+    reconocer los alias y el numero de hoy seria el mismo.
+    """
+    CASOS = (
+        ('import pytest as pt', 'pt.mark.parametrize'),
+        ('from pytest import mark', 'mark.parametrize'),
+        ('import pytest', 'pytest.mark.parametrize'),
+    )
+    for importa, decorador in CASOS:
+        fuente = chr(10).join([
+            importa,
+            '@%s("x", [1, 2])' % decorador,
+            'def test_este_si():',
+            '    pass',
+        ])
+        arbol = ast.parse(fuente)
+        modulos, marcas = _nombres_de_pytest(arbol)
+        d = arbol.body[1].decorator_list[0]
+        assert _es_parametrize_de_pytest(d, modulos, marcas), (
+            'con `%s` y `@%s` el decorador NO se reconoce, y eso es un fallo '
+            'SILENCIOSO: el recuento baja sin que nadie lo note.'
+            % (importa, decorador))
+
+
+def test_un_decorador_ajeno_con_la_palabra_no_cuenta_nunca():
+    """La mitad de la otra parte: que no cuente lo que no debe.
+
+    Y el caso con un argumento que lleva la palabra, que es el que la regla
+    de texto contaba. Y con un alias, que es la forma nueva:
+
+        @no_es_parametrize(parametrizacion=[1, 2])   ->  no cuenta
+        @pt.mark.parametrize_no_algo("x", [1])        ->  no cuenta
+    """
+    fuente = chr(10).join([
+        'import pytest as pt',
+        '',
+        'def no_es_parametrize(x):',
+        '    return x',
+        '',
+        '@no_es_parametrize(parametrizacion=[1, 2])',
+        'def test_este_no_cuenta():',
+        '    pass',
+        '',
+        '',
+        '@pt.mark.parametrize_no_algo("x", [1])',
+        'def test_este_tampoco():',
+        '    pass',
+    ])
+    arbol = ast.parse(fuente)
+    modulos, marcas = _nombres_de_pytest(arbol)
+    contados = 0
+    for nodo in arbol.body:
+        if not (isinstance(nodo, ast.FunctionDef) and nodo.name.startswith('test_')):
+            continue
+        for decorador in nodo.decorator_list:
+            if _es_parametrize_de_pytest(decorador, modulos, marcas):
+                contados += 1
+    assert contados == 0, (
+        'han contado %d decoradores que no son de pytest. Y con la regla de '
+        'texto el primero SI contaba.' % contados)
+
+# ============================ 26. EL MUTANTE, DEL HISTORIAL
+#
+# Y esto es la tarea 5 de R1, y es la leccion del bloque anterior:
+#
+#     un caso que no muere ante un mutante equivocado no es un caso aprobado;
+#     es un caso que solo se ha probado contra lo que su autor imagino
+#
+# Y el arreglo es una regla:
+#
+#     EL MUTANTE TIENE QUE SALIR DEL HISTORIAL, NO DE LA IMAGINACION.
+#
+# Y aqui no basta con DECIRLO: este test MONTIA el mutante con el codigo que
+# hay en el historial, y comprueba que el test del `+1` lo mata. De modo que
+# el mutante no puede dejar de ser el de verdad: se construye en cada
+# ejecucion, desde `git`.
+
+
+def _git(*args):
+    return subprocess.run(['git'] + list(args), cwd=ROOT,
+                          capture_output=True).stdout.decode('utf-8', 'replace')
+
+
+def _arbol_de(texto):
+    return ast.parse(texto)
+
+
+def _suma_de_mas_uno(arbol, base):
+    """El `BinOp` `base + 1` de un arbol, o None.
+
+    Y sale del ARBOL y no del texto, porque en el texto el nombre aparece
+    tambien en los COMENTARIOS que explican el cambio. Y un mutante sacado
+    de un comentario no es un mutante: es prosa.
+    """
+    for nodo in ast.walk(arbol):
+        if (isinstance(nodo, ast.BinOp) and isinstance(nodo.op, ast.Add)
+                and isinstance(nodo.left, ast.Name) and nodo.left.id == base
+                and isinstance(nodo.right, ast.Constant)
+                and nodo.right.value == 1):
+            return nodo
+    return None
+
+
+def _expresion_de_la_linea(arbol, funcion):
+    """(la funcion, la expresion) con la que calcula la linea que senala.
+
+    Y se busca por su FORMA, y no por su texto: una suma de un indice y un
+    uno. Y es la unica que hay en la funcion, de modo que si mañana aparece
+    otra, este helper tiene que decirlo en vez de adivinar.
+    """
+    for nodo in ast.walk(arbol):
+        if not (isinstance(nodo, ast.FunctionDef) and nodo.name == funcion):
+            continue
+        candidatas = []
+        for sub in ast.walk(nodo):
+            if (isinstance(sub, ast.BinOp) and isinstance(sub.op, ast.Add)
+                    and isinstance(sub.right, ast.Constant)
+                    and sub.right.value == 1
+                    and isinstance(sub.left, ast.Subscript)):
+                candidatas.append(sub)
+        assert len(candidatas) == 1, (
+            'se esperaba UNA suma «indice + 1» en `%s`, y hay %d: %r. O sea '
+            'que el mutante no se puede construir solo, y hay que rehacerlo.'
+            % (funcion, len(candidatas), candidatas))
+        return nodo, candidatas[0]
+    return None, None
+
+
+def test_el_mutante_del_uno_de_mas_sale_del_historial_y_mata_al_test():
+    """Que el mutante sea el de VERDAD, y que el test del `+1` lo mate.
+
+    Y la primera mitad es la importante, y es la que se puede hacer sola: el
+    mutante se MONTA con el codigo que hay en el historial, encontrado con
+    `git log -S` sobre el TEXTO DEL CODIGO —`% (nombre, apertura + 1,`— y no
+    sobre la prosa.
+
+    MEDIDO, y por que el texto del codigo y no «apertura + 1» a secas: en el
+    texto de HOY la frase aparece en los COMENTARIOS que explican el cambio,
+    de modo que una busqueda por la frase daria tambien el commit que la
+    AÑADIO al comentario — y ese commit no es el que quito el codigo. Y con
+    el texto del codigo, `git log -S` da exactamente dos commits: el que lo
+    puso y el que lo quito.
+
+    Y la segunda mitad: con ese mutante montado, el test del `+1` tiene que
+    FALLAR. Y el fallo se busca con `assert`, y no con «no ha fallado», que es
+    la confusion que el bloque anterior cometio.
+    """
+    REL = 'tools/test_ejecutar_pytest.py'
+    CODIGO = '% (nombre, apertura + 1,'
+
+    # 1. el commit que la quito: el que en su padre esta y en el mismo no.
+    fijos = _git('log', '-S' + CODIGO, '--format=%H', '--', REL).split()
+    assert fijos, (
+        'no hay ningun commit que cambiara el numero de apariciones de %r. '
+        'O sea que la historia no esta, y el mutante no se puede montar.'
+        % CODIGO)
+    quito = None
+    for commit in fijos:
+        propio = _git('show', '%s:%s' % (commit, REL))
+        padre = _git('show', '%s^:%s' % (commit, REL))
+        if not propio.strip() or not padre.strip():
+            continue
+        if (_suma_de_mas_uno(_arbol_de(padre), 'apertura') is not None
+                and _suma_de_mas_uno(_arbol_de(propio), 'apertura') is None):
+            quito = commit
+            break
+    assert quito, (
+        'ninguno de los %d commits que tocaron %r quito la suma `apertura + 1`'
+        % (len(fijos), CODIGO))
+
+    # 2. el codigo de su padre, que es el mutante
+    historico = _git('show', '%s^:%s' % (quito, REL))
+    nodo_historico = _suma_de_mas_uno(_arbol_de(historico), 'apertura')
+    assert nodo_historico is not None, (
+        'el padre de %s no tiene la suma `apertura + 1`, y el mutante no se '
+        'puede montar' % quito[:8])
+    expresion_historica = ast.unparse(nodo_historico)
+
+    # 3. el codigo de HOY, y el mutante: cambiar una cosa por la otra
+    actual = io.open(os.path.join(ROOT, REL.replace('/', os.sep)),
+                      encoding='utf-8').read()
+    arbol_actual = _arbol_de(actual)
+    funcion_actual, nodo_actual = _expresion_de_la_linea(
+        arbol_actual, '_docstrings_descuadrados')
+    assert nodo_actual is not None, (
+        'la funcion `_docstrings_descuadrados` ya no calcula la linea con una '
+        'suma, y el mutante no se puede montar.')
+    expresion_actual = ast.unparse(nodo_actual)
+    assert expresion_actual != expresion_historica, (
+        'la expresion de HOY y la del historial son la misma: %r. O sea que el '
+        'mutante seria el codigo correcto, y no mataria nada.'
+        % expresion_actual)
+
+    # 4. montar el mutante y comprobar que lo mata
+    #
+    # Y el recorte es el de la FUNCION, y no el de la expresion: el mutante
+    # tiene que ser el modulo entero de la funcion, porque si no lo que se
+    # ejecuta no es la funcion mutada sino un trozo suelto. MEDIDO, el
+    # sintoma de hacerlo al reves: un `IndentationError` en la primera linea
+    # del mutante.
+    lineas = actual.split(chr(10))
+    cuerpo = chr(10).join(lineas[funcion_actual.lineno - 1:
+                                 funcion_actual.end_lineno])
+    mutante = cuerpo.replace(expresion_actual, expresion_historica)
+    assert expresion_historica in mutante, (
+        'el mutante no se ha montado: %r no sale del cuerpo' % expresion_historica)
+
+    espacio = {'ast': ast, '_docstring_de': _docstring_de}
+    exec(compile(mutante, '<mutante-del-historial>', 'exec'), espacio)
+    sustituta = espacio['_docstrings_descuadrados']
+
+    original = _docstrings_descuadrados
+    globals()['_docstrings_descuadrados'] = sustituta
+    try:
+        test_el_diagnostico_de_docstrings_senala_la_culpable()
+        fallo = False
+        detalle = 'el test ha PASADO con el mutante'
+    except AssertionError as e:
+        fallo = True
+        detalle = str(e).split(chr(10))[0][:90]
+    finally:
+        globals()['_docstrings_descuadrados'] = original
+    assert fallo, (
+        'el mutante del historial —%r, del commit %s— NO ha matado el test '
+        'del `+1`. O sea que el caso no cubre el defecto que dice cubrir.'
+        % (expresion_historica, quito[:8]))
+    print('   el mutante del historial: %r (commit %s) -> %s'
+          % (expresion_historica, quito[:8], detalle))
+
+
+def test_un_mutante_de_memoria_no_mata_nada():
+    """La otra mitad, y es la que se MIDIO el bloque anterior.
+
+    MEDIDO, y el caso de memoria:
+
+        la variante ROTA que puse:   sueltas[0] + 1   ->  senala la 5   ->  el test PASA
+        la variante ROTA de verdad:  apertura + 1     ->  senala la 3   ->  el test FALLA
+
+    La primera no era la version anterior del codigo: era OTRA cosa que
+    PARECE la version anterior. Y el caso no la mato, porque no podia: no era
+    el fallo que se suponia que cubria.
+
+    Y por que esto es un TEST y no un comentario: un mutante de memoria es
+    indistinguible del de verdad HASTA QUE SE PRUEBA. Y aqui se prueba: se
+    monta el codigo de HOY como si fuera el mutante, y se mira que no mata
+    nada.
+
+    Y el motivo por el que el codigo de HOY es el mutante de memoria tipico:
+    es lo que se escribe de cabeza, porque es lo que se ve al leer el codigo
+    sin ir a la historia. Y es CORRECTO. De modo que el caso pasaria, el
+    guardarian estaria bien, y la hoja de ruta diria «cubierto». La cobertura
+    aparente y la real habrian divergido sin que nadie lo viera.
+    """
+    REL = 'tools/test_ejecutar_pytest.py'
+    actual = io.open(os.path.join(ROOT, REL.replace('/', os.sep)),
+                      encoding='utf-8').read()
+    funcion_actual, nodo = _expresion_de_la_linea(
+        _arbol_de(actual), '_docstrings_descuadrados')
+    assert nodo is not None
+    expresion = ast.unparse(nodo)
+
+    # el mutante de memoria: el codigo de HOY, puesto donde estaba el malo
+    lineas = actual.split(chr(10))
+    cuerpo = chr(10).join(lineas[funcion_actual.lineno - 1:
+                                 funcion_actual.end_lineno])
+    mutante = cuerpo.replace(expresion, expresion + ' + 0')
+    espacio = {'ast': ast, '_docstring_de': _docstring_de}
+    exec(compile(mutante, '<mutante-de-memoria>', 'exec'), espacio)
+
+    original = _docstrings_descuadrados
+    globals()['_docstrings_descuadrados'] = espacio['_docstrings_descuadrados']
+    try:
+        test_el_diagnostico_de_docstrings_senala_la_culpable()
+        fallo = False
+    except AssertionError:
+        fallo = True
+    finally:
+        globals()['_docstrings_descuadrados'] = original
+    assert not fallo, (
+        'un mutante de memoria ha matado el test, y eso no deberia pasar: un '
+        'mutante de memoria no es el defecto, es otra cosa que se parece.')
+
+# ============================ 27. LA POLITICA DE LOS FICHEROS ILEGIBLES
+#
+# Y esto es la tarea 2 de R1, que es la que faltaba:
+#
+#     _parametrizados lanza AssertionError con el nombre del fichero, no continue
+#     _tests_de tambien lanza, no continue
+#     las dos funciones tienen la misma politica
+#     si se vuelve al continue, el test falla
+#
+# Y la cuarta es la que hace que las otras tres valgan, y por eso el caso es
+# INVENTADO: un fichero con sintaxis mala, en un directorio temporal.
+
+
+def test_un_fichero_ilegible_hace_fallar_las_dos_cuentas():
+    """Que un `.py` que no se puede leer PARA, en las dos funciones.
+
+    Y el caso es inventado, y tiene que serlo: MEDIDO, en el repo no hay
+    ningun fichero ilegible, de modo que la comprobacion real pasaria con
+    CUALQUIER cosa —incluido un `continue`—.
+
+    Y las dos mitades, porque son dos medidas distintas y una sola comprobacion
+    no las cubre:
+
+      1. `_parametrizados` lanza y nombra el fichero;
+      2. `_tests_de` lanza y nombra el fichero.
+
+    Y el motivo de que el mensaje nombre el fichero, y no solo de que lance: un
+    `continue` que se traga un fichero convierte el recuento en una
+    DECLARACION —«hay 17 funciones parametrizadas»— y si se tragara uno, la
+    declaracion seria falsa y nadie lo veria. Un fallo con nombre se ve;
+    un recuento sin fichero se come.
+    """
+    with tempfile.TemporaryDirectory() as alta:
+        io.open(os.path.join(alta, 'roto.py'), 'w',
+                encoding='utf-8').write('def f(:' + chr(10))
+        for nombre, llamada in (('_parametrizados', _parametrizados),
+                                ('_tests_de', _tests_de)):
+            try:
+                llamada(alta)
+                fallo = None
+            except AssertionError as e:
+                fallo = str(e)
+            except Exception as e:                  # noqa: BLE001
+                fallo = '%s de Python, y no una AssertionError' % type(e).__name__
+            assert fallo is not None, (
+                '%s ha devuelto el recuento de un directorio con un fichero '
+                'ilegible, y no ha fallado. O sea que se lo ha tragado, y el '
+                'recuento es una DECLARACION sin el fichero que falta.'
+                % nombre)
+            assert 'roto.py' in fallo, (
+                '%s ha fallado, pero el mensaje no nombra el fichero: %r. Un '
+                'fallo sin nombre obliga a abrir el directorio a mano.'
+                % (nombre, fallo[:160]))
+            assert 'AssertionError' not in fallo, (
+                '%s ha fallado con otra excepcion: %r' % (nombre, fallo[:160]))
+
+
+def test_las_dos_funciones_tienen_la_misma_politica():
+    """Que la politica sea UNA, y no dos.
+
+    Y como se comprueba: por el ARBOL, y no por el texto. Y lo que se mira es
+    que el manejador de la excepcion NO contenga un salto —un `continue` o un
+    `break`—, y que su cuerpo sea un `raise`.
+
+    Y por que el ARBOL y no el texto: en el texto de estos dos ficheros la
+    palabra «continue» esta en los COMENTARIOS que explican por que se
+    quito, y una comprobacion por texto las encontraria y diria que el
+    problema sigue. Lo que no puede es EXISTIR.
+    """
+    arbol = ast.parse(io.open(__file__, encoding='utf-8').read())
+    for nombre in ('_parametrizados', '_tests_de'):
+        funcion = next(n for n in ast.walk(arbol)
+                       if isinstance(n, ast.FunctionDef) and n.name == nombre)
+        manejadores = [h for sub in ast.walk(funcion)
+                       if isinstance(sub, ast.Try)
+                       for h in sub.handlers]
+        assert manejadores, (
+            '%s no tiene ningun manejador de excepcion, y por tanto no tiene '
+            'politica declarada para un fichero ilegible' % nombre)
+        for manejador in manejadores:
+            tipos = ast.unparse(manejador.type) if manejador.type else '?'
+            assert 'SyntaxError' in tipos and 'UnicodeDecodeError' in tipos, (
+                '%s maneja %s, y lo que tiene que manejar es un fichero que no '
+                'se puede leer ni parsear' % (nombre, tipos))
+            saltos = [n.lineno for n in ast.walk(manejador)
+                      if isinstance(n, (ast.Break, ast.Continue))]
+            assert not saltos, (
+                '%s vuelve al `continue` en las lineas %r. Y un `continue` que '
+                'se traga un fichero convierte el recuento en una declaracion.'
+                % (nombre, saltos))
+            raises = [n for n in ast.walk(manejador)
+                      if isinstance(n, ast.Raise)]
+            assert raises, (
+                '%s no lanza nada en su manejador, y lo que tiene que hacer es '
+                'PARAR y nombrar el fichero' % nombre)

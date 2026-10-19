@@ -453,6 +453,36 @@ verdad:
 - y no está en el rango de la puntuación de Unicode, que sí puede aparecer
 
 Que son cuatro condiciones y ninguna lista.
+
+> **CORREGIDO el 2026-10-19.** Esta lección afirmaba que esas cuatro
+> condiciones sustituyen al rango, y **es falso**, y está medido:
+>
+> ```
+> chr(0xAC00).isprintable()  ->  True
+> chr(0x4E00).isprintable()  ->  True
+> chr(0x202E).isprintable()  ->  False
+> chr(0x200B).isprintable()  ->  False
+> ```
+>
+> O sea que el coreano y el chino **son imprimibles**, de modo que las cuatro
+> condiciones, juntas, NO los detectan. Lo que detectan es lo **invisible**:
+> los espacios de ancho cero, los Replacement Character y los selectores de
+> variante.
+>
+> Y R1 pidió exactamente esta comprobación —«detecta coreano (0xAC00) y
+> cualquier otro rango no cubierto por la lista»— y la medición la desmintió.
+> Es la segunda vez en dos bloques que una lección escrita con una medición a
+> medias se queda corta, y por eso lleva aquí la corrección y no el
+> Arrangement.
+>
+> **La regla que sí detecta el coreano** es la que decide por el **nombre
+> Unicode** del carácter, y está en §19. Y la lección de esta sección sigue
+> siendo válida en su parte central —una lista escrita a mano se queda
+> corta— y lo que se le añade es la otra mitad:
+>
+> > **Una condición derivada no es automáticamente mejor que una lista.** Lo
+> > que la hace mejor es que se pueda DEMOSTRAR que cubre lo que tiene que
+> > cubrir, y eso se comprueba con un caso, y no con un razonamiento.
 ## 18. Y la que se parece más a un agujero: un «roto» que no es el roto
 
 MEDIDO, y esto es lo que más cuesta del bloque:
@@ -506,3 +536,209 @@ medía. Y esa es la misma forma de la sección 6, pero vista desde el otro lado:
 
 Y los dos se evitan con lo mismo, y es una sola cosa: **el resultado hay que
 compararlo con algo**. Con el valor medido, o con la versión anterior real.
+## 19. Un rango escrito a mano se queda corto, y el que se queda corto no avisa
+
+MEDIDO, y el antes y el después del mismo script sobre el mismo repo:
+
+```
+los rangos de antes:  7 hallazgos
+la regla de ahora:   11 hallazgos
+```
+
+Y los cuatro que aparecen de mas son **reales**, y no los encuentro por
+caso: los encuentra el nombre del caracter.
+
+| | | |
+|---|---|---|
+| `motor/test_asistente_live.py` | `ARABIC LETTER BEH` | dentro de una palabra espanola |
+| `motor/test_asistente_live.py` | `ARABIC LETTER TEH` | idem |
+| `motor/test_asistente_live.py` | `ARABIC LETTER REH` | idem |
+| `DOCS/APRENDIZAJE.md` | `ZERO WIDTH NO-BREAK SPACE` | un BOM, invisible |
+| `DOCS/PROYECTO.md` | `ZERO WIDTH NO-BREAK SPACE` | idem |
+
+Y por que los rangos de antes no los veian, que es la parte que importa:
+
+- el arabe esta entre `0x0600` y `0x06FF`, y la lista no lo mencionaba;
+- el BOM es un `U+FEFF`, y la lista solo cubria el `U+FFFD` —el caracter de
+  reemplazo— de los invisibles.
+
+Y el sintoma de un rango que se ha quedado corto **no es que senale de mas**.
+Es que **no senala nada**:
+
+> un rango que se queda corto devuelve cero hallazgos, y cero hallazgos es un
+> verde.
+
+Y la regla que lo sustituye se decide por el **nombre Unicode** del caracter,
+que dice que es el caracter:
+
+```
+LATIN SMALL LETTER A WITH ACUTE   ->  LATIN, permitido
+CYRILLIC SMALL LETTER O           ->  LETTER de otro alfabeto
+ARABIC LETTER TEH                 ->  LETTER de otro alfabeto
+THAI CHARACTER KO KAI             ->  CHARACTER de otro alfabeto
+HANGUL SYLLABLE GA                ->  sin LETTER: hay que nombrarlo
+CJK UNIFIED IDEOGRAPH-4E00        ->  sin LETTER: hay que nombrarlo
+RIGHTWARDS ARROW                  ->  un simbolo, no un sistema
+```
+
+Y la moral, que es la de siempre pero con un caso nuevo: **una lista escrita a
+mano se queda corta**. Da igual que la lista sea de campos, de busquedas, de
+topes o de puntos de codigo. La unica defence es que la comprobacion se
+deduzca de lo que mira, y no de una enumeracion.
+
+## 20. Una cadena en un `if` no es un docstring, y el nombre de una funcion es una promesa
+
+MEDIDO, con un caso inventado:
+
+```
+cadena al principio de un `if`    ->  la senalaba   (no es un docstring)
+cadena al principio de un `for`   ->  la senalaba   (no es un docstring)
+cadena al principio de un `with`  ->  la senalaba   (no es un docstring)
+docstring de una funcion          ->  la senala     (si es lo que es)
+docstring de una clase            ->  la senala     (si es lo que es)
+```
+
+Y el detector moria en el sitio equivocado: senalaba `<modulo>` como nombre
+del nodo, que es la pista de que no era un docstring sino una cadena en un
+bloque de control.
+
+Y lo que hay que mirar, y no es «el primer elemento del body es una cadena»:
+
+> En Python, un docstring es la primera expresion de cadena de un **modulo**,
+> una **clase** o una **funcion**. Y nada mas.
+
+Y la leccion, que es de las dos mitades:
+
+- **el ARBOL sabe la diferencia**, y un `if` tiene `body` igual que una
+  funcion;
+- y **el NOMBRE de la funcion es una promesa**: si se llama
+  `_docstrings_descuadrados`, entonces lo que senale son docstrings. Un
+  detector que senala otra cosa no senala poco: senala otra cosa, y quien lo
+  lea buscara un docstring donde no hay.
+
+## 21. Un alias no reconocido es un fallo SILENCIOSO, y por eso no es «menor»
+
+MEDIDO, con tres decoradores inventados:
+
+```
+@pytest.mark.parametrize("x", [1])     ->  lo cuenta
+@pt.mark.parametrize("x", [1])         ->  NO lo cuenta
+@mark.parametrize("x", [1])            ->  NO lo cuenta
+```
+
+Y lo que hay debajo de «no lo cuenta» es lo que importa: **el numero baja y
+nadie lo ve**. El recuento es una AFIRMACION que se publica, y un recuento
+que se equivoca en silencio es la clase de error que este bloque lleva
+cuarenta bloques corrigiendo.
+
+Y la decision que se tomo, y que R2 dejo abierta como «una cuestion de
+contrato»:
+
+- **opcion A**: restringir el contrato a la forma canonica —`pytest.mark`— y
+  decirlo;
+- **opcion B**: reconocer los alias, resolviendolos por el AST.
+
+Se tomo la B, por un motivo medido: **las 17 llamadas del repo salen todas de
+la forma canonica**, de modo que reconocer los alias **no cambia el numero de
+hoy** y quita una clase de fallo silencioso que no se paga hasta que aparezca
+el caso.
+
+> Es el mismo argumento que la cota derivada y que el `pytest.mark` del bloque
+> anterior: **una regla mas estrecha que no cuesta nada ahora y evita un fallo
+> mas adelante.**
+
+Y la regla de la forma canonica, que es la que hace que la B sea segura: el
+nombre `pytest` no puede ser otra cosa, de modo que se acepta SIEMPRE; y un
+alias se acepta SOLO si el propio fichero lo declara.
+
+## 22. Una transaccion a medias, y que «cerrado» es una DECISION escrita
+
+Y esta es la del cierre, y no es de instrumentacion: es de gobernanza.
+
+Lo que paso, MEDIDO: el dueno de `data/` corrigio una mano, el cambio quedo
+**sin commitear**, y el repo se quedo con **doce tests en rojo** que no eran
+de nadie: seis por el hash obsoleto, dos por el reparto de acciones, y cuatro
+por la gobernanza del incidente.
+
+Y el protocolo del propio repo ya decia lo que habia que hacer, en
+`DOCS/SANEAMIENTO.md` §5:
+
+> el fichero se commitea primero, y el manifiesto apunta a ese commit
+> despues
+
+Y el `motor/test_canal_manual.py` lo decia de otra manera, y mejor:
+
+> **O se commitea con el motivo, o se revierte: no hay tercera via.**
+
+Y el «se commitea con el motivo» es la parte que no es opcional. Un commit
+que corrige una mano sin decir por que es un cambio de dato sin causa, que es
+exactamente lo que el canal manual existe para evitar.
+
+Y la parte que mas cuesta, y que es la que R1 lleva cuarenta bloques
+recordando:
+
+> **Un incidente no se cierra porque la suite salga verde. Se cierra con una
+> decision escrita.**
+
+Y los dos ingredientes de esa decision:
+
+1. **que rama** de las dos posibles se tomo —«el registro estaba mal» frente a
+   «el invariante estaba mal»—, porque las dos tienen consecuencias
+   distintas, y una de ellas es tocar el invariante;
+2. **que se midio** que ninguna cifra publicada se movia, porque sin eso
+   «cerrado» es una afirmacion sin respaldo.
+
+Y el invariante se quedo como estaba. Lo que se corrigio fue el DATO. Y el
+test sigue en la suite, sin `xfail` y sin `skip`, y ahora **pasa**.
+
+> Relajar el invariante para poner el test en verde habria sido justo el
+> error que el canal manual existe para evitar.
+## 23. Un script que se re-ejecuta, y el guardian que se enteró
+
+Y esta es la segunda vez en este bloque que un script mio pierde lo que habia
+aplicado, y las dos por el mismo motivo, que es el de siempre: **un objeto
+reconstruido**.
+
+MEDIDO, lo que paso:
+
+```
+el script guardaba una COPIA del fichero, luego lo sustituia por la version
+anterior, y luego lo reescribia con el inventario de ese estado
+```
+
+Y el script **se ejecuto dos veces**: la primera fallo en una comprobacion, y
+la segunda **volvio a guardar la copia** —que ya era la version anterior— y
+volvio a hacer el resto. O sea que la copia guardada era la buena y se
+pisaba con la mala, en silencio.
+
+Y el sintoma fue el mas discreto de todos: **faltaban ocho tests**. No un
+fallo, no una excepcion: ocho tests que no estaban.
+
+Y lo que lo pillo fue el guardian de siempre:
+
+```
+MEDIDO, tools=474   y el estado bueno era tools=482
+```
+
+O sea que **el guardia de inventario vio la perdida antes que nadie**. Y esa
+es la parte que hay que escribir, porque es lo contrario de lo que parece:
+
+> Un guardia que mide una cantidad no es solo un detector de CRECIMIENTOS. Es
+> tambien un detector de **PERDIDAS**, y las perdidas no dan ningun sintoma:
+> un test que desaparece no rompe nada, porque no hay nada que ejecutar.
+
+Y la regla que sale, y que es de las que mas se olvidan:
+
+> **Un script que se vuelve a ejecutar tiene que ser IDEMPOTENTE, y su primer
+> paso no puede ser guardar una copia de lo que su segundo paso va a
+> cambiar.** O se guarda DESPUES de decidir, o el paso que guarda se salta si
+> ya se guardo.
+
+Y la forma de evitarlo de verdad, que no es el orden de los pasos: **que el
+script mida lo que va a hacer, y que la medida se compruebe contra un
+numero esperado antes de escribir nada**. MEDIDO, y asi fue como se pillo: el
+script decia `tools=474` y el estado bueno era `482`, y la asercion
+paró el script antes de que hiciera daño.
+
+Que es, otra vez, lo de siempre: **el resultado hay que compararlo con
+algo**. Con el valor medido, o con la version anterior real.

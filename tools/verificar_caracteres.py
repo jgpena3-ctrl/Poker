@@ -22,14 +22,61 @@ import unicodedata
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Lo que el proyecto USA de verdad. No es contaminacion.
-PERMITIDOS = set('·§«»¿¡…—–áéíóúñÁÉÍÓÚÑüÜçÇãõâêô«»«“”„‟')
+#
+# Y el `U+FE0F` va aqui con `chr()`, y no escrito en crudo, por el mismo
+# motivo que el U+0435 de mas abajo: un selector de variacion no es
+# imprimible, de modo que la regla de «lo invisible es sospechoso» lo
+# senalaria, y el fichero se contaminaria paraSENALAR una contaminacion.
+PERMITIDOS = set('·§«»¿¡…—–áéíóúñÁÉÍÓÚÑüÜçÇãõâêô«»«“”„‟'
+                  + chr(0xFE0F))
 
-RANGOS = (
-    (0x3000, 0x9FFF, 'CJK'),
-    (0x0400, 0x04FF, 'cirilico'),
-    (0x0530, 0x058F, 'armenio'),
-    (0x4E00, 0x9FFF, 'han'),
-    (0xFFFD, 0xFFFD, 'replacement'),
+# ---------------------------------------------------------------------------
+# LA REGLA, y por que no son RANGOS
+# ---------------------------------------------------------------------------
+#
+# Antes esta regla eran RANGOS de puntos de codigo, escritos a mano. Y un
+# rango escrito a mano se queda corto sin que nada se note. MEDIDO: el de
+# este fichero NO incluia el ARABE (U+0600..U+06FF), y en el repo habia
+# TRES caracteres arabes. Y un rango que se queda corto no avisa: devuelve
+# cero hallazgos, que es un verde.
+#
+# Y la regla que lo sustituye se decide por el NOMBRE Unicode del caracter,
+# que dice QUE ES el caracter. Y el nombre tiene una forma:
+#
+#     LATIN SMALL LETTER A WITH ACUTE   ->  LATIN, permitido
+#     CYRILLIC SMALL LETTER O           ->  LETTER de otro alfabeto
+#     ARABIC LETTER TEH                 ->  LETTER de otro alfabeto
+#     THAI CHARACTER KO KAI             ->  CHARACTER de otro alfabeto
+#     GREEK SMALL LETTER TAU            ->  GREEK, permitido
+#     HANGUL SYLLABLE GA                ->  sin LETTER: hay que nombrarlo
+#     CJK UNIFIED IDEOGRAPH-4E00        ->  sin LETTER: hay que nombrarlo
+#     RIGHTWARDS ARROW                  ->  un simbolo, no un sistema
+#
+# De ahi sale todo, y sale SIN enumerar rangos.
+
+# Los alfabetos que el proyecto USA. Y son dos, y sale de medir el repo
+# entero, no de suponerlo: LATIN, y GREEK —que se usa como notacion
+# matematica—. MEDIDO: no hay ni una letra de otro alfabeto que sea
+# legitima en el repo.
+ALFABETOS_USADOS = ('LATIN', 'GREEK')
+
+# Y los sistemas cuyos caracteres NO se llaman LETTER, que hay que
+# nombrarlos aparte. Y son cuatro: HANGUL (SYLLABLE), CJK (UNIFIED
+# IDEOGRAPH), YI (SYLLABLE) e IDEOGRAPHIC (la puntuacion CJK).
+SISTEMAS_SIN_LETRAS = ('CJK', 'HANGUL', 'YI', 'IDEOGRAPHIC')
+
+# La puntuacion de Unicode, que SI puede aparecer y es legitima: son las
+# rayas, las comillas angulares y los puntos suspensivos.
+PUNTUACION_UNICODE = (0x2000, 0x206F)
+
+# Y las excepciones POR SITIO, y no por caracter.
+#
+# MEDIDO, el motivo de que sean por sitio: el U+0435 cirilico del ejemplo de
+# `DOCS/INC-003_BARRIDO_DESTRUCTIVO.md` es INTENCIONADO —lo dice el propio
+# documento— y el MISMO caracter en `motor/test_canal_manual.py` es una
+# corrupcion. Una excepcion por caracter los taparia a los dos.
+EXCEPCIONES = (
+    ('DOCS/INC-003_BARRIDO_DESTRUCTIVO.md', chr(0x435)),
 )
 
 # La UNICA correccion automatica, y por SECUENCIA DE CARACTERES.
@@ -112,13 +159,82 @@ def revisar(patrones=None):
             except (OSError, UnicodeDecodeError):
                 continue
             for c in sorted(set(s)):
-                if c in PERMITIDOS:
-                    continue
-                for lo, hi, nombre in RANGOS:
-                    if lo <= ord(c) <= hi:
-                        hallazgos.append((p, c, nombre))
-                        break
+                nombre = _sospechoso(c, p)
+                if nombre is not None:
+                    hallazgos.append((p, c, nombre))
     return hallazgos
+
+
+def _sospechoso(c, ruta=None):
+    """El nombre de POR QUE este caracter es sospechoso, o None si no lo es.
+
+    Y la regla, que son CUATRO condiciones de exencion y una de senal:
+
+        1. NO es imprimible            ->  es invisible: sospechoso
+        2. es ASCII                    ->  permitido
+        3. es un espacio o un salto    ->  permitido
+        4. es puntuacion de Unicode   ->  permitido
+        5. y no esta en `PERMITIDOS` ni en las EXCEPCIONES de su sitio
+
+    Y de ahi, lo que decide, y no un rango:
+
+        - si el nombre dice LETTER o CHARACTER, su alfabeto es la primera
+          palabra, y es sospechoso si ese alfabeto no es uno de los que el
+          proyecto usa;
+        - si el nombre NO dice LETTER, es de uno de los cuatro sistemas que
+          hay que nombrar aparte;
+        - y si no es ninguna de las dos cosas, es un simbolo, y no es
+          sospechoso.
+
+    Y el texto de `PERMITIDOS` y de las EXCEPCIONES va aparte, porque son
+    dos preguntas distintas: una es «que usa el proyecto» y la otra es «este
+    sitio, este caracter». MEDIDO, el motivo de separarlas: el U+0435
+    cirilico es un ejemplo INTENCIONADO en un documento y una corrupcion en
+    otro fichero.
+    """
+    if c in PERMITIDOS:
+        return None
+    if ruta is not None:
+        rel = os.path.relpath(ruta, ROOT).replace(os.sep, '/')
+        for fichero, caracter in EXCEPCIONES:
+            if rel == fichero and c == caracter:
+                return None
+    # Y el ORDEN importa, y no por gusto. MEDIDO, dos veces:
+    #
+    #   · el salto de linea NO es imprimible, de modo que la comprobacion de
+    #     «invisible» tiene que ir DESPUES de la de «es ASCII» y la de «es un
+    #     espacio». Con el orden contrario el script senalaba 254 saltos.
+    #   · y el U+200B —ZERO WIDTH SPACE— NO es imprimible Y esta en la
+    #     puntuacion de Unicode, de modo que «invisible» tiene que ir antes
+    #     que «puntuacion de Unicode». Con el orden contrario el espacio de
+    #     ancho cero pasaba.
+    #
+    # 2. lo ASCII
+    if ord(c) < 0x80:
+        return None
+    # 3. los espacios
+    if c in ' \t\n\r':
+        return None
+    # 4. lo invisible
+    if not c.isprintable():
+        return 'invisible'
+    # 5. la puntuacion de Unicode
+    if PUNTUACION_UNICODE[0] <= ord(c) <= PUNTUACION_UNICODE[1]:
+        return None
+    try:
+        nombre = unicodedata.name(c)
+    except ValueError:
+        return None
+    if not nombre:
+        return None
+    if nombre.startswith(ALFABETOS_USADOS):
+        return None
+    if ' LETTER ' in nombre or ' CHARACTER ' in nombre \
+            or nombre.endswith(' LETTER') or nombre.endswith(' CHARACTER'):
+        return nombre.split(' ')[0].lower()
+    if nombre.split(' ')[0] in SISTEMAS_SIN_LETRAS:
+        return nombre.split(' ')[0].lower()
+    return None
 
 
 def parsear_hunks(texto):
@@ -260,6 +376,7 @@ def main(argv=None):
 
     permitidos = ''.join(sorted(PERMITIDOS))
     print('   Caracteres permitidos (%d): %s' % (len(PERMITIDOS), permitidos))
+    print('   Alfabetos usados: %s' % ', '.join(ALFABETOS_USADOS))
     print()
 
     h = revisar()
