@@ -253,20 +253,30 @@ def equity_contra(h, villain_pos, labels, modelo, postflop_model=None):
         return None, 'el hero no tiene cartas'
     if not board and calle != 'preflop':
         return None, 'no hay board en la calle del punto de decision'
-    # PREFLOP: HAY UN HUECO EN EL MOTOR, y es declarado.
+    # PREFLOP: HAY UN CAMINO OBSERVABLE EN EL MOTOR, y esta herramienta no
+    # lo usa. Y el motivo NO es que no exista.
     #
-    # `situation` no tiene camino porque `evaluate_batch` declara board de 3
-    # a 5 cartas. Y `decision.runout_equity` con board vacio falla por LA
-    # MISMA causa: `_villain_arrays` llama a `evaluate_batch` y con 0 cartas
-    # de board pide `_SUBSETS[2]`, que no existe. `_SUBSETS` tiene 5, 6, 7.
+    # El motor tiene camino de equity preflop: `equity_preflop_rango` en
+    # `motor/hand_evaluator.py`, al que `situation.equity_vs_range` delega
+    # cuando el board esta vacio. Y no usa las cartas del rival, solo su
+    # rango, de modo que la equity que devuelve es OBSERVABLE.
     #
-    # O sea: **el motor no tiene ningun camino de equity preflop.** Ni por
-    # situacion ni por runout. Anadirlo es un bloque aparte, en `motor/`.
+    # Y la razon por la que esta herramienta NO lo usa es que **cambiaria el
+    # AUC publicado**: la equity que se mide aqui es RETROSPECTIVA, contra
+    # las cartas REALES del rival, y el AUC que sale de ahi es el AUC
+    # publicado. Y un AUC publicado no se mueve por el criterio de un
+    # arreglo de instrumentacion: moverlo es una RECALIBRACION, y las
+    # recalibraciones van despues de la adopcion de la base.
     #
-    # Mientras tanto lo unico que hay es la enumeracion contra las cartas
-    # REALES del rival, que es RETROSPECTIVA: en una decision preflop
-    # historica esas cartas no eran observables. Sirve para auditar el
-    # evaluador y para estudiar manos. NO es la equity de una decision.
+    # De modo que lo que queda aqui, y es lo correcto mientras tanto: la
+    # enumeracion contra las cartas reales, que es RETROSPECTIVA —en una
+    # decision preflop historica esas cartas no eran observables—, y que
+    # sirve para auditar el evaluador y para estudiar manos. NO es la equity
+    # de una decision.
+    #
+    # Y el hueco que de verdad habia —`evaluate_batch` declara board de 3 a
+    # 5 cartas, y `decision.runout_equity` con board vacio pide
+    # `_SUBSETS[2]`, que no existe— esta resuelto por la delegacion.
     if calle == 'preflop':
         vc = cartas_de(h, villain_pos)
         if len(vc) < 2:

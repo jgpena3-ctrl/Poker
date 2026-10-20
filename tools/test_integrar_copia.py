@@ -42,6 +42,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, 'tools'))
 
 import fixture_copia_sintetica as FIX   # noqa: E402
+from tools.integrar_copia import CONTROL_CATEGORIAS   # noqa: E402
 
 CANON = os.path.join(ROOT, 'data', 'hands_db.jsonl')
 SCRIPT = os.path.join(ROOT, 'tools', 'integrar_copia.py')
@@ -94,6 +95,24 @@ def _candidata(dureza=FIX.DUREZA_SUAVE, inyectar_error=False):
             f.writelines(lineas)
         informe['inyectado'] = True
     return alta, destino, informe
+
+
+def _control(alta, etiqueta='control'):
+    """El fichero con el control de las doce categorias, DECLARADO.
+
+    Y el control es el de la BASE DE HOY —el de NEUTRALIDAD DE LA
+    CODIFICACION—, y no el de la candidata: porque si fuera el de la
+    candidata, el test seria circular y siempre pasaria.
+
+    Y el motivo de que el control sea un fichero: **el procedimiento exige
+    los dos controles declarados**, y el que declara cada uno es quien lo ha
+    medido. De modo que un test del procedimiento tiene que DECLARAR los
+    suyos, como lo hara A1 con los de la copia real.
+    """
+    ruta = os.path.join(alta, '%s.json' % etiqueta)
+    with io.open(ruta, 'w', encoding='utf-8') as f:
+        json.dump(CONTROL_CATEGORIAS, f, ensure_ascii=False, indent=1)
+    return ruta
 
 
 def _correr(destino, candidata, *args):
@@ -152,7 +171,8 @@ def test_el_flujo_completo_pasa_contra_el_fixture_suave():
         antes = io.open(destino, 'rb').read()
 
         r = _correr(destino, candidata,
-                    '--ciegas-esperadas', str(informe['ciegas_reconocidas']))
+                    '--ciegas-esperadas', str(informe['ciegas_reconocidas']),
+                    '--control-categorias', _control(alta))
         assert r.returncode == 0, (
             'el camino de exito ha fallado con el codigo %d:\n%s'
             % (r.returncode, r.stdout[-1500:]))
@@ -192,7 +212,8 @@ def test_el_flujo_completo_pasa_contra_el_fixture_duro():
         antes = io.open(destino, 'rb').read()
 
         r = _correr(destino, candidata,
-                    '--ciegas-esperadas', str(informe['ciegas_reconocidas']))
+                    '--ciegas-esperadas', str(informe['ciegas_reconocidas']),
+                    '--control-categorias', _control(alta))
         assert r.returncode == 0, (
             'el camino de exito con el fixture DURO ha fallado con el codigo '
             '%d:\n%s' % (r.returncode, r.stdout[-1500:]))
@@ -240,7 +261,8 @@ def test_el_umbral_del_suave_no_sirve_para_el_duro():
         destino = _destino_temporal(alta)
         antes = io.open(destino, 'rb').read()
 
-        r = _correr(destino, candidata, '--ciegas-esperadas', '921')
+        r = _correr(destino, candidata, '--ciegas-esperadas', '921',
+                    '--control-categorias', _control(alta))
         assert r.returncode == 1, (
             'con el umbral del fixture suave en el duro, el script tiene que '
             'fallar, y ha salido con %d:\n%s' % (r.returncode, r.stdout[-1200:]))
@@ -263,7 +285,8 @@ def test_el_umbral_del_duro_no_sirve_para_el_suave():
         destino = _destino_temporal(alta)
         antes = io.open(destino, 'rb').read()
 
-        r = _correr(destino, candidata, '--ciegas-esperadas', '1258')
+        r = _correr(destino, candidata, '--ciegas-esperadas', '1258',
+                    '--control-categorias', _control(alta))
         assert r.returncode == 1, (
             'con el umbral del fixture duro en el suave, el script tiene que '
             'fallar, y ha salido con %d:\n%s' % (r.returncode, r.stdout[-1200:]))
@@ -285,7 +308,8 @@ def test_un_error_de_clasificacion_inyectado_hace_fallar_y_restaura():
         destino = _destino_temporal(alta)
         antes = io.open(destino, 'rb').read()
 
-        r = _correr(destino, candidata, '--ciegas-esperadas', '921')
+        r = _correr(destino, candidata, '--ciegas-esperadas', '921',
+                    '--control-categorias', _control(alta))
         assert r.returncode == 1, (
             'con un error de clasificacion inyectado el script tiene que '
             'fallar, y ha salido con %d:\n%s' % (r.returncode, r.stdout[-1200:]))
@@ -317,9 +341,11 @@ def test_la_ejecucion_no_deja_rastro():
     alta, candidata, _informe = _candidata(FIX.DUREZA_DURA)
     try:
         destino = _destino_temporal(alta)
-        _correr(destino, candidata, '--ciegas-esperadas', '1258')
+        _correr(destino, candidata, '--ciegas-esperadas', '1258',
+                '--control-categorias', _control(alta))
         # Y un camino de FALLO, que es donde mas se puede dejar rastro.
-        _correr(destino, candidata, '--ciegas-esperadas', '99999')
+        _correr(destino, candidata, '--ciegas-esperadas', '99999',
+                '--control-categorias', _control(alta))
     finally:
         shutil.rmtree(alta, ignore_errors=True)
 
@@ -345,7 +371,9 @@ def test_un_sha_que_no_cuadra_falla_limpiamente_sin_tocar_la_base():
         destino = _destino_temporal(alta)
         antes = io.open(destino, 'rb').read()
 
-        r = _correr(destino, candidata, '--sha-esperada', '0' * 64)
+        r = _correr(destino, candidata, '--sha-esperada', '0' * 64,
+                    '--ciegas-esperadas', '921',
+                    '--control-categorias', _control(alta))
         assert r.returncode == 4, (
             'con un sha que no cuadra el script tiene que fallar con el codigo '
             '4, y ha salido con %d:\n%s' % (r.returncode, r.stdout[-1200:]))
@@ -462,7 +490,8 @@ def test_el_control_de_categorias_bloquea_y_no_se_puede_hacer_informativo():
             f.writelines(lineas)
 
         destino = _destino_temporal(alta)
-        r = _correr(destino, candidata, '--ciegas-esperadas', '921')
+        r = _correr(destino, candidata, '--ciegas-esperadas', '921',
+                    '--control-categorias', _control(alta))
         assert r.returncode == 1, (
             'con las categorias cambiadas, el script tiene que FALLAR, y ha '
             'salido con %d:\n%s' % (r.returncode, r.stdout[-1200:]))
@@ -479,6 +508,172 @@ def test_el_control_de_categorias_bloquea_y_no_se_puede_hacer_informativo():
             'hay una bandera para volver el control de categorias '
             'informativo, y esa bandera es exactamente el falso verde que '
             'este control existe para impedir')
+    finally:
+        shutil.rmtree(alta, ignore_errors=True)
+
+def test_sin_control_de_categorias_declarado_no_da_verde():
+    """Y el caso que R1 pide: sin el control declarado, el codigo es 2.
+
+    Y no 1, y no 0. Y la distincion es el fondo de la cosa:
+
+        «no has decidido» no es «has fallado».
+
+    Y el motivo de que sea 2 y no 1: un 1 dice «esta candidata no vale», y
+    eso es una AFIRMACION sobre la candidata. Y sin el control declarado no
+    hay nada que decir de ella: lo que hay es una DECISION que no se ha
+    tomado.
+
+    Y el motivo de que no sea 0: el procedimiento no puede bendecir una
+    candidata sin saber que categorias tiene que dar. Y el control por
+    defecto —las doce de la base de HOY— es el de NEUTRALIDAD DE LA
+    CODIFICACION, que es otra pregunta, de modo que usarlo por defecto seria
+    responder una que nadie ha hecho.
+    """
+    alta, candidata, informe = _candidata(FIX.DUREZA_DURA)
+    try:
+        destino = _destino_temporal(alta)
+        antes = io.open(destino, 'rb').read()
+
+        # el numero de ciegas SI esta declarado, y el control de categorias NO
+        r = _correr(destino, candidata,
+                    '--ciegas-esperadas', str(informe['ciegas_reconocidas']))
+        assert r.returncode == 2, (
+            'sin el control de categorias declarado el codigo tiene que ser '
+            'el 2, y ha salido con %d:\n%s' % (r.returncode, r.stdout[-1200:]))
+        assert 'INCOMPLETA' in r.stdout, r.stdout[-800:]
+        assert 'el control de las categorias' in r.stdout, (
+            'y el mensaje tiene que decir QUE falta, que es lo que permite '
+            'saber que hacer: %s' % r.stdout[-800:])
+        assert io.open(destino, 'rb').read() == antes, (
+            'la base destino no ha vuelto a ser la que era')
+    finally:
+        shutil.rmtree(alta, ignore_errors=True)
+
+
+def test_el_control_declarado_bloquea_de_verdad():
+    """Y que declarado, el control BLOQUEA: una diferencia inyectada da codigo 1.
+
+    Y la diferencia con el test de arriba es el fondo: sin declaracion es
+    «no se puede saber» (2), y con declaracion y una diferencia es «se sabe
+    que no vale» (1). Y los dos restauran.
+    """
+    alta, candidata, informe = _candidata(FIX.DUREZA_SUAVE)
+    try:
+        # una diferencia de categorias de verdad: un fold que pasa a call
+        with io.open(candidata, encoding='utf-8') as f:
+            lineas = [l for l in f if l.strip()]
+        h = json.loads(lineas[0])
+        pre = ((h.get('streets', {}) or {}).get('preflop', {}) or {}).get(
+            'actions', []) or []
+        for a in pre:
+            if a.get('action') == 'f' and a.get('pos') not in ('BB', 'SB'):
+                a['action'] = 'c'
+                a['amount'] = 1.0
+                break
+        else:
+            raise AssertionError('no hay un fold que cambiar')
+        lineas[0] = json.dumps(h, ensure_ascii=False) + '\n'
+        with io.open(candidata, 'w', encoding='utf-8', newline='\n') as f:
+            f.writelines(lineas)
+
+        destino = _destino_temporal(alta)
+        antes = io.open(destino, 'rb').read()
+
+        r = _correr(destino, candidata, '--ciegas-esperadas', '921',
+                    '--control-categorias', _control(alta))
+        assert r.returncode == 1, (
+            'con el control declarado y una diferencia de categorias, el '
+            'codigo tiene que ser el 1, y ha salido con %d:\n%s'
+            % (r.returncode, r.stdout[-1200:]))
+        assert 'LAS CATEGORIAS NO SON LAS DEL CONTROL DECLARADO' in r.stdout, (
+            r.stdout[-800:])
+        assert io.open(destino, 'rb').read() == antes
+    finally:
+        shutil.rmtree(alta, ignore_errors=True)
+
+
+# ---------------------------------------------------------------------------
+# LOS TRES RESULTADOS, Y QUE NO SE CONTAMINEN
+# ---------------------------------------------------------------------------
+
+def test_un_fallo_de_integridad_no_impide_ver_las_diferencias():
+    """Y que un fallo de INTEGRIDAD no impida que se impriman las DIFERENCIAS.
+
+    Y el motivo: si el motor no lee la candidata, igual se debe saber que
+    cambia la candidata. Y el fallo de integridad y la lista de diferencias
+    son dos hechos, y se necesitan los dos.
+    """
+    alta, candidata, informe = _candidata(FIX.DUREZA_SUAVE, inyectar_error=True)
+    try:
+        # y ademas un bote cambiado, para que las diferencias no sean cero
+        with io.open(candidata, encoding='utf-8') as f:
+            lineas = [l for l in f if l.strip()]
+        h = json.loads(lineas[0])
+        h['final_pot'] = float(h.get('final_pot') or 0) + 2.0
+        lineas[0] = json.dumps(h, ensure_ascii=False) + '\n'
+        with io.open(candidata, 'w', encoding='utf-8', newline='\n') as f:
+            f.writelines(lineas)
+
+        destino = _destino_temporal(alta)
+        r = _correr(destino, candidata, '--ciegas-esperadas', '921',
+                    '--control-categorias', _control(alta))
+        assert 'ERRORES de clasificacion' in r.stdout, (
+            'y el fallo de integridad tiene que estar: %s' % r.stdout[-1000:])
+        assert 'manos con el BOTE distinto : 1' in r.stdout, (
+            'y las diferencias SEMANTICAS tambien, porque son un hecho '
+            'independiente del fallo: %s' % r.stdout[-1000:])
+    finally:
+        shutil.rmtree(alta, ignore_errors=True)
+
+
+def test_una_diferencia_semantica_no_bloquea_la_integridad():
+    """Y que un cambio de bote NO es un fallo de integridad.
+
+    Y el motivo: una candidata que cambia botes es INFORMACION, y el
+    veredicto de integridad tecnica es otra cosa. De modo que una
+    diferencia semantica, con todo lo demas en orden, da el mismo codigo que
+    sin ella.
+    """
+    alta, candidata, informe = _candidata(FIX.DUREZA_SUAVE)
+    try:
+        with io.open(candidata, encoding='utf-8') as f:
+            lineas = [l for l in f if l.strip()]
+        h = json.loads(lineas[0])
+        h['final_pot'] = float(h.get('final_pot') or 0) + 2.0
+        lineas[0] = json.dumps(h, ensure_ascii=False) + '\n'
+        with io.open(candidata, 'w', encoding='utf-8', newline='\n') as f:
+            f.writelines(lineas)
+
+        destino = _destino_temporal(alta)
+        r = _correr(destino, candidata, '--ciegas-esperadas', '921',
+                    '--control-categorias', _control(alta))
+        assert r.returncode == 0, (
+            'un cambio de bote es informacion y no un fallo de integridad, '
+            'de modo que el codigo tiene que ser 0, y ha salido con %d:\n%s'
+            % (r.returncode, r.stdout[-1200:]))
+        assert 'manos con el BOTE distinto : 1' in r.stdout, r.stdout[-800:]
+    finally:
+        shutil.rmtree(alta, ignore_errors=True)
+
+
+def test_la_autorizacion_no_se_estima_si_la_integridad_no_ha_pasado():
+    """Y que la autorizacion estadistica NO se evalua si la integridad fallo.
+
+    Y el motivo: no tiene sentido autorizar estadisticamente una candidata
+    que el motor no lee. Y por eso la seccion 3 lo DICE, en vez de callarse:
+    un apartado que no dice nada parece un apartado que no tiene nada que
+    decir.
+    """
+    alta, candidata, informe = _candidata(FIX.DUREZA_SUAVE, inyectar_error=True)
+    try:
+        destino = _destino_temporal(alta)
+        r = _correr(destino, candidata, '--ciegas-esperadas', '921',
+                    '--control-categorias', _control(alta))
+        assert r.returncode == 1, r.stdout[-800:]
+        assert 'LA INTEGRIDAD TECNICA NO HA PASADO' in r.stdout, (
+            'y la seccion de autorizacion tiene que decirlo: %s'
+            % r.stdout[-1000:])
+        assert 'NO SE EVALUA' in r.stdout, r.stdout[-800:]
     finally:
         shutil.rmtree(alta, ignore_errors=True)
 

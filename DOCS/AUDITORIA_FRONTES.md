@@ -211,6 +211,25 @@ aplicación, que es «los rivales vivos en la calle de corte».
 > · y sin ninguna, un error que lo dice, y no el `nan` que devuelve
 >   `numpy.median([])`, que es un número que se propaga sin que nadie lo note.
 
+### Y LA EVIDENCIA, QUE ESTA CUBIERTA Y POR LO TANTO EL FRENTE SE CIERRA
+
+Y R2 pide: «si estos casos ya están cubiertos, documentar las evidencias y
+cerrar el frente en lugar de añadir pruebas redundantes». Y están:
+
+| caso | dónde está cubierto |
+|---|---|
+| **cero rivales evaluables** | `test_sin_equities_da_un_error_claro`: un error que lo dice, y no el `nan` de `numpy.median([])` |
+| **un rival** | `test_un_solo_rival_median_igual_y_dispersion_cero`, y `n_evaluados == 1` |
+| **varios rivales** | `test_tres_rivales_mediana_el_del_medio` y `test_cuatro_rivales_la_mediana_es_el_promedio_de_los_dos_del_medio` |
+| **`n_evaluados` es el conjunto de la mediana** | `test_n_evaluados_es_el_conjunto_sobre_el_que_se_calcula_la_mediana` |
+| **un rival no evaluable no altera la agregación** | `test_un_rival_no_evaluable_no_entra_en_el_conjunto`, y `test_el_codigo_de_equity_de_mano_excluye_a_los_que_fallan` (por el árbol) |
+| **equivalencia numérica con la anterior** | `test_el_resultado_es_identico_al_de_la_version_anterior`, con la implementación anterior escrita como referencia |
+
+> **El frente de INSTRUMENTACIÓN queda cerrado**: la agregación hace lo que
+> decía que hacía, y se sabe. Y lo que queda abierto no es de instrumentación
+> —es la elección de la reducción, que es una cuestión de póquer—, y por eso
+> no se cierra aquí.
+
 **DE QUIEN DECIDE EL OBJETIVO:** si la mediana es la reducción correcta, que es
 una cuestión de póquer y no de instrumentación. Y por eso **no se toca**: un
 cambio de reducción cambia la métrica, y la métrica publicada no se mueve por
