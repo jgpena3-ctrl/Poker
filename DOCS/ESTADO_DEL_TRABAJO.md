@@ -20,6 +20,8 @@
 | **el procedimiento de integración** | `tools/integrar_copia.py`, probado en seco con la copia sintética **completa** de 1258 manos, y con sus dos caminos de fallo |
 | **los DOS fixtures** | uno **suave** —solo recodifica— y otro **duro** —además añade las ciegas que faltaban—, y el duro reconoce **1258** ciegas, las mismas que la copia real |
 | **el número de ciegas, que no es una constante global** | lo mide cada fixture y lo dice en su informe, y es **exacto** y no un mínimo: un control que no puede fallar no es un control |
+| **la auditoría de `matrix`** | `DOCS/AUDITORIA_MATRIX.md`: el mapa real de los lectores, los contratos de lectura, y los cinco hallazgos con su categoría. Y sus tres decisiones, declaradas como de A1 |
+| **la vía preflop observable** | `DOCS/OBSERVABLE_PREFLOP.md`: qué es observable, quién lo valida sin sesgo, y qué está medido y qué es hipótesis |
 | **la declaración de los escritores** | `motor/test_quien_escribe.py`, y ahora **verificable**: qué escribe, dónde y bajo qué condición |
 
 ## 2. ABIERTO, de A1
@@ -41,18 +43,21 @@
 
 ## 4. ABIERTO, de A2, INDEPENDIENTE
 
-| trabajo | dueño | condición de activación |
-|---|---|---|
-| `matrix`: auditar el origen de las discrepancias y las dependencias del calculo, sin regenerar derivados | A2 | **AUDITADO**: `DOCS/AUDITORIA_MATRIX.md`. Y lo que sale de el, y es de A1: que significa una celda, el 22 % de spots sin tabla, y la regla de `Call_OR` |
-| las 5 manos con board divergente: clasificar cuales se pueden analizar desde el codigo y cuales dependen de A1 | A2 | **AUDITADO**: 27 de 29 son un resumen truncado, y 2 son de A1 (`H_0915` y `H_0921`) |
-| la via preflop: revisar el recorrido de las acciones, sus contratos y la propagacion de estados, con pruebas sinteticas | A2 | **AUDITADO**: sus dos decisiones ya estan tomadas, y lo que falta son las cuestiones de ALCANCE, que no son de instrumentacion |
-| el peso por rival: auditar la logica de asignacion y sus condiciones de aplicacion, sin recalibrar con la copia | A2 | **AUDITADO**: la mediana se aplica sobre los rivales EVALUABLES, y ahora la cuenta se dice. Y si la mediana es la reduccion correcta, de quien decide el objetivo |
+Y los cuatro frentes, con los CINCO campos que hacen falta para retomarlos:
+**responsable**, **resultado medido**, **decisión pendiente**, **condición de
+activación** y **prueba que demuestra el cierre**.
 
-> Y los cuatro **auditados y clasificados** en
-> [`AUDITORIA_FRONTES.md`](AUDITORIA_FRONTES.md), que dice, para cada uno, qué
-> parte es del código y qué parte depende de A1. Y lo que sale de los cuatro es
-> lo mismo: **la parte que se puede decidir desde el código está medida y es
-> pequeña, y la parte que depende de los datos es de otra persona.**
+| frente | responsable | resultado medido | decisión pendiente | condición de activación | prueba que demuestra el cierre |
+|---|---|---|---|---|---|
+| `matrix` | A2, y A1 para las tres decisiones | el mapa: **tres** lectores del fichero, uno lo lee a través de otro, y tres solo lo mencionan. Y la cobertura: **324** spots, **252** con tabla, el **78 %** | qué significa una celda; el **22 %** de spots sin tabla; la regla de `Call_OR` | ninguna para la auditoría: se puede seguir midiendo. Y para las tres decisiones, la de A1 | `motor/test_lectura_matrices.py` (10) y `tools/test_cifras_no_movidas.py` (2) |
+| las 5 manos con board divergente | A2, y A1 para 2 cartas | **27** de **29** son un resumen truncado —`comunitarias` es un subconjunto de `streets`— y se clasifican sin la grabación | la identidad de la carta de `H_0915` y de `H_0921` | la resolución es de A1, con la grabación | `tools/test_auditoria_frentes.py` (las dos cifras y su condición) |
+| la vía preflop | A2, y quien decide el alcance | el contrato está escrito, sus **dos decisiones ya están tomadas**, y el camino **observable existe** en el motor: `equity_preflop_rango` no usa las cartas del rival, y hay un test de fuga que lo comprueba | que la equity observable **ordena** las manos —**no medido**, y el motivo es de coste—; y si la herramienta debe pasar a medirla, que **movería el AUC publicado** y es post-adopción | ninguna para la auditoría; las dos son de alcance | `tools/test_observable_preflop.py` (5) y `DOCS/OBSERVABLE_PREFLOP.md` |
+| el peso por rival | A2, y quien decide el objetivo | la mediana se aplica sobre los rivales **evaluables**, y ahora el resultado lleva `n_evaluados` | si la mediana es la reducción correcta, para la métrica siguiente | ninguna para la auditoría; la elección es de alcance | `tools/test_agregacion_rival.py` (9) |
+
+> Y el patrón de los cuatro es el del proyecto entero: **la parte que se
+> puede decidir desde el código está medida y es pequeña; y la parte que
+> depende de los datos es de otra persona.**
+
 
 ## 5. ABIERTO, sin dueño asignado
 
@@ -86,7 +91,7 @@ condición**, y la condición dice **qué lo desbloquea**, no «cuando se pueda�
 | la traduccion del `p` en las auditorias | A2, con A1 | la base adoptada, porque su semantica depende de la codificacion final |
 | `matrix` | A2 | ninguna: se puede empezar ya |
 | las 5 manos divergentes | A2 | ninguna para la clasificacion; la resolucion depende de A1 |
-| la via preflop | A2 | ninguna: se puede empezar ya |
+| la via preflop | A2 | ninguna: se puede seguir midiendo. Y para las dos decisiones de alcance, de quien decide |
 | el peso por rival | A2 | ninguna: se puede empezar ya |
 
 ## 7. LOS COMANDOS PARA REPETIR LA VALIDACIÓN
@@ -121,3 +126,27 @@ Y con el resultado que se espera, para que repetirla no sea adivinar:
 >
 > Y el procedimiento de `tools/integrar_copia.py` es **lo que falta
 > ejecutar**, no lo que falta escribir.
+
+
+## 10. QUÉ DEBE HACER A1 ANTES DE DISPARAR
+
+Y son cuatro pasos, y cada uno tiene su criterio de **hecho**, que es lo que
+los hace comprobables y no una lista de intenciones.
+
+| # | paso | su criterio de «hecho» |
+|---|---|---|
+| 1 | **cerrar las 203 manos** | las 203 tienen su bote resuelto con la grabación original, y el detalle lo dice: `trabajo/botes_aritmetica.jsonl` con `resuelto` en las 203 |
+| 2 | **fijar el número de ciegas de la copia** | el número que el motor reconoce en la copia revisada, y el **control de categorías** que la copia da, medido sobre ella |
+| 3 | **declarar los dos controles** | `--ciegas-esperadas <N>` y `--control-categorias <fichero.json>`, y el fichero con las doce categorías **de la copia**, no las de la base de hoy |
+| 4 | **disparar la primera ejecución real** | `python tools/integrar_copia.py --ciegas-esperadas <N> --control-categorias <fichero.json>`, y el resultado con las **tres** secciones, y el **código 0** |
+
+> Y los dos controles del paso 3 son **declaraciones**, no medidas del
+> script: y el de las categorías **tiene que ser el de la copia**, porque el
+> de la base de hoy es el control de NEUTRALIDAD DE LA CODIFICACIÓN, y la
+> copia no es solo una re-codificación (MEDIDO: cambia el `final_pot` de 689
+> de las 1055 manos resueltas).
+>
+> Y el paso 4 **no lo dispara este trabajo**. Es de A1, y por una razón que
+> no es de instrumentación: la adopción es una decisión sobre datos que
+> todavía se están validando.
+

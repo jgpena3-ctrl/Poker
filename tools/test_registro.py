@@ -125,3 +125,76 @@ def test_no_hay_trabajo_abierto_sin_dueno():
     assert con_trabajo == ['ninguno'], (
         'hay %d trabajo(s) abierto(s) SIN dueño: %r. Y un trabajo sin dueño '
         'es un trabajo que no se hace.' % (len(con_trabajo) - 1, con_trabajo))
+
+def test_los_cinco_campos_de_cada_frente_estan():
+    """Y que la tabla de los frentes tenga los CINCO campos.
+
+    Y los cinco, y por que cinco: responsable, resultado medido, decision
+    pendiente, condicion de activacion, y la prueba que demuestra el
+    cierre. Y el quinto es el que hace que los otros cuatro no se
+    desvanezcan: un frente sin prueba que lo fije, es un frente que se
+    cierra cuando alguien se acuerda.
+    """
+    reg = _registro()
+    cuerpo = reg.split('## 4. ABIERTO, de A2, INDEPENDIENTE', 1)[1]
+    cuerpo = cuerpo.split('## ', 1)[0]
+    filas = []
+    for l in cuerpo.split('\n'):
+        if not l.startswith('|') or l.count('|') < 7:
+            continue
+        celdas = [c.strip() for c in l.strip('|').split('|')]
+        if len(celdas) != 6:
+            continue
+        if set(''.join(celdas)) <= set('-: '):
+            continue
+        if celdas[0] == 'frente':
+            continue          # la cabecera de la tabla, no una fila
+        filas.append(celdas)
+    assert len(filas) == 4, (
+        'se esperaban los cuatro frentes en la tabla, y hay %d: %r'
+        % (len(filas), filas))
+    for frente, resp, medido, decision, condicion, prueba in filas:
+        for nombre, valor in (('responsable', resp),
+                              ('resultado medido', medido),
+                              ('decision pendiente', decision),
+                              ('condicion de activacion', condicion),
+                              ('prueba que demuestra el cierre', prueba)):
+            assert valor, (
+                'el frente %r no tiene %s' % (frente, nombre))
+
+
+def test_los_cuatro_pasos_de_a1_estan_con_su_criterio_de_hecho():
+    """Y que la seccion de los pasos exista, y que cada paso diga cuando
+    esta HECHO.
+
+    Y el motivo del «criterio de hecho»: una lista de pasos sin criterio de
+    hecho es una lista de intenciones, y las intenciones no se comprueban.
+    """
+    reg = _registro()
+    assert 'QUÉ DEBE HACER A1 ANTES DE DISPARAR' in reg, (
+        'el registro no tiene la seccion de los pasos de A1')
+    cuerpo = reg.split('QUÉ DEBE HACER A1 ANTES DE DISPARAR', 1)[1]
+    cuerpo = cuerpo.split('\n## ', 1)[0]
+    filas = []
+    for l in cuerpo.split('\n'):
+        if not l.startswith('|') or l.count('|') < 4:
+            continue
+        celdas = [c.strip() for c in l.strip('|').split('|')]
+        if len(celdas) != 3:
+            continue
+        if set(''.join(celdas)) <= set('-: '):
+            continue
+        filas.append(celdas)
+    pasos = [f for f in filas if f[0].isdigit()]
+    assert len(pasos) == 4, (
+        'se esperaban los cuatro pasos, y hay %d: %r' % (len(pasos), pasos))
+    for numero, paso, hecho in pasos:
+        assert paso, 'el paso %s no dice que hacer' % numero
+        assert hecho, 'el paso %s no dice su criterio de «hecho»' % numero
+    # y los cuatro pasos tienen que ser los que son
+    texto = ' '.join(p[1].lower() for p in pasos)
+    for ancla in ('203', 'ciegas', 'declarar', 'disparar'):
+        assert ancla in texto, (
+            'los pasos de A1 no hablan de %r, y la secuencia tiene que ser '
+            'cerrar, fijar, declarar y disparar' % ancla)
+

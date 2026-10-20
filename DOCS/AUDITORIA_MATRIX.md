@@ -132,7 +132,46 @@ todos con **datos sintéticos**:
 | **el 22 % de spots sin tabla** | si la ausencia es «no modelado» o «no ocurre», y si el modelo debe cubrir esos spots, es una decisión del modelo, no de instrumentación |
 | **la regla de `Call_OR`** | que MP, CO y SB no tengan tabla de «igualar una apertura» puede ser una decisión («subir o foldear») o un hueco. Y es lo que decide si el asistente debe recomendar igualar en esos spots |
 
-## 8. Y LO QUE NO SE HACE, Y POR QUÉ
+## 8. DECISIONES PENDIENTES DE A1
+
+Y son tres, y cada una con tres cosas: **qué se decide**, **qué depende de
+la decisión** y **qué no se toca mientras no se decida**. Y la tercera es la
+que importa: sin ella, «pendiente» es una palabra, y con ella es una
+frontera.
+
+### D1 — QUÉ SIGNIFICA UNA CELDA
+
+| | |
+|---|---|
+| **qué se decide** | si el valor de una celda es una probabilidad, una frecuencia o un peso; y si la tabla tiene que sumar 1 |
+| **qué depende** | `preflop.prob` la usa como P(A\|H) y la mete en un update bayesiano; `player_ranges` la usa como prior de un shrinkage; `profile` la pondera por combos para el factor ω |
+| **qué NO se toca** | ninguna celda, ninguna matriz regenerada, y **ninguna regla de selección**: el grafo de lectores no se mueve hasta que esto esté declarado |
+
+> Y lo que ya está medido, y es una integridad y no un significado: las 117
+> tablas dan tasas base de 0.0030 a 0.4397, y todas en [0, 1], y a ninguna le
+> falta una celda.
+
+### D2 — EL 22 % DE SPOTS SIN TABLA
+
+| | |
+|---|---|
+| **qué se decide** | si la ausencia es «no modelado» o «no ocurre»; y si el modelo debe cubrir esos spots |
+| **qué depende** | la recomendación preflop: MEDIDO, `Call_OR` no tiene tabla para MP, CO ni SB, de modo que en esos spots el modelo no contempla «igualar una apertura» |
+| **qué NO se toca** | la **convención** de la ausencia —que una tabla ausente es un 0 para esa acción—, que está declarada por los tests de `asistente_live`, y que por eso no se cambia a ciegas |
+
+### D3 — LA REGLA DE `Call_OR`
+
+| | |
+|---|---|
+| **qué se decide** | si MP, CO y SB sin tabla de «igualar una apertura» es una decisión del modelo («subir o foldear») o un hueco |
+| **qué depende** | lo mismo que D2, y por eso van juntas: la respuesta a D3 es una parte de la de D2 |
+| **qué NO se toca** | las tablas de `Call_*`, y su contenido; y la **fórmula** por rival, que es de otra decisión |
+
+> Y las tres son de A1, y no de instrumentación, y el motivo es el mismo de
+> siempre: **la intención no está en el fichero**, y deducirla del fichero es
+> adivinar.
+
+## 9. Y LO QUE NO SE HACE, Y POR QUÉ
 
 | | |
 |---|---|

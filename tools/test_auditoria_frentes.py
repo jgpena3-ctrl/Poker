@@ -244,3 +244,37 @@ def test_el_documento_declara_la_inmovilidad_del_grafo():
         'el documento no declara la inmovilidad del grafo de matrix')
     assert 'cambio a ciegas' in doc, (
         'y no dice POR QUE: que es lo que convence a quien lo vaya a tocar')
+
+def test_el_documento_declara_las_tres_decisiones_de_a1():
+    """Y que las tres esten, con su «que NO se toca».
+
+    Y el motivo de que el «que no se toca» sea la parte que se comprueba: sin
+    el, «pendiente» es una palabra, y con el es una FRONTERA. Y una frontera
+    que no esta escrita, es una frontera que se cruza sin querer.
+    """
+    doc = _registro_matrix()
+    assert 'DECISIONES PENDIENTES DE A1' in doc, (
+        'el documento no tiene la seccion de decisiones de A1')
+    for ancla in ('D1', 'D2', 'D3'):
+        assert ancla in doc, 'falta la decision %s' % ancla
+    # y cada una con su «que NO se toca»
+    cuerpo = doc.split('DECISIONES PENDIENTES DE A1', 1)[1]
+    for ancla in ('D1', 'D2', 'D3'):
+        bloque = cuerpo.split('### %s' % ancla, 1)[1]
+        bloque = bloque.split('### ', 1)[0]
+        assert 'qué NO se toca' in bloque, (
+            'la decision %s no dice que NO se toca mientras no se decida' % ancla)
+        assert 'qué se decide' in bloque, (
+            'la decision %s no dice que se decide' % ancla)
+        assert 'qué depende' in bloque, (
+            'la decision %s no dice que depende de la decision' % ancla)
+
+
+def _registro_matrix():
+    import io as _io
+    import os as _os
+    ruta = _os.path.join(_os.path.dirname(_os.path.dirname(
+        _os.path.abspath(__file__))), 'DOCS', 'AUDITORIA_MATRIX.md')
+    with _io.open(ruta, encoding='utf-8') as f:
+        return f.read()
+

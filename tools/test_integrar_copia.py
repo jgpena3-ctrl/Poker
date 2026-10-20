@@ -375,3 +375,110 @@ def test_el_codigo_de_incompleta_no_es_una_integracion_satisfactoria():
         assert io.open(destino, 'rb').read() == antes
     finally:
         shutil.rmtree(alta, ignore_errors=True)
+
+# ---------------------------------------------------------------------------
+# LOS TRES RESULTADOS, Y POR QUE NO SE MEZCLAN
+# ---------------------------------------------------------------------------
+
+def test_el_informe_separa_los_tres_resultados():
+    """Y que las TRES secciones esten, y en su sitio.
+
+    Y el motivo de que el informe los separe: **integridad tecnica**,
+    **diferencias semanticas** y **autorizacion estadistica** son cosas de
+    distinta naturaleza, y mezclarlas es como se cuela un verde falso: un
+    informe que dice «todo bien» al lado de un delta de 41 folds es un
+    informe que alguien va a leer como «todo bien».
+    """
+    alta, candidata, informe = _candidata(FIX.DUREZA_SUAVE)
+    try:
+        destino = _destino_temporal(alta)
+        r = _correr(destino, candidata,
+                    '--ciegas-esperadas', str(informe['ciegas_reconocidas']))
+        assert '1. INTEGRIDAD TECNICA' in r.stdout, r.stdout[-1200:]
+        assert '2. DIFERENCIAS SEMANTICAS' in r.stdout, r.stdout[-1200:]
+        assert '3. AUTORIZACION ESTADISTICA' in r.stdout, r.stdout[-1200:]
+        # y en su orden
+        assert (r.stdout.index('1. INTEGRIDAD TECNICA')
+                < r.stdout.index('2. DIFERENCIAS SEMANTICAS')
+                < r.stdout.index('3. AUTORIZACION ESTADISTICA'))
+    finally:
+        shutil.rmtree(alta, ignore_errors=True)
+
+
+def test_las_diferencias_semanticas_dicen_que_manos_y_cuantas():
+    """Y que las diferencias se CUANTIFIQUEN y se diga DONDE.
+
+    Y el motivo: «cambian final_pot, importes o categorias» sin decir en que
+    manos es informacion que no se puede usar. Y lo que se mide aqui es una
+    diferencia de datos, que es lo que la copia real hace.
+    """
+    alta, candidata, informe = _candidata(FIX.DUREZA_SUAVE)
+    try:
+        # una candidata con el bote de UNA mano cambiado
+        with io.open(candidata, encoding='utf-8') as f:
+            lineas = [l for l in f if l.strip()]
+        h = json.loads(lineas[0])
+        h['final_pot'] = float(h.get('final_pot') or 0) + 1.5
+        lineas[0] = json.dumps(h, ensure_ascii=False) + '\n'
+        with io.open(candidata, 'w', encoding='utf-8', newline='\n') as f:
+            f.writelines(lineas)
+
+        destino = _destino_temporal(alta)
+        r = _correr(destino, candidata, '--ciegas-esperadas', '921')
+        assert 'manos con el BOTE distinto : 1' in r.stdout, r.stdout[-1500:]
+        assert h['hand_id'] in r.stdout, (
+            'y el informe tiene que NOMBRAR la mano, que es lo que hace falta '
+            'para usarla: %s' % r.stdout[-800:])
+    finally:
+        shutil.rmtree(alta, ignore_errors=True)
+
+
+def test_el_control_de_categorias_bloquea_y_no_se_puede_hacer_informativo():
+    """Y que el control de las categorias BLOQUEA, y no hay forma de pasarlo.
+
+    Y el motivo de que sea un test y no una frase: el modo de que un falso
+    verde se cuele es que un control BLOQUEANTE se vuelva informativo «por
+    comodidad». Y aqui no hay ninguna bandera que lo haga, y el test
+    comprueba las dos cosas: que bloquea, y que no hay bandera.
+    """
+    alta, candidata, _informe = _candidata(FIX.DUREZA_SUAVE)
+    try:
+        # una candidata cuyas categorias NO son las de control: se
+        # comprueba con una que cambia la codificacion de una decision
+        with io.open(candidata, encoding='utf-8') as f:
+            lineas = [l for l in f if l.strip()]
+        h = json.loads(lineas[0])
+        pre = ((h.get('streets', {}) or {}).get('preflop', {}) or {}).get(
+            'actions', []) or []
+        for a in pre:
+            if a.get('action') == 'f' and a.get('pos') not in ('BB', 'SB'):
+                a['action'] = 'c'
+                a['amount'] = 1.0
+                break
+        else:
+            raise AssertionError('no hay un fold que cambiar')
+        lineas[0] = json.dumps(h, ensure_ascii=False) + '\n'
+        with io.open(candidata, 'w', encoding='utf-8', newline='\n') as f:
+            f.writelines(lineas)
+
+        destino = _destino_temporal(alta)
+        r = _correr(destino, candidata, '--ciegas-esperadas', '921')
+        assert r.returncode == 1, (
+            'con las categorias cambiadas, el script tiene que FALLAR, y ha '
+            'salido con %d:\n%s' % (r.returncode, r.stdout[-1200:]))
+        assert 'LAS CATEGORIAS NO SON LAS DEL CONTROL DECLARADO' in r.stdout, (
+            r.stdout[-800:])
+        assert 'no se puede volver informativo' in r.stdout, (
+            'y el informe tiene que decir que el control BLOQUEA, que es lo '
+            'que evita que alguien lo cambie de forma: %s' % r.stdout[-800:])
+
+        # y no hay ninguna bandera que lo vuelva informativo
+        ayuda = subprocess.run([sys.executable, SCRIPT, '--help'],
+                               cwd=ROOT, capture_output=True, text=True)
+        assert 'informativ' not in ayuda.stdout.lower(), (
+            'hay una bandera para volver el control de categorias '
+            'informativo, y esa bandera es exactamente el falso verde que '
+            'este control existe para impedir')
+    finally:
+        shutil.rmtree(alta, ignore_errors=True)
+

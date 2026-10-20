@@ -225,3 +225,67 @@ def test_el_fichero_real_esta_entero():
     assert not malas, (
         'tablas con la matriz danada en el fichero REAL: %r. Y eso no tendria '
         'que pasar, y si pasa hay que decirlo.' % malas[:10])
+
+# ---------------------------------------------------------------------------
+# 5. H3: LOS SITIOS DONDE LA AUSENCIA SE CONVIERTE EN CERO
+# ---------------------------------------------------------------------------
+
+def test_los_sitios_que_convierten_la_ausencia_en_cero_estan_fijados():
+    """Y H3, que NO se arregla: se DECLARA, y se cuenta.
+
+    Y el defecto, MEDIDO: `asistente_live._recom_preflop` convierte la
+    AUSENCIA de una tabla en una frecuencia CERO con un `or 0.0`. Y la
+    consecuencia medida: `ROL_UTG` NO existe en el fichero, y un UTG con un
+    limp delante se leia como «over-limp 0 %», o sea «retirar 100 %» — una
+    certeza INVENTADA a partir de una tabla que no existe.
+
+    Y no se arregla, y el motivo esta en los tests que ya lo fijan:
+    `test_recom_preflop_sb_no_pide_call_sin_tabla` dice, literalmente, «no se
+    inventa un call (lo mas apegado a las tablas): igualar queda en 0». De
+    modo que la CONVENCION esta declarada, y una excepcion declarada no se
+    toca: se documenta.
+
+    Y lo que este test hace es CONTAR los sitios, para que un sitio nuevo
+    aparezca en la lista y sea una decision y no un descuido. Y el numero
+    esta MEDIDO, y se vuelve a medir si el numero cambia: y entonces hay que
+    revisar la convencion, porque eso ya no seria lo mismo.
+    """
+    import ast
+    ruta = os.path.join(os.path.dirname(os.path.dirname(
+        os.path.abspath(__file__))), 'motor', 'asistente_live.py')
+    with io.open(ruta, encoding='utf-8') as f:
+        arbol = ast.parse(f.read())
+    fn = next(n for n in ast.walk(arbol)
+              if isinstance(n, ast.FunctionDef)
+              and n.name == '_recom_preflop')
+    sitios = []
+    for n in ast.walk(fn):
+        if isinstance(n, ast.BoolOp):
+            src = ast.unparse(n)
+            if 'or 0.0' in src:
+                sitios.append(src)
+    assert len(sitios) == 8, (
+        'hay %d sitios donde la AUSENCIA se convierte en un cero, y eran 8. '
+        'Y si se ha anadido uno, es una decision y hay que declararla; y si '
+        'se ha quitado uno, hay que revisar la convencion.\n   %r'
+        % (len(sitios), sitios))
+
+
+def test_el_lector_sigue_distinguendo_una_frecuencia_nula_de_una_desconocida():
+    """Y que la distincion exista EN EL LECTOR, que es donde se puede.
+
+    Y el motivo de que aqui, y no en el consumidor: en el consumidor la
+    distincion se pierde a proposito —es la convencion—, y ahi no se puede
+    comprobar sin cambiar el comportamiento. En el lector si: y es el punto
+    desde el que se puede auditar si algun dia la convencion cambia.
+    """
+    # MEDIDO, `ROL_UTG` no existe y `ROL_BB` si.
+    assert preflop.prob('ROL', 'UTG', '') is None
+    assert preflop.prob('ROL', 'BB', '') is not None
+    # y el valor de una celda que es CERO de verdad, es un numero
+    v = preflop.prob('ROL', 'BB', '')
+    assert v is not None and float(v[0]) == 0.0
+    # y la fuente lo declara: la ausencia tiene nombre propio
+    _v, fuente = preflop.prob_or_fallback('ROL', 'UTG', '')
+    assert fuente == 'uniform'
+
