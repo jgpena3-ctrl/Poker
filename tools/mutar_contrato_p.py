@@ -51,16 +51,26 @@ LEARN_REL = 'motor/learn.py'
 MUTACIONES = {
     'M1': {
         'que': 'el salto de las posts en `preflop_events`',
+        'invariante': 'una posta no es una decision, y el jugador sigue '
+                      'sin decidir',
+        'test': 'motor/test_accion_p.py::test_una_p_sola_no_es_ninguna_decision',
         'viejo': "        if act == 'p':\n",
         'nuevo': "        if act == 'q':\n",
     },
     'M2': {
         'que': '`_es_ciega_bb` deja de reconocer la `p` como ciega',
+        'invariante': 'la ciega del BB puede escribirse de las dos maneras',
+        'test': ('motor/test_accion_p.py::'
+                 'test_la_ciega_del_bb_grabada_como_p_se_reconoce'),
         'viejo': "if pos == 'BB' and act in ('b', 'p') and not voluntary_before:",
         'nuevo': "if pos == 'BB' and act == 'b' and not voluntary_before:",
     },
     'M3': {
         'que': '`entradas_bb_rechazadas` deja de marcar «el BB ya posteo»',
+        'invariante': 'un BB que YA posteo la ciega no puede tener una ciega '
+                      'segunda',
+        'test': ('motor/test_accion_p.py::'
+                 'test_un_bb_que_ya_posteo_no_vuelve_a_ser_una_ciega'),
         'viejo': "            if pos == 'BB' and act == 'p':",
         'nuevo': "            if pos == 'BB' and act == 'q':",
     },
@@ -73,6 +83,10 @@ MUTACIONES = {
     # y la mutacion de SU camino es esta ✓.
     'M4': {
         'que': 'el motor deja de rechazar las ciegas tardias',
+        'invariante': 'un BB que NO posteo antes y tiene una `b` tarde es un '
+                      'rechazo',
+        'test': ('motor/test_accion_p.py::'
+                 'test_sin_la_p_de_antes_la_b_del_bb_si_es_un_rechazo'),
         'viejo': ("        if pos == 'BB' and act in ('b', 'p') "
                   "and not bb_ya_posteo:"),
         'nuevo': ("        if pos == 'ZZ' and act in ('b', 'p') "
@@ -153,6 +167,24 @@ def _correr(tests=None):
                           env=_entorno_sin_bytecode())
 
 
+def tabla_de_mutaciones():
+    """La tabla, en forma de filas, y con su verificacion.
+
+    Y la forma es la del informe: que invariante rompe, que test la nota, y
+    si la nota ✓. Y la ultima columna NO es una opinion: se comprueba ✓.
+    """
+    filas = []
+    for etiqueta in sorted(MUTACIONES):
+        mut = MUTACIONES[etiqueta]
+        filas.append({
+            'mutacion': etiqueta,
+            'que': mut['que'],
+            'invariante': mut['invariante'],
+            'test': mut['test'],
+        })
+    return filas
+
+
 def mutar_y_comprobar(etiqueta, ruta=None, runner=None, tests=None):
     """Muta el motor, mira si los tests lo notan, y lo RESTAURA SIEMPRE.
 
@@ -226,13 +258,20 @@ def main(argv=None):
     print()
     fallos = []
     for etiqueta in etiquetas:
-        notado, detalle = mutar_y_comprobar(etiqueta, ruta)
+        mut = MUTACIONES[etiqueta]
+        # Y se corre EL TEST DE LA TABLA, y no la suite entera ✓, porque lo
+        # que se comprueba es que ese test concreto nota esta mutacion ✓.
+        notado, detalle = mutar_y_comprobar(etiqueta, ruta,
+                                            tests=[mut['test']])
         print('   MEDIDO, %s (%s): %s' % (
-            etiqueta, MUTACIONES[etiqueta]['que'],
-            'LOS TESTS LO NOTAN' if notado
-            else '*** LOS TESTS NO LO NOTAN ***'))
+            etiqueta, mut['que'],
+            'EL TEST DE LA TABLA LO NOTA' if notado
+            else '*** EL TEST DE LA TABLA NO LO NOTA ***'))
+        print('      invariante: %s' % mut['invariante'])
+        print('      test      : %s' % mut['test'])
         if not notado:
-            print('      Y eso es un HUECO: ese contrato no esta vigilado.')
+            print('      Y eso es una BRECHA DE COBERTURA: ese contrato no '
+                  'esta vigilado, y no es motivo para relajar el test.')
             fallos.append(etiqueta)
     print()
     print('   MEDIDO, el motor restaurado: SIEMPRE (en un `finally`)')
