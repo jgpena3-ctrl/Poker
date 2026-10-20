@@ -14,6 +14,7 @@ confianza por muestra usando una posterior Beta por estadística:
 import json
 import math
 import os
+import warnings
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
@@ -279,29 +280,61 @@ class Profiles:
 
 
 def load_base_rates(matrices_path=MATRICES_PATH):
-    """Tasa base (frecuencia media ponderada por combos) de cada tabla."""
+    """Tasa base (frecuencia media ponderada por combos) de cada tabla.
+
+    Y EL CONTRATO, y es el de `preflop.py`, que ya lo tiene bien: **una
+    tabla DANA no es una tabla con menos celdas, es una tabla que NO
+    EXISTE**.
+
+    Y el motivo, MEDIDO: antes, una fila de 12 celdas en vez de 13 se
+    comia en silencio, y la tabla salia con una tasa de 0.10 —un numero
+    PLAUSIBLE, y falso—. Y una tasa falsa es peor que una tasa ausente: la
+    ausente se ve —`omega` la devuelve como None—, y la falsa se usa para
+    escalar un rango.
+
+    Y por eso la tabla danada se AVISA y se salta, en vez de saltarse en
+    silencio: una ausencia que no se dice es un agujero, y este es el
+    patron del proyecto: lo que no se declara, no existe.
+    """
     if not matrices_path or not os.path.exists(matrices_path):
         return {}
     tables = json.load(open(matrices_path, encoding='utf-8')).get('tables', {})
     rates = {}
     for name, t in tables.items():
         matrix = t.get('matrix')
-        if not isinstance(matrix, list) or len(matrix) != 13:
+        if not _matriz_entera(matrix):
+            warnings.warn(
+                f'load_base_rates: tabla {name!r} con la matriz DANA; '
+                f'se trata como tabla ausente',
+                RuntimeWarning, stacklevel=2)
             continue
         total_w = total_p = 0.0
         for i, row in enumerate(matrix):
-            if not isinstance(row, list) or len(row) != 13:
-                continue
             for j, freq in enumerate(row):
-                try:
-                    f = float(freq)
-                except (TypeError, ValueError):
-                    continue
+                f = float(freq)
                 w = _COMBO.get((i, j), 1)
                 total_w += w
                 total_p += f * w
         rates[name] = total_p / total_w if total_w else 0.0
     return rates
+
+
+def _matriz_entera(matrix) -> bool:
+    """13x13, y todas las celdas numericas. Y nada mas.
+
+    Y el motivo de que sea una funcion y no un `try`: la forma se comprueba
+    una vez, y el numero se comprueba con la conversion, que es lo que
+    garantiza que la celda es un numero y no un texto.
+    """
+    if not isinstance(matrix, list) or len(matrix) != 13:
+        return False
+    for fila in matrix:
+        if not isinstance(fila, list) or len(fila) != 13:
+            return False
+        for v in fila:
+            if isinstance(v, bool) or not isinstance(v, (int, float)):
+                return False
+    return True
 
 
 def main(argv=None):
