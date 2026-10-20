@@ -382,3 +382,82 @@ def test_la_auditoria_de_rules_esta_declarada_como_cerrada():
         assert ancla in reg, (
             'el registro no declara el estado del hallazgo %r' % ancla)
 
+def test_el_cuarto_hallazgo_de_rules_esta_declarado_con_su_motivo():
+    """Y que H4 tenga nombre, motivo y condicion de activacion.
+
+    Y el motivo de que el test exista ✓: un hallazgo **sin motivo declarado**
+    es un hallazgo que se olvida ✓. Y este es el cuarto de la auditoria de
+    `rules.py` ✓, que es de otro modulo ✓, y por eso necesita su ficha ✓.
+    """
+    import io as _io
+    import os as _os
+    raiz = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+    ruta = _os.path.join(raiz, 'DOCS', 'AUDITORIA_RULES.md')
+    with _io.open(ruta, encoding='utf-8') as f:
+        texto = f.read()
+    assert 'H4' in texto, 'el cuarto hallazgo no tiene nombre'
+    bloque = texto.split('## 6. H4', 1)[1].split('\n## ', 1)[0]
+    for ancla in ('qué es', 'dónde está', 'por qué no se arregla aquí',
+                  'qué condición lo activaría'):
+        assert ancla in bloque, (
+            'la ficha de H4 no dice %r, y un hallazgo sin motivo declarado es '
+            'un hallazgo que se olvida' % ancla)
+
+    # y el registro lo nombra en la mitad que le toca
+    reg = _registro()
+    assert 'H4' in reg, 'el registro no nombra H4'
+    assert 'post-adopción' in reg, 'y H4 tiene que estar en la post-adopcion'
+
+
+def test_el_registro_es_auditable_de_extremo_a_extremo():
+    """Y las tres mitades, con su criterio, una a una.
+
+    Y el motivo de que sea una asertion por mitad ✓: un registro que dice
+    «cerrado» sin commit ✓ no se puede auditar ✓, y uno que dice «A1» con
+    una cifra que ya no es cierta ✓ se lee mal ✓.
+    """
+    reg = _registro()
+
+    # (1) lo cerrado: cada cosa con su COMMIT y su motivo
+    cuerpo = reg.split('EL ESTADO DE ESPERA', 1)[1].split('\n## ', 1)[0]
+    fila = [l for l in cuerpo.split('\n')
+            if l.startswith('| lo que **ya está cerrado**')]
+    assert fila, 'falta la mitad de lo cerrado'
+    celdas = [c.strip() for c in fila[0].strip('|').split('|')]
+    # Y la tabla de las tres mitades tiene DOS columnas —la mitad y su
+    # contenido— ✓, y los commits van en la segunda ✓.
+    assert len(celdas) == 2, fila[0]
+    commits = re.findall(r'`[0-9a-f]{7}`', celdas[1])
+    assert len(commits) >= 4, (
+        'cada cosa cerrada tiene que decir EN QUE COMMIT se cerro, y hay %d '
+        'commits para %d cosas' % (len(commits), celdas[1].count(';')))
+    assert len(celdas[1]) > 60, 'y ademas el motivo, que es lo que lo sostiene'
+
+    # (2) lo de A1: la TAREA y su criterio de hecho, y NO una cifra
+    #
+    # Y los pasos se buscan en SU SECCION ✓, y no en todo el documento ✓:
+    # hay otra tabla numerada —la de «qué no se toca»— y que las dos se
+    # mezclaran haria que el test mirara la tabla equivocada ✓.
+    sec = reg.split('QUÉ DEBE HACER A1 ANTES DE DISPARAR', 1)[1]
+    sec = sec.split('\n## ', 1)[0]
+    pasos = [l for l in sec.split('\n') if l.startswith('| ') and l.count('|') >= 4
+             and l.strip('|').split('|')[0].strip().isdigit()]
+    assert len(pasos) == 4, 'se esperaban los cuatro pasos de A1: %r' % pasos
+    for l in pasos:
+        celdas = [c.strip() for c in l.strip('|').split('|')]
+        assert celdas[1], 'un paso sin que hacer'
+        assert celdas[2], 'un paso sin su criterio de HECHO'
+    assert 'las manos sin resolver' in reg, (
+        'la mitad de A1 tiene que nombrar la TAREA y no su numero')
+
+    # (3) la post-adopcion: cada cosa con su CONDICION de activacion
+    fila = [l for l in reg.split('\n')
+            if l.startswith('| lo que depende de la **post-adopción**')]
+    assert fila, 'falta la mitad de la post-adopcion'
+    celdas = [c.strip() for c in fila[0].strip('|').split('|')]
+    # Y la tabla de las tres mitades tiene DOS columnas ✓.
+    assert len(celdas) == 2 and celdas[1], fila
+    assert 're-deriven contra la base adoptada' in celdas[1], (
+        'la condicion de activacion de H4 tiene que estar escrita: %r'
+        % celdas[1])
+

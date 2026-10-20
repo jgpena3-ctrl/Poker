@@ -348,3 +348,47 @@ def test_el_mutador_invalida_la_cache_y_no_escribe_bytecode():
         if os.path.exists(otra):
             os.remove(otra)
 
+def test_los_pares_de_la_tabla_tienen_su_contraparte_sensible():
+    """Y que los pares —M3 y M4— tengan los dos lados, y que cada lado sea
+    sensible a SU mutacion.
+
+    Y el motivo de que sean un par ✓: **M3 y M4 son las dos caras del mismo
+    hueco** ✓ —el BB que ya posteo ✓ y el BB que no posteo antes ✓— y una
+    cara sin la otra no se puede comprobar ✓.
+
+    Y lo que se mide, y que es una verdad MEDIDA ✓ y no una opinion ✓:
+
+      · cada cara es sensible a **su** mutacion ✓;
+      · y la contraparte de una **no** es sensible a la otra ✓, y eso es lo
+        correcto ✓: M3 desactiva el rechazo de una ciega TARDIA ✓ —que es el
+        caso de la `p`— ✓, y M4 desactiva el rechazo de cualquier ciega
+        tardia ✓ —que es el caso de la `b`— ✓. Y la contraparte de M3 afirma
+        que NO hay rechazo ✓, de modo que con M4 —que no rechaza nada— ✓ esa
+        afirmacion se cumple todavia mas ✓, y el test pasa ✓.
+
+    > Y por eso la regla de la tabla es **cada caso vigila lo suyo** ✓, y no
+    > «cada caso nota todas las mutaciones» ✓: eso segundo seria imposible,
+    > porque las dos caras son afirmaciones **opuestas** ✓.
+    """
+    import mutar_contrato_p as M
+
+    pares = {'M3': 'M4', 'M4': 'M3'}
+    for mutacion, contraparte in sorted(pares.items()):
+        propio = M.MUTACIONES[mutacion]['test']
+        del_otro = M.MUTACIONES[contraparte]['test']
+
+        # (a) cada cara es sensible a SU mutacion
+        notado, _d = M.mutar_y_comprobar(mutacion, LEARN, tests=[propio])
+        assert notado, (
+            'la mutacion %s tiene que notarla su propio test %s' % (
+                mutacion, propio))
+
+        # (b) y la contraparte de la otra NO es sensible a esta, y eso es lo
+        #     correcto: son afirmaciones opuestas
+        notado_otro, _d2 = M.mutar_y_comprobar(mutacion, LEARN,
+                                               tests=[del_otro])
+        assert not notado_otro, (
+            'la contraparte de %s (%s) no deberia notar %s: son los dos '
+            'lados del mismo hueco y cada uno vigila el suyo'
+            % (contraparte, del_otro, mutacion))
+

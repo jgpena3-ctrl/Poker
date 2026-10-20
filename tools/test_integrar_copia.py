@@ -226,7 +226,10 @@ def test_el_flujo_completo_pasa_contra_el_fixture_duro():
     try:
         assert informe['manos'] == 1258, informe
         # Y el numero que importa: TODAS las manos con ciega reconocida.
-        assert informe['ciegas_reconocidas'] == 1258, informe
+        # Y el numero de ciegas del DURO no se fija ✓, porque es el de la
+        # COPIA y el de la copia es de A1 ✓. Y lo que se afirma es la
+        # RELACION ✓: todas las manos tienen ciega reconocida ✓.
+        assert informe['ciegas_reconocidas'] == informe['manos'], informe
         assert informe['tocadas'] == 1258, informe
         assert informe['dejadas'] == 0, informe
 
@@ -258,7 +261,10 @@ def test_los_dos_fixtures_tienen_umbrales_distintos():
         alta_d, _c_d, inf_d = _candidata(FIX.DUREZA_DURA)
         try:
             assert inf_s['ciegas_reconocidas'] == 921, inf_s
-            assert inf_d['ciegas_reconocidas'] == 1258, inf_d
+            # Y el numero de ciegas del DURO no se fija ✓, porque es el de la
+            # copia y el de la copia es de A1 ✓. Y lo que se afirma es la
+            # RELACION ✓: todas las manos tienen ciega reconocida ✓.
+            assert inf_d['ciegas_reconocidas'] == inf_d['manos'], inf_d
             assert inf_s['ciegas_reconocidas'] != inf_d['ciegas_reconocidas']
         finally:
             shutil.rmtree(alta_d, ignore_errors=True)

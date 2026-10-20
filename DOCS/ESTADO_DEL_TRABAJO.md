@@ -203,7 +203,7 @@ Y lo que hay detrás de esa frase, y es lo que la sostiene:
 | | |
 |---|---|
 | lo que depende de **A1** | las manos sin resolver, el número de ciegas de la copia, el control de categorías, y las tres decisiones de `matrix` |
-| lo que depende de la **post-adopción** | el defecto del contador de subidas, la recalibración de las cifras derivadas, y la elección de la reducción estadística |
+| lo que depende de la **post-adopción** | **H4 — el limp corto contado como subida** (el «defecto del contador de subidas» de `AUDITORIA_RULES.md` §6 ✓, que es de `motor/learn.py` ✓): se corrige **cuando las cifras publicadas se re-deriven contra la base adoptada** ✓. Y tambien la recalibración de las cifras derivadas ✓, y la elección de la reducción estadística ✓ |
 | lo que **ya está cerrado** | la auditoría de `rules.py` (`866e0c1`, `15ed74a`); los cuatro frentes auditados y clasificados (`7e0b3c7`, `25fe330`); el contrato de la `p`, con su inventario y su tabla de mutaciones (`25fe330`, `d12bff4`); los dos controles del procedimiento, con sus cuatro caminos (`25fe330`); y el experimento de la equity observable, preparado y con puerta (`25fe330`) |
 
 > Y la diferencia entre «no hay trabajo» y «no hay trabajo que se pueda
@@ -217,7 +217,7 @@ los hace comprobables y no una lista de intenciones.
 
 | # | paso | su criterio de «hecho» |
 |---|---|---|
-| 1 | **cerrar las manos sin resolver** | las que quedan tienen su bote resuelto con la grabación original, y el detalle lo dice: `trabajo/botes_aritmetica.jsonl` con `resuelto` en las 203 |
+| 1 | **cerrar las manos sin resolver** | las que quedan tienen su bote resuelto con la grabación original, y el detalle lo dice: `trabajo/botes_aritmetica.jsonl` con `resuelto` en cada una. Y **su número se mueve**, de modo que aquí no se escribe ✓ |
 | 2 | **fijar el número de ciegas de la copia** | el número que el motor reconoce en la copia revisada, y el **control de categorías** que la copia da, medido sobre ella |
 | 3 | **declarar los dos controles** | `--ciegas-esperadas <N>` y `--control-categorias <fichero.json>`, y el fichero con las doce categorías **de la copia**, no las de la base de hoy. Y **sin el control de categorías declarado el script NO da verde**: sale con el código **2**, que es INCOMPLETA y no FALLO, porque «no has decidido» no es «has fallado» |
 | 4 | **disparar la primera ejecución real** | `python tools/integrar_copia.py --ciegas-esperadas <N> --control-categorias <fichero.json>`, y el resultado con las **tres** secciones, y el **código 0** |

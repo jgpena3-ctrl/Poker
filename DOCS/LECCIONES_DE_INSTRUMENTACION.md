@@ -1446,3 +1446,26 @@ la copia tampoco se puede fijar** ✓, porque tambien es de A1 ✓ —y el del
 fixture duro, que es el mismo, tambien— ✓. Y lo que se afirma en su lugar es
 que **todas las manos tienen ciega** ✓, que es la relacion ✓ y no una fecha
 ✓.
+
+### Y EL INSTRUMENTO MIDE EN EL MOMENTO, Y NO GUARDA
+
+Y esa es la parte del instrumento que hace que la leccion se cumpla ✓ y no
+sea un consejo ✓:
+
+> **El numero se mide en el momento, y no se guarda** ✓. Y el motivo es
+> concreto ✓: un numero guardado en un test **se queda viejo sin que nadie lo
+> note** ✓, y un numero viejo en un test es peor que no tener el test ✓,
+> porque da verde ✓.
+
+Y el instrumento `tools/test_cifras_a1.py` lo cumple de dos maneras ✓:
+
+  · **el conteo se lee del detalle de A1 cada vez que se corre** ✓, y no hay
+    ninguna constante que lo guarde ✓, y **un test lo comprueba** ✓;
+  · y el conteo se busca como **literal en todos los tests** ✓, de modo que
+    el dia que A1 resuelva mas ✓, el numero viejo queda marcado ✓.
+
+Y lo que se busca no es solo el literal ✓, sino **el literal junto a una
+palabra de A1** ✓ —«resuelt», «ciegas_reconocidas», «candidata»— ✓, porque
+el 1258 es **a la vez** el de la base canonica ✓ —que es legitimo— ✓ y el de
+la copia ✓ —que no lo es como valor esperado— ✓, y lo que los distingue **de
+que son** ✓ y no el numero ✓.

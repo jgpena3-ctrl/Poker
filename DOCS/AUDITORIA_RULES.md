@@ -161,13 +161,29 @@ Y lo que sale de aquí, en una frase:
 > hablan entre sí.** Y el arreglo de eso no es de código: es de documento, y
 > es de quien lo firma.
 
-## 6. Un cuarto hallazgo, que es de OTRO sitio, y que no se arregla aquí
+## 6. H4 — el limp corto contado como subida, que es de OTRO sitio
 
-Y este no es de `rules.py`, sino de `motor/learn.py`, y salió al trabajar con
-la acción `p`: una **apuesta de 0.5 BB o menos** se CLASIFICA como `limp` —y
-el docstring de `classify_first_action` dice que «no se cuenta como subida
-real»— pero el contador de `preflop_events` la cuenta como **subida** de
-todas maneras.
+Y el nombre, que faltaba ✓: **H4 — el limp corto contado como subida** ✓.
+
+Y este hallazgo **no es de `rules.py`** ✓, sino de `motor/learn.py` ✓, y salió
+al trabajar con la acción `p` ✓: una **apuesta de 0.5 BB o menos** se
+CLASIFICA como `limp` —y el docstring de `classify_first_action` dice que «no
+cuenta como subida real»— pero el contador de `preflop_events` la cuenta como
+**subida** de todas maneras ✓.
+
+Y la ficha, completa ✓, para que no sea una nota sin contenido ✓:
+
+| | |
+|---|---|
+| **qué es** | una apuesta de 0.5 BB o menos se clasifica como `limp` y a la vez cuenta como subida |
+| **dónde está** | `motor/learn.py`: `classify_first_action` (la etiqueta) frente a `preflop_events` (el contador) |
+| **por qué no se arregla aquí** | **es post-adopción**: arreglarlo **recalibra**, y una cifra publicada no se mueve como efecto secundario de un arreglo |
+| **qué condición lo activaría** | que las cifras publicadas se re-deriven contra la base **adoptada** |
+| **cómo está visible mientras tanto** | declarado y **fijado**: `motor/test_defectos_declarados.py` afirma la conducta actual y su medición, de modo que no se olvide |
+
+> Y este hallazgo **es el mismo** que el «defecto del contador de subidas» del
+> registro ✓, y no son dos: son el mismo de dos sitios ✓. Y el registro lo
+> nombra en la mitad de la **post-adopción** ✓, con su condición ✓.
 
 Y las dos cosas no pueden ser verdad, y el desacuerdo se reproduce en
 `motor/test_defectos_declarados.py`.

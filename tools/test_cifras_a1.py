@@ -128,3 +128,120 @@ def test_el_registro_no_tiene_la_cifra_de_a1():
         'el registro tiene que nombrar la TAREA de A1, y no su numero')
     assert 'se mueve' in texto, (
         'y tiene que decir que el numero se mueve, que es el motivo ✓')
+
+# Y los literales que se buscan, y POR QUE cada uno es legitimo en un sitio
+# y no en otro ✓.
+#
+#   1055  el conteo de manos resueltas HISTORICO ✓ -> prohibido siempre
+#   1258  las lineas de la base CANONICA ✓ -> legitimo ahi, y no como
+#         valor esperado de la COPIA ✓
+#    877  la ventana fiable de la base de HOY ✓ -> legitimo ahi, y no como
+#         valor esperado de la COPIA ✓
+#    921  el control de regresion de la base de HOY ✓ -> legitimo ahi, y no
+#         como valor esperado de la COPIA ✓
+LITERALES_A_VIGILAR = (1055, 1258, 877, 921)
+
+# Y las palabras que asocian una cifra a las manos RESUELTAS POR A1 ✓, o a
+# una CANDIDATA ✓.
+#
+# Y la regla es por PALABRA y no por numero ✓, porque el 1258 es a la vez el de
+# la base canonica ✓ —que es legitimo— ✓ y el de la copia ✓ —que no lo es como
+# valor esperado— ✓, y lo que los distingue **de que son** ✓ y no el numero ✓.
+PALABRAS_DE_A1 = ('resuelt', 'candidata', 'edicion', 'normaliz')
+
+# Y el caso particular, que es el que mas se repite ✓: el **numero de ciegas
+# de la CANDIDATA** no puede ser un literal ✓.
+#
+# Y el 921 SI puede ✓, porque es el control de regresion de la base de HOY ✓,
+# y el fixture SUAVE —que no cambia el numero de ciegas— da ese ✓. Y el 1258
+# NO puede ✓, porque ese es el de la copia ✓.
+LITERAL_DE_LA_CANDIDATA = 1258
+
+
+def _sentencias_con(literal):
+    """Las sentencias de los tests que contienen ese literal.
+
+    Y se devuelven con su TEXTO ✓, porque lo que hay que mirar es el
+    CONTEXTO ✓: el mismo numero es legitimo en un sitio y no en otro ✓.
+    """
+    salida = []
+    for ruta in _ficheros_de_test():
+        if os.path.abspath(ruta) == os.path.abspath(__file__):
+            continue
+        with io.open(ruta, encoding='utf-8') as f:
+            texto = f.read()
+        arbol = ast.parse(texto)
+        for nodo in ast.walk(arbol):
+            if (isinstance(nodo, ast.Constant)
+                    and isinstance(nodo.value, int)
+                    and nodo.value == literal):
+                lineas = texto.split('\n')
+                salida.append((os.path.relpath(ruta, ROOT),
+                                nodo.lineno,
+                                lineas[nodo.lineno - 1].strip()))
+    return salida
+
+
+def test_los_literales_de_a1_no_aparecen_asociados_a_la_copia():
+    """Y que ningun literal de A1 aparezca junto a una palabra de A1.
+
+    Y la regla, que es por PALABRA y no por numero ✓: el 1258 es a la vez el
+    de la base canonica ✓ —legitimo— ✓ y el de la copia ✓ —no legitimo como
+    valor esperado— ✓, y lo que los distingue **de que son** ✓, no el
+    numero ✓.
+    """
+    culpables = []
+    for literal in LITERALES_A_VIGILAR:
+        for fichero, linea, texto in _sentencias_con(literal):
+            bajo = texto.lower()
+            por = None
+            for palabra in PALABRAS_DE_A1:
+                if palabra in bajo:
+                    por = palabra
+                    break
+            if por is None and (literal == LITERAL_DE_LA_CANDIDATA
+                                and 'ciegas_reconocidas' in bajo):
+                por = 'el numero de ciegas de la CANDIDATA'
+            if por is not None:
+                culpables.append('%s:%d  %r  (por %r)'
+                                 % (fichero, linea, texto[:90], por))
+    assert not culpables, (
+        'hay %d literal(es) de A1 asociado(s) a la copia o a las manos '
+        'resueltas:\n   %s\n\nY esos numeros son de A1 y SE MUEVEN ✓, y lo '
+        'que se fija es la RELACION ✓.'
+        % (len(culpables), '\n   '.join(culpables)))
+
+
+def test_el_instrumento_no_guarda_el_conteo():
+    """Y que el instrumento NO guarde el numero, que es la leccion.
+
+    Y el motivo de que esto sea un test ✓: un numero guardado en un test es
+    exactamente lo que hay que evitar ✓ —porque se queda viejo sin que nadie
+    lo note— ✓, y la leccion es **«se mide en el momento, no se guarda»** ✓.
+
+    Y se comprueba por el ARBOL ✓: no hay ninguna constante de nivel de
+    modulo en el instrumento cuyo valor sea el conteo ✓.
+    """
+    raiz = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    ruta = os.path.join(raiz, 'tools', 'test_cifras_a1.py')
+    with io.open(ruta, encoding='utf-8') as f:
+        arbol = ast.parse(f.read())
+    n = _conteo_de_resueltas()
+    for nodo in arbol.body:
+        if not isinstance(nodo, ast.Assign):
+            continue
+        for t in nodo.targets:
+            if not isinstance(t, ast.Name):
+                continue
+            if isinstance(nodo.value, ast.Constant) and n is not None:
+                assert nodo.value.value != n, (
+                    'el instrumento GUARDA el conteo de A1 en la constante %r, '
+                    'y la leccion es que se mide en el momento y no se guarda'
+                    % t.id)
+    # y el conteo se mide de verdad, y no esta escrito en el fichero
+    fuente = io.open(ruta, encoding='utf-8').read()
+    if n is not None:
+        assert str(n) not in fuente, (
+            'el numero del conteo aparece escrito en el instrumento, y eso es '
+            'guardarlo')
+

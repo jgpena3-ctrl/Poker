@@ -113,6 +113,41 @@ Y sus cuatro condiciones de seguridad, que están comprobadas ✓:
 > **bytecode mutado** en vez del código restaurado ✓. Y un instrumento que
 > miente es peor que no tener instrumento ✓, porque su conclusión se cita ✓.
 
+## Y LA TABLA, QUE ES LA EVIDENCIA
+
+> **La tabla de mutaciones ES la evidencia de que los tests no son vacíos** ✓.
+> Y no lo es porque las mutaciones existan ✓, sino porque **cada una la nota
+> el test que la tabla declara** ✓.
+
+Y la tabla, con sus cuatro filas ✓:
+
+| mutacion | el invariante que rompe | el test que tiene que notarla |
+|---|---|---|
+| M1 | una posta no es una decision, y el jugador sigue sin decidir | `test_una_p_sola_no_es_ninguna_decision` |
+| M2 | la ciega del BB puede escribirse de las dos maneras | `test_la_ciega_del_bb_grabada_como_p_se_reconoce` |
+| M3 | un BB que YA posteo la ciega no puede tener una ciega segunda | `test_un_bb_que_ya_posteo_no_vuelve_a_ser_una_ciega` |
+| M4 | un BB que NO posteo antes y tiene una `b` tarde es un rechazo | `test_sin_la_p_de_antes_la_b_del_bb_si_es_un_rechazo` |
+
+> Y **una mutacion que nadie nota no es un detalle: es una BRECHA DE
+> COBERTURA** ✓, y no un motivo para relajar el test ✓.
+
+### Y los pares, y la verdad medida de la sensibilidad cruzada
+
+Y M3 y M4 son **las dos caras del mismo hueco** ✓ —el BB que ya posteo ✓ y el
+BB que no posteo antes ✓— y por eso son un par ✓.
+
+Y lo MEDIDO ✓, que es lo que la tabla declara y lo que los tests comprueban ✓:
+
+| | sensible a M3 | sensible a M4 |
+|---|---|---|
+| el caso de la `p` —un BB que ya posteo— | **si** ✓ | no ✓ |
+| el caso de la `b` —un BB que no posteo antes— | no ✓ | **si** ✓ |
+
+> Y lo de la diagonal en cero **no es un fallo**: son afirmaciones **opuestas**
+> ✓, y por eso la regla de la tabla es **cada caso vigila lo suyo** ✓, y no
+> «cada caso nota todas las mutaciones» ✓ —que seria imposible ✓.
+
+
 ### Y M3 ENCONTRÓ UN HUECO REAL, Y AHORA TIENE TEST Y CONTRAPARTE
 
 > Y esto hay que dejarlo escrito, para que no se lea como «M3 estaba bien y no
