@@ -14,7 +14,7 @@ Criterio usado para NO tocar una acción:
 | **bet con fichas previas** | 39 | `importe` puede ser el total o el incremento |
 | **call raro** | 54 | no encaja en ninguna regla |
 | **reraise ambiguo** | 12 | `importe == viva + ya`, dos lecturas posibles |
-| **call-raise** | 0单独 | subida que sube justo lo que falta |
+| **call-raise** | 0 | subida que sube justo lo que falta |
 
 ---
 

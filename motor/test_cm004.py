@@ -524,3 +524,51 @@ def test_el_invariante_de_cm004_puede_dispararse():
         'invariante no ha mirado nada.'
         % (con_ciega, len(manos), CIEGAS_RECONOCIDAS,
            CIEGAS_RECONOCIDAS, 6))
+
+def test_el_921_no_puede_ser_el_valor_esperado_de_la_copia():
+    """Que el 921 no aparezca como constante de la COPIA normalizada.
+
+    Y el motivo, que es la leccion del bloque: **1258 —o el numero que A1
+    fije— no se puede declarar desde aqui**, porque sale de datos que A1 todavia
+    no ha validado. Y el 921 es el numero de la base CANONICA, de modo que
+    usarlo como el valor esperado de la copia seria declarar una cosa que no
+    es la.
+
+    Y el modo de comprobarlo es el de siempre: por el ARBOL, y no por el
+    texto. Se buscan las constantes de nivel de modulo cuyo VALOR es 921, y se
+    mira el NOMBRE: si el nombre dice que es de la copia, el test falla.
+
+    Y el nombre, y no el valor, porque el valor 921 es legitimo en mas de un
+    sitio: es el control de regresion de la base de hoy, y ese ha de seguir
+    ahi.
+    """
+    raiz = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    de_la_copia = ('COPIA', 'EDICION', 'NORMALIZAD')
+    culpables = []
+    for carpeta in ('motor', 'tools'):
+        base = os.path.join(raiz, carpeta)
+        for nombre in sorted(os.listdir(base)):
+            if not nombre.endswith('.py'):
+                continue
+            ruta = os.path.join(base, nombre)
+            with io.open(ruta, encoding='utf-8') as f:
+                arbol = ast.parse(f.read())
+            for nodo in arbol.body:
+                if not isinstance(nodo, ast.Assign):
+                    continue
+                valor = nodo.value
+                if not (isinstance(valor, ast.Constant)
+                        and valor.value == 921):
+                    continue
+                for t in nodo.targets:
+                    if not isinstance(t, ast.Name):
+                        continue
+                    if any(m in t.id.upper() for m in de_la_copia):
+                        culpables.append('%s/%s:%d  %s = 921'
+                                         % (carpeta, nombre, nodo.lineno, t.id))
+    assert not culpables, (
+        'el 921 aparece como constante de la COPIA normalizada:\n   '
+        + '\n   '.join(culpables)
+        + '\n\nY no puede: el 921 es el control de la base CANONICA de hoy. '
+          'El numero de la copia lo fija A1 al cerrar las 203 manos, y sale '
+          'de datos revisados. Ver DOCS/CONTRATO_ACCION_P.md.')

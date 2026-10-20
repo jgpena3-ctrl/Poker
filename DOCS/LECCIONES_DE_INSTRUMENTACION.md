@@ -1217,3 +1217,55 @@ Y una segunda, que es de las que más cuestan:
 > CONTRATO.** Porque un contrato que dice «estas dos formas son la misma» sin
 > el experimento que lo demuestra es una promesa, y las promesas no se
 > fiscalizan.
+## 29. Un hallazgo se ARREGLA, y una excepción se DECLARA
+
+Y las dos cosas se parecen en la forma —una lista de cosas que el barrido no
+marca— y son **cosas opuestas** en lo que significan.
+
+Y el motivo por el que se distinguen es de procedimiento, y no de gusto:
+
+> **Un hallazgo es un DEFECTO: se quita.** Y una excepción es un **hueco**: se
+> declara, con su motivo, y se deja.
+
+Y la prueba de cuál es cuál no es la opinión de nadie: es **qué se puede
+decir de él**. Un `.md` con dos ideogramas chinos pegados a un número, en un
+documento en español, **no es una decisión del autor**: es una errata. Y una
+errata se quita, y no se convierte en una excepción para que el barrido salga
+verde.
+
+MEDIDO, el caso: en `APUESTAS_DIFICILES.md`, la celda de la columna `nº`
+decía `0` seguido de dos ideogramas chinos. Y las otras cuatro celdas de la
+misma columna son números pelados. De modo que la celda era un `0`, y los
+ideogramas no eran parte de nada.
+
+> **Declarar un defecto como excepción es una manera de que no se note, con la
+> forma de una decisión.** Y el precio es que el barrido deja de ser un
+> barrido: pasa a ser una lista de Desire.
+
+### Y el otro lado, que es el bueno
+
+Y el hueco de verdad —el codigo fuera de las carpetas del inventario— se
+resuelve **al reves**: se extiende el barrido, se DECLARA lo que aparezca, y
+el guardian exige que lo declarado exista y este bajo el barrido.
+
+> **Si algo no se puede vigilar, que sea una DECISIÓN declarada, no un
+> hueco.** Y las dos cosas se distinguen en una linea: la excepción dice «esto
+> no lo miro», y la declaración dice «esto lo miro y aqui esta por que».
+
+### Y lo que pasó de verdad, que es el mejor resumen
+
+Y en este bloque, el guardián de control de caracteres **pillo un error
+mio**:
+
+```
+MEDIDO, tools/verificar_caracteres.py:201, 0x0C
+```
+
+Y la causa fue escribir `\f` y `\t` en una cadena de Python **normal**, en
+vez de una cruda: `\f` es un SALTO DE FORMULA y `\t` un tabulador. O sea
+que el error se produjo **al escribir el codigo**, y lo vio el guardián que
+vigila el codigo.
+
+> Y eso es lo que un guardián bien puesto hace: **no vigila al autor, vigila al
+> material.** Y el mio habia visto cuatro caracteres raros escritos a mano en
+> dos bloques, y no habia visto ni uno de los que el propio codigo genera.

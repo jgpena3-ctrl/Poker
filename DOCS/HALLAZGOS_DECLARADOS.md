@@ -60,8 +60,6 @@ rangos: `DOCS/LECCIONES_DE_INSTRUMENTACION.md` §19.
 | `motor/test_canal_manual.py` | `CYRILLIC SMALL LETTER TE` | U+0442 | fichero de «no tocar», y la correccion la hace quien lo mantiene |
 | `motor/test_canal_manual.py` | `CYRILLIC SMALL LETTER YA` | U+044F | fichero de «no tocar», y la correccion la hace quien lo mantiene |
 | `motor/test_auditar_rango.py` | `IDEOGRAPHIC COMMA` | U+3001 | fichero de «no tocar», y la correccion la hace quien lo mantiene |
-| `APUESTAS_DIFICILES.md` | `CJK UNIFIED IDEOGRAPH-5355` | U+5355 | una palabra china pegada a un numero, en un documento en espanol |
-| `APUESTAS_DIFICILES.md` | `CJK UNIFIED IDEOGRAPH-72EC` | U+72EC | idem, y en la misma celda |
 
 ### Y por qué los tres árabes no los veía el barrido viejo
 

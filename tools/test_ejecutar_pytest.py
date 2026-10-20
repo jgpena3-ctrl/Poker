@@ -3628,7 +3628,7 @@ CARPETAS_DEL_INVENTARIO = ('tools', 'motor', 'recorder')
 # fichero de esa taille es una tabla que nadie mantiene, y una tabla que nadie
 # mantiene es decoracion.
 
-TESTS_POR_CARPETA = {'motor': 852, 'recorder': 4, 'tools': 488}
+TESTS_POR_CARPETA = {'motor': 855, 'recorder': 4, 'tools': 497}
 
 
 # Y los FICHEROS, que son OTRA medida. MEDIDO, y sin ellos el guardia
@@ -3641,7 +3641,7 @@ TESTS_POR_CARPETA = {'motor': 852, 'recorder': 4, 'tools': 488}
 # es cierto. Y «hoy» no es una propiedad. O sea que el guardia no baja,
 # pero FALLA si algun dia hay tests abajo: es el unico caso en el que
 # bajaria, y bajarlo sin querer seria decir «el repo entero» sin serlo.
-FICHEROS_POR_CARPETA = {'motor': 70, 'recorder': 4, 'tools': 112}
+FICHEROS_POR_CARPETA = {'motor': 71, 'recorder': 4, 'tools': 115}
 # Y LA MAGNITUD QUE MIDE ESTE GUARDIA, que es lo que R2 pregunta, y que hay
 # que responder por la magnitud y no solo por el numero.
 #
@@ -5107,22 +5107,54 @@ ACUMULADORES_REPETIBLES = {
 ASIGNACIONES_QUE_SOBRESCRIBEN = 46
 
 
-# Los ficheros de CODIGO que estan fuera de las tres carpetas del inventario,
-# y el motivo de cada uno.
+# Los ficheros que estan fuera de las tres carpetas del inventario, y el
+# motivo de cada uno.
 #
 # Y MEDIDO, el motivo de que esta lista exista: el codigo del repo vive en
-# `tools/`, `motor/` y `recorder/`, y lo que se queda fuera no lo vigila
+# `tools/`, `motor/` y `recorder/`, y lo que se queda fuera no lo vigilaba
 # NADA: ni el inventario, ni el control de caracteres, ni el de docstrings.
 #
 # Y un fichero que nadie vigila es un fichero que nadie lee. De modo que
-# esta lista los NOMBRA, y el guardián de mas abajo falla si aparece uno que
+# esta lista los NOMBRA, y el guardian de mas abajo falla si aparece uno que
 # no este aqui. Que es lo contrario de ampliar la lista de excepciones: es
 # obligar a decidir.
+#
+# Y los `.py`, los `.md` y los `.jsonl` de la raiz y de `trabajo/` estan
+# ADEMAS bajo el barrido de caracteres, que los recorre. De modo que la lista
+# no es una exccepcion: es la declaracion de POR QUE estan ahi.
+#
+# Y los `.txt` y el `.csv` de la raiz NO estan en esta lista, y el motivo esta
+# en `tools/verificar_caracteres.py`: los `.txt` pueden estar en UTF-16LE, y
+# la politica es de los `.txt` en general; y el `.csv` es una tabla de datos,
+# no codigo ni documentacion del motor.
 FUERA_DEL_INVENTARIO = {
+    # el codigo
     'hand_editor.py':
         'el editor de la COPIA de trabajo, del trabajo en paralelo de la base',
     'trabajo/ABRIR_EDITOR_COPIA.py':
         'el lanzador del editor, del trabajo en paralelo de la base',
+    # los documentos del trabajo en paralelo
+    'APUESTAS_DIFICILES.md':
+        'el catalogo de las apuestas que hay que mirar en las grabaciones',
+    'AUDITORIA_SEMANTICA_GRABADOR.md':
+        'la auditoria semantica del grabador',
+    'FRONTERA_GRABADOR.md':
+        'la frontera entre las dos generaciones de grabador',
+    'INDICE_DEFECTOS.md':
+        'el indice de los defectos que quedan por revisar',
+    'PLAN_EDICION_DB.md':
+        'el plan de edicion de la base',
+    'REVISION_DIAGNOSTICO_GRABADOR.md':
+        'la revision del diagnostico del grabador',
+    'trabajo/BOTES_NO_ENCONTRADOS.md':
+        'los botes que no cuadran con la grabacion',
+    # los datos del trabajo en paralelo
+    'trabajo/hands_db_edicion.jsonl':
+        'la COPIA normalizada de la base, que A1 esta revisando',
+    'trabajo/botes_aritmetica.jsonl':
+        'los botes calculados con la aritmetica de la copia',
+    'trabajo/botes_aritmetica_origen.jsonl':
+        'los botes calculados con la aritmetica de siempre',
 }
 
 
@@ -5159,11 +5191,41 @@ def test_el_codigo_fuera_del_inventario_esta_declarado():
                         sorted(FUERA_DEL_INVENTARIO)))
     # Y lo declarado tiene que EXISTIR, que es la otra mitad: una declaracion
     # de algo que ya no esta es una declaracion falsa.
-    que_faltan = sorted(declarados - set(vistos))
-    assert not que_faltan, (
-        'hay %d fichero(s) declarados que ya no estan: %r. Y una declaracion '
-        'de algo que no existe es una declaracion falsa.' % (len(que_faltan),
-                                                             que_faltan))
+    # Y la otra mitad —«los declarados existen»— la comprueba
+    # `test_los_ficheros_declarados_existen_y_estan_vigilados`, que mira los
+    # DOCE y no solo los `.py`. Y aqui solo se comprueba que no haya codigo sin
+    # declarar, que es lo propio de este test.
+
+
+def test_los_ficheros_declarados_existen_y_estan_vigilados():
+    """Que los doce declarados EXISTAN, y que los de texto esten vigilados.
+
+    Y la segunda mitad es la que importa: un fichero declarado que ha
+    desaparecido es un hueco nuevo, y la lista se queda con una entrada que no
+    vigila nada. Y la tercera: los `.md` y los `.jsonl` declarados tienen que
+    estar BAJO el barrido, que es lo que hace que la declaracion no sea una
+    decoracion.
+    """
+    faltan = []
+    for nombre in sorted(FUERA_DEL_INVENTARIO):
+        ruta = os.path.join(ROOT, nombre.replace('/', os.sep))
+        if not os.path.isfile(ruta):
+            faltan.append(nombre)
+    assert not faltan, (
+        'hay %d fichero(s) declarados que no existen: %r. Y una declaracion '
+        'de algo que no esta es una declaracion falsa.' % (len(faltan), faltan))
+    import verificar_caracteres as VC
+    sin_vigilar = []
+    for nombre in sorted(FUERA_DEL_INVENTARIO):
+        if not nombre.endswith(('.md', '.jsonl')):
+            continue
+        if not any(VC._coincide_con(patron, nombre)
+                   for patron in VC.PATRONES):
+            sin_vigilar.append(nombre)
+    assert not sin_vigilar, (
+        'estos ficheros estan declarados, pero el barrido de caracteres NO los '
+        'mira: %r. Y una declaracion que no vigila nada es una decoracion.'
+        % sin_vigilar)
 
 
 def test_las_asignaciones_que_sobrescriben_estan_revisadas():

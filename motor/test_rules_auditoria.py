@@ -85,14 +85,29 @@ def test_sin_plan_se_consideran_todas_las_claves():
 
 # --- los estados invalidos que degradan en SILENCIO -----------------------
 
-@pytest.mark.parametrize('cambio', [
-    {'board_codes': ['As', 'Kd']},
-    {'pot': -1.0},
-    {'stack': -1.0},
-    {'stack': 0.0},
-    {'n_players': 0},
-])
-def test_los_estados_invalidos_degradan_en_silencio(cambio):
+# Las CINCO precondiciones que `plan()` no comprueba, y el estado invalido
+# que representa cada una. Y el estado invalido va en la propia tabla, para
+# que se lea con la fila y no haya que ir a buscarlo.
+#
+# Y el motivo de que esten aqui, y no en el documento: una comprobacion que
+# solo esta escrita en un documento es una promesa. Y esta comprueba que cada
+# una produce un plan, que es lo que hace que el hueco sea VISIBLE.
+LAS_CINCO = (
+    ({'board_codes': ['As', 'Kd']},
+     'un board incompleto, de modo que la TEXTURA es desconocida'),
+    ({'pot': -1.0},
+     'un bote NEGATIVO, que no puede existir'),
+    ({'stack': -1.0},
+     'un stack NEGATIVO, que no puede existir'),
+    ({'stack': 0.0},
+     'un stack de CERO, sin fichas para actuar'),
+    ({'n_players': 0},
+     'CERO jugadores en la mesa, que no es una mesa'),
+)
+
+
+@pytest.mark.parametrize('cambio,estado', LAS_CINCO)
+def test_los_estados_invalidos_degradan_en_silencio(cambio, estado):
     """Que el estado invalido NO se lance, y que quede DECLARADO.
 
     Y aqui esta el hallazgo de la auditoria: `plan()` comprueba dos
@@ -102,11 +117,14 @@ def test_los_estados_invalidos_degradan_en_silencio(cambio):
     plan con la textura a `None`, que en la nota se ve como un `?`.
 
     Y el test fija la COMPORTACION, que es lo que hace que el hueco sea
-    visible: si mañana `plan()` empieza a lanzar, este test falla y obliga a
+    visible: si manana `plan()` empieza a lanzar, este test falla y obliga a
     revisar el contrato. Ver `DOCS/AUDITORIA_RULES.md`.
     """
     rp = rules.plan(**dict(BASE, **cambio))
-    assert rp.candidates, 'el plan tiene que tener candidatas: %r' % (rp,)
+    assert rp.candidates, (
+        'el plan tiene que tener candidatas, y el estado invalido que '
+        'representa esta fila es: %s. Y el hecho de que salga un plan es el '
+        'defecto.' % (estado,))
     assert rp.spot != 'unknown', 'y no puede ser un plan sin regla'
 
 

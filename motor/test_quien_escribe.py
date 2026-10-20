@@ -63,6 +63,9 @@ ESCRITORES_DECLARADOS = {
     'tools/aplicar_correcciones.py',  # migraciones, con backup
     'tools/aplicar_reinterpretacion.py',
     'tools/sanear_base.py',           # saneamiento, con backup y dry-run
+    'tools/integrar_copia.py',        # integra una base candidata, con
+                                      # restauracion GARANTIZADA en el
+                                      # `finally` y verificada por sha
 }
 
 
