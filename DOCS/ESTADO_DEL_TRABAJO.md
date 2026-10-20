@@ -4,6 +4,12 @@
 > terminado, qué sigue abierto, de quién es, y **qué condición lo
 > desbloquea**.
 >
+> Y una nota sobre las cifras: **las de A1 se mueven** ✓ —MEDIDO, las manos
+> sin resolver eran 203 cuando empezó este bloque y ahora son menos, porque A1
+> ha seguido resolviendo ✓— de modo que aquí se nombra **la tarea** y no su
+> número ✓. Y una cifra de A1 en un documento de A2 caduca sola ✓, y un
+> documento caducado no se lee ✓.
+>
 > Y no es un informe: es un estado, y hay un test que comprueba que no se
 > contradice a sí mismo: que todo lo abierto tiene dueño y condición.
 
@@ -29,7 +35,7 @@
 
 | trabajo | dueño | condición de activación |
 |---|---|---|
-| las 203 manos sin resolver | A1 | la revisión manual de cada una, con la grabación original |
+| las manos sin resolver | A1 | la revisión manual de cada una, con la grabación original. Y el NÚMERO es de A1 y **se mueve**: MEDIDO, eran 203 cuando este bloque empezó, y ahora son menos, porque A1 ha seguido resolviendo ✓. Y por eso aquí no se escribe la cifra: una cifra de A1 en un documento de A2 caduca sola ✓ |
 | el número de ciegas que la copia debe reconocer | A1 | haber cerrado las 203, y el número sale de los datos revisados. Y el procedimiento **no tiene un valor por defecto**: sin ese parámetro sale con código **2** |
 | las doce categorías que la copia debe dar | A1 | lo mismo, y por un motivo que está medido: **la copia no es solo una re-codificación** |
 | la primera ejecución real de `integrar_copia.py` | A1 | el número de ciegas declarado, y el control de categorías declarado |
@@ -83,9 +89,9 @@ condición**, y la condición dice **qué lo desbloquea**, no «cuando se pueda�
 
 | trabajo | dueño | condición de activación |
 |---|---|---|
-| las 203 manos | A1 | la revisión manual de cada una, con la grabación original |
-| el número de ciegas de la copia | A1 | haber cerrado las 203; el número sale de los datos revisados |
-| las doce categorías de la copia | A1 | haber cerrado las 203; y el número sale de los datos revisados, y no del fichero de la copia |
+| las manos sin resolver | A1 | la revisión manual de cada una, con la grabación original. Y su número se mueve ✓ |
+| el número de ciegas de la copia | A1 | haber cerrado las manos sin resolver; el número sale de los datos revisados |
+| las doce categorías de la copia | A1 | haber cerrado las manos sin resolver; y el número sale de los datos revisados, y no del fichero de la copia |
 | la primera ejecucion real de la integracion | A1 | el umbral declarado, y la copia validada |
 | el defecto del contador de subidas | A2, con A1 | las cifras se re-derivan contra la base adoptada, y no antes |
 | la recalibracion de derivados | A2, con A1 | la base adoptada, y el manifiesto redeclarado |
@@ -163,7 +169,7 @@ Y los **dos controles** del procedimiento los declara **A1**, y el script
 
 | | quién lo declara | y qué pasa sin él |
 |---|---|---|
-| el número de ciegas | A1, al cerrar las 203 | el script sale con el código **2**, y el veredicto nombra **el número de ciegas** |
+| el número de ciegas | A1, al cerrar las manos sin resolver | el script sale con el código **2**, y el veredicto nombra **el número de ciegas** |
 | el control de las doce categorías | A1, sobre la copia ya revisada | el script sale con el código **2**, y el veredicto nombra **el control de las categorias** |
 
 > Y el motivo de que no haya valores por defecto: el de las doce categorías de
@@ -172,14 +178,32 @@ Y los **dos controles** del procedimiento los declara **A1**, y el script
 > hecho. Y el del número de ciegas sale de datos que todavía no son
 > canónicos.
 
-## 12. QUÉ DEBE HACER A1 ANTES DE DISPARAR
+## 12. EL ESTADO DE ESPERA
+
+> **A2 no tiene trabajo pendiente que no dependa de A1 o de la
+> post-adopción.** Y si en el futuro aparece algo, que sea una **decisión
+> declarada** y no un olvido ✓.
+
+Y lo que hay detrás de esa frase, y es lo que la sostiene:
+
+| | |
+|---|---|
+| lo que depende de **A1** | las manos sin resolver, el número de ciegas de la copia, el control de categorías, y las tres decisiones de `matrix` |
+| lo que depende de la **post-adopción** | el defecto del contador de subidas, la recalibración de las cifras derivadas, y la elección de la reducción estadística |
+| lo que **ya está cerrado** | los cuatro frentes auditados y clasificados; el contrato de la `p`, con su inventario y su mutación; los dos controles del procedimiento, con sus cuatro caminos; y el experimento de la equity observable, preparado y con puerta |
+
+> Y la diferencia entre «no hay trabajo» y «no hay trabajo que se pueda
+> hacer» es la diferencia entre un proyecto acabado y uno parado ✓. Y aquí
+> es lo segundo, y la causa es de A1 ✓.
+
+## 13. QUÉ DEBE HACER A1 ANTES DE DISPARAR
 
 Y son cuatro pasos, y cada uno tiene su criterio de **hecho**, que es lo que
 los hace comprobables y no una lista de intenciones.
 
 | # | paso | su criterio de «hecho» |
 |---|---|---|
-| 1 | **cerrar las 203 manos** | las 203 tienen su bote resuelto con la grabación original, y el detalle lo dice: `trabajo/botes_aritmetica.jsonl` con `resuelto` en las 203 |
+| 1 | **cerrar las manos sin resolver** | las que quedan tienen su bote resuelto con la grabación original, y el detalle lo dice: `trabajo/botes_aritmetica.jsonl` con `resuelto` en las 203 |
 | 2 | **fijar el número de ciegas de la copia** | el número que el motor reconoce en la copia revisada, y el **control de categorías** que la copia da, medido sobre ella |
 | 3 | **declarar los dos controles** | `--ciegas-esperadas <N>` y `--control-categorias <fichero.json>`, y el fichero con las doce categorías **de la copia**, no las de la base de hoy. Y **sin el control de categorías declarado el script NO da verde**: sale con el código **2**, que es INCOMPLETA y no FALLO, porque «no has decidido» no es «has fallado» |
 | 4 | **disparar la primera ejecución real** | `python tools/integrar_copia.py --ciegas-esperadas <N> --control-categorias <fichero.json>`, y el resultado con las **tres** secciones, y el **código 0** |

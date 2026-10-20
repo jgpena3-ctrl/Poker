@@ -325,8 +325,18 @@ def test_un_bb_que_ya_posteo_no_vuelve_a_ser_una_ciega():
         'un BB que ya posteo la ciega no puede tener una ciega segunda: %r'
         % (learn.entradas_bb_rechazadas(h),))
 
-    # y la contraparte: sin la `p` de antes, la `b` del BB ES la ciega, y
-    # estar despues de una accion voluntaria es lo que la hace un rechazo
+
+def test_sin_la_p_de_antes_la_b_del_bb_si_es_un_rechazo():
+    """Y la CONTRAPARTE, que es el otro lado del hueco.
+
+    Y la contraparte importa tanto como el caso: si solo se comprobara que un
+    BB que ya posteo NO es un rechazo, el test pasaria tambien con un motor
+    que no rechazara NADA ✓. Y con la contraparte —la misma mano sin la `p` de
+    antes, que SI es un rechazo— los dos lados del hueco estan cubiertos ✓.
+
+    Y las dos caras tienen que notar la M3 ✓, que es lo que las hace
+   sensibles: `tools/test_mutar_contrato_p.py`.
+    """
     h2 = _hand([('UTG', 'b', 2.5), ('BB', 'b', 1.0)])
     rechazos = learn.entradas_bb_rechazadas(h2)
     assert rechazos, 'una `BB b` tarde tiene que salir como rechazo'

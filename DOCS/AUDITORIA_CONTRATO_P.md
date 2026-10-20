@@ -87,7 +87,57 @@ demostrar. Y el método es **mutar el motor** y mirar si los tests lo notan ✓:
 Y el motor se restauró después de cada mutación, verificado por sha ✓, y el
 motor está **byte a byte** como estaba ✓.
 
-## 6. Y LO QUE QUEDA ABIERTO
+## 6. Y EL INSTRUMENTO DE MUTACIÓN, QUE ES UN INSTRUMENTO Y NO UN TEST
+
+Y `tools/mutar_contrato_p.py` **no es un test de la suite normal** ✓: se
+ejecuta a mano cuando se quiere comprobar que los tests no son vacíos ✓, y
+no en cada `pytest` ✓. Y el motivo es concreto: **muta el motor**, y un test
+que muta el motor mientras corre la suite puede dejarlo roto si la suite se
+interrumpe ✓.
+
+Y sus cuatro condiciones de seguridad, que están comprobadas ✓:
+
+| | |
+|---|---|
+| **árbol limpio** | sin cambios sin commitear, se niega, y **no muta nada** ✓ |
+| **restauración siempre** | el original se guarda en memoria y se restaura en un `finally`, y **no depende de que el test pase**: si el test lanza, el fichero vuelve igual ✓ |
+| **mutaciones declaradas** | las tres, con su descripción; y una que no lo está es un **error**, no un «no encuentro el patrón» ✓ |
+| **sin rastro** | el sha del fichero restaurado, y ningún temporal en `motor/` ni en la raíz ✓ |
+| **la CACHE invalidada** | el `.pyc` del módulo mutado se borra antes de correr los tests, y se corre con `PYTHONDONTWRITEBYTECODE=1` ✓ |
+
+> Y esa última condición no es un detalle: **MEDIDO, sin ella el instrumento
+> da falsos positivos** ✓. Y la razón es que la mutación M3 cambia `'p'` por
+> `'q'` ✓, de modo que **el fichero conserva el mismo tamaño** ✓, y en
+> Windows la marca de tiempo tiene una granularidad gruesa ✓: de modo que el
+> `__pycache__` se podía considerar válido ✓, y el subproceso importaba el
+> **bytecode mutado** en vez del código restaurado ✓. Y un instrumento que
+> miente es peor que no tener instrumento ✓, porque su conclusión se cita ✓.
+
+### Y M3 ENCONTRÓ UN HUECO REAL, Y AHORA TIENE TEST Y CONTRAPARTE
+
+> Y esto hay que dejarlo escrito, para que no se lea como «M3 estaba bien y no
+> hacía falta»: **M3 no la vio nadie**, y por eso encontró un hueco ✓.
+
+Y el hueco, en una frase: que un BB que **ya posteó** la ciega y después tiene
+una `b` no puede tener una ciega segunda ✓ —porque si la tiene, se marca
+como rechazo, un falso positivo— ✓.
+
+Y ahora tiene **las dos caras** ✓:
+
+| | lo que afirma | la mutación que lo rompe |
+|---|---|---|
+| el caso | un BB que ya posteó **no** es un rechazo | **M3** ✓ |
+| la contraparte | un BB que **no** posteó antes **sí** es un rechazo | **M4** ✓ |
+
+> Y el motivo de que la contraparte sea sensible a **M4** y no a **M3** ✓:
+> son **casos distintos** ✓. M3 es el caso de la `p` —un BB que ya posteó— ✓,
+> y la contraparte es el de la `b` —un BB que no posteó antes— ✓, y ahí la
+> marca de «ya posteó» no interviene ✓. Y esa asertion es más útil que la
+> que se leería al principio: dice que **cada caso vigila lo suyo** ✓, y que
+> un solo test que vigilara los dos con una sola mutación no distinguiría
+> nada ✓.
+
+## 7. Y LO QUE QUEDA ABIERTO
 
 | | | dueño |
 |---|---|---|

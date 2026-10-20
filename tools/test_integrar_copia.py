@@ -152,7 +152,11 @@ def test_el_flujo_completo_pasa_contra_el_fixture_suave():
     alta, candidata, informe = _candidata(FIX.DUREZA_SUAVE)
     try:
         assert informe['manos'] == 1258, informe
-        assert informe['revisadas_disponibles'] == 1055, informe
+        # Y el numero de manos revisadas NO se fija ✓: es un dato de A1 que
+        # se mueve —MEDIDO, 1055 al empezar este bloque, y mas ahora—, y un
+        # test que lo fijara passaria a fallar por un dato que no es un
+        # defecto ✓.
+        assert informe['revisadas_disponibles'] > 0, informe
         assert informe['tocadas'] > 0, informe
         # Y el umbral sale de aqui, y no de una constante.
         assert informe['ciegas_reconocidas'] == 921, informe
@@ -173,13 +177,17 @@ def test_el_flujo_completo_pasa_contra_el_fixture_suave():
             sinteticas = {json.loads(l)['hand_id']: json.loads(l)
                           for l in f if l.strip()}
         sin_revisar = set(canonicas) - FIX.revisadas()
-        assert len(sin_revisar) == 203, len(sin_revisar)
+        # Y el NUMERO de sin revisar no se fija ✓: es de A1 y se mueve ✓.
+        assert sin_revisar, 'no hay manos sin revisar, y deberia haberlas'
         intactas = [h for h in sin_revisar
                     if canonicas[h] == sinteticas[h]]
-        assert len(intactas) == 203, (
-            'de las 203 sin revisar, %d han cambiado. Y el fixture solo puede '
-            'tocar las revisadas.' % (203 - len(intactas)))
-        assert informe['dejadas'] == 456, informe['dejadas']
+        assert len(intactas) == len(sin_revisar), (
+            'de las %d sin revisar, %d han cambiado. Y el fixture solo puede '
+            'tocar las revisadas.' % (len(sin_revisar),
+                                       len(sin_revisar) - len(intactas)))
+        # Y el numero de manos intactas NO se fija: depende de cuantas ha
+        # resuelto A1, que es un dato suyo y se mueve.
+        assert informe['dejadas'] > 0, informe
 
         destino = _destino_temporal(alta)
         antes = io.open(destino, 'rb').read()

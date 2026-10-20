@@ -1368,3 +1368,45 @@ Y la trampa de fondo, que es la de siempre pero girada:
 > es el `or`: es que el resto del proyecto se comportara de otra manera en
 > el caso equivalente —la rama de la apertura devolvía `None`—, y esa
 > incoherencia era la pista de que había algo escrito detrás.
+## 32. Una mutacion que conserva el TAMAÑO deja la cache valida, y el instrumento miente
+
+Y este es el hallazgo del bloque, y es de la familia de §31 —«un test que pasa
+no dice nada»—, pero del lado del INSTRUMENTO ✓.
+
+MEDIDO, lo que pasó. El instrumento de mutacion muta `motor/learn.py`, corre
+los tests, y restaura ✓. Y la mutacion M3 cambia **`'p'` por `'q'`** ✓, de
+modo que **el fichero conserva el MISMO TAMANO** ✓, y en Windows la marca de
+tiempo tiene una granularidad gruesa ✓. De modo que el `__pycache__` de
+`motor/learn.py` se podia considerar **valido** ✓, y el subproceso importaba
+el **BYTECODE MUTADO** en vez del codigo restaurado ✓.
+
+Y el efecto, que es lo que importa ✓:
+
+> **Un instrumento que da falsos positivos no es un instrumento: es una fuente
+> de ruido con apariencia de evidencia.** Y este existe para decir si los
+> tests vigilan algo ✓, de modo que un falso positivo ahi invierte la
+> conclusion ✓.
+
+Y la clase general, que es la octava de la familia:
+
+> **Un mutador tiene que invalidar la CACHE, porque el mutador no cambia el
+> codigo que se importa: cambia el codigo que se COMPILA** ✓. Y la cache se
+> invalida por marca de tiempo y tamano ✓, de modo que un mutador que no
+> cambia ninguno de los dos deja la cache valida ✓.
+
+Y el arreglo, que son dos cosas ✓:
+
+  · borrar el `.pyc` del modulo mutado ANTES de correr los tests ✓;
+  · y correr con `PYTHONDONTWRITEBYTECODE=1` ✓, para que el subproceso no
+    deje un `.pyc` del codigo mutado que otro proceso lea despues ✓.
+
+Y una segunda, que es de la misma familia ✓: **el test que usa el mutador
+tiene que usar EL MUTADOR** ✓, y no una copia sua ✓. De modo que el
+instrumento y sus tests no puedan divergir ✓ —que es como se encuentra
+esto: el test tenia su propia mutacion, sin el arreglo, y por eso se veia
+un fallo que no existia ✓.
+
+Y el sintoma que lo delata ✓, y que es el que hay que reconocer la proxima
+vez ✓: **un test que falla unas veces y otras no** ✓. Y el orden de
+ejecucion lo cambiaba ✓, y eso no es un test fragil: es un test que depende
+de un estado que nadie declara ✓.

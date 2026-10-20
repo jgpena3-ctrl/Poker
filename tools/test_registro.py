@@ -191,12 +191,15 @@ def test_los_cuatro_pasos_de_a1_estan_con_su_criterio_de_hecho():
     for numero, paso, hecho in pasos:
         assert paso, 'el paso %s no dice que hacer' % numero
         assert hecho, 'el paso %s no dice su criterio de «hecho»' % numero
-    # y los cuatro pasos tienen que ser los que son
+    # y los cuatro pasos tienen que ser los que son. Y el ancla del primer
+    # paso es la TAREA —«resolver»— y no su NUMERO, porque el numero es de A1
+    # y se mueve ✓, y un test que lo fijara passaria a fallar por un dato que
+    # no es un defecto ✓.
     texto = ' '.join(p[1].lower() for p in pasos)
-    for ancla in ('203', 'ciegas', 'declarar', 'disparar'):
+    for ancla in ('resolver', 'ciegas', 'declarar', 'disparar'):
         assert ancla in texto, (
             'los pasos de A1 no hablan de %r, y la secuencia tiene que ser '
-            'cerrar, fijar, declarar y disparar' % ancla)
+            'resolver, fijar, declarar y disparar' % ancla)
 
 def test_la_seccion_de_lo_que_no_se_toca_existe_y_tiene_motivos():
     """Y que exista, y que cada elemento diga POR QUE.
@@ -252,4 +255,49 @@ def test_el_registro_declara_el_estado_de_a2_y_de_a1():
         'el registro no dice que los dos controles los declara A1')
     assert 'no tiene valor por defecto para ninguno de los dos' in reg, (
         'y no dice que el script no tiene valores por defecto')
+
+def test_el_estado_de_espera_esta_declarado():
+    """Y que exista, y que diga las tres cosas.
+
+    Y el motivo de que las tres: **lo que depende de A1**, **lo que depende
+    de la post-adopcion** y **lo que ya esta cerrado**. Y sin las tres, un
+    «no hay trabajo» no se distingue de un «no he mirado».
+    """
+    reg = _registro()
+    assert 'EL ESTADO DE ESPERA' in reg, (
+        'el registro no tiene la seccion del estado de espera')
+    cuerpo = reg.split('EL ESTADO DE ESPERA', 1)[1].split('\n## ', 1)[0]
+    assert 'no tiene trabajo pendiente' in cuerpo, (
+        'la seccion no dice que no hay trabajo pendiente')
+    for ancla in ('A1', 'post-adopci', 'cerrado'):
+        assert ancla in cuerpo, (
+            'la seccion no menciona %r, y sin las tres mitades no se sabe que '
+            'es una espera y no un olvido' % ancla)
+
+
+def test_la_tabla_de_los_dos_controles_es_verificable():
+    """Y que la tabla diga las tres cosas, y que el script no tenga defaults.
+
+    Y la tercera es la importante: **el script no tiene ningun valor por
+    defecto**, y eso se comprueba en el codigo, no en el documento ✓.
+    """
+    reg = _registro()
+    assert 'los **dos controles** del procedimiento los declara **A1**' in reg
+    assert 'no tiene valor por defecto para ninguno de los dos' in reg
+
+    # y la distincion entre el codigo 2 y el codigo 1, con su motivo
+    assert '«no has decidido» no es «has fallado»' in reg, (
+        'el registro no dice POR QUE el codigo 2 no es el codigo 1')
+
+    # y en el codigo: los dos controles se piden, y ninguno tiene defecto
+    import tools.integrar_copia as IC
+    import argparse
+    ayuda = argparse.ArgumentParser()
+    ayuda.add_argument('--ciegas-esperadas', type=int, default=None)
+    ayuda.add_argument('--control-categorias', default=None)
+    acc = {a.dest: a.default for a in ayuda._actions}
+    assert acc['ciegas_esperadas'] is None, acc
+    assert acc['control_categorias'] is None, acc
+    # y el codigo 2 existe y es distinto del 1
+    assert IC.CODIGO_INCOMPLETA == 2 and IC.CODIGO_FALLO == 1
 

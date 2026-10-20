@@ -5,7 +5,7 @@ Y lo que este script hace es **romper el motor a proposito** y mirar si los
 tests lo notan ✓. Y el motivo de que haga falta: **un test que pasa no dice
 nada sobre lo que vigila**, y solo un test que se ha visto fallar dice algo.
 
-Y las tres mutaciones, y cada una rompe UN contrato:
+## Y LAS TRES MUTACIONES, Y CADA UNA ROMPE UN CONTRATO
 
   M1  se quita el salto de las posts en `preflop_events`, de modo que una
       `p` se cuenta como decision;
@@ -14,21 +14,29 @@ Y las tres mutaciones, y cada una rompe UN contrato:
 
 ## Y LA PUERTA, QUE ES DE SEGURIDAD
 
-Y este script ESCRIBE en `motor/learn.py`, y por eso tiene tres CONDITIONS:
+Y este script ESCRIBE en `motor/learn.py`, y por eso tiene cuatro condiciones:
 
   · **el arbol tiene que estar limpio**, para que la restauracion sea
     verificable y no pise nada de nadie;
   · el original se guarda **en memoria** y se restaura SIEMPRE, en un
-    `finally`;
-  · y al final se comprueba el **sha** del fichero, y si no coincide, el
-    script lo dice y sale con codigo 1.
+    `finally`, **y no depende de que el test pase**: si el test lanza, el
+    fichero vuelve a su sitio igual ✓;
+  · al final se comprueba el **sha**, y si no coincide, el script lo dice y
+    sale con codigo 1;
+  · y una mutacion **no declarada** es un error, no un «no encuentro el
+    patron»: porque un patron que ya no esta es un motor que ha cambiado, y
+    eso hay que decirlo.
 
-Y por eso es un instrumento y no un test: muta el motor, y un test que muta
-el motor mientras corre la suite es un test que puede dejar el motor roto si
-la suite se interrumpe ✓.
+## Y NO ES UN TEST DE LA SUITE
+
+Y es un INSTRUMENTO, y se ejecuta a mano cuando se quiere comprobar que los
+tests no son vacios ✓, y no en cada `pytest` ✓: porque muta el motor, y un
+test que muta el motor mientras corre la suite puede dejarlo roto si la
+suite se interrumpe ✓.
 
 ```
-python tools/mutar_contrato_p.py
+python tools/mutar_contrato_p.py                # las tres
+python tools/mutar_contrato_p.py --mutacion M3  # una sola
 ```
 """
 import hashlib
@@ -38,23 +46,57 @@ import subprocess
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-LEARN = os.path.join(ROOT, 'motor', 'learn.py')
+LEARN_REL = 'motor/learn.py'
 
-MUTACIONES = [
-    ('M1', 'el salto de las posts en `preflop_events`',
-     "        if act == 'p':\n",
-     "        if act == 'q':\n"),
-    ('M2', '`_es_ciega_bb` deja de reconocer la `p` como ciega',
-     "if pos == 'BB' and act in ('b', 'p') and not voluntary_before:",
-     "if pos == 'BB' and act == 'b' and not voluntary_before:"),
-    ('M3', '`entradas_bb_rechazadas` deja de marcar «el BB ya posteo»',
-     "            if pos == 'BB' and act == 'p':",
-     "            if pos == 'BB' and act == 'q':"),
-]
+MUTACIONES = {
+    'M1': {
+        'que': 'el salto de las posts en `preflop_events`',
+        'viejo': "        if act == 'p':\n",
+        'nuevo': "        if act == 'q':\n",
+    },
+    'M2': {
+        'que': '`_es_ciega_bb` deja de reconocer la `p` como ciega',
+        'viejo': "if pos == 'BB' and act in ('b', 'p') and not voluntary_before:",
+        'nuevo': "if pos == 'BB' and act == 'b' and not voluntary_before:",
+    },
+    'M3': {
+        'que': '`entradas_bb_rechazadas` deja de marcar «el BB ya posteo»',
+        'viejo': "            if pos == 'BB' and act == 'p':",
+        'nuevo': "            if pos == 'BB' and act == 'q':",
+    },
+    # Y la M4 es la mutacion del CAMINO DE LA CONTRAPARTE: sin ella, el
+    # motor deja de rechazar las ciegas tardias, y con ella se nota.
+    #
+    # Y el motivo de que haga falta: la contraparte del hueco de M3 —un BB
+    # que NO posteo antes y tiene una `b` tarde— no es sensible a M3, porque
+    # M3 es el caso de la `p` ✓. De modo que la contraparte vigila SU camino,
+    # y la mutacion de SU camino es esta ✓.
+    'M4': {
+        'que': 'el motor deja de rechazar las ciegas tardias',
+        'viejo': ("        if pos == 'BB' and act in ('b', 'p') "
+                  "and not bb_ya_posteo:"),
+        'nuevo': ("        if pos == 'ZZ' and act in ('b', 'p') "
+                  "and not bb_ya_posteo:"),
+    },
+}
 
 # Y los tests que tienen que notar las tres.
 TESTS = ['motor/test_accion_p.py', 'motor/test_cm004.py',
          'motor/test_orden_preflop.py', 'motor/test_ciega_bb.py']
+
+
+def _acepta_tests(runner):
+    """Si el runner acepta la lista de tests, y si no, se llama sin ella.
+
+    Y el motivo: un runner de pruebas propio —el de los tests de ESTE
+    fichero— puede querer correr un solo nodo ✓, y el de por defecto corre
+    la lista entera ✓.
+    """
+    import inspect
+    try:
+        return len(inspect.signature(runner).parameters) >= 1
+    except (TypeError, ValueError):
+        return False
 
 
 def _git(*args):
@@ -62,19 +104,115 @@ def _git(*args):
                           capture_output=True, text=True)
 
 
-def _arbol_limpio():
+def arbol_limpio():
     r = _git('status', '--porcelain')
     return r.returncode == 0 and not r.stdout.strip()
 
 
-def _correr():
-    return subprocess.run([sys.executable, '-m', 'pytest'] + TESTS + ['-q'],
-                          cwd=ROOT, capture_output=True, text=True)
+def _limpiar_cache(modulo='learn'):
+    """Borra el `.pyc` del modulo mutado, y dice cuantos ha borrado.
+
+    Y el motivo, MEDIDO: **una mutacion que conserva el TAMANO del fichero
+    deja el `__pycache__` seemingly valido** ✓, porque en Windows la marca de
+    tiempo tiene una granularidad gruesa ✓. Y entonces el subproceso importa
+    el BYTECODE MUTADO en vez del codigo restaurado ✓, y el instrumento
+    DA FALSOS POSITIVOS ✓.
+
+    Y el `.pyc` se borra DESPUES de mutar y ANTES de correr los tests ✓, que
+    es cuando importa ✓.
+    """
+    d = os.path.join(ROOT, 'motor', '__pycache__')
+    if not os.path.isdir(d):
+        return 0
+    n = 0
+    for nombre in os.listdir(d):
+        if nombre.startswith(modulo) and nombre.endswith('.pyc'):
+            try:
+                os.remove(os.path.join(d, nombre))
+                n += 1
+            except OSError:
+                pass
+    return n
 
 
-def main():
-    if not _arbol_limpio():
-        print('EL ARBOL TIENE CAMBIOS, y este script ESCRIBE en motor/learn.py.')
+def _entorno_sin_bytecode():
+    """El entorno, sin escribir bytecode.
+
+    Y el motivo: si el subproceso escribe un `.pyc` del codigo MUTADO, otro
+    proceso puede leerlo despues ✓, y el motor parece roto sin estarlo ✓.
+    """
+    env = dict(os.environ)
+    env['PYTHONDONTWRITEBYTECODE'] = '1'
+    return env
+
+
+def _correr(tests=None):
+    return subprocess.run([sys.executable, '-m', 'pytest']
+                          + list(tests or TESTS) + ['-q'],
+                          cwd=ROOT, capture_output=True, text=True,
+                          env=_entorno_sin_bytecode())
+
+
+def mutar_y_comprobar(etiqueta, ruta=None, runner=None, tests=None):
+    """Muta el motor, mira si los tests lo notan, y lo RESTAURA SIEMPRE.
+
+    Y la restauracion no depende de que el test pase ✓: esta en un
+    `finally`, y por eso el `finally` es la parte importante y no el resto.
+
+    Y devuelve `(notado, detalle)`, y el detalle es lo que hay que mirar
+    cuando NO se nota: que el patron no aparezca, o que el test lanzara.
+    """
+    if etiqueta not in MUTACIONES:
+        raise ValueError(
+            'mutacion no declarada: %r. Las declaradas son: %r. Y una '
+            'mutacion no declarada NO se ignora: es un error, porque un '
+            'patron que ya no esta quiere decir que el motor ha cambiado.'
+            % (etiqueta, sorted(MUTACIONES)))
+    ruta = ruta or os.path.join(ROOT, *LEARN_REL.split('/'))
+    runner = runner or _correr
+    mut = MUTACIONES[etiqueta]
+    original = io.open(ruta, 'rb').read()
+    sha = hashlib.sha256(original).hexdigest()
+    texto = original.decode('utf-8')
+    if texto.count(mut['viejo']) != 1:
+        return False, ('el patron aparece %d veces, y se esperaba 1'
+                       % texto.count(mut['viejo']))
+    notado = False
+    detalle = ''
+    try:
+        with io.open(ruta, 'w', encoding='utf-8', newline='') as f:
+            f.write(texto.replace(mut['viejo'], mut['nuevo'], 1))
+        # Y LA CACHE, que es lo que hacia que este instrumento mintiera ✓.
+        _limpiar_cache()
+        r = runner(tests) if _acepta_tests(runner) else runner()
+        notado = r.returncode != 0
+        detalle = (r.stdout or '')[-800:]
+    finally:
+        with io.open(ruta, 'wb') as f:
+            f.write(original)
+        _limpiar_cache()
+    sha_tras = hashlib.sha256(io.open(ruta, 'rb').read()).hexdigest()
+    if sha_tras != sha:
+        raise AssertionError(
+            'el fichero NO ha vuelto a ser el de antes: sha %r y %r. Y hay '
+            'que restaurarlo a mano: git checkout %s' % (sha_tras, sha, LEARN_REL))
+    return notado, detalle
+
+
+def main(argv=None):
+    import argparse
+    ap = argparse.ArgumentParser(prog='mutar_contrato_p.py',
+                                 description='Rompe el motor a proposito y '
+                                             'mira si los tests lo notan. '
+                                             'NO es un test de la suite.')
+    ap.add_argument('--mutacion', default=None, choices=sorted(MUTACIONES),
+                    help='una sola mutacion; por defecto, las tres')
+    ap.add_argument('--fichero', default=None,
+                    help='el fichero a mutar; por defecto `motor/learn.py`')
+    args = ap.parse_args(argv)
+
+    if not arbol_limpio():
+        print('EL ARBOL TIENE CAMBIOS, y este script ESCRIBE en `%s`.' % LEARN_REL)
         print()
         print('   Y el motivo de la condicion: la restauracion se verifica con')
         print('   un sha, y con cambios en el arbol ese sha no demuestra nada.')
@@ -82,47 +220,22 @@ def main():
         print('   Commitea o guarda lo que tengas y vuelve a lanzarlo.')
         return 2
 
-    original = io.open(LEARN, 'rb').read()
-    sha = hashlib.sha256(original).hexdigest()
-    resultados = []
+    ruta = args.fichero or os.path.join(ROOT, *LEARN_REL.split('/'))
+    etiquetas = [args.mutacion] if args.mutacion else sorted(MUTACIONES)
     print('1. LA MUTACION: se rompe el motor y se mira si los tests lo notan')
     print()
-    try:
-        for etiqueta, que, viejo, nuevo in MUTACIONES:
-            texto = original.decode('utf-8')
-            if texto.count(viejo) != 1:
-                print('   MEDIDO, %s: el patron aparece %d veces, y se esperaba 1.'
-                      % (etiqueta, texto.count(viejo)))
-                print('      O el motor ha cambiado, o la mutacion ya no aplica.')
-                resultados.append((etiqueta, None))
-                continue
-            mutado = texto.replace(viejo, nuevo, 1)
-            with io.open(LEARN, 'w', encoding='utf-8', newline='') as f:
-                f.write(mutado)
-            r = _correr()
-            notado = r.returncode != 0
-            print('   MEDIDO, %s (%s): %s' % (
-                etiqueta, que,
-                'LOS TESTS LO NOTAN' if notado
-                else '*** LOS TESTS NO LO NOTAN ***'))
-            if not notado:
-                print('      Y eso es un HUECO: ese contrato no esta vigilado.')
-            resultados.append((etiqueta, notado))
-            with io.open(LEARN, 'wb') as f:
-                f.write(original)
-    finally:
-        with io.open(LEARN, 'wb') as f:
-            f.write(original)
-
-    sha_tras = hashlib.sha256(io.open(LEARN, 'rb').read()).hexdigest()
-    igual = sha_tras == sha
+    fallos = []
+    for etiqueta in etiquetas:
+        notado, detalle = mutar_y_comprobar(etiqueta, ruta)
+        print('   MEDIDO, %s (%s): %s' % (
+            etiqueta, MUTACIONES[etiqueta]['que'],
+            'LOS TESTS LO NOTAN' if notado
+            else '*** LOS TESTS NO LO NOTAN ***'))
+        if not notado:
+            print('      Y eso es un HUECO: ese contrato no esta vigilado.')
+            fallos.append(etiqueta)
     print()
-    print('   MEDIDO, el motor restaurado: %s' % ('IGUAL' if igual else
-                                                 '*** DISTINTO ***'))
-    if not igual:
-        print('   Y HAY QUE RESTAURARLO A MANO: git checkout motor/learn.py')
-        return 1
-    fallos = [e for e, ok in resultados if ok is False]
+    print('   MEDIDO, el motor restaurado: SIEMPRE (en un `finally`)')
     if fallos:
         print()
         print('   Y hay %d mutacion(es) que los tests NO notan: %r' % (
