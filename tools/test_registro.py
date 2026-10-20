@@ -301,3 +301,84 @@ def test_la_tabla_de_los_dos_controles_es_verificable():
     # y el codigo 2 existe y es distinto del 1
     assert IC.CODIGO_INCOMPLETA == 2 and IC.CODIGO_FALLO == 1
 
+def test_la_lesion_de_las_cifras_de_a1_esta_escrita():
+    """Y que la leccion exista, y con su marca.
+
+    Y el motivo de que se compruebe la MARCA: una leccion sin medicion es
+    una opinion, y este proyecto escribe lecciones medidas ✓.
+    """
+    import io as _io
+    import os as _os
+    ruta = _os.path.join(_os.path.dirname(_os.path.dirname(
+        _os.path.abspath(__file__))), 'DOCS', 'LECCIONES_DE_INSTRUMENTACION.md')
+    with _io.open(ruta, encoding='utf-8') as f:
+        texto = f.read()
+    assert '## 33.' in texto, (
+        'no esta la leccion de las cifras de A1')
+    bloque = texto.split('## 33.', 1)[1].split('\n## ', 1)[0]
+    assert 'MEDIDO' in bloque or 'CORREGIDO' in bloque, (
+        'la leccion no tiene su marca, y sin marca es una opinion')
+    assert 'se fija la relacion, no el numero' in bloque.lower(), (
+        'la leccion tiene que decir la regla, no solo el')
+
+
+def test_las_tres_mitades_declaran_su_criterio():
+    """Y que las tres mitades tengan su criterio, y no solo su nombre.
+
+    Y el motivo: un «no hay trabajo» sin las tres mitades no se distingue de
+    un «no he mirado» ✓, y en un registro eso es la diferencia entre una
+    espera y un abandono ✓.
+    """
+    reg = _registro()
+    cuerpo = reg.split('EL ESTADO DE ESPERA', 1)[1].split('\n## ', 1)[0]
+
+    # (1) lo que depende de A1: QUE hacer y CUANDO
+    fila_a1 = [l for l in cuerpo.split('\n')
+               if l.startswith('| lo que depende de **A1**')]
+    assert fila_a1, 'falta la mitad de A1'
+    assert len(fila_a1[0].split('|')) >= 4, fila_a1
+
+    # (2) lo que depende de la post-adopcion: QUE se activa y CON QUE
+    fila_post = [l for l in cuerpo.split('\n')
+                 if l.startswith('| lo que depende de la **post-adopción**')]
+    assert fila_post, 'falta la mitad de la post-adopcion'
+    assert len(fila_post[0].split('|')) >= 4, fila_post
+
+    # (3) lo que ya esta cerrado: QUE se cerro y EN QUE COMMIT
+    fila_cerrado = [l for l in cuerpo.split('\n')
+                    if l.startswith('| lo que **ya está cerrado**')]
+    assert fila_cerrado, 'falta la mitad de lo cerrado'
+    commits = re.findall(r'`[0-9a-f]{7}`', fila_cerrado[0])
+    assert len(commits) >= 3, (
+        'la mitad de lo cerrado tiene que decir EN QUE COMMIT se cerro cada '
+        'cosa, y no solo que se cerro: %r' % fila_cerrado[0])
+
+
+def test_la_auditoria_de_rules_esta_declarada_como_cerrada():
+    """Y que la auditoria de `rules.py` este, con sus hallazgos y su estado.
+
+    Y el motivo de que el estado importe mas que el hallazgo ✓: un hallazgo
+    sin estado es un asunto abierto, y este esta CERRADO ✓ —uno con su nota
+    en el contrato ✓, uno con su tabla y su test ✓, y uno declarado como
+    riesgo latente ✓.
+    """
+    import io as _io
+    import os as _os
+    raiz = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+    ruta = _os.path.join(raiz, 'DOCS', 'AUDITORIA_RULES.md')
+    assert _os.path.exists(ruta), 'la auditoria de rules.py no esta'
+    with _io.open(ruta, encoding='utf-8') as f:
+        texto = f.read()
+    for ancla in ('fold', 'precondiciones', 'unknown'):
+        assert ancla in texto.lower(), (
+            'la auditoria de rules.py no habla de %r' % ancla)
+
+    reg = _registro()
+    assert 'la auditoría de `rules.py`' in reg, (
+        'el registro no declara la auditoria de rules.py')
+    assert 'CERRADA' in reg, (
+        'el registro no dice que la auditoria de rules.py esta CERRADA')
+    for ancla in ('§C4', 'precondiciones', 'riesgo latente'):
+        assert ancla in reg, (
+            'el registro no declara el estado del hallazgo %r' % ancla)
+

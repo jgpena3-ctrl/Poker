@@ -20,7 +20,7 @@
 | **el contrato de la acción `p`** | `DOCS/CONTRATO_ACCION_P.md`. La semántica, los consumidores, y qué NO se hace |
 | **el motor aprende la `p`** | `_es_ciega_bb` la reconoce, `preflop_events` salta las posts, y `entradas_bb_rechazadas` distingue las dos codificaciones |
 | **la equivalencia de la codificación** | MEDIDO: las doce categorías de la primera decisión son **idénticas** antes y después, y las 921 ciegas siguen siendo 921 |
-| **la auditoría de `rules.py`** | `DOCS/AUDITORIA_RULES.md`, con cuatro hallazgos y sus mediciones |
+| **la auditoría de `rules.py`** | `DOCS/AUDITORIA_RULES.md`, con cuatro hallazgos y sus mediciones. Y **CERRADA**, con el estado de cada uno: el **fold** fuera del plan, con su nota en `CONTRATOS_RULES.md` §C4 remitiendo a `CONTRATO_C4.md` ✓; las **cinco precondiciones silenciosas** de `plan()`, con su tabla en la auditoría y con test ✓; el **plan «unknown»**, que no se alcanza, declarado como **riesgo latente de C3** ✓; y un cuarto hallazgo, **de otro sitio**, que no se arregla aquí ✓ |
 | **el defecto del contador de subidas** | declarado, fijado con un test, y con su **condición de activación** |
 | **la cobertura de los guardianes** | el barrido mira la raíz y `trabajo/`, y el código fuera de las tres carpetas tiene que estar declarado |
 | **el procedimiento de integración** | `tools/integrar_copia.py`, probado en seco con la copia sintética **completa** de 1258 manos, y con sus dos caminos de fallo |
@@ -178,7 +178,21 @@ Y los **dos controles** del procedimiento los declara **A1**, y el script
 > hecho. Y el del número de ciegas sale de datos que todavía no son
 > canónicos.
 
-## 12. EL ESTADO DE ESPERA
+## 12. Y UNA ACLARACIÓN QUE ESTÁ PENDIENTE DE R2
+
+> **La auditoría de `rules.py` se cerró en `866e0c1` y `15ed74a`.** Y si R2
+> la señala como pendiente, R2 debe indicar **qué frente no cubierto por esos
+> commits considera abierto** ✓. Y **A2 no reabre la auditoría sin esa
+> indicación** ✓, porque reabrirla sería trabajo duplicado o, peor, una
+> reapertura de hallazgos ya cerrados que podría **mover conducta fijada** ✓.
+
+Y el motivo por el que esto no es una discusión de reciprocidad ✓: los
+hallazgos están **cerrados con su estado** ✓ —uno con su nota en el contrato
+de las reglas ✓, uno con su tabla y su test ✓, y uno declarado como riesgo
+latente ✓—, y reabrirlos sin nada nuevo que aportar es volver a tocar el
+contrato firmado ✓.
+
+## 13. EL ESTADO DE ESPERA
 
 > **A2 no tiene trabajo pendiente que no dependa de A1 o de la
 > post-adopción.** Y si en el futuro aparece algo, que sea una **decisión
@@ -190,13 +204,13 @@ Y lo que hay detrás de esa frase, y es lo que la sostiene:
 |---|---|
 | lo que depende de **A1** | las manos sin resolver, el número de ciegas de la copia, el control de categorías, y las tres decisiones de `matrix` |
 | lo que depende de la **post-adopción** | el defecto del contador de subidas, la recalibración de las cifras derivadas, y la elección de la reducción estadística |
-| lo que **ya está cerrado** | los cuatro frentes auditados y clasificados; el contrato de la `p`, con su inventario y su mutación; los dos controles del procedimiento, con sus cuatro caminos; y el experimento de la equity observable, preparado y con puerta |
+| lo que **ya está cerrado** | la auditoría de `rules.py` (`866e0c1`, `15ed74a`); los cuatro frentes auditados y clasificados (`7e0b3c7`, `25fe330`); el contrato de la `p`, con su inventario y su tabla de mutaciones (`25fe330`, `d12bff4`); los dos controles del procedimiento, con sus cuatro caminos (`25fe330`); y el experimento de la equity observable, preparado y con puerta (`25fe330`) |
 
 > Y la diferencia entre «no hay trabajo» y «no hay trabajo que se pueda
 > hacer» es la diferencia entre un proyecto acabado y uno parado ✓. Y aquí
 > es lo segundo, y la causa es de A1 ✓.
 
-## 13. QUÉ DEBE HACER A1 ANTES DE DISPARAR
+## 14. QUÉ DEBE HACER A1 ANTES DE DISPARAR
 
 Y son cuatro pasos, y cada uno tiene su criterio de **hecho**, que es lo que
 los hace comprobables y no una lista de intenciones.

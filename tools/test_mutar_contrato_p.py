@@ -275,3 +275,76 @@ def test_al_terminar_el_motor_no_ha_quedado_mutado():
         'el motor ha quedado mutado, y eso no puede pasar:\n%s'
         % r.stdout[:600])
 
+def test_cada_mutacion_tiene_su_test_sensible_y_falla_con_ella():
+    """Y la TABLA ENTERA, mutacion por mutacion.
+
+    Y esto es lo que R1 pide: que no baste con que la mutacion EXISTA, sino
+    que **su test sensible falle cuando se aplica** ✓. Y la diferencia es
+    la de siempre: una mutacion que nadie nota es una **brecha de
+    cobertura** ✓, y no un detalle ✓.
+
+    Y se usa el INSTRUMENTO ✓, con su invalidacion de la cache ✓, para que
+    el resultado sea el mismo que el del `main()` ✓.
+    """
+    import mutar_contrato_p as M
+
+    filas = M.tabla_de_mutaciones()
+    assert len(filas) == 4, [f['mutacion'] for f in filas]
+    for fila in filas:
+        assert fila['invariante'].strip(), fila
+        assert fila['test'].strip(), fila
+        notado, detalle = M.mutar_y_comprobar(fila['mutacion'], LEARN,
+                                              tests=[fila['test']])
+        assert notado, (
+            'la mutacion %s (%s) no la nota su test de la tabla (%s). Y eso es '
+            'una BRECHA DE COBERTURA, y no un motivo para relajar el test.\n%s'
+            % (fila['mutacion'], fila['que'], fila['test'], detalle[:600]))
+
+
+def test_el_mutador_invalida_la_cache_y_no_escribe_bytecode():
+    """Y que la invalidacion se haga SIEMPRE, y en los dos sistemas.
+
+    Y el motivo de que sea **incondicional** ✓: el problema se manifesto en
+    Windows ✓, donde la marca de tiempo tiene una granularidad gruesa ✓ y el
+    `.pyc` se puede considerar valido ✓; en Linux la marca es de nanosegundos
+    ✓ y el problema no se daba ✓. De modo que el arreglo —borrar el `.pyc` y
+    no escribir bytecode— se aplica **en los dos** ✓, porque un instrumento
+    que depende del sistema es un instrumento que no se puede usar ✓.
+
+    Y la prueba es del MECANISMO ✓ y no del comportamiento del sistema ✓:
+    que se borre el `.pyc` del modulo mutado ✓, y que el entorno lleva la
+    variable ✓.
+    """
+    import mutar_contrato_p as M
+
+    # (a) el entorno
+    env = M._entorno_sin_bytecode()
+    assert env.get('PYTHONDONTWRITEBYTECODE') == '1', env.get(
+        'PYTHONDONTWRITEBYTECODE')
+
+    # (b) el `.pyc` se borra, y se cuenta
+    cache = os.path.join(ROOT, 'motor', '__pycache__')
+    os.makedirs(cache, exist_ok=True)
+    # Y el nombre tiene que CUMPLIR EL PATRON del borrado ✓ —empezar por el
+    # modulo y acabar en `.pyc`— ✓, porque lo que se comprueba es el
+    # mecanismo ✓, no un borrado de todo ✓.
+    falsa = os.path.join(cache, 'learn_prueba.pyc')
+    with io.open(falsa, 'wb') as f:
+        f.write(b'x')
+    n = M._limpiar_cache()
+    assert n >= 1, 'el `.pyc` de prueba deberia haberse borrado'
+    assert not os.path.exists(falsa), 'el `.pyc` sigue ahi'
+
+    # (c) y el `.pyc` que NO es del modulo mutado se respeta
+    otra = os.path.join(cache, 'otro_modulo_prueba.pyc')
+    with io.open(otra, 'wb') as f:
+        f.write(b'x')
+    try:
+        M._limpiar_cache()
+        assert os.path.exists(otra), (
+            'el borrado tiene que ser SOLO del modulo mutado, que lo que no es '
+            'de este motor no se toca')
+    finally:
+        if os.path.exists(otra):
+            os.remove(otra)
+

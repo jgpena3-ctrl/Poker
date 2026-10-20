@@ -1410,3 +1410,39 @@ Y el sintoma que lo delata ✓, y que es el que hay que reconocer la proxima
 vez ✓: **un test que falla unas veces y otras no** ✓. Y el orden de
 ejecucion lo cambiaba ✓, y eso no es un test fragil: es un test que depende
 de un estado que nadie declara ✓.
+## 33. Una cifra de A1 en un documento de A2 caduca sola
+
+Y esta es la novena de la familia, y es la mas cara de las ultimas, porque
+la has pagado TERCERA vez ✓.
+
+MEDIDO, lo que pasó. A1 ha seguido resolviendo manos ✓, y el numero de
+manos con bote resuelto se ha movido ✓. Y tres de los tests de A2 han
+fallado por eso ✓ —no por un defecto, sino por un numero que cambio debajo
+mientras el trabajo estaba quieto ✓.
+
+> **Una cifra que pertenece a otra persona es una fecha, no un dato** ✓. Y
+> una fecha en un documento o en un test caduca sola ✓, y lo que caduca no se
+> lee ✓, y lo que no se lee esta mal ✓.
+
+Y la regla que sale, y que es la que hay que aplicar la proxima vez ✓:
+
+> **Se fija la RELACION, no el numero** ✓.
+
+Y que es fijar la relacion ✓, en cada caso ✓:
+
+| | la relacion | el numero que no hay que fijar |
+|---|---|---|
+| el fixture y las manos revisadas | las manos que el fixture trata como revisadas son **exactamente** las que la herramienta pudo resolver | cuantas son |
+| la copia y el bote | el fixture **no toca** los botes | cuantas manos lleva el bote resuelto |
+| el registro | la TARJA de A1, y que su numero **se mueve** | cuantas quedan |
+
+Y el instrumento que lo vigila ✓, y que es lo que hace que no vuelva a
+pasar ✓: `tools/test_cifras_a1.py` ✓, que **mide el conteo en el momento** ✓
+—y no lo guarda, porque un numero guardado en un test es exactamente lo que
+hay que evitar— ✓, y busca ese numero como literal en todos los tests ✓.
+
+Y una cosa que sale de ahi, y que es de la misma familia ✓: **el numero de
+la copia tampoco se puede fijar** ✓, porque tambien es de A1 ✓ —y el del
+fixture duro, que es el mismo, tambien— ✓. Y lo que se afirma en su lugar es
+que **todas las manos tienen ciega** ✓, que es la relacion ✓ y no una fecha
+✓.
