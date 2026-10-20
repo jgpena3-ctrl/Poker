@@ -316,6 +316,67 @@ def violaciones_stack(mano):
     return out
 
 
+def _trazas_unicas(match):
+    out = []
+    vistos = set()
+    for r in match:
+        k = tuple(tuple(x) for x in r['res'])
+        if k not in vistos:
+            vistos.add(k)
+            out.append(r)
+    return out
+
+
+def _diagnostico(mano, trazas, campo):
+    """Por que hay varias trazas que producen el mismo bote.
+
+    DEVUELTA   : la diferencia esta en una subida no pagada; el neto no cambia
+    REPARTO    : neto y bruto iguales; cambia quien aporto cada ficha
+    NETO_IGUAL : neto igual, pero cambian importes igualados (y el bruto)
+    REAL       : el neto cambia; aqui si hay que decidir
+    """
+    flats = []
+    for r in trazas:
+        f = {}
+        for st, amounts in zip(r['calles'], r['res']):
+            acts = (((mano.get('streets') or {}).get(st) or {})
+                    .get('actions') or [])
+            for i, amt in enumerate(amounts):
+                if i < len(acts):
+                    f[(st, i)] = amt
+        flats.append(f)
+    claves = set().union(*[set(f) for f in flats])
+    diferencias = []
+    for k in sorted(claves, key=lambda x: (STREETS.index(x[0]), x[1])):
+        vals = [f.get(k) for f in flats]
+        norm = {None if v is None else round(v, 2) for v in vals}
+        if len(norm) > 1:
+            st, i = k
+            a = (((mano.get('streets') or {}).get(st) or {})
+                 .get('actions') or [])[i]
+            diferencias.append({
+                'street': st,
+                'pos': a.get('pos'),
+                'action': a.get('action'),
+                'valores': [None if v is None else round(v, 2)
+                            for v in vals],
+            })
+    netos = {round(r['neto'], 2) for r in trazas}
+    brutos = {round(r['bruto'], 2) for r in trazas}
+    if len(netos) > 1:
+        causa = 'REAL'
+    elif len(brutos) == 1:
+        causa = 'REPARTO'
+    elif diferencias and all(d['action'] in ('b', 'r')
+                             for d in diferencias):
+        causa = 'DEVUELTA'
+    else:
+        causa = 'NETO_IGUAL'
+    if campo and campo.endswith('_sin_sb'):
+        causa += '+SB'
+    return causa, diferencias[:10]
+
+
 def clasificar(mano):
     pot = round(float(mano.get('final_pot') or 0.0), 4)
     viol = violaciones_stack(mano)
@@ -369,6 +430,12 @@ def clasificar(mano):
     firmas = {tuple(tuple(x) for x in r['res']) for r in match}
     n_trazas = len(firmas)
 
+    causa = None
+    diferencias = []
+    if n_trazas > 1:
+        causa, diferencias = _diagnostico(
+            mano, _trazas_unicas(match), campo)
+
     resuelto = None
     if n_trazas == 1 and match and not viol:
         r = match[0]
@@ -415,6 +482,8 @@ def clasificar(mano):
         'traza': traza,
         'alternativas': alternativas[:4],
         'stack_violations': viol,
+        'causa': causa,
+        'diferencias': diferencias,
         'resuelto': resuelto,
     }
 
@@ -465,6 +534,14 @@ def escribir_documento(manos, detalle, ruta):
             if d['clase'] == 'NADA' and not d.get('stack_violations')]
     amb = [d for d in detalle
            if d['clase'] == 'ACCION_AMBIGUA' and not d.get('stack_violations')]
+    amb_dev = [d for d in amb
+               if (d.get('causa') or '').startswith('DEVUELTA')]
+    amb_rep = [d for d in amb
+               if (d.get('causa') or '').startswith('REPARTO')]
+    amb_net = [d for d in amb
+               if (d.get('causa') or '').startswith('NETO_IGUAL')]
+    amb_real = [d for d in amb
+                if (d.get('causa') or '').startswith('REAL')]
     lineas = []
     lineas.append('# Botes no encontrados - revision manual')
     lineas.append('')
@@ -484,8 +561,16 @@ def escribir_documento(manos, detalle, ruta):
                   'dispararia el bote: se dejan intactas. En las `NADA` el '
                   'bote declarado no sale con ninguna combinacion de apuestas '
                   'parciales/absolutas, con ni sin comision, ni con ni sin la '
-                  'ciega del SB. En las `ACCION_AMBIGUA` el bote si sale, '
-                  'pero hay dos o mas repartos de importes que lo producen.')
+                  'ciega del SB.')
+    lineas.append('')
+    lineas.append('De las `ACCION_AMBIGUA`: `DEVUELTA` %d (la diferencia esta '
+                  'en una subida no pagada; el bote neto NO cambia), '
+                  '`REPARTO` %d (mismo neto y bruto; cambia quien aporta), '
+                  '`NETO_IGUAL` %d (mismo neto; cambian importes igualados), '
+                  '`REAL` %d (el neto cambia; hay que decidir). Solo `REAL` '
+                  'afecta a la ganancia.'
+                  % (len(amb_dev), len(amb_rep), len(amb_net),
+                     len(amb_real)))
     lineas.append('')
 
     def acciones(h):
@@ -501,46 +586,86 @@ def escribir_documento(manos, detalle, ruta):
                 for a in acs)))
         return out
 
-    for titulo, grupo in (('STACK', stack), ('NADA', nada),
-                          ('ACCION_AMBIGUA', amb)):
+    def ficha(d):
+        h = por_id.get(d['hand_id'], {})
+        lineas.append('### %s - %s' % (d['hand_id'], d['date']))
+        lineas.append('')
+        lineas.append('- **Pot declarado**: %s' % d['pot'])
+        lineas.append('- **Combinaciones**: %s' % d.get(
+            'n_combinaciones'))
+        lineas.append('- **Netos posibles**: %s' % d.get('netos'))
+        lineas.append('- **Brutos posibles**: %s' % d.get('brutos'))
+        if d.get('coincidencias'):
+            c = d['coincidencias'][0]
+            lineas.append('- **Coincidencia**: %s = %s (dif %s)' % (
+                c.get('campo'), c.get('valor'), c.get('diff')))
+        if d.get('causa'):
+            lineas.append('- **Causa**: `%s`' % d['causa'])
+        if d.get('diferencias'):
+            lineas.append('- **Diferencia**: %s' % '; '.join(
+                '%s %s %s %s' % (x['street'], x['pos'], x['action'],
+                                 x['valores'])
+                for x in d['diferencias']))
+        if d['clase'] == 'NADA' and d.get('netos'):
+            cerca = min(d['netos'], key=lambda v: abs(v - d['pot']))
+            lineas.append('- **Neto mas cercano**: %s (dif %s)' % (
+                cerca, round(cerca - d['pot'], 2)))
+        lineas.append('- **Stacks**: %s' % ', '.join(
+            '%s=%s' % (p.get('pos'), p.get('stack'))
+            for p in (h.get('players') or []) if p.get('pos')))
+        if d.get('stack_violations'):
+            lineas.append('- **Supera stack**: %s' % ', '.join(
+                '%s total=%s stack=%s exceso=%+.2f'
+                % (v['pos'], v['total'], v['stack'], v['exceso'])
+                for v in d['stack_violations']))
+            if any(v['exceso'] <= TOL + 1e-9
+                   for v in d['stack_violations']):
+                lineas.append('- **Nota**: el exceso <= %s esta dentro de la '
+                              'tolerancia del bote; puede ser redondeo, no un '
+                              'error de stack.' % TOL)
+        lineas.append('- **Acciones**:')
+        lineas.extend(acciones(h))
+        if d.get('alternativas'):
+            lineas.append('- **Lecturas alternativas** (%d):'
+                          % len(d['alternativas']))
+            for i, alt in enumerate(d['alternativas'], 1):
+                lineas.append('  %d. %s' % (i, ' | '.join(
+                    x for x in alt if '[' not in x)))
+        lineas.append('')
+
+    for titulo, grupo in (('STACK', stack), ('NADA', nada)):
         if not grupo:
             continue
         lineas.append('## %s (%d)' % (titulo, len(grupo)))
         lineas.append('')
         for d in grupo:
-            h = por_id.get(d['hand_id'], {})
-            lineas.append('### %s - %s' % (d['hand_id'], d['date']))
+            ficha(d)
+
+    if amb:
+        lineas.append('## ACCION_AMBIGUA (%d)' % len(amb))
+        lineas.append('')
+        lineas.append('La `causa` describe por que hay mas de una traza. '
+                      '`DEVUELTA` no es un error de bote: la subida no se '
+                      'paga y las fichas extra se devuelven; el neto es el '
+                      'mismo. `REPARTO` y `NETO_IGUAL` tampoco cambian el '
+                      'bote neto, pero dejan el `amount` de alguna accion sin '
+                      'determinar. `REAL` es el unico caso en que el bote '
+                      'neto depende de la lectura. El sufijo `+SB` indica que '
+                      'la coincidencia usa la variante que descuenta la '
+                      'ciega del SB.')
+        lineas.append('')
+        for subtitulo, grupo in (
+                ('DEVUELTA (subida no pagada; el neto no cambia)', amb_dev),
+                ('REPARTO (mismo bote; cambia quien aporta)', amb_rep),
+                ('NETO_IGUAL (mismo neto; cambian importes igualados)',
+                 amb_net),
+                ('REAL (el bote neto cambia)', amb_real)):
+            if not grupo:
+                continue
+            lineas.append('### %s - %d' % (subtitulo, len(grupo)))
             lineas.append('')
-            lineas.append('- **Pot declarado**: %s' % d['pot'])
-            lineas.append('- **Combinaciones**: %s' % d.get(
-                'n_combinaciones'))
-            lineas.append('- **Netos posibles**: %s' % d.get('netos'))
-            lineas.append('- **Brutos posibles**: %s' % d.get('brutos'))
-            if d.get('coincidencias'):
-                c = d['coincidencias'][0]
-                lineas.append('- **Coincidencia**: %s = %s (dif %s)' % (
-                    c.get('campo'), c.get('valor'), c.get('diff')))
-            if d['clase'] == 'NADA' and d.get('netos'):
-                cerca = min(d['netos'], key=lambda v: abs(v - d['pot']))
-                lineas.append('- **Neto mas cercano**: %s (dif %s)' % (
-                    cerca, round(cerca - d['pot'], 2)))
-            lineas.append('- **Stacks**: %s' % ', '.join(
-                '%s=%s' % (p.get('pos'), p.get('stack'))
-                for p in (h.get('players') or []) if p.get('pos')))
-            if d.get('stack_violations'):
-                lineas.append('- **Supera stack**: %s' % ', '.join(
-                    '%s total=%s stack=%s exceso=%+.2f'
-                    % (v['pos'], v['total'], v['stack'], v['exceso'])
-                    for v in d['stack_violations']))
-            lineas.append('- **Acciones**:')
-            lineas.extend(acciones(h))
-            if d.get('alternativas'):
-                lineas.append('- **Lecturas alternativas** (%d):'
-                              % len(d['alternativas']))
-                for i, alt in enumerate(d['alternativas'], 1):
-                    lineas.append('  %d. %s' % (i, ' | '.join(
-                        x for x in alt if '[' not in x)))
-            lineas.append('')
+            for d in grupo:
+                ficha(d)
     with io.open(ruta, 'w', encoding='utf-8', newline='\n') as f:
         f.write('\n'.join(lineas))
     return {'nada': len(nada), 'ambiguas': len(amb), 'stack': len(stack),
