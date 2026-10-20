@@ -46,6 +46,7 @@
 | trabajo | dueño | condición de activación |
 |---|---|---|
 | las manos sin resolver | A1 | la revisión manual de cada una, con la grabación original. Y el NÚMERO es de A1 y **se mueve**: MEDIDO, eran 203 cuando este bloque empezó, y ahora son menos, porque A1 ha seguido resolviendo ✓. Y por eso aquí no se escribe la cifra: una cifra de A1 en un documento de A2 caduca sola ✓ |
+| la cuarentena de registros | A1 | A1 gestiona una cuarentena de registros ✓; los números y los estados son de A1 ✓, y A2 no los fija ✓. Y en el registro la cuarentena esta **dentro de la mitad de A1** ✓, y no como una cuarta mitad ✓, porque **A1 todavía no ha definido qué significa cada estado** ✓ |
 | el número de ciegas que la copia debe reconocer | A1 | haber cerrado las 203, y el número sale de los datos revisados. Y el procedimiento **no tiene un valor por defecto**: sin ese parámetro sale con código **2** |
 | las doce categorías que la copia debe dar | A1 | lo mismo, y por un motivo que está medido: **la copia no es solo una re-codificación** |
 | la primera ejecución real de `integrar_copia.py` | A1 | el número de ciegas declarado, y el control de categorías declarado |
@@ -239,7 +240,24 @@ Y el **umbral** ✓, que sin el un coste crece sin que nadie lo note ✓:
 > maquina descargada ✓ y **25:43** con A1 trabajando en paralelo ✓. Y el
 > umbral que sirve es el de la maquina **descargada** ✓, porque el otro no
 > mide el codigo ✓, mide la cola ✓.
-## 14. EL ESTADO DE ESPERA
+## 14. EL DETECTOR DE FUGAS, QUE ES LA RED DEL MUTADOR
+
+Y el detector de fugas —el test que comprueba que el motor esta limpio al
+terminar los tests de mutacion ✓— **es la red de seguridad del mutador** ✓, y
+no un comprobante más ✓.
+
+> Y su fallo en un bloque es **la prueba de que funciona** ✓: un detector que
+> nunca falla no se sabe si funciona ✓. Y el fallo que dio ✓ —la suite entera
+> ejecutandose con el motor mutado ✓, sin el soporte de la `p` ✓— fue
+> exactamente el que tenia que dar ✓.
+
+Y la caracteristica que lo hace util ✓: **no depende de que el mutador haya
+restaurado** ✓. Y si el motor esta mutado **por cualquier motivo** ✓ —una
+fuga, otro agente, una escritura a pelo ✓—, el detector lo ve ✓. Y un
+detector que solo detecta fugas del mutador no detecta fugas ✓.
+
+## 15. EL ESTADO DE ESPERA
+
 
 
 > **A2 no tiene trabajo pendiente que no dependa de A1 o de la
@@ -250,7 +268,7 @@ Y lo que hay detrás de esa frase, y es lo que la sostiene:
 
 | | |
 |---|---|
-| lo que depende de **A1** | las manos sin resolver, el número de ciegas de la copia, el control de categorías, y las tres decisiones de `matrix` |
+| lo que depende de **A1** | las manos sin resolver, el número de ciegas de la copia y el control de categorías. Y **la cuarentena de registros**, que es una decisión de A1 ✓: los números y los estados son de A1 ✓ —MEDIDO, 202 registros en cuarentena y una copia filtrada de 1056 manos ✓— y **A2 no los fija** ✓, sino que los **mide** ✓. Y la cuarentena **no es un estado de A2** ✓: A2 no define estados de datos ✓ |
 | lo que depende de la **post-adopción** | **H4**, que esta en §3 ✓ con su dueño y su condicion ✓ —y cuya ficha esta en `AUDITORIA_RULES.md` §6 ✓—. Y tambien la recalibracion de las cifras derivadas ✓, y la eleccion de la reduccion estadistica ✓ |
 | lo que **ya está cerrado** | la auditoría de `rules.py` (`866e0c1`, `15ed74a`); los cuatro frentes auditados y clasificados (`7e0b3c7`, `25fe330`); el contrato de la `p`, con su inventario y su tabla de mutaciones (`25fe330`, `d12bff4`); los dos controles del procedimiento, con sus cuatro caminos (`25fe330`); y el experimento de la equity observable, preparado y con puerta (`25fe330`) |
 
@@ -258,7 +276,7 @@ Y lo que hay detrás de esa frase, y es lo que la sostiene:
 > hacer» es la diferencia entre un proyecto acabado y uno parado ✓. Y aquí
 > es lo segundo, y la causa es de A1 ✓.
 
-## 15. QUÉ DEBE HACER A1 ANTES DE DISPARAR
+## 16. QUÉ DEBE HACER A1 ANTES DE DISPARAR
 
 Y son cuatro pasos, y cada uno tiene su criterio de **hecho**, que es lo que
 los hace comprobables y no una lista de intenciones.

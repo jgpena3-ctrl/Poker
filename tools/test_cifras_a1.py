@@ -39,6 +39,50 @@ sys.path.insert(0, os.path.join(ROOT, 'tools'))
 ESTABLES = (1258, 877, 921)
 
 
+def _conteo_de_cuarentena():
+    """Cuantos registros hay en la CUARENTENA de A1, MEDIDO ahora.
+
+    Y el motivo de que este numero tambien se mida ✓: la cuarentena es una
+    decision de A1 ✓, y sus numeros se mueven con cada liberacion ✓ —y con
+    cada liberacion, la copia candidata cambia ✓—. De modo que un numero
+    pineado aqui seria un numero que caduca ✓.
+    """
+    ruta = os.path.join(ROOT, 'trabajo', 'cuarentena.jsonl')
+    if not os.path.exists(ruta):
+        return None
+    with io.open(ruta, encoding='utf-8') as f:
+        return sum(1 for l in f if l.strip())
+
+
+def _ciegas_de_la_copia_filtrada():
+    """Cuantas ciegas tiene la copia FILTRADA de A1, MEDIDO ahora.
+
+    Y el motivo de medirlo con el MOTOR y no con un numero ✓: la cifra sale
+    de la regla `_es_ciega_bb` ✓, que es la que decide ✓, y si la regla
+    cambia ✓, el numero cambia ✓, y un literal no se enteraria ✓.
+    """
+    ruta = os.path.join(ROOT, 'trabajo', 'hands_db_sin_cuarentena.jsonl')
+    if not os.path.exists(ruta):
+        return None
+    sys.path.insert(0, os.path.join(ROOT, 'tools'))
+    import fixture_copia_sintetica as FIX
+    return FIX._ciegas_reconocidas(ruta)
+
+
+def _conteos_de_a1():
+    """LOS NUMEROS QUE SON DE A1, MEDIDOS AHORA, Y NO GUARDADOS.
+
+    Y la lista es dinamica ✓, y anadir un numero nuevo a ella ✓ —una
+    cuarentena nueva, una liberacion ✓— es **anadir una MEDIDA** ✓, y no un
+    literal ✓.
+    """
+    return {
+        'manos resueltas': _conteo_de_resueltas(),
+        'registros en cuarentena': _conteo_de_cuarentena(),
+        'ciegas de la copia filtrada': _ciegas_de_la_copia_filtrada(),
+    }
+
+
 def _conteo_de_resueltas():
     """Cuantas manos ha resuelto la herramienta, MEDIDO ahora.
 
@@ -67,41 +111,74 @@ def _ficheros_de_test():
                 yield os.path.join(carpeta, nombre)
 
 
-def test_ningun_test_pina_el_conteo_de_resueltas_de_a1():
-    """Y que el conteo de A1 no aparezca como literal en ningun test.
+def test_ningun_test_pina_ningun_numero_de_a1():
+    """Y que NINGUN numero de A1 aparezca como literal en ningun test.
+
+    Y son tres ✓, y los tres se **miden** ✓ y no se guardan ✓:
+
+      · las **manos resueltas** ✓, que crecen con cada revision ✓;
+      · los **registros en cuarentena** ✓, que BAJAN con cada liberacion ✓;
+      · y las **ciegas de la copia filtrada** ✓, que son las de la poblacion
+        que A1LIBERA ✓.
 
     Y el motivo de que la busqueda sea por el ARBOL y no por el texto ✓: en
     un TEXTO un `1258` puede ser el de la base canonica ✓ —que es estable— ✓
     o el de la copia ✓ —que es de A1— ✓, y el numero no los distingue ✓.
     Y en un ARBOL lo que se mira es el VALOR y el CONTEXTO ✓.
-
-    Y la lista de estables ✓ es la de la base canonica ✓, que esta congelada ✓.
     """
-    n = _conteo_de_resueltas()
-    if n is None:
-        return          # sin el detalle de A1, no hay nada que comprobar
-    assert n not in ESTABLES, (
-        'el conteo de resueltas ha coincidido con un numero estable (%d), y '
-        'entonces esta comprobacion no distinguiria nada' % n)
+    conteos = _conteos_de_a1()
+    medidos = {k: v for k, v in conteos.items()
+               if v is not None and v not in ESTABLES}
+    if not medidos:
+        return          # sin los ficheros de A1, no hay nada que comprobar
+
+    # Y LA REGLA ES POR CIFRA **Y SU CONTEXTO** ✓, y no por el numero
+    # suelto ✓. Y el motivo es un FALSO POSITIVO real ✓: MEDIDO, el 202 de
+    # `motor/test_diagnostico_grabador.py` es el **recuento del grabador** ✓
+    # —una medicion fija de ese grabador ✓— y coincide con el de la
+    # cuarentena por casualidad ✓. Y una regla que solo mira el numero
+    # ## senala cosas que no son de A1 ✓, y una regla que senala de mas
+    # acaba sin que nadie la mire ✓.
+    #
+    # Y por eso cada cifra tiene SUS palabras ✓: las de la cuarentena ✓ no
+    # son las de las manos resueltas ✓.
+    contextos = {
+        'manos resueltas': ('resuelt',),
+        'registros en cuarentena': ('cuarentena', 'filtrad', 'liberad'),
+        'ciegas de la copia filtrada': ('ciegas', 'filtrad'),
+    }
 
     culpables = []
     for ruta in _ficheros_de_test():
         if os.path.abspath(ruta) == os.path.abspath(__file__):
             continue
         with io.open(ruta, encoding='utf-8') as f:
-            arbol = ast.parse(f.read())
+            texto = f.read()
+        arbol = ast.parse(texto)
+        lineas = texto.split('\n')
         for nodo in ast.walk(arbol):
-            if (isinstance(nodo, ast.Constant)
-                    and isinstance(nodo.value, int)
-                    and nodo.value == n):
-                culpables.append('%s:%d' % (os.path.relpath(ruta, ROOT),
-                                              nodo.lineno))
+            if not (isinstance(nodo, ast.Constant)
+                    and isinstance(nodo.value, int)):
+                continue
+            for clave, valor in medidos.items():
+                if nodo.value != valor:
+                    continue
+                linea = lineas[nodo.lineno - 1].lower()
+                for palabra in contextos.get(clave, ()):
+                    if palabra in linea:
+                        culpables.append(
+                            '%s:%d  (=%r, el de %s)'
+                            % (os.path.relpath(ruta, ROOT), nodo.lineno,
+                               nodo.value, clave))
+                        break
+                break
     assert not culpables, (
-        'el conteo de manos resueltas por A1 (%d) aparece como literal en %d '
-        'sitio(s):\n   %s\n\nY ese numero es de A1 y SE MUEVE ✓, y un test '
-        'que falla por un dato que no es un defecto es un test que ensucia ✓. '
-        'Lo que se fija es la RELACION ✓.'
-        % (n, len(culpables), '\n   '.join(culpables)))
+        'hay %d literal(es) de un numero de A1 en los tests:\n   %s\n\nY '
+        'esos numeros son de A1 y SE MUEVEN ✓ —la cuarentena se libera, y '
+        'con ella cambia la poblacion— ✓, y un test que falla por un dato que '
+        'no es un defecto es un test que ensucia ✓. Lo que se fija es la '
+        'RELACION ✓.'
+        % (len(culpables), '\n   '.join(culpables)))
 
 
 def test_el_registro_no_tiene_la_cifra_de_a1():

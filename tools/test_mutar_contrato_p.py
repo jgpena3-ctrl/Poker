@@ -20,6 +20,8 @@ FUNCION, y no por su `main()` ✓.
 import hashlib
 import io
 import os
+
+import pytest
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -432,4 +434,93 @@ def test_el_instrumento_no_muta_sobre_un_arbol_sucio():
 
     # (c) y el motor ha quedado como estaba
     assert io.open(LEARN, 'rb').read() == original
+
+def test_el_mutador_no_toca_un_fichero_sucio_y_no_lo_restaura():
+    """Y que se negue, y que **no lo restaure**.
+
+    Y el motivo de que no lo restaure ✓: restaurar desde GIT cuando el
+    fichero tiene trabajo sin commitear **destruye ese trabajo** ✓. Y el
+    instrumento no es quien debe decidir eso ✓: lo correcto es **negarse** ✓
+    y que lo decida quien iba a mutar ✓.
+
+    Y este caso cubre a la vez los dos primeros de R1 ✓: el arbol sucio ✓ y
+    el fichero que ya estaba modificado ✓ —da igual por que motivo ✓—.
+    """
+    import mutar_contrato_p as M
+
+    original = io.open(LEARN, 'rb').read()
+    sucio = original + b'\n# una modificacion sin commitear\n'
+    with io.open(LEARN, 'wb') as f:
+        f.write(sucio)
+    try:
+        M.mutar_y_comprobar('M1', LEARN)
+    except RuntimeError:
+        pass
+    else:
+        raise AssertionError('el instrumento tenia que negarse')
+    finally:
+        with io.open(LEARN, 'wb') as f:
+            f.write(original)
+
+    # y el fichero ha quedado EXACTAMENTE como estaba ✓, con su trabajo sin
+    # commitear intacto ✓
+    assert io.open(LEARN, 'rb').read() == original
+
+
+def test_el_mutador_sin_git_falla_limpio_y_no_muta():
+    """Y que sin GIT **no mute**, en vez de leer el original del fichero.
+
+    Y el motivo ✓: **el fallback al fichero no es aceptable ni cuando GIT no
+    esta** ✓, porque es exactamente el fallo queNapshot ✓: un «original» que
+    no se puede comprobar no sirve para restaurar ✓. Y es mejor **fallar** que
+    mutar sin red ✓.
+    """
+    import mutar_contrato_p as M
+
+    original = io.open(LEARN, 'rb').read()
+    guardado = M._version_commiteada
+    M._version_commiteada = lambda ruta: None
+    try:
+        M.mutar_y_comprobar('M1', LEARN)
+    except RuntimeError as e:
+        assert 'COMITEADA' in str(e), str(e)
+    else:
+        raise AssertionError(
+            'sin GIT el instrumento tenia que FALLAR, y no mutar: el '
+            'fallback al fichero es el fallo que ya se/ha pagado')
+    finally:
+        M._version_commiteada = guardado
+
+    assert io.open(LEARN, 'rb').read() == original, 'el motor se ha tocado'
+
+
+def test_el_detector_de_fugas_ve_un_motor_mutado_por_cualquier_causa():
+    """Y que el detector NO dependa de que el mutador haya restaurado.
+
+    Y el motivo ✓: **un detector que solo detecta fugas del MUTADOR no
+    detecta fugas** ✓. Y el caso que se dio ✓ fue justo ese ✓: el motor
+    mutado por una fuga ✓, y lo detecto ✓.
+
+    Y el caso de este test ✓ es mas fuerte ✓: el motor esta mutado **sin que
+    el mutador pase por aqui** ✓ —lo simula una escritura a pelo ✓— y el
+    detector lo ve ✓.
+    """
+    import mutar_contrato_p as M
+
+    original = io.open(LEARN, 'rb').read()
+    # y una mutacion a pelo, que no pasa por el instrumento ✓
+    mutado = original.replace(
+        b"if pos == 'BB' and act in ('b', 'p') and not voluntary_before:",
+        b"if pos == 'BB' and act == 'b' and not voluntary_before:", 1)
+    if mutado == original:
+        pytest.skip('el patron de la mutacion no esta en el motor')
+    with io.open(LEARN, 'wb') as f:
+        f.write(mutado)
+    try:
+        assert not M._fichero_limpio(LEARN), (
+            'el detector NO ha visto un motor mutado a pelo')
+    finally:
+        with io.open(LEARN, 'wb') as f:
+            f.write(original)
+    assert M._fichero_limpio(LEARN), 'y tras restaurar, el motor esta limpio'
 

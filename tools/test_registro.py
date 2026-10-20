@@ -562,3 +562,31 @@ def test_el_registro_explica_los_nombres_en_su_primera_mencion():
             'la nota no explica %r, y sin eso el registro es una memoria de '
             'la conversacion' % explicacion)
 
+def test_el_registro_trata_la_cuarentena_como_de_a1():
+    """Y que la mencione, y que NO la trate como un estado de A2.
+
+    Y el motivo de que este dentro de la mitad de A1 y no sea una cuarta
+    mitad ✓: **A1 todavia no ha definido que significa cada estado** ✓, y un
+    estado que se define en el registro se convierte en un estado del
+    proyecto ✓ —y los estados de datos son de quien gobierna los datos ✓.
+
+    Y el otro motivo ✓: **la cuarentena cambia los numeros** ✓ —las manos
+    resueltas ✓, las ciegas de la copia ✓, el tamano de la poblacion ✓—, y
+    por eso refuerza la decision de no pinearlos ✓.
+    """
+    reg = _registro()
+    assert 'cuarentena' in reg, 'el registro no menciona la cuarentena'
+    # y que este en la mitad de A1 ✓
+    cuerpo = reg.split('EL ESTADO DE ESPERA', 1)[1].split('\n## ', 1)[0]
+    fila = [l for l in cuerpo.split('\n')
+            if l.startswith('| lo que depende de **A1** |')]
+    assert fila, 'no esta la mitad de A1'
+    assert 'cuarentena' in fila[0], (
+        'la cuarentena tiene que estar DENTRO de la mitad de A1, y no en '
+        'una cuarta mitad: %r' % fila[0][:120])
+    assert 'A2 no los fija' in fila[0], (
+        'y hay que decir que A2 no fija sus numeros')
+    # y que no aparezca como una mitad propia ✓
+    assert '| lo que depende de la **cuarentena** |' not in reg, (
+        'la cuarentena no es una mitad del registro: es de A1')
+

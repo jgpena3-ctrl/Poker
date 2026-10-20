@@ -3628,7 +3628,7 @@ CARPETAS_DEL_INVENTARIO = ('tools', 'motor', 'recorder')
 # fichero de esa taille es una tabla que nadie mantiene, y una tabla que nadie
 # mantiene es decoracion.
 
-TESTS_POR_CARPETA = {'motor': 878, 'recorder': 4, 'tools': 587}
+TESTS_POR_CARPETA = {'motor': 884, 'recorder': 4, 'tools': 591}
 
 
 # Y los FICHEROS, que son OTRA medida. MEDIDO, y sin ellos el guardia
@@ -3641,7 +3641,7 @@ TESTS_POR_CARPETA = {'motor': 878, 'recorder': 4, 'tools': 587}
 # es cierto. Y «hoy» no es una propiedad. O sea que el guardia no baja,
 # pero FALLA si algun dia hay tests abajo: es el unico caso en el que
 # bajaria, y bajarlo sin querer seria decir «el repo entero» sin serlo.
-FICHEROS_POR_CARPETA = {'motor': 72, 'recorder': 4, 'tools': 127}
+FICHEROS_POR_CARPETA = {'motor': 72, 'recorder': 4, 'tools': 128}
 # Y LA MAGNITUD QUE MIDE ESTE GUARDIA, que es lo que R2 pregunta, y que hay
 # que responder por la magnitud y no solo por el numero.
 #
@@ -5082,6 +5082,11 @@ ACUMULADORES_REPETIBLES = {
     ('tools/test_integrar_copia.py', 'pre[j]'):        'una LISTA y no un diccionario, y cada indice se escribe una vez: la forma es mas ancha que el defecto',    ('motor/preflop.py', 'tables[name]'):
         'la clave es el NOMBRE de una tabla, y las claves de un dict son '
         'unicas',
+    ('tools/cuarentena.py', 'q[hid]'):
+        'la clave es el IDENTIFICADOR de la mano, y cada mano se escribe una '
+        'vez: la ultima escritura es la de esa misma mano, de modo que no se '
+        'pierde nada. Y el sitio es de A1, que lo ha anadido con la '
+        'cuarentena.',
     ('motor/test_ranges.py', 'rank_pair_data[rank_key]'):
         'la clave sale del INDICE del bucle, y un indice no se repite',
     ('motor/test_stats.py', 'streets[key]'):
@@ -5109,7 +5114,7 @@ ACUMULADORES_REPETIBLES = {
 # pierde nada al sobrescribir —cada indice se escribe una vez—. De modo que la
 # forma es mas ANCHA que el defecto, y por eso el numero se declara: cada
 # sitio nuevo es una decision, y el total es el que se vigila.
-ASIGNACIONES_QUE_SOBRESCRIBEN = 47
+ASIGNACIONES_QUE_SOBRESCRIBEN = 48
 
 
 # Los ficheros que estan fuera de las tres carpetas del inventario, y el

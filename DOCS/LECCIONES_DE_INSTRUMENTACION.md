@@ -1506,3 +1506,24 @@ instrumento que restaure algo ✓:
 > ✓. Y para poder demostrarlo, lo que restaura tiene que venir de una fuente
 > verificable ✓ —un commit, un fichero de referencia, un hash declarado ✓— y
 > no del propio sitio que modifica ✓.
+
+### Y EL FALLBACK AL FICHERO NO ES ACEPTABLE, NI SIQUIERA SIN GIT
+
+Y esto es lo que se decidio al arreglar la fuga ✓, y es una decision que se
+puede perder de vista ✓:
+
+> **Si GIT no esta disponible, el instrumento FALLA y no muta** ✓. Y no se
+> cae al comportamiento anterior ✓ —leer el original del fichero ✓— **ni
+> siquiera como degradacion** ✓.
+
+Y el motivo ✓: el fallback es **exactamente** el fallo que se-ha pagado ✓ ✓.
+Y un fallback que existe es un fallback que se usa ✓ —el dia que GIT falte,
+> que es justo el dia que hace falta✓— y entonces el instrumento vuelve a
+> mentir ✓ sin avisar ✓.
+
+> Y la regla, en una linea ✓: **mejor fallar que mutar sin red** ✓.
+
+Y la consecuencia, que es la practica ✓: el instrumento **se niega a mutar un
+arbol sucio** ✓, y **no restaura** en ese caso ✓, porque restaurar desde GIT
+**destruiria el trabajo sin commitear de alguien** ✓ —que es peor que no
+mutar ✓—.
