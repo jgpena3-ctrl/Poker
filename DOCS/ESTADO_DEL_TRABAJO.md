@@ -52,7 +52,7 @@ activación** y **prueba que demuestra el cierre**.
 | `matrix` | A2, y A1 para las tres decisiones | el mapa: **tres** lectores del fichero, uno lo lee a través de otro, y tres solo lo mencionan. Y la cobertura: **324** spots, **252** con tabla, el **78 %** | qué significa una celda; el **22 %** de spots sin tabla; la regla de `Call_OR` | ninguna para la auditoría: se puede seguir midiendo. Y para las tres decisiones, la de A1 | `motor/test_lectura_matrices.py` (10) y `tools/test_cifras_no_movidas.py` (2) |
 | las 5 manos con board divergente | A2, y A1 para 2 cartas | **27** de **29** son un resumen truncado —`comunitarias` es un subconjunto de `streets`— y se clasifican sin la grabación | la identidad de la carta de `H_0915` y de `H_0921` | la resolución es de A1, con la grabación | `tools/test_auditoria_frentes.py` (las dos cifras y su condición) |
 | la vía preflop | A2, y quien decide el alcance | el contrato está escrito, sus **dos decisiones ya están tomadas**, y el camino **observable existe** en el motor: `equity_preflop_rango` no usa las cartas del rival, y hay un test de fuga que lo comprueba | que la equity observable **ordena** las manos —**no medido**, y el motivo es de coste—; y si la herramienta debe pasar a medirla, que **movería el AUC publicado** y es post-adopción | ninguna para la auditoría; las dos son de alcance | `tools/test_observable_preflop.py` (5) y `DOCS/OBSERVABLE_PREFLOP.md` |
-| el peso por rival | A2, y quien decide el objetivo | la mediana se aplica sobre los rivales **evaluables**, y ahora el resultado lleva `n_evaluados` | si la mediana es la reducción correcta, para la métrica siguiente | ninguna para la auditoría; la elección es de alcance | `tools/test_agregacion_rival.py` (9) |
+| el peso por rival | A2, y quien decide el objetivo | la mediana se aplica sobre los rivales **evaluables**, y ahora el resultado lleva `n_evaluados`. Y el frente de **instrumentación está CERRADO**: la agregación hace lo que decía, y hay la evidencia de los seis casos | si la mediana es la reducción correcta, para la métrica siguiente | ninguna para la instrumentación: está cerrada. Y para la elección, de quien decide el objetivo | `tools/test_agregacion_rival.py` (9) y la evidencia en `DOCS/AUDITORIA_FRONTES.md` §4 |
 
 > Y el patrón de los cuatro es el del proyecto entero: **la parte que se
 > puede decidir desde el código está medida y es pequeña; y la parte que
@@ -128,7 +128,27 @@ Y con el resultado que se espera, para que repetirla no sea adivinar:
 > ejecutar**, no lo que falta escribir.
 
 
-## 10. QUÉ DEBE HACER A1 ANTES DE DISPARAR
+## 10. QUÉ NO SE TOCA HASTA LA ADOPCIÓN
+
+Y no es una lista de cosas intocables: es la lista de las cosas que **cambian
+la respuesta**, con el motivo de cada una. Y el motivo es lo que las
+sostiene: una cosa intocable sin motivo es una superstición, y una
+superstición se negocia.
+
+| | lo que no se toca | por qué |
+|---|---|---|
+| 1 | **el defecto del contador de subidas** | MEDIDO, un limp corto de ≤ 0.5 BB cuenta como una subida, y arreglarlo **recalibra**: toca 43 de las 877 manos de la ventana |
+| 2 | **el AUC publicado** | su calculo depende del numero de manos (877 hoy) y de las DECISIONES de la base; y una recalibracion va despues de la adopcion |
+| 3 | **el grafo de `preflop_matrices.json`** | lo leen **siete** modulos, y la intencion del fichero la declara A1: un cambio en el grafo sin la intencion fijada es un cambio a ciegas |
+| 4 | **las cifras derivadas** | frecuencias, rangos y perfiles se derivan de la base; derivarlos contra una base que todavia no es canonica es medir sobre nada |
+| 5 | **la herramienta de equity preflop** (`tools/equity_de_mano.py`) | MEDIDO, usaria la via **observable** en vez de la retrospectiva, y eso **moveria el AUC publicado** |
+| 6 | **cualquier cifra que dependa del numero de manos** | la ventana fiable son **877** manos de la base de HOY y la copia tiene **1258**: el 29 de hoy no es el 29 de despues, y el 5 tampoco |
+
+> Y el patron: **las cinco primeras se mueven al adoptar, y la sexta se
+> vuelve a medir al adoptar**. Y ninguna se toca antes, porque antes no
+> hay una base que las sostenga.
+
+## 11. QUÉ DEBE HACER A1 ANTES DE DISPARAR
 
 Y son cuatro pasos, y cada uno tiene su criterio de **hecho**, que es lo que
 los hace comprobables y no una lista de intenciones.
@@ -137,7 +157,7 @@ los hace comprobables y no una lista de intenciones.
 |---|---|---|
 | 1 | **cerrar las 203 manos** | las 203 tienen su bote resuelto con la grabación original, y el detalle lo dice: `trabajo/botes_aritmetica.jsonl` con `resuelto` en las 203 |
 | 2 | **fijar el número de ciegas de la copia** | el número que el motor reconoce en la copia revisada, y el **control de categorías** que la copia da, medido sobre ella |
-| 3 | **declarar los dos controles** | `--ciegas-esperadas <N>` y `--control-categorias <fichero.json>`, y el fichero con las doce categorías **de la copia**, no las de la base de hoy |
+| 3 | **declarar los dos controles** | `--ciegas-esperadas <N>` y `--control-categorias <fichero.json>`, y el fichero con las doce categorías **de la copia**, no las de la base de hoy. Y **sin el control de categorías declarado el script NO da verde**: sale con el código **2**, que es INCOMPLETA y no FALLO, porque «no has decidido» no es «has fallado» |
 | 4 | **disparar la primera ejecución real** | `python tools/integrar_copia.py --ciegas-esperadas <N> --control-categorias <fichero.json>`, y el resultado con las **tres** secciones, y el **código 0** |
 
 > Y los dos controles del paso 3 son **declaraciones**, no medidas del

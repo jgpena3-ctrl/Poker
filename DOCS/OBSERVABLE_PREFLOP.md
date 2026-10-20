@@ -84,7 +84,44 @@ una cifra publicada es una **recalibración**, y las recalibraciones van
 después de la adopción. Y la cifra que se movería es el AUC, que es la
 métrica del proyecto.
 
-## 5. Y LO QUE NO SE HACE
+## 5. EL EXPERIMENTO, PREPARADO
+
+Y lo que hay, y es lo que R2 pide: **el experimento está escrito y se puede
+ejecutar**, y su resultado no se anticipa.
+
+```
+python tools/auditar_equity_observable.py --piloto      # una mano, dos combos
+python tools/auditar_equity_observable.py                # las 47, 40 combos
+```
+
+Y lo que hace, en orden:
+
+1. **la población** — las manos de la **partición versionada**
+   (`calibrar.es_validacion`), que es la misma que usa el AUC publicado, de
+   modo que la comparación sea legítima;
+2. **el rango** — por `rango_del_rival`, el mismo camino que la herramienta
+   publicada, de modo que el estimador no se haya construido con las cartas
+   de la mano que valida;
+3. **la equity** — con `equity_preflop_rango`, que **no ve las cartas del
+   rival**: la observable;
+4. **la etiqueta** — `1.0` si ganó, `0.0` si perdió, y **los empates no
+   entran y se cuentan**, que es la regla del reparto del `CONTRATO_L_SEC.md`;
+5. **el AUC y su intervalo** — con el mismo bootstrap que el AUC publicado.
+
+Y el **coste se imprime antes de empezar**, que es el dato que hace que esto
+sea de horas: MEDIDO, una mano con dos combos tarda **54 s**, de modo que las
+47 con 40 combos son **1880 enumeraciones** de C(48,5).
+
+> Y el piloto, ejecutado a mano: **una mano medida**, y el script dijo que no
+> se puede calcular el AUC porque **no hay las dos clases** ✓. Y eso es lo
+> que tiene que decir, y no un 0.5 inventado.
+
+Y lo que el experimento **no** hace, y es lo importante: **no toca la
+herramienta que genera el AUC publicado**, y no lo toca porque usarla
+movería el AUC. Y hay un test que lo comprueba por el árbol: la rama preflop
+de `equity_contra` sigue usando la enumeración contra la mano real.
+
+## 6. Y LO QUE NO SE HACE
 
 | | |
 |---|---|

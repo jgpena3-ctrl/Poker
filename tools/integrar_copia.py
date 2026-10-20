@@ -249,11 +249,27 @@ def integrar(origen, destino=None, ciegas_esperadas=None, sha_esperada=None,
                 'sha_esperada': sha_esperada,
                 'intercambio': False,
             }
+    # Y el control de las categorias: si no se DECLARA, no hay control, y
+    # sin control no se puede bendecir una candidata. Y el valor por defecto
+    # —las doce categorias de la base de HOY— es el control de NEUTRALIDAD
+    # DE LA CODIFICACION, que es OTRA pregunta, de modo que usarlo por
+    # defecto seria responder una que nadie ha hecho.
+    #
+    # Y por eso NO se usa por defecto: el procedimiento exige los dos
+    # controles declarados, y el que declare cada uno es quien lo ha medido.
     declarado = control_categorias is not None
     if control_categorias is None:
         control_categorias = dict(CONTROL_CATEGORIAS)
     sha_original = _sha(original)
-    informe = {'completo': ciegas_esperadas is not None, 'restaurado': False}
+    informe = {
+        'completo': (ciegas_esperadas is not None and declarado),
+        'faltan_controles': [
+            x for x, falta in (('el numero de ciegas',
+                                ciegas_esperadas is None),
+                               ('el control de las categorias',
+                                not declarado)) if falta],
+        'restaurado': False,
+    }
     try:
         shutil.copyfile(origen, destino)
         m = medir(destino)
@@ -268,6 +284,15 @@ def integrar(origen, destino=None, ciegas_esperadas=None, sha_esperada=None,
         informe['ciegas_esperadas'] = ciegas_esperadas
         if ciegas_esperadas is not None:
             informe['ciegas_iguales'] = (m['ciegas'] == ciegas_esperadas)
+        # Y LA INTEGRIDAD TECNICA, en un solo booleano, porque de eso depende
+        # si la autorizacion estadistica se evalua o no: no tiene sentido
+        # autorizar estadisticamente una candidata que el motor no lee.
+        informe['integridad_ok'] = (
+            not m['errores']
+            and not any(t.startswith('FALLO')
+                        for _e, t in informe.get('guardianes', []))
+            and (ciegas_esperadas is None or m['ciegas'] == ciegas_esperadas)
+            and m['violaciones'] == CONTROL_VIOLACIONES)
     finally:
         with io.open(destino, 'wb') as f:
             f.write(original)
@@ -368,10 +393,18 @@ def main(argv=None):
           % informe.get('ciegas_esperadas'))
     print('   control de categorias        : %s'
           % ('DECLARADO' if informe.get('control_categorias_declarado')
-             else 'el de la base de HOY (neutralidad de la codificacion)'))
-    print('   el control de las categorias es BLOQUEANTE, y no hay ninguna')
-    print('   forma de volverlo informativo: pasarlo requiere un control')
-    print('   DECLARADO, y decidir cual es, es de A1.')
+             else 'NO DECLARADO'))
+    if informe.get('integridad_ok'):
+        print('   la integridad tecnica ha pasado, de modo que la '
+              'autorizacion ESTA EVALUADA:')
+        print('   el control de las categorias es BLOQUEANTE, y no hay ninguna')
+        print('   forma de volverlo informativo: pasarlo requiere un control')
+        print('   DECLARADO, y decidir cual es, es de A1.')
+    else:
+        print('   LA INTEGRIDAD TECNICA NO HA PASADO, de modo que la '
+              'autorizacion estadistica')
+        print('   NO SE EVALUA: no tiene sentido autorizar estadisticamente')
+        print('   una candidata que el motor no lee.')
 
     # ------------------------------------------------------------------
     # Y EL ORDEN, y son TRES CLASES, y el criterio es: lo mas grave y lo
@@ -405,8 +438,13 @@ def main(argv=None):
     #    en la candidata.
     if not informe['completo']:
         print()
-        print('   INCOMPLETA: falta el numero de ciegas, que lo fija A1. Y '
-              'sin el, la ejecucion no puede decir si la copia es valida.')
+        print('   INCOMPLETA: falta %s. Y sin %s, la ejecucion no puede decir '
+              'si la candidata es valida.'
+              % (', '.join(informe.get('faltan_controles', [])) or 'los controles',
+                 'ellos' if len(informe.get('faltan_controles', [])) != 1
+                 else 'el'))
+        print('   Y el motivo de que sea INCOMPLETA y no FALLO: «no has '
+              'decidido» no es «has fallado».')
         return CODIGO_INCOMPLETA
 
     # 4. DE LA CANDIDATA. Y un guardian que FALLA hace fallar la integracion:

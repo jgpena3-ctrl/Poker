@@ -198,3 +198,39 @@ def test_los_cuatro_pasos_de_a1_estan_con_su_criterio_de_hecho():
             'los pasos de A1 no hablan de %r, y la secuencia tiene que ser '
             'cerrar, fijar, declarar y disparar' % ancla)
 
+def test_la_seccion_de_lo_que_no_se_toca_existe_y_tiene_motivos():
+    """Y que exista, y que cada elemento diga POR QUE.
+
+    Y el motivo de que el motivo sea la parte que se comprueba: una cosa
+    intocable sin motivo es una supersticion, y una supersticion se negocia.
+    """
+    reg = _registro()
+    assert 'QUÉ NO SE TOCA HASTA LA ADOPCIÓN' in reg, (
+        'el registro no tiene la seccion de lo que no se toca')
+    cuerpo = reg.split('QUÉ NO SE TOCA HASTA LA ADOPCIÓN', 1)[1]
+    cuerpo = cuerpo.split('\n## ', 1)[0]
+    filas = []
+    for l in cuerpo.split('\n'):
+        if not l.startswith('|') or l.count('|') < 4:
+            continue
+        celdas = [c.strip() for c in l.strip('|').split('|')]
+        if len(celdas) != 3:
+            continue
+        if set(''.join(celdas)) <= set('-: '):
+            continue
+        if celdas[0].isdigit():
+            filas.append(celdas)
+    assert len(filas) == 6, (
+        'se esperaban los seis elementos, y hay %d: %r' % (len(filas), filas))
+    for numero, que, porque in filas:
+        assert que, 'el elemento %s no dice QUE no se toca' % numero
+        assert porque, (
+            'el elemento %s no dice POR QUE, y sin motivo es una '
+            'supersticion' % numero)
+    # y los seis tienen que ser los que son
+    texto = ' '.join(f[1].lower() for f in filas)
+    for ancla in ('contador de subidas', 'auc', 'preflop_matrices',
+                  'cifras derivadas', 'equity preflop', 'numero de manos'):
+        assert ancla in texto, (
+            'falta el elemento %r en la lista de lo que no se toca' % ancla)
+

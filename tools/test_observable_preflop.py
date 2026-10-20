@@ -186,3 +186,69 @@ def test_el_camino_observable_funciona_de_situation(monkeypatch):
     assert eq == 0.25
     assert abs(wins + ties + losses - 1.0) < 1e-9
 
+# ---------------------------------------------------------------------------
+# EL DOCUMENTO: MEDIDO E HIPOTESIS, Y QUE NO SE MEZCLEN
+# ---------------------------------------------------------------------------
+
+def _documento():
+    ruta = os.path.join(ROOT, 'DOCS', 'OBSERVABLE_PREFLOP.md')
+    with io.open(ruta, encoding='utf-8') as f:
+        return f.read()
+
+
+def test_el_documento_separa_lo_medido_de_lo_hipotesis():
+    """Y que las dos cosas esten en secciones DISTINTAS.
+
+    Y el motivo: una hipotesis escrita como un resultado acaba citandose
+    como un resultado. Y la seccion de las hipotesis tiene que estar
+    VECINA a la de lo medido, y no al final del documento, que es donde se
+    pierde.
+    """
+    doc = _documento()
+    assert '### MEDIDO' in doc, 'el documento no tiene la seccion de MEDIDO'
+    assert '### HIPÓTESIS' in doc, (
+        'el documento no tiene la seccion de HIPOTESIS')
+    assert doc.index('### MEDIDO') < doc.index('### HIPÓTESIS'), (
+        'lo medido tiene que ir antes que la hipotesis')
+
+
+def test_la_hipotesis_esta_declarada_como_no_medida_y_con_su_motivo():
+    """Y que la hipotesis diga que NO esta medida, y por que.
+
+    Y el motivo del motivo: sin el, la hipotesis se lee como un resultado
+    que todavia no se ha hecho, y eso es peor que no tenerla.
+    """
+    doc = _documento()
+    bloque = doc.split('### HIPÓTESIS', 1)[1].split('\n### ', 1)[0]
+    bajo = bloque.lower()
+    assert 'ordene las manos' in bajo, (
+        'la hipotesis no es la que esta declarada')
+    assert 'no está medido' in bajo or 'no esta medido' in bajo, (
+        'la hipotesis no dice que NO esta medida')
+    assert '1 712 304' in bloque, (
+        'la hipotesis no dice el motivo del coste, que es lo que explica '
+        'por que no se ha medido')
+    assert 'C(48,5)' in bloque, (
+        'y el motivo tiene que ser el numero del contrato, que es donde esta '
+        'medido')
+
+
+def test_el_documento_declara_lo_de_n_combos_y_lo_del_auc():
+    """Y las dos afirmaciones que sostienen el «no se toca».
+
+    Y la primera: bajar `n_combos` es PRACTICABLE, que es lo que hace que
+    el camino observable sea usable. Y la segunda: cambiar la herramienta
+    moveria el AUC publicado, que es post-adopcion.
+
+    Y el motivo de que esten en un test: las dos son las que explican por que
+    la via observable no se usa todavia, y si se olvidaran, el «no se toca»
+    pareceria una mania en vez de una consecuencia.
+    """
+    doc = _documento()
+    assert 'n_combos' in doc, 'el documento no habla de `n_combos`'
+    assert 'practicable' in doc.lower() or 'PRACTICABLE' in doc, (
+        'el documento no dice que bajar `n_combos` es practicable')
+    assert 'AUC' in doc, 'el documento no habla del AUC'
+    assert 'post-adopci' in doc.lower(), (
+        'el documento no dice que cambiar la herramienta es post-adopcion')
+

@@ -289,3 +289,82 @@ def test_el_lector_sigue_distinguendo_una_frecuencia_nula_de_una_desconocida():
     _v, fuente = preflop.prob_or_fallback('ROL', 'UTG', '')
     assert fuente == 'uniform'
 
+# ---------------------------------------------------------------------------
+# 6. LOS TRES ESTADOS, QUE NO SON EL MISMO
+# ---------------------------------------------------------------------------
+
+def _hay_alguna_tabla_de(accion):
+    """Si el fichero tiene ALGUNA tabla de esa accion, en algun spot.
+
+    Y el motivo de que la pregunta sea «alguna»: para distinguir «no hay
+    tabla de esta accion» de «no hay tabla de esta accion EN ESTE SPOT»,
+    que son dos estados distintos y que el lector no distingue.
+    """
+    tablas = preflop.load_tables()
+    return any(t.get('action') == accion for t in tablas.values())
+
+
+def test_los_tres_estados_de_una_lectura_se_distinguen():
+    """Y que se distingan, y que la distincion se pueda EXPRESAR.
+
+    Y los tres estados, que son los que R2 pide separar:
+
+      · una frecuencia REALMENTE CERO —la tabla existe y dice 0.0—;
+      · una frecuencia DESCONOCIDA por ausencia de datos —no hay tabla de
+        esa accion en ningun sitio—;
+      · una POSICION O SITUACION SIN ENTRADA APLICABLE —hay tablas de esa
+        accion, pero no en este spot—.
+
+    Y el segundo y el tercero son DISTINTOS, y el lector los devuelve
+    IGUALES —`None`—, de modo que la distincion hay que hacerla con el
+    inventario de tablas al lado. Y eso es un hecho del contrato, y un test
+    que lo deja escrito.
+    """
+    # (1) una frecuencia REALMENTE CERO
+    v = preflop.prob('ROL', 'BB', '')
+    assert v is not None
+    assert float(v[0]) == 0.0, (
+        'se esperaba un cero REAL en la primera mano de ROL_BB, y hay %r'
+        % float(v[0]))
+
+    # (2) una frecuencia DESCONOCIDA: no hay tabla de esa accion en ningun
+    #     sitio. Y `LIMP` es el ejemplo: el mapa de acciones lo menciona,
+    #     pero el fichero no tiene ninguna tabla de ese prefijo.
+    assert not _hay_alguna_tabla_de('LIMP'), (
+        'LIMP tiene tablas, y este test usa LIMP como el ejemplo de accion '
+        'SIN NINGUNA tabla: si ha cambiado, hay que elegir otro ejemplo')
+    assert preflop.prob('LIMP', 'UTG', '') is None
+
+    # (3) una POSICION SIN ENTRADA APLICABLE: hay tablas de la accion, pero
+    #     no en ese spot. Y MEDIDO, `OR_BB` no existe porque el BB no abre,
+    #     y `ROL_UTG` no existe porque el UTG no se enfrenta a un limp.
+    assert _hay_alguna_tabla_de('OR')
+    assert preflop.prob('OR', 'BB', '') is None
+    assert _hay_alguna_tabla_de('ROL')
+    assert preflop.prob('ROL', 'UTG', '') is None
+
+    # y los tres se distinguen CON EL INVENTARIO al lado, que es lo que
+    # significa que el lector los devuelve iguales
+    assert preflop.prob('ROL', 'UTG', '') is preflop.prob('LIMP', 'UTG', '')
+    assert preflop.prob('ROL', 'BB', '') is not None
+
+
+def test_el_inventario_distingue_los_estados_que_el_lector_no():
+    """Y que el inventario SEA la distincion, y que se pueda usar.
+
+    Y el motivo de que esto sea un test y no una frase: el lector devuelve
+    `None` para los dos estados que no son «cero real», de modo que quien
+    consume el dato tiene que poder distinguir «no modelado» de «no
+    aplicable aqui». Y la unica forma de distinguirlo es el inventario, y
+    por eso el inventario es parte del contrato.
+    """
+    tablas = preflop.load_tables()
+    prefijos = set(k.split('_')[0] for k in tablas)
+    assert 'LIMP' not in prefijos, (
+        'LIMP ha vuelto a tener tablas, y este test lo usa como el ejemplo de '
+        'accion sin ninguna')
+    assert 'ROL' in prefijos
+    # y las dos preguntas dan respuestas distintas para los dos estados
+    assert _hay_alguna_tabla_de('ROL') is True
+    assert _hay_alguna_tabla_de('LIMP') is False
+
