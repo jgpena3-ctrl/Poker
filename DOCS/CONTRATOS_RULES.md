@@ -79,8 +79,24 @@ llamada.
 
 ### C4 — `select_best(evs, rp) -> (label, value)`
 
+> **La fuente de verdad de C4 es [`CONTRATO_C4.md`](CONTRATO_C4.md), que está
+> FIRMADO.** Este resumen lo describe, y este resumen se equivoca en un punto:
+> la línea siguiente dice que la etiqueta devuelta está «siempre» en
+> `rp.candidates`, y **no es así**. El fold es el **suelo** —§2.1 y §2.4 del
+> contrato firmado— y se puede devolver aunque el plan no lo ofrezca.
+>
+> MEDIDO, con estados sintéticos: un plan de `('check',)` y un fold con más EV
+> devuelve `('fold', 5.0)`, y `fold` no está en el plan.
+>
+> Y el motivo de que la nota esté aquí, y no solo en el contrato firmado, es
+> que **una discrepancia entre un resumen y su fuente tiene que quedar
+> escrita en el resumen**, o el resumen se «arregla» por error y se rompe el
+> contrato firmado. Ver `DOCS/AUDITORIA_RULES.md` §1.
+
 - **`rp is None`** → equivale a `evs.best()` sobre **todas** las acciones.
-- **`rp` dado** → la etiqueta devuelta está **siempre** en `rp.candidates`.
+- **`rp` dado** → la etiqueta devuelta puede **no** estar en `rp.candidates`:
+  el fold es el suelo y se considera siempre. **La fuente de verdad es
+  `CONTRATO_C4.md` §2.1 y §2.4.**
 - **Baseline del fold:** es el **EV real** de `ev['fold']`, no `0.0`. Con todas
   las acciones peor que el fold, devuelve `('fold', <valor real>)`, aunque sea
   negativo. Devolver `0.0` sería inventar un número.

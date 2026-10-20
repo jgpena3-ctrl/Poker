@@ -15,6 +15,7 @@
 """
 import importlib.util
 import os
+import subprocess
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CIRILICO = chr(0x435)
@@ -196,10 +197,86 @@ def test_un_fichero_sin_seguimiento_es_todo_del_cambio():
     assert not os.path.exists(ruta), 'el test tiene que limpiar'
 
 
+def _un_fichero_rastreado_y_sin_cambios():
+    """Un fichero del repo que este RASTREADO y SIN CAMBIOS.
+
+    Y se BUSCA, y no se fija, y el motivo es el que dice el test de al lado,
+    que lo dice mejor: **un test que depende del estado del repositorio es un
+    test que se rompe solo.**
+
+    Y el caso concreto que lo obligo: este test fijaba
+    `motor/test_canal_manual.py` como su ejemplo, y ese fichero lo cambia
+    medio repo. De modo que un cambio legitimo en el rompia un test que no va
+    con el, y el sintoma era un fallo rojo en un sitio que no tiene nada que
+    ver.
+
+    Y el criterio de «sin cambios» sale del MISMO `git status` que usa el
+    verificador, para que los dos miren lo mismo.
+
+    Y se acota a las tres carpetas que el barrido recorre —`tools/`, `motor/`
+    y `recorder/`—, porque el escenario tiene que ser un fichero que el
+    verificador MIRA. Un `.py` en la raiz del repo no lo mira nadie, y un
+    test cuyo caso no lo mira nadie no comprueba nada.
+
+    Y se exige que el fichero NO ESTE VACIO, y el motivo es el de siempre: un
+    fichero vacio no tiene lineas, de modo que la comprobacion pasaria con
+    cualquier cosa. MEDIDO: sin esta exigencia, el helper encontraba
+    `motor/__init__.py`, y el caso era trivial.
+
+    Y se exige que el fichero TENGA un caracter que el BARRIDO senalaria, que
+    es lo que hace fiel el escenario —«aunque tenga el caracter dentro»— y lo
+    que lo hace util: un fichero que el barrido mira de verdad. Y el criterio
+    sale del propio barrido, `_sospechoso`, y no de una lista: de modo que
+    los dos miran lo mismo.
+    """
+    vc = _mod()
+    salida = subprocess.run(['git', 'status', '--porcelain'], cwd=ROOT,
+                            capture_output=True, text=True).stdout
+    tocados = set()
+    for linea in salida.split('\n'):
+        if linea.strip():
+            tocados.add(linea[3:].strip())
+    listados = subprocess.run(['git', 'ls-files'], cwd=ROOT,
+                              capture_output=True, text=True).stdout
+    for rel in listados.split('\n'):
+        rel = rel.strip()
+        if not rel or rel in tocados or not rel.endswith('.py'):
+            continue
+        if rel.split('/')[0] not in ('tools', 'motor', 'recorder'):
+            continue
+        ruta = os.path.join(ROOT, rel)
+        if os.path.getsize(ruta) == 0:
+            continue
+        with open(ruta, encoding='utf-8') as f:
+            texto = f.read()
+        if not any(vc._sospechoso(c) for c in set(texto)):
+            continue
+        return rel
+    return None
+
+
 def test_un_fichero_rastreado_y_sin_cambios_no_tiene_lineas_nuevas():
     """El otro extremo: un fichero que no ha cambiado no puede salir
-    DEL CAMBIO aunque tenga el caracter dentro."""
+    DEL CAMBIO aunque tenga el caracter dentro.
+
+    Y el fichero se BUSCA, y no se fija, y el motivo esta en el docstring del
+    helper: un test que depende del estado del repositorio es un test que se
+    rompe solo. Y este test fijaba uno —`motor/test_canal_manual.py`—, que es
+    de los ficheros que mas se tocan del repo, de modo que un cambio
+    legitimo en el rompia un test que no va con el.
+
+    Y lo que se comprueba es lo de siempre: un fichero RASTREADO y SIN
+    CAMBIOS no produce lineas nuevas. Y si no se encuentra ninguno, el test
+    falla en vez de pasar: porque un caso que no se puede construir es un caso
+    que no se ha comprobado, no uno que ha pasado.
+    """
     vc = _mod()
-    rel = 'motor/test_canal_manual.py'
-    assert '??' not in vc._porcelain(rel)
-    assert vc.lineas_nuevas(os.path.join(ROOT, rel)) == []
+    rel = _un_fichero_rastreado_y_sin_cambios()
+    assert rel, (
+        'no hay ningun fichero rastreado y sin cambios, y sin el no se puede '
+        'comprobar nada. Y si el repo entero esta modificado, este test no '
+        'tiene caso: es mejor que falle a que pase sin mirar.')
+    assert '??' not in vc._porcelain(rel), (
+        'el fichero tiene que estar RASTREADO, y no nuevo: %r' % rel)
+    assert vc.lineas_nuevas(os.path.join(ROOT, rel)) == [], (
+        'un fichero sin cambios no puede tener lineas nuevas: %r' % rel)

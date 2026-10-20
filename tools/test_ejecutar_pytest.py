@@ -3628,7 +3628,7 @@ CARPETAS_DEL_INVENTARIO = ('tools', 'motor', 'recorder')
 # fichero de esa taille es una tabla que nadie mantiene, y una tabla que nadie
 # mantiene es decoracion.
 
-TESTS_POR_CARPETA = {'motor': 834, 'recorder': 4, 'tools': 487}
+TESTS_POR_CARPETA = {'motor': 870, 'recorder': 4, 'tools': 537}
 
 
 # Y los FICHEROS, que son OTRA medida. MEDIDO, y sin ellos el guardia
@@ -3641,7 +3641,7 @@ TESTS_POR_CARPETA = {'motor': 834, 'recorder': 4, 'tools': 487}
 # es cierto. Y «hoy» no es una propiedad. O sea que el guardia no baja,
 # pero FALLA si algun dia hay tests abajo: es el unico caso en el que
 # bajaria, y bajarlo sin querer seria decir «el repo entero» sin serlo.
-FICHEROS_POR_CARPETA = {'motor': 68, 'recorder': 4, 'tools': 110}
+FICHEROS_POR_CARPETA = {'motor': 72, 'recorder': 4, 'tools': 122}
 # Y LA MAGNITUD QUE MIDE ESTE GUARDIA, que es lo que R2 pregunta, y que hay
 # que responder por la magnitud y no solo por el numero.
 #
@@ -3673,7 +3673,7 @@ FICHEROS_POR_CARPETA = {'motor': 68, 'recorder': 4, 'tools': 110}
 # cambia ese numero. Lo que NO se puede tapar sin ejecutar pytest es el numero
 # de CASOS de cada una, y eso queda declarado como punto ciego y no como
 # garantia.
-PARAMETRIZADOS_ABAJO = 17
+PARAMETRIZADOS_ABAJO = 18
 
 def _tests_de(directorio):
     """Cuantos `def test_` hay en los `.py` de `directorio`, y cuantos ficheros.
@@ -5079,7 +5079,7 @@ def _asignaciones_que_sobrescriben():
 # esto sea una DECLARACION y no una lista: un test no puede juzgar un texto,
 # pero si puede comprobar que NO FALTA ninguno.
 ACUMULADORES_REPETIBLES = {
-    ('motor/preflop.py', 'tables[name]'):
+    ('tools/test_integrar_copia.py', 'pre[j]'):        'una LISTA y no un diccionario, y cada indice se escribe una vez: la forma es mas ancha que el defecto',    ('motor/preflop.py', 'tables[name]'):
         'la clave es el NOMBRE de una tabla, y las claves de un dict son '
         'unicas',
     ('motor/test_ranges.py', 'rank_pair_data[rank_key]'):
@@ -5104,7 +5104,133 @@ ACUMULADORES_REPETIBLES = {
 }
 
 # Y el total, que es una cifra y por lo tanto vive en una constante.
-ASIGNACIONES_QUE_SOBRESCRIBEN = 46
+# Y MEDIDO, por que el numero se declara y no se deriva: la FORMA `d[clave] =
+# <lista o dict>` no distingue un DICCIONARIO de una LISTA, y una lista no
+# pierde nada al sobrescribir —cada indice se escribe una vez—. De modo que la
+# forma es mas ANCHA que el defecto, y por eso el numero se declara: cada
+# sitio nuevo es una decision, y el total es el que se vigila.
+ASIGNACIONES_QUE_SOBRESCRIBEN = 47
+
+
+# Los ficheros que estan fuera de las tres carpetas del inventario, y el
+# motivo de cada uno.
+#
+# Y MEDIDO, el motivo de que esta lista exista: el codigo del repo vive en
+# `tools/`, `motor/` y `recorder/`, y lo que se queda fuera no lo vigilaba
+# NADA: ni el inventario, ni el control de caracteres, ni el de docstrings.
+#
+# Y un fichero que nadie vigila es un fichero que nadie lee. De modo que
+# esta lista los NOMBRA, y el guardian de mas abajo falla si aparece uno que
+# no este aqui. Que es lo contrario de ampliar la lista de excepciones: es
+# obligar a decidir.
+#
+# Y los `.py`, los `.md` y los `.jsonl` de la raiz y de `trabajo/` estan
+# ADEMAS bajo el barrido de caracteres, que los recorre. De modo que la lista
+# no es una exccepcion: es la declaracion de POR QUE estan ahi.
+#
+# Y los `.txt` y el `.csv` de la raiz NO estan en esta lista, y el motivo esta
+# en `tools/verificar_caracteres.py`: los `.txt` pueden estar en UTF-16LE, y
+# la politica es de los `.txt` en general; y el `.csv` es una tabla de datos,
+# no codigo ni documentacion del motor.
+FUERA_DEL_INVENTARIO = {
+    # el codigo
+    'hand_editor.py':
+        'el editor de la COPIA de trabajo, del trabajo en paralelo de la base',
+    'trabajo/ABRIR_EDITOR_COPIA.py':
+        'el lanzador del editor, del trabajo en paralelo de la base',
+    # los documentos del trabajo en paralelo
+    'APUESTAS_DIFICILES.md':
+        'el catalogo de las apuestas que hay que mirar en las grabaciones',
+    'AUDITORIA_SEMANTICA_GRABADOR.md':
+        'la auditoria semantica del grabador',
+    'FRONTERA_GRABADOR.md':
+        'la frontera entre las dos generaciones de grabador',
+    'INDICE_DEFECTOS.md':
+        'el indice de los defectos que quedan por revisar',
+    'PLAN_EDICION_DB.md':
+        'el plan de edicion de la base',
+    'REVISION_DIAGNOSTICO_GRABADOR.md':
+        'la revision del diagnostico del grabador',
+    'trabajo/BOTES_NO_ENCONTRADOS.md':
+        'los botes que no cuadran con la grabacion',
+    # los datos del trabajo en paralelo
+    'trabajo/hands_db_edicion.jsonl':
+        'la COPIA normalizada de la base, que A1 esta revisando',
+    'trabajo/botes_aritmetica.jsonl':
+        'los botes calculados con la aritmetica de la copia',
+    'trabajo/botes_aritmetica_origen.jsonl':
+        'los botes calculados con la aritmetica de siempre',
+}
+
+
+def test_el_codigo_fuera_del_inventario_esta_declarado():
+    """Que no aparezca codigo fuera de las tres carpetas sin declararse.
+
+    Y el motivo: el inventario, el control de caracteres y el de docstrings
+    miran `tools/`, `motor/` y `recorder/`. Un `.py` en la raiz, o en
+    `trabajo/`, no lo mira NINGUNO. Y si no esta declarado, no lo vigila nadie
+    y no se sabe por que esta ahi.
+
+    Y el fallo tiene que NOMBRAR el fichero, porque un guardián que dice
+    «hay un problema» sin decir cual es un guardián que se mira por encima.
+    """
+    declarados = set(FUERA_DEL_INVENTARIO)
+    vistos = []
+    for nombre in sorted(os.listdir(ROOT)):
+        ruta = os.path.join(ROOT, nombre)
+        if nombre in CARPETAS_DEL_INVENTARIO or nombre.startswith('.'):
+            continue
+        if os.path.isfile(ruta) and nombre.endswith('.py'):
+            vistos.append(nombre)
+        elif os.path.isdir(nombre) and nombre == 'trabajo':
+            for n2 in sorted(os.listdir(ruta)):
+                if n2.endswith('.py'):
+                    vistos.append('trabajo/' + n2)
+    sin_declarar = sorted(set(vistos) - declarados)
+    assert not sin_declarar, (
+        'hay %d fichero(s) de codigo fuera de las carpetas del inventario y '
+        'sin declarar: %r.\n\nY no declararlos no es una opcion: un '
+        'fichero fuera del alcance de los guardianes no lo vigila nadie, y '
+        'eso hay que decidirlo, no dejarlo.\n\nLos declarados, con su '
+        'motivo: %r' % (len(sin_declarar), sin_declarar,
+                        sorted(FUERA_DEL_INVENTARIO)))
+    # Y lo declarado tiene que EXISTIR, que es la otra mitad: una declaracion
+    # de algo que ya no esta es una declaracion falsa.
+    # Y la otra mitad —«los declarados existen»— la comprueba
+    # `test_los_ficheros_declarados_existen_y_estan_vigilados`, que mira los
+    # DOCE y no solo los `.py`. Y aqui solo se comprueba que no haya codigo sin
+    # declarar, que es lo propio de este test.
+
+
+def test_los_ficheros_declarados_existen_y_estan_vigilados():
+    """Que los doce declarados EXISTAN, y que los de texto esten vigilados.
+
+    Y la segunda mitad es la que importa: un fichero declarado que ha
+    desaparecido es un hueco nuevo, y la lista se queda con una entrada que no
+    vigila nada. Y la tercera: los `.md` y los `.jsonl` declarados tienen que
+    estar BAJO el barrido, que es lo que hace que la declaracion no sea una
+    decoracion.
+    """
+    faltan = []
+    for nombre in sorted(FUERA_DEL_INVENTARIO):
+        ruta = os.path.join(ROOT, nombre.replace('/', os.sep))
+        if not os.path.isfile(ruta):
+            faltan.append(nombre)
+    assert not faltan, (
+        'hay %d fichero(s) declarados que no existen: %r. Y una declaracion '
+        'de algo que no esta es una declaracion falsa.' % (len(faltan), faltan))
+    import verificar_caracteres as VC
+    sin_vigilar = []
+    for nombre in sorted(FUERA_DEL_INVENTARIO):
+        if not nombre.endswith(('.md', '.jsonl')):
+            continue
+        if not any(VC._coincide_con(patron, nombre)
+                   for patron in VC.PATRONES):
+            sin_vigilar.append(nombre)
+    assert not sin_vigilar, (
+        'estos ficheros estan declarados, pero el barrido de caracteres NO los '
+        'mira: %r. Y una declaracion que no vigila nada es una decoracion.'
+        % sin_vigilar)
 
 
 def test_las_asignaciones_que_sobrescriben_estan_revisadas():

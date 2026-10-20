@@ -404,8 +404,24 @@ def _es_ciega_bb(i, pos, act, amount, is_blind, voluntary_before, bb=BB):
 
     Orden de confianza:
       1. Marca explícita del recorder (`blind`) — identidad, no heurística.
-      2. Respaldo estructural para datos antiguos: posición BB, acción 'b' y
-         sin ninguna acción voluntaria anterior.
+      2. Respaldo estructural para datos antiguos: posición BB, acción 'b' o
+         'p' y sin ninguna acción voluntaria anterior.
+
+    Y LA ACCIÓN `p`, y por qué entra aquí
+    ---------------------------------------
+    Una `p` es una POSTA: el jugador pone dinero sin que sea una decisión.
+    Y la ciega es exactamente eso. De modo que una `BB p` es la ciega del BB.
+
+    Y el contrato es `DOCS/CONTRATO_ACCION_P.md`, con la medición: la base de
+    HOY no tiene ni una `p`, de modo que este cambio **no mueve un solo
+    número**. MEDIDO: con la regla nueva, las manos con ciega reconocida
+    siguen siendo 921 de 1258, las mismas de antes.
+
+    Y lo que NO se hace aquí, y por qué: la acción `p` no se añade a la lista
+    de acciones que `classify_first_action` sabe clasificar. Porque
+    `classify_first_action` clasifica una DECISIÓN, y una posta no lo es. Lo
+    que se hace es SALTAR las posts antes de llegar ahí, y eso lo decide el
+    consumidor, no esta función.
 
     Por qué el importe ya NO decide
     --------------------------------
@@ -421,18 +437,24 @@ def _es_ciega_bb(i, pos, act, amount, is_blind, voluntary_before, bb=BB):
 
     LIMITACIÓN CONOCIDA
     -------------------
-    La regla exige `act == 'b'`, así que una subida registrada correctamente
-    como `'r'` NUNCA se lee como ciega, aunque venga después de solo folds. El
-    riesgo real es más estrecho: que el recorder escribiera una subida
-    voluntaria del BB como `'b'` y sin ninguna acción voluntaria antes. Entonces
-    sí se leería como ciega.
+    La regla exige `act` IN ('b', 'p'), así que una subida registrada
+    correctamente como `'r'` NUNCA se lee como ciega, aunque venga después de
+    solo folds. El riesgo real es más estrecho: que el recorder escribiera una
+    subida voluntaria del BB como `'b'` y sin ninguna acción voluntaria antes.
+    Entonces sí se leería como ciega.
+
+    Y con la `p` hay un riesgo NUEVO, y está medido: una `BB p` puesta DESPUÉS
+    de una acción voluntaria se leería como ciega. Y eso es el mismo defecto
+    que CM-004 vigila, con otra codificación: la analogía es «una `BB p` tarde».
+    MEDIDO: 0 manos, en las dos codificaciones. Ver
+    `DOCS/CONTRATO_ACCION_P.md` §5.
 
     Medido sobre las 900 manos fiables: **0 casos**. Es una medición, no una
     prueba, y por eso hay un test que la fija.
     """
     if is_blind:
         return True
-    if pos == 'BB' and act == 'b' and not voluntary_before:
+    if pos == 'BB' and act in ('b', 'p') and not voluntary_before:
         return True
     return False
 
@@ -450,6 +472,20 @@ def preflop_events(hand, bb=BB):
         es_ciega_bb = _es_ciega_bb(i, pos, act, amount, is_blind,
                                    voluntary_before, bb)
         if es_ciega_bb:
+            continue
+        if act == 'p':
+            # Una POSTA no es una decisión. El jugador que posta la ciega
+            # SIGUE sin decidir, y su siguiente acción es su primera
+            # decisión.
+            #
+            # Y el filtro va ANTES de `decided.add(pos)`, y no despues: si la
+            # posta contara como decision, la siguiente acción del mismo
+            # jugador caeria en la rama de «ya decidio», y una subida se
+            # contaria como la segunda acción de alguien que no habia
+            # decidido. MEDIDO, con las ciegas recodificadas: 922 de 1258
+            # manos cambiaban de respuesta sin este salto.
+            #
+            # Y el contrato es `DOCS/CONTRATO_ACCION_P.md`.
             continue
         if pos in decided:
             if act in ('b', 'r'):
@@ -532,16 +568,41 @@ def entradas_bb_rechazadas(hand, bb=BB):
 
     `CAUSA_IMPORTE` no es un defecto de dato: era un defecto del motor, ya
     corregido. `CAUSA_ORDEN` si lo es, y es lo que se conoce como CM-004.
+
+    Y LA ACCIÓN `p`, Y POR QUÉ ESTA REGLA TIENE QUE MIRAR A DOS BANDAS
+    ------------------------------------------------------------------
+    En la codificacion vieja, la ciega del BB es un `b`, y una `BB b` que no
+    puede ser la ciega es un DEFECTO.
+
+    En la codificacion nueva —la de la copia normalizada— la ciega del BB es
+    una `p`, y una `BB b` es **siempre una subida**, que no es un defecto. De
+    modo que la regla tiene que distinguir las dos, y no por la codificacion
+    de la mano, sino por una cosa que la mano DICE:
+
+    > **el BB ya posteo su ciega**.
+
+    Y por que esa es la condicion correcta, y no «la mano tiene alguna `p`»:
+    porque la regla tiene que servir para las dos codificaciones a la vez, y la
+    base de HOY no tiene ni una `p`. MEDIDO: con esta regla, la base de hoy
+    da EXACTAMENTE los mismos rechazos que antes, y la copia da cero falsos
+    positivos en las subidas del BB.
+
+    Y el análogo de CM-004 en la codificacion nueva: **una `BB p` DESPUES de
+    una acción voluntaria**, que es una ciega puesta tarde. Y esa la detecta
+    esta misma regla.
     """
     seq = _preflop_sequence(hand)
     rechazadas = []
     voluntary_before = False
+    bb_ya_posteo = False
     for i, (pos, act, amount, is_blind) in enumerate(seq):
         if _es_ciega_bb(i, pos, act, amount, is_blind, voluntary_before, bb):
             if act in ('b', 'r', 'c'):
                 voluntary_before = True
+            if pos == 'BB' and act == 'p':
+                bb_ya_posteo = True
             continue
-        if pos == 'BB' and act == 'b':
+        if pos == 'BB' and act in ('b', 'p') and not bb_ya_posteo:
             causa = CAUSA_ORDEN if voluntary_before else CAUSA_IMPORTE
             rechazadas.append((i, amount, causa))
         if act in ('b', 'r', 'c'):
@@ -550,7 +611,11 @@ def entradas_bb_rechazadas(hand, bb=BB):
 
 
 def defecto_orden_ciega_bb(hand, bb=BB):
-    """True si alguna `BB b` de esta mano no puede ser la ciega (CM-004).
+    """True si alguna ciega del BB de esta mano no puede estar donde esta.
+
+    Y la ciega del BB es un `b` en la codificacion vieja y una `p` en la
+    nueva, de modo que el defecto es el mismo con dos nombres. Ver
+    `DOCS/CONTRATO_ACCION_P.md` §5.
 
     El INVARIANTE del bloque. Importa la funcion el hecho de que sea el motor
     quien lo decida: una cuenta hecha fuera podria discrepar de `_es_ciega_bb`

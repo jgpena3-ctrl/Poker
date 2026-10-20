@@ -15,6 +15,7 @@ import argparse
 import glob
 import io
 import os
+import re
 import subprocess
 import sys
 import unicodedata
@@ -95,6 +96,18 @@ EXCEPCIONES = (
 # Y un hallazgo que se ARREGLA baja este numero, y el test falla, y hay que
 # subir la constante a mano. Y eso es lo que se quiere: que quitar un
 # defecto sea una decision, y no un efecto secundario.
+#
+# Y MEDIDO, y por que estuvo en 13 y ha vuelto a 11: al extender el alcance
+# del barrido a la raiz del repo y a `trabajo/`, aparecieron DOS, en
+# `APUESTAS_DIFICILES.md` —dos ideogramas chinos pegados a un numero, en un
+# documento en espanol—. Y se han ARREGLADO, porque la columna de esa tabla es
+# el numero, y el numero era un 0. De modo que los dos ideogramas no eran una
+# marca: eran una errata.
+#
+# Y el motivo por el que se arreglan y no se declaran: **un hallazgo del
+# barrido es un defecto, y una excepcion es un hueco**. Un `.md` con dos
+# ideogramas chinos pegados a un numero no es una decision del autor: es una
+# errata, y se quita.
 SOSPECHOSOS_ABAJO = 11
 
 # La UNICA correccion automatica, y por SECUENCIA DE CARACTERES.
@@ -154,8 +167,50 @@ def correcciones_de(s):
 
 PREFIJOS = ('tools/', 'motor/', 'recorder/', 'DOCS/', 'tests/')
 
+# Y el alcance, y por que esta asi.
+#
+# MEDIDO, lo que hay FUERA de las tres carpetas del inventario:
+#
+#     los .py de la raiz y de `trabajo/` : 2, y los dos LIMPIOS
+#     los .md de la raiz y de `trabajo/` : 7, y uno con dos caracteres chinos
+#     los .jsonl de `trabajo/`            : 3, y los tres limpios
+#
+# Y la decision: **se extiende el alcance y se DECLARA lo que aparezca**, en
+# vez de ampliar la lista de excepciones. Un fichero que nadie vigila es un
+# fichero que nadie lee.
+#
+# Y los `.txt` de la raiz quedan FUERA, y el motivo es el de siempre: la
+# politica de exclusion de los `.txt` es que pueden estar en UTF-16LE, y leidos
+# como texto dan un caracter de control por cada letra. MEDIDO, los de ESTA
+# raiz estan en UTF-8 y limpios, de modo que incluirlos no costaria nada: pero
+# la politica es de los `.txt` en general, y se cambia para todos o para
+# ninguno.
+#
+# Y el `.csv` tambien queda fuera, y el motivo es que no es codigo ni
+# documentacion del motor: es una tabla de datos.
+#
+# Y los `.py`, los `.md` y los `.jsonl` que estan FUERA de las carpetas del
+# inventario SI se vigilan, y se DECLARAN uno a uno en
+# `tools/test_ejecutar_pytest.py`, que es donde esta la lista y el guardian.
 PATRONES = ('tools/*.py', 'motor/*.py', 'recorder/*.py', 'DOCS/*.md',
-            'tests/*.py')
+            'tests/*.py',
+            '*.py', 'trabajo/*.py', '*.md', 'trabajo/*.md',
+            '*.jsonl', 'trabajo/*.jsonl')
+
+
+def _coincide_con(patron, rel):
+    """Si un fichero, con su ruta RELATIVA, casa con un patron de `PATRONES`.
+
+    Y la semantica es la de `glob`: el asterisco NO cruza la barra. De modo
+    que `*.py` casa con `hand_editor.py` y NO con `trabajo/x.py`, que es lo
+    que hace `glob.glob` y lo que hace `fnmatch` NO.
+
+    Y por que hace falta: para comprobar que un fichero DECLARADO esta de
+    verdad bajo el barrido. Y un `fnmatch` de los ordinarios daria la
+    respuesta equivocada, porque su asterisco cruza la barra.
+    """
+    rx = '^' + re.escape(patron).replace('\\*', '[^/]*') + '$'
+    return re.match(rx, rel) is not None
 
 
 def revisar(patrones=None):

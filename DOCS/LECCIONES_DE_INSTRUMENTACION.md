@@ -1012,3 +1012,359 @@ Y la cifra vive en una constante, `ASIGNACIONES_QUE_SOBRESCRIBEN`, y el
 guardian la compara con la medida: asi, anadir un sitio nuevo obliga a
 declararlo, y quitarlo obliga a bajar la cifra a mano. Las dos son
 decisiones.
+## 26. Un invariante que da cero porque no puede dispararse
+
+Y esta es la más peligrosa de todas, porque **no da ningún síntoma**: verde.
+
+Y el caso, MEDIDO, con la COPIA NORMALIZADA de la base —que re-codifica las
+ciegas como `p` —pass— en vez de `b` —bet—:
+
+```
+la canónica :  921 de 1258 manos con ciega RECONOCIDA, y el invariante da 0
+la copia    :    6 de 1258 manos con ciega RECONOCIDA, y el invariante da 0
+```
+
+El MISMO cero, con dos significados opuestos:
+
+- en la canónica, cero quiere decir «ninguna mano lo viola»;
+- en la copia, cero quiere decir «**ya no hay ninguna `BB b` que pueda
+  violarlo**».
+
+> **La regla se ha apagado sola.** Y el motor la apaga sin decir nada, porque
+> la regla que decide —`_es_ciega_bb`— exige `act == 'b'`, y en la copia la
+> ciega ya no es una `b`.
+
+Y eso es la quinta forma de la familia de §25, y la peor:
+
+| | el instrumento | lo que no puede ver |
+|---|---|---|
+| §18 | un mutante escrito de memoria | el defecto de verdad |
+| §23 | un contador de definiciones | un nombre repetido |
+| §23 | un script re-ejecutado | lo que ya había aplicado |
+| §25 | un diccionario | una fila repetida |
+| **§26** | **un invariante que ya no puede dispararse** | **el hecho de que ya no mira** |
+
+Y la forma general, que es lo que hay que llevarse:
+
+> **Un invariante que da cero porque no hay nada que mirar no es un
+> invariante que pasa: es un invariante que ha dejado de mirar.** Y el cero
+> de un invariante no dice que el objeto esté bien: dice que el invariante no
+> ha mirado nada.
+
+### Y la regla que sale, y que es de las que mas cuesta
+
+> **Un invariante que puede dar cero tiene que declarar, ADEMAS de su cero,
+> CUANTAS COSAS ESTABA MIRANDO.** Y ese numero es una medida, no un supuesto,
+> y se compara con el declarado a mano: porque un `> 0` tolerado no distinguiría
+> «la base está bien» de «la regla se ha apagado».
+
+Y el numero va con la **REGLA**, que es la que decide: si la regla cambia, el
+numero cambia, y hay que actualizarlo. Que es el precio de que el guard vigile
+algo.
+
+### Y el otro guard, que es el hermano de este
+
+Y el del **vocabulario**, que vigila que la base y el motor hablen el mismo
+idioma. MEDIDO: la copia usa `p` 2514 veces, y `motor/learn.py` no menciona
+`p` ni una vez.
+
+Y las dos mitades juntas:
+
+> **Un invariante que se apaga, y un objeto que cambia de idioma, se
+> detectan con la MISMA pregunta: ¿qué está mirando esto, y cuántas cosas
+> están mirando?**
+
+Y el reproche al que se parecen los dos, y que es el reproche del §24:
+
+> Un invariante que no declara su alcance —qué mira, y cuántas cosas— no
+> vigila nada, y **no avisa de que no vigila nada**.
+## 27. Una lección escrita en un sitio no se cumple en el de al lado
+
+Y esta es corta, y es de las que más molestan, porque no es un fallo de
+nadie: es una regla que el repo **ya tenía escrita** y que no se cumplía una
+línea más abajo.
+
+MEDIDO, en `tools/test_verificador_caracteres.py`, que es un fichero de 13
+tests:
+
+```
+test_un_fichero_sin_seguimiento_es_todo_del_cambio
+    "Un test que depende del estado del repositorio es un test que se rompe
+     solo."
+
+test_un_fichero_rastreado_y_sin_cambios_no_tiene_lineas_nuevas      <-- el que
+    fijaba 'motor/test_canal_manual.py' como su ejemplo
+```
+
+Y el primero **explica** por qué el segundo no puede fijar un fichero: porque
+en cuanto el fichero del test se commitea, deja de estar «sin seguimiento» y
+el test empieza a fallar sin que nada haya cambiado. Y el segundo fijaba un
+fichero **del repo**, y de los que más se tocan.
+
+Y lo que lo rompió fue un cambio **legítimo y sin relacion**: añadir un
+guardian de vocabulario a `motor/test_canal_manual.py`. Y el sintoma fue un
+rojo en un sitio que no tiene nada que ver con el cambio.
+
+> **La lección, escrita a treinta líneas de distancia, no gobierna el test
+> de al lado.** Y el motivo es que una lección es prosa, y la prosa no se
+> comprueba: un test que depende del estado del repositorio sigue
+> dependiendo del estado del repositorio, por muy bien escrito que esté el
+> comentario de al lado.
+
+Y el arreglo, que es el de siempre: **el caso se CONSTRUYE, no se busca**. Y
+aquí, por la vía de derivarlo:
+
+```
+el fichero se BUSCA entre los rastreados y sin cambios
+    y se exige que NO este vacio            (un caso trivial no comprueba nada)
+    y se exige que tenga un caracter que el BARRIDO senalaria  (que el escenario
+                                                            sea el que se dice)
+    y se acota a las carpetas que el barrido recorre  (un caso que nadie mira
+                                                    no comprueba nada)
+```
+
+Y las tres exigencias son MEDIDAS, porque cada una se hizo necesaria al
+ver que la anterior dejaba un caso trivial: sin la del tamaño, el helper
+encontraba `motor/__init__.py`; sin la del caracter, el escenario no era el
+que el test describia.
+
+Y la general, que es la de siempre pero vista por el otro lado:
+
+> **Un comentario que explica una regla no la hace cumplir.** Lo que la hace
+> cumplir es un test que construye el caso, y que falla si el caso no se
+> puede construir. Y un caso que no se puede construir tiene que **fallar**,
+> no pasar: porque un caso que no se ha comprobado no es un caso que ha
+> pasado.
+## 28. Una codificación no es una forma de escribirlo, y su neutralidad hay que PROBARLA
+
+Y esta es la quinta de la familia de §25, y la más sutil, porque el
+instrumento no es un detector: es **una base de datos con dos codificaciones**.
+
+### El experimento
+
+Y la forma de enumerar los consumidores que hay que enseñar, sin leer cuarenta
+y cinco sitios esperando encontrarles:
+
+> Se coge la base **de hoy**, se recodifican sus ciegas como `p` —un cambio
+> químico, sin tocar la base ni la copia— y se mide **qué consumidores dan otra
+> respuesta**.
+
+MEDIDO, manos de 1258 cuya respuesta cambia:
+
+```
+  la primera accion del preflop            921
+  classify_first_action de la primera      921
+  la secuencia preflop completa            922
+  el dinero puesto (b + r)                 922
+  la ciega reconocida (regla VIEJA)        921
+  la ciega reconocida (regla NUEVA)          0   <-- retrocompatible
+  el numero de acciones                    0
+```
+
+Y de ahí sale la lista de consumidores, y la lista **no se escribió de
+memoria**: salió del experimento.
+
+### Y la neutralidad, que es lo que de verdad importa
+
+MEDIDO, y con la base de HOY, que es la que alimenta las cifras:
+
+```
+las doce categorias de la primera decision   ->  IDENTICAS antes y despues
+las manos con ciega reconocida               ->  921, las mismas
+```
+
+> **Una codificación es neutra cuando el motor la trata igual, y eso no se
+> supone: se mide con el experimento que la rompe.** Y el experimento es
+> siempre el mismo: **recodificar lo que ya se tiene y ver qué se mueve**.
+
+Y el recíproco, que es la mitad interesante:
+
+> **El bote, en las dos codificaciones, sale IGUAL: 1258 de 1258 las dos
+> veces.** Y yo suponía lo contrario —que la ciega grabada como `b`\subía el
+> nivel y corrompía el bote—, y la medición lo desmintió.
+
+### Y el hallazgo que NO se buscaba
+
+Y el experimento encontró un defecto que no tenía nada que ver con las
+codificaciones:
+
+> Una apuesta de 0.5 BB o menos se **clasifica** como `limp` —y el docstring
+> de `classify_first_action` dice que «no se cuenta como subida real»— pero
+> el contador de `preflop_events` la cuenta como **subida** de todas
+> maneras. Las dos cosas no pueden ser verdad.
+>
+> MEDIDO: **52 de 1258** manos, y **43 de las 877 de la ventana fiable**, que
+> es la que alimenta las cifras publicadas.
+
+Y **no se ha arreglado**, y el motivo es el mismo de siempre y es la parte
+importante:
+
+> Arreglarlo **recalibra**. Y una cifra publicada no se mueve como efecto
+> secundario de un arreglo. De modo que el defecto se **declara**, con su
+> medición, y se arregla cuando las cifras se re-derivan contra la base que
+> se adopte.
+
+### Y la clase general
+
+> **Un experimento que compara dos formas de representar lo mismo encuentra
+> los defectos del MODELO, no solo las diferencias entre las formas.** Y eso
+> vale más que la diferencia que ibas a buscar, porque la diferencia se
+> arrange y el defecto no.
+
+Y una segunda, que es de las que más cuestan:
+
+> **Una propiedad de equivalencia no se supone, se mide, y su medicion es un
+> CONTRATO.** Porque un contrato que dice «estas dos formas son la misma» sin
+> el experimento que lo demuestra es una promesa, y las promesas no se
+> fiscalizan.
+## 29. Un hallazgo se ARREGLA, y una excepción se DECLARA
+
+Y las dos cosas se parecen en la forma —una lista de cosas que el barrido no
+marca— y son **cosas opuestas** en lo que significan.
+
+Y el motivo por el que se distinguen es de procedimiento, y no de gusto:
+
+> **Un hallazgo es un DEFECTO: se quita.** Y una excepción es un **hueco**: se
+> declara, con su motivo, y se deja.
+
+Y la prueba de cuál es cuál no es la opinión de nadie: es **qué se puede
+decir de él**. Un `.md` con dos ideogramas chinos pegados a un número, en un
+documento en español, **no es una decisión del autor**: es una errata. Y una
+errata se quita, y no se convierte en una excepción para que el barrido salga
+verde.
+
+MEDIDO, el caso: en `APUESTAS_DIFICILES.md`, la celda de la columna `nº`
+decía `0` seguido de dos ideogramas chinos. Y las otras cuatro celdas de la
+misma columna son números pelados. De modo que la celda era un `0`, y los
+ideogramas no eran parte de nada.
+
+> **Declarar un defecto como excepción es una manera de que no se note, con la
+> forma de una decisión.** Y el precio es que el barrido deja de ser un
+> barrido: pasa a ser una lista de Desire.
+
+### Y el otro lado, que es el bueno
+
+Y el hueco de verdad —el codigo fuera de las carpetas del inventario— se
+resuelve **al reves**: se extiende el barrido, se DECLARA lo que aparezca, y
+el guardian exige que lo declarado exista y este bajo el barrido.
+
+> **Si algo no se puede vigilar, que sea una DECISIÓN declarada, no un
+> hueco.** Y las dos cosas se distinguen en una linea: la excepción dice «esto
+> no lo miro», y la declaración dice «esto lo miro y aqui esta por que».
+
+### Y lo que pasó de verdad, que es el mejor resumen
+
+Y en este bloque, el guardián de control de caracteres **pillo un error
+mio**:
+
+```
+MEDIDO, tools/verificar_caracteres.py:201, 0x0C
+```
+
+Y la causa fue escribir `\f` y `\t` en una cadena de Python **normal**, en
+vez de una cruda: `\f` es un SALTO DE FORMULA y `\t` un tabulador. O sea
+que el error se produjo **al escribir el codigo**, y lo vio el guardián que
+vigila el codigo.
+
+> Y eso es lo que un guardián bien puesto hace: **no vigila al autor, vigila al
+> material.** Y el mio habia visto cuatro caracteres raros escritos a mano en
+> dos bloques, y no habia visto ni uno de los que el propio codigo genera.
+## 30. Un guardián que mira el sitio equivocado, y no lo dice
+
+Y este es el hallazgo del bloque, y es de la familia de §25, pero con una
+peculiaridad: **el guardián fallaba, y su fallo era el correcto, y su verdad
+era la incorrecta.**
+
+MEDIDO, lo que pasó. El guardián de vocabulario —«la base no usa acciones que
+el motor no conoce»— derivaba el vocabulario del motor de
+`classify_first_action`, que es donde el motor **LANZA** ante una acción que no
+conoce. Y `classify_first_action` clasifica una **DECISIÓN**, y una **POSTA**
+—`p`— no lo es. De modo que:
+
+```
+la `p` no sale de `classify_first_action`   ->  el guardian la senala como
+                                                desconocida
+y el motor SI la maneja: la salta en `preflop_events` y la reconoce como
+                                 ciega en `_es_ciega_bb`
+```
+
+> **El guardián miraba el sitio equivocado, y lo que medía no era lo que
+> decía medir.** Y no daba ningún síntoma: el guardián fallaba, que es lo que
+> se espera de un guardián, y lo que fallaba era una cosa distinta de la que
+> su nombre dice.
+
+Y el arreglo, que es el de siempre y que ya estaba escrito: **el guardián
+tiene que mirar el MOTOR, no una función del motor.** Y la derivacion
+correcta, MEDIDA:
+
+> **Las acciones son las letras que el motor COMPARA contra un nombre de
+> acción.** Ni más ni menos. Y eso da `{b, c, f, p, r, x}`, que es
+> exactamente el conjunto que el motor despacha.
+
+Y las dos derivaciones que se descartaron, y por qué, que es lo que hace
+útil la lección:
+
+| derivación | resultado | por qué no vale |
+|---|---|---|
+| las constantes de `classify_first_action` | `{b, c, f, r, x}` | se salta la `p`, que el motor sí maneja |
+| todas las constantes de un caracter de `learn.py` | `{b, c, f, p, r, w, x}` | mete `w`, que no es una acción, y dejaría pasar una acción mal escrita |
+
+Y la clase general, que es la sexta de la familia:
+
+> **Un guardián que deriva de un sitio concreto deriva de ese sitio, no de lo
+> que dice vigilar.** Y si ese sitio es una de las varios piezas que manejan
+> la cosa, el guardián vigila una esquina y se cree que vigila el conjunto.
+
+Y la pregunta que hay que hacerse, y que es de una linea:
+
+> **¿De dónde sale lo que el guardián mira, y es el mismo sitio del que sale
+> lo que el motor mira?**
+
+Y el caso de este bloque, en una frase: el guardián de vocabulario miraba
+`classify_first_action`, y el motor mira el preflop entero. Y el guardián no
+tenía por qué saberlo, y por eso no lo decía.
+## 31. Un test que fija una convención es una DECLARACIÓN, y hay que leerlo
+
+Y este es el hallazgo del bloque, y es del genero de §29, pero con la
+dirección contraria: **lo que yo iba a arreglar era correcto**.
+
+MEDIDO, lo que pasó. La auditoría de `preflop_matrices.json` encontró que
+`asistente_live._recom_preflop` convierte la **ausencia de tabla** en una
+frecuencia **cero** con un `or 0.0`. Y la consecuencia medida era seria:
+`ROL_UTG` no existe en el fichero, y un UTG con un limp delante se leía como
+«over-limp 0 %», o sea **«retirar 100 %»** — una certeza inventada a partir de
+una tabla que no existe.
+
+Y el arreglo estaba escrito, era de tres líneas, y **rompió dos tests**:
+
+```
+test_recom_preflop_sb_no_pide_call_sin_tabla
+    # SB vs apertura: NO existe tabla Call_OR_SB_* -> no se inventa un call
+    # (lo más apegado a las tablas): igualar queda en 0.
+```
+
+> **La convención estaba DECLARADA, en un test, con su motivo.** Y yo la iba
+> a cambiar sin haber leído los tests. Y el motivo por el que la auditoría
+> no la vio es que la auditoría miraba el **código** y el **fichero**, y no
+> los **tests**, que es donde el proyecto guarda las decisiones.
+
+Y la clase general, que es la séptima de la familia:
+
+> **Una convención que está fijada por un test no es un defecto: es una
+> DECLARACIÓN.** Y la auditoría que llama «defecto» a una declaración no está
+> auditando el código: está auditando sus propias preferencias.
+
+Y la regla que sale, y que es la que hay que aplicar la próxima vez:
+
+> **Antes de llamar defecto a un comportamiento, hay que leer los tests que
+> lo fijan.** Y si hay uno que lo fija, no es un defecto: es una decisión, y
+> lo que se hace es **documentarla** y **fijarla con un test propio**, que es
+> lo que se hizo: la convención quedó escrita en `motor/test_lectura_matrices.py`,
+> y su comportamiento sigue igual.
+
+Y la trampa de fondo, que es la de siempre pero girada:
+
+> **Un `or 0.0` parece un descuido y es una decisión.** Y lo que lo delata no
+> es el `or`: es que el resto del proyecto se comportara de otra manera en
+> el caso equivalente —la rama de la apertura devolvía `None`—, y esa
+> incoherencia era la pista de que había algo escrito detrás.

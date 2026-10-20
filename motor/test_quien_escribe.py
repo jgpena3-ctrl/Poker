@@ -56,13 +56,62 @@ def _inventario_del_instrumento():
 
 
 #: Lo que el fichero dice. Si el instrumento ve uno mas, este test falla.
+# Cada escritor, con QUE escribe, DONDE, y BAJO QUE CONDICION.
+#
+# Y no es una lista de nombres, y el motivo: una lista de nombres NO SE PUEDE
+# COMPROBAR. El guardián de mas abajo comprueba que el instrumento —que mira
+# por el ARBOL quien escribe en `hands_db.jsonl`— y esta declaracion dicen lo
+# mismo. Y con una lista de nombres, lo unico que se podria comprobar es que
+# no se ha olvidado un nombre, que es otra cosa.
+#
+# Y el campo `temporal` es el que evita el permiso permanente: si la escritura
+# es temporal, la declaracion tiene que decirlo Y decir como se restaura. Y
+# hay un test que lo comprueba.
 ESCRITORES_DECLARADOS = {
-    'hand_editor.py',                 # REESCRIBE la base entera
-    'recorder/record_hand.py',        # AÑADE una mano
-    'recorder/recorder_live.py',      # AÑADE manos
-    'tools/aplicar_correcciones.py',  # migraciones, con backup
-    'tools/aplicar_reinterpretacion.py',
-    'tools/sanear_base.py',           # saneamiento, con backup y dry-run
+    'hand_editor.py': {
+        'escribe': 'la base entera',
+        'destino': 'data/hands_db.jsonl',
+        'condicion': 'a mano, y con un `.bak` al lado',
+        'temporal': False,
+    },
+    'recorder/record_hand.py': {
+        'escribe': 'una mano',
+        'destino': 'data/hands_db.jsonl',
+        'condicion': 'en vivo, mientras se juega',
+        'temporal': False,
+    },
+    'recorder/recorder_live.py': {
+        'escribe': 'manos',
+        'destino': 'data/hands_db.jsonl',
+        'condicion': 'en vivo, mientras se juega',
+        'temporal': False,
+    },
+    'tools/aplicar_correcciones.py': {
+        'escribe': 'migraciones',
+        'destino': 'data/hands_db.jsonl',
+        'condicion': 'con backup, y con dry-run por defecto',
+        'temporal': False,
+    },
+    'tools/aplicar_reinterpretacion.py': {
+        'escribe': 'la base reinterpretada',
+        'destino': 'data/hands_db.jsonl',
+        'condicion': 'con backup, y con dry-run por defecto',
+        'temporal': False,
+    },
+    'tools/sanear_base.py': {
+        'escribe': 'el saneamiento',
+        'destino': 'data/hands_db.jsonl',
+        'condicion': 'con backup, y con dry-run por defecto',
+        'temporal': False,
+    },
+    'tools/integrar_copia.py': {
+        'escribe': 'la base CANDIDATA, mientras dura la integracion',
+        'destino': 'data/hands_db.jsonl',
+        'condicion': ('swap con la candidata, y RESTAURACION en el `finally`, '
+                      'verificada por sha; y el sha de la candidata se '
+                      'comprueba ANTES de tocar nada'),
+        'temporal': True,
+    },
 }
 
 
@@ -70,8 +119,62 @@ def test_el_inventario_coincide_con_el_instrumento():
     """La lista del documento y la del instrumento tienen que decir lo mismo.
 
     Un inventario que se queda viejo es peor que no tenerlo: invita a dar por
-    cerrado un canal que ya se ha abierto otra vez."""
-    assert _inventario_del_instrumento() == ESCRITORES_DECLARADOS
+    cerrado un canal que ya se ha abierto otra vez.
+
+    Y ahora la lista es un DICCIONARIO, porque una lista de nombres no se
+    puede comprobar: con una lista, lo unico que se mira es que no se haya
+    olvidado un nombre. Y lo que se mira ahora es que el conjunto de claves
+    sea el mismo que el del instrumento.
+    """
+    assert _inventario_del_instrumento() == set(ESCRITORES_DECLARADOS)
+
+
+def test_cada_escritor_declara_que_escribe_y_donde():
+    """Y que la declaracion de cada uno este COMPLETA.
+
+    Y las cuatro cosas, y por que las cuatro:
+
+      · `escribe` — QUE escribe. Sin esto, la declaracion no dice nada.
+      · `destino` — DONDE. Y tiene que ser la base, porque el instrumento
+        mide justamente eso.
+      · `condicion` — BAJO QUE CONDICION. Sin esto, «escribe la base» es un
+        permiso permanente.
+      · `temporal` — si la escritura es temporal. Y entonces la condicion
+        tiene que decir COMO se restaura, porque una escritura temporal sin
+        restauracion declarada es una escritura permanente.
+    """
+    for nombre, d in sorted(ESCRITORES_DECLARADOS.items()):
+        for campo in ('escribe', 'destino', 'condicion', 'temporal'):
+            assert campo in d, (
+                'la declaracion de %r no tiene el campo %r' % (nombre, campo))
+        assert d['escribe'].strip(), 'lo que escribe %r esta vacio' % nombre
+        assert d['destino'].strip(), 'donde escribe %r esta vacio' % nombre
+        assert d['condicion'].strip(), (
+            'la condicion de %r esta vacia, y sin condicion una declaracion de '
+            'escritor es un permiso' % nombre)
+        assert d['destino'] == 'data/hands_db.jsonl', (
+            'el destino declarado de %r es %r, y el instrumento mide la base'
+            % (nombre, d['destino']))
+        if d['temporal']:
+            condicion = d['condicion'].lower()
+            assert ('finally' in condicion or 'restaur' in condicion), (
+                'la escritura de %r es TEMPORAL, y su condicion tiene que decir '
+                'como se restaura: %r' % (nombre, d['condicion']))
+
+
+def test_la_declaracion_no_tiene_una_entrada_que_no_exista():
+    """Y que no haya entradas que no correspondan a un escritor de verdad.
+
+    Y el motivo: una declaracion de algo que ya no esta es una declaracion
+    falsa, y peor: un nombre que se queda da la sensacion de que algo sigue
+    vigilado.
+    """
+    reales = _inventario_del_instrumento()
+    sobran = sorted(set(ESCRITORES_DECLARADOS) - reales)
+    assert not sobran, (
+        'hay %d entrada(s) declaradas que el instrumento no ve: %r. Y una '
+        'declaracion de algo que no existe es una declaracion falsa.'
+        % (len(sobran), sobran))
 
 
 def test_el_instrumento_pasa_sus_propios_casos():

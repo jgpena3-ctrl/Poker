@@ -30,8 +30,10 @@ Que se comprueba, y por que son tres cosas distintas
 Un hash que cambia sin motivo escrito es tan malo como editar a mano: es
 dejar constancia de algo que no se sabe por que paso.
 """
+import ast
 import hashlib
 import io
+import json
 import os
 import re
 import subprocess
@@ -42,7 +44,12 @@ from motor import learn
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB_REL = 'data/hands_db.jsonl'
-DB_PATH = os.path.join(ROOT, *DB_REL.split('/'))
+# Y la base que mira este fichero se puede APUNTAR a otra, con
+# `POKER_DB_PATH`. Y el motivo es que el procedimiento de integracion tiene
+# que poder probarse contra un destino TEMPORAL, sin tocar la base canonica.
+# Y sin la variable, el comportamiento es el de siempre.
+DB_PATH = os.environ.get('POKER_DB_PATH') or os.path.join(
+    ROOT, *DB_REL.split('/'))
 CANONICO = 'DOCS/CANAL_MANUAL_CERRADO.md'
 
 
@@ -377,3 +384,127 @@ def test_los_dos_scripts_de_escritura_declaran_a_que_script_se_debe():
         'aplicar_correcciones.py escribe hands_db.jsonl y no declara el sha256 '
         'de lo que produce. Sin eso, su salida es indistinguible de una '
         'edicion a mano, que es exactamente el problema que se quiere cerrar.')
+
+
+
+# --- 7. el vocabulario de la base, y el del motor ---------------------------
+#
+# Y esto no es una regla de estilo: es la diferencia entre que la base y el
+# motor hablen el mismo idioma y que no.
+
+# Los modulos del motor que DESPACHAN sobre acciones. Y la lista es
+# EXPRESA, y no se deriva del repositorio entero, porque hay letras de un
+# solo caracter que no son acciones, y porque `recorder/` y `tools/` tienen
+# las suyas.
+MODULOS_QUE_DESPACHAN_SOBRE_ACCIONES = (
+    'learn', 'multiway', 'stats', 'hierarchy', 'observations', 'behavior',
+)
+
+# Y los nombres que son de ACCION. Y no es `a`, porque `a` se usa de sobra
+# para otras cosas, y por eso el filtro mira el NOMBRE COMPLETO.
+NOMBRES_DE_ACCION = ('action', 'act', 'acc', 'accion')
+
+
+def _es_nombre_de_accion(nombre):
+    n = nombre.lower()
+    return any(n == x or n.endswith('_' + x) for x in NOMBRES_DE_ACCION)
+
+
+def _vocabulario_del_motor():
+    """Las acciones que el motor despacha, DERIVADAS de su codigo.
+
+    Y sale del ARBOL, y la derivacion es: **las acciones son las letras que
+    el motor COMPARA contra un nombre de accion**. Ni mas ni menos.
+
+    Y por que no `classify_first_action`, que era la derivacion anterior: esa
+    funcion clasifica una DECISION, y una POSTA —`p`— no lo es, de modo que la
+    `p` no sale de ahi. Y el guardian senalaba como desconocida una accion que
+    el motor SI maneja: el guardian estaba mirando el sitio equivocado.
+
+    Y por que no «todas las constantes de un solo caracter»: MEDIDO, esa
+    derivacion mete `w`, `a` y `n`, que no son acciones, y dejaria pasar una
+    accion mal escrita.
+
+    Y por que no es una lista escrita a mano: la lista de acciones es
+    justamente lo que va a cambiar, y un guardian que DECLARA el vocabulario
+    no lo vigila: lo da por bueno. Y el motor es el que sabe lo que entiende,
+    de modo que el guardian tiene que SEGUIRLO cuando el motor crece.
+    """
+    vocabulario = set()
+    for modulo in MODULOS_QUE_DESPACHAN_SOBRE_ACCIONES:
+        ruta = os.path.join(ROOT, 'motor', modulo + '.py')
+        if not os.path.exists(ruta):
+            continue
+        with io.open(ruta, encoding='utf-8') as f:
+            arbol = ast.parse(f.read())
+        for nodo in ast.walk(arbol):
+            if not isinstance(nodo, ast.Compare):
+                continue
+            if not isinstance(nodo.left, ast.Name):
+                continue
+            if not _es_nombre_de_accion(nodo.left.id):
+                continue
+            for comp in nodo.comparators:
+                if (isinstance(comp, ast.Constant)
+                        and isinstance(comp.value, str)
+                        and len(comp.value) == 1 and comp.value.isalpha()):
+                    vocabulario.add(comp.value)
+                elif isinstance(comp, (ast.Tuple, ast.List, ast.Set)):
+                    for e in comp.elts:
+                        if (isinstance(e, ast.Constant)
+                                and isinstance(e.value, str)
+                                and len(e.value) == 1 and e.value.isalpha()):
+                            vocabulario.add(e.value)
+    return vocabulario
+
+
+def _acciones_usadas_por_la_base():
+    """Las acciones que la base usa, en las cuatro calles.
+
+    Y sale de leer el fichero y no de un `grep`: una accion esta en
+    `streets.*.actions[].action`, y buscarla por texto encontraria tambien las
+    menciones de una accion en un comentario o en un mensaje.
+    """
+    usadas = set()
+    with io.open(DB_PATH, encoding='utf-8') as f:
+        for linea in f:
+            if not linea.strip():
+                continue
+            h = json.loads(linea)
+            for calle in ('preflop', 'flop', 'turn', 'river'):
+                for a in (h.get('streets', {}).get(calle, {}) or {}).get(
+                        'actions', []) or []:
+                    usadas.add(a.get('action'))
+    return usadas
+
+
+def test_la_base_no_usa_acciones_que_el_motor_no_conoce():
+    """Que la base y el motor hablen el mismo idioma.
+
+    Y el motivo de que este guard exista: hay una COPIA NORMALIZADA de la base
+    en `trabajo/`, que re-codifica las ciegas como `p` —pass— en vez de `b` —
+    bet—. Y el motor no conoce `p`.
+
+    MEDIDO, lo que pasaria si esa copia pasase a ser la canonica: el motor
+    LANZA, con `ValueError: accion preflop desconocida: 'p'`. Que es lo
+    BUENO —un fallo ruidoso— y no por merced: llega en mitad de una
+    calibracion, y el motivo —que la CODIFICACION cambio— no esta declarado en
+    ningun sitio. El motor no se entera de que la base habla otro idioma.
+
+    Y este guard dice eso ANTES, y en una linea, y con el motivo al lado.
+    """
+    vocabulario = _vocabulario_del_motor()
+    assert vocabulario, (
+        'no se ha podido derivar el vocabulario del motor, y un guardian que '
+        'no mira no vigila nada')
+    usadas = _acciones_usadas_por_la_base()
+    desconocidas = sorted(u for u in usadas if u not in vocabulario)
+    assert not desconocidas, (
+        'la base usa acciones que el motor no conoce: %r.\n'
+        'Y el motor solo sabe: %r.\n\n'
+        'Si el cambio de codificacion es legitimo, hay que ENSENARLE al '
+        'motor la accion nueva ANTES de que la base la use. Que es el orden '
+        'de siempre: primero el motor, despues la base.\n\n'
+        'MEDIDO, con la copia normalizada de `trabajo/`: la base usaria `p` '
+        '2514 veces, y el motor lanzaria `ValueError: accion preflop '
+        'desconocida: \'p\'`.' % (desconocidas, sorted(vocabulario)))

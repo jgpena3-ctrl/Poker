@@ -1,0 +1,233 @@
+# LOS CUATRO FRENTES INDEPENDIENTES, AUDITADOS Y CLASIFICADOS
+
+> Y lo que se pide en cada uno no es una conclusión, sino la **clasificación**:
+> qué parte se puede analizar desde el código, y qué parte depende de A1.
+>
+> Y la regla del reparto, que es la de siempre: **A2 puede mejorar la
+> capacidad del motor para interpretar los datos; no puede dar por ciertos los
+> datos que A1 todavía está validando.** Y por eso en ninguno de los cuatro se
+> recalcula nada, y en ninguno se toca la base.
+
+## 1. Las 5 manos con board divergente
+
+Y la definición del problema, que está en `QUE_REPRESENTA_LA_PREDICCION.md`
+§2.3: `tablero()` lee `comunitarias`, y `villain_hasta_corte()` lee
+`streets.*.board`. Dos fuentes para el mismo tablero.
+
+### Y primero, una correccion de la cuenta
+
+MEDIDO, y la cuenta del documento **no se reproduce con el board entero**:
+
+```
+la ventana (877), comparando el board ENTERO   :  29 con numero distinto de cartas
+la ventana (877), con la cuenta del documento  :   5
+```
+
+Y la diferencia está en **el corte**: la cifra del documento es por calle de
+corte —el board hasta la calle en la que se decide—, y el board entero da 29.
+Las 5 del documento están entre las 29 ✓.
+
+> **Las dos cifras son correctas, y miden cosas distintas.** Y la que se cita
+> en el documento es la que cuenta la divergencia **en el board que se usa**.
+> Y por eso el alcance hay que decirlo, porque quien lo lea va a esperar 5 y
+> va a medir 29.
+
+### LAS DOS CIFRAS, CON SU DEFINICION, Y SU CONDICION DE REPETICION
+
+| cifra | definicion exacta | que cuenta |
+|---:|---|---|
+| **5** | las manos en las que el board **hasta la calle de corte** difiere entre `comunitarias` y `streets` | la divergencia **en el board que el motor usa para esa decision** |
+| **29** | las manos de la ventana de 877 en las que el board **entero** tiene un numero distinto de cartas entre las dos fuentes | la divergencia **de las fuentes**, sin cortar |
+
+Y las dos son MEDIDAS sobre la base de hoy, y las dos se han de volver a
+medir **despues de la adopcion**:
+
+> **LA CONDICION DE REPETICION, y es la que hay que respetar:** la ventana
+> fiable son 877 manos **de la base de HOY**, y la copia tiene 1258. De modo
+> que **el 29 de hoy no es el 29 de despues**, y el 5 tampoco. Y el numero
+> que importa no es el que salga, sino que **se vuelve a medir y se vuelve a
+> escribir**, con la base que esté adoptada.
+>
+> Y la razón de que haga falta decirlo: un número que se cita sin la base
+> que lo produjo es un número que se cita mal. Y entre la base de hoy y la
+> adoptada, el corte puede cambiar, porque el corte depende de la decision
+> que se está mirando.
+
+Y lo que NO se hace con estas dos cifras, y es lo importante: **no se corrige
+ninguna de las dos**. La cifra de 5 del documento es la de una divergencia que
+solo se ve en el board que se usa, y corregirla cambia los números, y eso va
+con la recalibración, que va con la adopción.
+
+### Y la clasificación, que es lo que se pedía
+
+**DEL CÓDIGO, y se puede hacer ya:**
+
+| | |
+|---|---|
+| las 29 de la ventana | `comunitarias` es un **subconjunto** de `streets`, y **nunca al revés**: el resumen está truncado, el board completo está en `streets` |
+| 27 de ellas | el problema es una lista incompleta, no una contradicción. Y se puede **clasificar sin la grabación**: no hace falta el pantallazo para saber que una de las dos listas está truncada |
+| qué fuente debe leer `tablero()` | es una decisión de instrumentación, y **cambia los números**, de modo que va con la recalibración |
+
+**DE A1, y son dos:**
+
+| | |
+|---|---|
+| `H_0915` | `comunitarias` dice `2s` y `streets` dice `6c`: **una carta distinta** |
+| `H_0921` | `comunitarias` dice `2s` y `streets` dice `9c`: **una carta distinta** |
+
+> Y en esas dos, cuál de las dos cartas es la buena **no lo decide el dato**:
+> hace falta la grabación. Y eso es de A1, y es una decisión de una carta por
+> mano, no de instrumentación.
+
+**Y una consecuencia que hay que tener presente:** el número de manos afectadas
+depende de la base que se adopte, y la copia tiene 1258 manos y no 877. De modo
+que **la cuenta de este frente hay que repetirla después de la adopción**, y no
+es un número que se pueda fijar ahora.
+
+## 2. `matrix`
+
+Y lo que se medido es el alcance del fichero, que es lo que hace la auditoría
+útil:
+
+**MEDIDO, `data/preflop_matrices.json` (328 548 bytes) lo leen ONCE ficheros:**
+
+```
+motor/__init__.py      motor/_procedencia.py    motor/asistente_live.py
+motor/learn.py         motor/player_ranges.py   motor/preflop.py
+motor/profile.py
+tools/auditar_matrix.py
+```
+
+> **Siete módulos del motor dependen de él.** De modo que el frente de
+> `matrix` no es «un fichero que hay que entender»: es **el fichero del que
+> dependen siete módulos**, y cualquier cosa que se le cambie se propaga a
+> todos.
+
+### Y EL GRAFO NO SE TOCA, HASTA QUE A1 DECLARE LA INTENCIÓN
+
+> **El grafo de los siete módulos que dependen de `preflop_matrices.json` NO
+> se toca hasta que A1 declare qué significa el fichero.** Y un cambio en el
+> grafo sin la intención fijada es un **cambio a ciegas**: se puede medir,
+> pero no se puede saber si lo que se ha movido es lo que se quería.
+
+Y la razón de que la intención la tenga que declarar A1, y no se deduzca: la
+intención es lo que NO está en el fichero. `QUE_ES_MATRIX.md` dice que la
+pregunta sigue abierta, y una pregunta abierta no se contesta leyendo el
+código que la pregunta tiene por objeto.
+
+Y el alcance de la inmovilidad, que es lo que hay que vigilar:
+
+| | |
+|---|---|
+| qué queda inmóvil | los ficheros de `motor/` que ya dependían de `preflop_matrices` en el ancla de la auditoría |
+| qué NO queda inmóvil | los ficheros NUEVOS que dependan de él, que se declaran uno a uno, con su motivo |
+| por qué | porque un test nuevo que depende del fichero es una dependencia nueva sobre un fichero cuya intención no está fijada |
+
+Y el ancla, y su sha, están en `tools/test_auditoria_frentes.py`: la
+comparación es contra un **commit concreto**, y el sha del ancla se comprueba,
+porque un commit no garantiza por sí solo que siga siendo la versión que se
+creyó.
+
+Y lo que NO se hace, y por qué: no se regenera ninguna matriz, y no se cambia
+la semántica de ninguna. La pregunta de `QUE_ES_MATRIX.md` —qué significa el
+fichero— sigue siendo de quien lo generó, y hasta que la responda, auditar
+«las dependencias del cálculo» es auditar **el grafo de dependencia**, que es
+lo que está medido aquí.
+
+**DE A1, o de quien generó el fichero:** la intención.
+**DEL CÓDIGO:** el grafo de dependencia, que está medido.
+
+## 3. La vía preflop del motor
+
+Y lo que hay, medido, son **dos contratos ya escritos**: `CONTRATO_PREFLOP.md` y
+`CONTRATO_L_SEC.md`. Y los dos tienen la misma forma, y la forma es la clave:
+
+```
+CONTRATO_PREFLOP.md
+    ## Firma propuesta
+    ## Dos decisiones que hay que tomar antes de codificar
+    ## Lo que este contrato NO resuelve
+    ## Lo que queda abierto
+```
+
+> **El contrato de la vía preflop está escrito y NO está firmado, y sus dos
+> decisiones YA ESTÁN TOMADAS.** Y aquí hay que corregirse, porque el bloque
+> anterior escribió lo contrario: `muestreado con n_combos = 40` y `la
+> varianza es admisible` no son decisiones *pendientes*, son las **Decisión 1**
+> y la **Decisión 2** del propio contrato, y están escritas ✓.
+>
+> De modo que el frente no es «tomar dos decisiones»: es **firmar**, y lo que
+> falta para firmar son las **cuestiones de alcance**, que son de otro dueño.
+
+Y la separación, que es lo que R2 pide:
+
+| | |
+|---|---|
+| **DECIDIDO, y en el contrato** | muestreado con `n_combos = 40`; la varianza es admisible; la firma `equity_preflop_rango(hero_codes, villain_reach, …)`; y un desacuerdo **declarado**: `DEFAULT_RUNOUT_COMBOS` sigue en 200 y no baja a 40 |
+| **de ALCANCE, y de otro dueño** | que la equity sea **observable** en preflop —hoy el 62 % es retrospectiva—; más manos de validación —41 es pocas—; y si la equity preflop observable **ordena** las manos, que se mide *después* de implementarla |
+
+> Y la circularidad que hay detrás, y que está escrita en los dos contratos:
+> la cobertura preflop no se amplía hasta que `L_sec` esté firmado, y
+> `L_sec` necesita la equity observable en preflop para poder afirmarse. Y
+> romperlo por un lado no es una decisión de instrumentación: es una decisión
+> de alcance.
+
+**DEL CÓDIGO:** la forma del contrato, sus dos decisiones pendientes y sus
+apartados de «lo que NO resuelve».
+**DE QUIEN DECIDE EL OBJETIVO:** las dos decisiones, porque son de alcance y no
+de instrumentación.
+
+## 4. El peso por rival
+
+Y lo medido, y es poco, y es lo que importa: **el AUC usa la MEDIANA** de las
+equities por rival, y hay **un solo sitio** donde se toma:
+
+```
+tools/auditar_auc.py:299
+    filas.append((r[1]['mediana'], y, acts[idx].get('action')))
+```
+
+**MEDIDO, y las condiciones de aplicación, que son las del propio dato:**
+
+| | |
+|---|---|
+| qué se agrega | la **mediana** de las equities de los rivales VIVOS en la calle de corte |
+| dónde | `equity_de_mano()` la calcula, y `auditar_auc.py` la consume |
+| por qué la mediana | con 415 de 877 cortes con más de un rival, «la equity del héroe» no es un número: es una lista |
+
+**DEL CÓDIGO:** la lógica de agregación, que era una línea, y su condición de
+aplicación, que es «los rivales vivos en la calle de corte».
+
+> Y la condición, ahora VERIFICABLE y no una frase: la agregación se ha
+> extraído a `tools/equity_de_mano.py::agrega_equities`, y su test, con datos
+> sintéticos, fija **cuándo se aplica la mediana**:
+>
+> · se aplica sobre **los rivales que se pudieron evaluar**, y no sobre los
+>   rivales del bote: los que fallaron no están, y su motivo queda aparte;
+> · y por eso el resultado lleva **`n_evaluados`**, que antes no se decía: una
+>   mediana de dos rivales y una de cinco se veían igual;
+> · con un rival la mediana es ese valor y la dispersión es 0.0 —que no es
+>   «no hay dispersión», sino «no se puede medir»;
+> · y sin ninguna, un error que lo dice, y no el `nan` que devuelve
+>   `numpy.median([])`, que es un número que se propaga sin que nadie lo note.
+
+**DE QUIEN DECIDE EL OBJETIVO:** si la mediana es la reducción correcta, que es
+una cuestión de póquer y no de instrumentación. Y por eso **no se toca**: un
+cambio de reducción cambia la métrica, y la métrica publicada no se mueve por
+criterio de un bloque de instrumentación. Y lo que ya está medido es que
+**para este AUC la reducción no importa** (`tools/test_reduccion_auc.py`
+compara seis), de modo que la pregunta es para la métrica SIGUIENTE, y esa es
+de quien la decide.
+
+## 5. Y EL RESUMEN, que es lo que hay que llevarse
+
+| frente | del código | de A1, o de quien decide |
+|---|---|---|
+| las 5 divergentes | 27 de 29 son un resumen truncado, y se clasifican sin la grabación | 2 cartas, una en `H_0915` y otra en `H_0921`. Y la cuenta hay que repetirla tras la adopción |
+| `matrix` | el grafo: 7 módulos del motor dependen del fichero | la intención del fichero |
+| la vía preflop | el contrato está escrito, y sus **dos decisiones ya están tomadas**; lo que falta son las cuestiones de alcance | que la equity sea observable en preflop, más manos de validación, y si la equity preflop observable ordena las manos |
+| el peso por rival | la agregación, su condición —los rivales **evaluables**— y su cuenta, con test sintético | si la mediana es la reducción correcta, y para la métrica siguiente |
+
+> Y el patrón de los cuatro es el mismo, y es el del proyecto entero:
+> **la parte que se puede decidir desde el código está medida y es pequeña; y
+> la parte que depende de los datos es de otra persona, y no se toca.**

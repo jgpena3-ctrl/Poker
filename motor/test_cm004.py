@@ -448,3 +448,177 @@ def test_el_verificador_detecta_una_revertida_que_reaparece(tmp_path, capsys):
     salida = capsys.readouterr().out
     assert rc != 0, 'el verificador dio 0 con una revertida reaparecida'
     assert 'REVERTIDAS' in salida, salida
+
+
+
+# --- el invariante, y que todavia pueda dispararse --------------------------
+#
+# Y este es el otro guard, y el mas peligroso de los dos: un invariante que
+# da CERO porque no hay nada que mirar.
+
+# MEDIDO, y el numero es una MEDIDA y no un supuesto: las manos de la base en
+# las que el motor RECONOCE la ciega del BB con su propia regla.
+#
+# Y por que es un numero y no un «> 0»: porque un 0 tolerado no distinguiría
+# «la base está bien» de «la regla se ha apagado». Y la diferencia entre esas
+# dos cosas es de 921 contra 6.
+#
+# Y ESTE NUMERO ES EL CONTROL DE REGRESION DE LA BASE DE HOY, Y NO MAS
+# -------------------------------------------------------------------
+# Y la distincion importa, y es la que R1 pidio:
+#
+# > Este número es un control de la BASE CANONICA DE HOY. Cuando se adopte
+# > la base normalizada, el número esperado se fija A PARTIR DE DATOS YA
+# > REVISADOS, y no de la copia.
+#
+# Y el motivo es concreto: la copia tiene 2514 postes y la base de hoy tiene
+# cero, de modo que el número de manos con ciega reconocida es OTRO, y tomarlo
+# de la copia seria fijarlo sobre datos que todavia no son los canonicos.
+#
+# MEDIDO, de lo que seria: con la regla nueva —que acepta la `p` de
+# `DOCS/CONTRATO_ACCION_P.md`— la base de HOY da 921, los MISMOS de antes, y
+# la copia da 1258. Y 1258 NO es un numero que se pueda declarar aqui.
+CIEGAS_RECONOCIDAS = 921
+
+
+def test_el_invariante_de_cm004_puede_dispararse():
+    """Que la regla de CM-004 todavia tenga algo que mirar.
+
+    Y el motivo, que es el mas importante de este fichero: el invariante da
+    CERO, y ese cero puede significar dos cosas muy distintas:
+
+        · que ninguna mano lo viola            ->  la base esta bien
+        · que ya no hay ninguna `BB b` que pueda violarlo  ->  la regla esta
+          APAGADA, y su cero no dice NADA
+
+    Y MEDIDO, la diferencia, con la COPIA NORMALIZADA de la base —que re-codifica
+    las ciegas como `p` —pass— en vez de `b` —bet——:
+
+        la canonica : 921 de 1258 manos con ciega reconocida, y el invariante da 0
+        la copia    :   6 de 1258 manos con ciega reconocida, y el invariante da 0
+
+    O sea que el MISMO CERO, con dos significados opuestos, y nada en la suite
+    que los distinga. **Un verde que miente es peor que un rojo**, porque el
+    rojo se ve y el verde se copia.
+
+    Y por que la cuenta va en la REGLA y no en el texto: la regla que decide
+    es `_es_ciega_bb`, que esta en `motor/learn.py`, y el numero se mide con
+    ella. De modo que si la regla cambia, el numero cambia, y hay que
+    actualizarlo a mano —que es el precio de que el guard vigile algo.
+    """
+    # Y la base que se mira se puede APUNTAR a otra, con `POKER_DB_PATH`, y el
+    # motivo es el mismo que en el otro guardian: que el procedimiento de
+    # integracion se pueda probar contra un destino temporal.
+    #
+    # Y el 921 sigue siendo el control de la base ACTUAL: de modo que contra
+    # una candidata con otro numero de ciegas este test FALLA, y tiene que
+    # fallar, porque el 921 no es el umbral de la copia.
+    ruta = os.environ.get('POKER_DB_PATH') or None
+    manos = learn.load_hands(path=ruta, reliable_only=False)
+    con_ciega = 0
+    for h in manos:
+        seq = learn._preflop_sequence(h)
+        if any(learn._es_ciega_bb(i, pos, act, amount, is_blind, False)
+               for i, (pos, act, amount, is_blind) in enumerate(seq)):
+            con_ciega += 1
+    assert con_ciega == CIEGAS_RECONOCIDAS, (
+        'el motor reconoce la ciega en %d de %d manos, y el declarado es %d.\n\n'
+        'Y el motivo de que sea un numero y no un «> 0»: porque un 0 tolerado '
+        'no distinguiría «la base esta bien» de «la regla se ha apagado». Y la '
+        'diferencia entre esas dos cosas es de %d contra 6.\n\n'
+        'MEDIDO, con la copia normalizada de `trabajo/`: %d manos con ciega '
+        'reconocida, y el invariante de CM-004 daria CERO igual. O sea que el '
+        'CERO de un invariante no dice que la base este bien: dice que el '
+        'invariante no ha mirado nada.'
+        % (con_ciega, len(manos), CIEGAS_RECONOCIDAS,
+           CIEGAS_RECONOCIDAS, 6))
+
+def test_el_invariante_tiene_algo_que_mirar():
+    """La no vacuidad, en la base que se le diga, y no solo en la de hoy.
+
+    Y por que este test es DISTINTO del de las 921, y por que hace falta:
+
+    El control del 921 es el control de REGRESION de la base de HOY. Y durante
+    una integracion, el sitio de la canonica lo ocupa la CANDIDATA, que tiene
+    otro numero de ciegas. De modo que el 921, alli, no falla: es que **no
+    dice nada**. Y un control que no se puede aplicar no es un control: es un
+    adorno que ademas distrae, porque parece que se esta comprobando.
+
+    Y lo que SI tiene sentido en cualquier base es la no vacuidad: que la
+    regla de la ciega tenga ALGO que mirar. Y es exactamente el fallo que el
+    921 documenta: un invariante que da cero porque no hay nada que mirar.
+
+    Y el motivo de que mire `POKER_DB_PATH` es el de siempre: el procedimiento
+    de integracion tiene que poder probarse contra un destino TEMPORAL, sin
+    tocar la base canonica.
+
+    Y el 921 NO se reutiliza aqui: R2 lo dice, y es que el numero de la copia
+    lo declara A1, con datos revisados. Este test solo mira que haya algo que
+    mirar, y eso no es un numero de manos: es una pregunta de si el motor esta
+    VIVO.
+    """
+    ruta = os.environ.get('POKER_DB_PATH') or None
+    manos = learn.load_hands(path=ruta, reliable_only=False)
+    con_ciega = 0
+    for h in manos:
+        seq = learn._preflop_sequence(h)
+        if any(learn._es_ciega_bb(i, pos, act, amount, is_blind, False)
+               for i, (pos, act, amount, is_blind) in enumerate(seq)):
+            con_ciega += 1
+    assert con_ciega > 0, (
+        'el motor NO reconoce ninguna ciega en %d manos, y con 0 el '
+        'invariante de CM-004 no tiene nada que mirar: su cero no dice si la '
+        'base esta bien, dice que la regla esta apagada.\n\n'
+        'Y esto pasa con CUALQUIER base, y no solo con la de hoy: por eso este '
+        'test no mira el 921, que es el control de la base canonica de hoy.'
+        % len(manos))
+
+
+
+def test_el_921_no_puede_ser_el_valor_esperado_de_la_copia():
+    """Que el 921 no aparezca como constante de la COPIA normalizada.
+
+    Y el motivo, que es la leccion del bloque: **1258 —o el numero que A1
+    fije— no se puede declarar desde aqui**, porque sale de datos que A1 todavia
+    no ha validado. Y el 921 es el numero de la base CANONICA, de modo que
+    usarlo como el valor esperado de la copia seria declarar una cosa que no
+    es la.
+
+    Y el modo de comprobarlo es el de siempre: por el ARBOL, y no por el
+    texto. Se buscan las constantes de nivel de modulo cuyo VALOR es 921, y se
+    mira el NOMBRE: si el nombre dice que es de la copia, el test falla.
+
+    Y el nombre, y no el valor, porque el valor 921 es legitimo en mas de un
+    sitio: es el control de regresion de la base de hoy, y ese ha de seguir
+    ahi.
+    """
+    raiz = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    de_la_copia = ('COPIA', 'EDICION', 'NORMALIZAD')
+    culpables = []
+    for carpeta in ('motor', 'tools'):
+        base = os.path.join(raiz, carpeta)
+        for nombre in sorted(os.listdir(base)):
+            if not nombre.endswith('.py'):
+                continue
+            ruta = os.path.join(base, nombre)
+            with io.open(ruta, encoding='utf-8') as f:
+                arbol = ast.parse(f.read())
+            for nodo in arbol.body:
+                if not isinstance(nodo, ast.Assign):
+                    continue
+                valor = nodo.value
+                if not (isinstance(valor, ast.Constant)
+                        and valor.value == 921):
+                    continue
+                for t in nodo.targets:
+                    if not isinstance(t, ast.Name):
+                        continue
+                    if any(m in t.id.upper() for m in de_la_copia):
+                        culpables.append('%s/%s:%d  %s = 921'
+                                         % (carpeta, nombre, nodo.lineno, t.id))
+    assert not culpables, (
+        'el 921 aparece como constante de la COPIA normalizada:\n   '
+        + '\n   '.join(culpables)
+        + '\n\nY no puede: el 921 es el control de la base CANONICA de hoy. '
+          'El numero de la copia lo fija A1 al cerrar las 203 manos, y sale '
+          'de datos revisados. Ver DOCS/CONTRATO_ACCION_P.md.')

@@ -208,7 +208,30 @@ class ProfileRangeModel:
                 f'usando FLAT_PRIOR={FLAT_PRIOR}',
                 RuntimeWarning, stacklevel=2)
             return np.full((13, 13), FLAT_PRIOR, dtype=np.float32)
-        return np.asarray(chosen['matrix'], dtype=np.float32)
+        # Y LA FORMA, y es el MISMO contrato de `preflop.py`: una matriz que
+        # no es 13x13 no es una tabla con menos celdas, es una tabla DANA.
+        #
+        # MEDIDO, antes no se miraba, y una matriz de (12, 13) pasaba como
+        # prior: el fallo aparecia mas tarde y lejos —una suma de formas que
+        # no encaja, o un indice fuera de rango al mapear a combos—, y sin
+        # decir nada de donde venia.
+        matrix = chosen['matrix']
+        if (not isinstance(matrix, list) or len(matrix) != 13
+                or any(not isinstance(fila, list) or len(fila) != 13
+                       for fila in matrix)):
+            warnings.warn(
+                f'_prior_grid: tabla {source!r} con la matriz DANA '
+                f'(no es 13x13); usando FLAT_PRIOR={FLAT_PRIOR}',
+                RuntimeWarning, stacklevel=2)
+            return np.full((13, 13), FLAT_PRIOR, dtype=np.float32)
+        try:
+            return np.asarray(matrix, dtype=np.float32)
+        except (TypeError, ValueError):
+            warnings.warn(
+                f'_prior_grid: tabla {source!r} con celdas que no son '
+                f'numeros; usando FLAT_PRIOR={FLAT_PRIOR}',
+                RuntimeWarning, stacklevel=2)
+            return np.full((13, 13), FLAT_PRIOR, dtype=np.float32)
 
     def p_matrix(self, perfil: str, spot: str, action: str,
                  pos: str = '', villain_pos: str = '') -> np.ndarray:
