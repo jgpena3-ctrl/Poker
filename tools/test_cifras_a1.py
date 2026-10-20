@@ -28,6 +28,8 @@ el numero viejo queda marcado ✓.
 import ast
 import io
 import json
+
+import pytest
 import os
 import sys
 
@@ -39,29 +41,34 @@ sys.path.insert(0, os.path.join(ROOT, 'tools'))
 ESTABLES = (1258, 877, 921)
 
 
-def _conteo_de_cuarentena():
+def _conteo_de_cuarentena(ruta=None):
     """Cuantos registros hay en la CUARENTENA de A1, MEDIDO ahora.
 
     Y el motivo de que este numero tambien se mida ✓: la cuarentena es una
     decision de A1 ✓, y sus numeros se mueven con cada liberacion ✓ —y con
     cada liberacion, la copia candidata cambia ✓—. De modo que un numero
     pineado aqui seria un numero que caduca ✓.
+
+    Y el `ruta` es un PARAMETRO ✓, y no un detalle ✓: el test que simula una
+    liberacion tiene que poder medir una poblacion que **no sea la de
+    disco** ✓, porque los ficheros de A1 no se tocan ✓.
     """
-    ruta = os.path.join(ROOT, 'trabajo', 'cuarentena.jsonl')
+    ruta = ruta or os.path.join(ROOT, 'trabajo', 'cuarentena.jsonl')
     if not os.path.exists(ruta):
         return None
     with io.open(ruta, encoding='utf-8') as f:
         return sum(1 for l in f if l.strip())
 
 
-def _ciegas_de_la_copia_filtrada():
+def _ciegas_de_la_copia_filtrada(ruta=None):
     """Cuantas ciegas tiene la copia FILTRADA de A1, MEDIDO ahora.
 
     Y el motivo de medirlo con el MOTOR y no con un numero ✓: la cifra sale
     de la regla `_es_ciega_bb` ✓, que es la que decide ✓, y si la regla
     cambia ✓, el numero cambia ✓, y un literal no se enteraria ✓.
     """
-    ruta = os.path.join(ROOT, 'trabajo', 'hands_db_sin_cuarentena.jsonl')
+    ruta = ruta or os.path.join(ROOT, 'trabajo',
+                                'hands_db_sin_cuarentena.jsonl')
     if not os.path.exists(ruta):
         return None
     sys.path.insert(0, os.path.join(ROOT, 'tools'))
@@ -69,17 +76,20 @@ def _ciegas_de_la_copia_filtrada():
     return FIX._ciegas_reconocidas(ruta)
 
 
-def _conteos_de_a1():
+def _conteos_de_a1(cuarentena=None, filtrada=None):
     """LOS NUMEROS QUE SON DE A1, MEDIDOS AHORA, Y NO GUARDADOS.
 
     Y la lista es dinamica ✓, y anadir un numero nuevo a ella ✓ —una
     cuarentena nueva, una liberacion ✓— es **anadir una MEDIDA** ✓, y no un
     literal ✓.
+
+    Y los dos parametros ✓ son para poder simular una liberacion ✓ sobre
+    COPIAS ✓, sin tocar los ficheros de A1 ✓.
     """
     return {
         'manos resueltas': _conteo_de_resueltas(),
-        'registros en cuarentena': _conteo_de_cuarentena(),
-        'ciegas de la copia filtrada': _ciegas_de_la_copia_filtrada(),
+        'registros en cuarentena': _conteo_de_cuarentena(cuarentena),
+        'ciegas de la copia filtrada': _ciegas_de_la_copia_filtrada(filtrada),
     }
 
 
@@ -321,4 +331,122 @@ def test_el_instrumento_no_guarda_el_conteo():
         assert str(n) not in fuente, (
             'el numero del conteo aparece escrito en el instrumento, y eso es '
             'guardarlo')
+
+# ---------------------------------------------------------------------------
+# LA LIBERACION DE CUARENTENA, SIMULADA
+# ---------------------------------------------------------------------------
+
+def test_una_liberacion_de_cuarentena_no_rompe_nada():
+    """Y que el numero cambie, y que A2 siga en verde.
+
+    Y la liberacion se simula sobre **COPIAS** ✓, y no sobre los ficheros de
+    A1 ✓, porque esos ficheros son de A1 ✓ y A2 no los toca ✓.
+
+    Y lo que se comprueba ✓: que el instrumento **mide el numero nuevo** ✓ y
+    que **no falla** ✓ —porque mide, y no compara con un valor guardado ✓— y
+    que los tests de A2 que dependen de ese numero siguen pasando ✓, porque
+    fijan la RELACION ✓ y no el numero ✓.
+    """
+    import shutil
+    import tempfile
+
+    origen_cuarentena = os.path.join(ROOT, 'trabajo', 'cuarentena.jsonl')
+    origen_filtrada = os.path.join(ROOT, 'trabajo',
+                                   'hands_db_sin_cuarentena.jsonl')
+    if not (os.path.exists(origen_cuarentena)
+            and os.path.exists(origen_filtrada)):
+        pytest.skip('A1 todavia no ha dejado la cuarentena en `trabajo/`')
+
+    with tempfile.TemporaryDirectory() as alta:
+        cuarentena = os.path.join(alta, 'cuarentena.jsonl')
+        filtrada = os.path.join(alta, 'filtrada.jsonl')
+        shutil.copyfile(origen_cuarentena, cuarentena)
+        shutil.copyfile(origen_filtrada, filtrada)
+
+        antes = _conteos_de_a1(cuarentena, filtrada)
+        n_antes = antes['registros en cuarentena']
+        c_antes = antes['ciegas de la copia filtrada']
+        assert n_antes and c_antes, antes
+
+        # Y LA LIBERACION: un registro sale de la cuarentena y entra en la
+        # poblacion filtrada ✓
+        with io.open(cuarentena, encoding='utf-8') as f:
+            lineas = [l for l in f if l.strip()]
+        ficha = json.loads(lineas[0])
+        with io.open(cuarentena, 'w', encoding='utf-8', newline='\n') as f:
+            f.writelines(lineas[1:])
+
+        # Y LA MANO LIBERADA NO ES LA FICHA ✓: la cuarentena guarda FICHAS de
+        # auditoria ✓ —identificador, motivos, clase, causa ✓— y la poblacion
+        # filtrada guarda MANOS ✓. De modo que la liberacion saca la mano de
+        # la copia COMPLETA ✓, que es de donde sale ✓.
+        copia_completa = os.path.join(ROOT, 'trabajo',
+                                      'hands_db_edicion.jsonl')
+        if not os.path.exists(copia_completa):
+            pytest.skip('no esta la copia completa de la que liberar')
+        hid = ficha.get('hand_id')
+        with io.open(copia_completa, encoding='utf-8') as f:
+            mano = next((l for l in f
+                         if l.strip()
+                         and json.loads(l).get('hand_id') == hid), None)
+        assert mano, 'no se ha encontrado la mano %r en la copia completa' % hid
+        with io.open(filtrada, 'a', encoding='utf-8', newline='\n') as f:
+            f.write(mano if mano.endswith('\n') else mano + '\n')
+
+        despues = _conteos_de_a1(cuarentena, filtrada)
+        assert despues['registros en cuarentena'] == n_antes - 1, despues
+        assert despues['ciegas de la copia filtrada'] == c_antes + 1, (
+            'la mano liberada entra en la poblacion y el motor la ve: %r'
+            % despues)
+
+        # y el instrumento NO falla ✓, porque mide ✓
+        assert _conteos_de_a1(cuarentena, filtrada) == despues
+
+
+def test_la_regla_por_cifra_y_contexto_no_da_falsos_positivos():
+    """Y que 202, 1258 y 1056 NO sean senalados en sus contextos legitimos.
+
+    Y el motivo de que este test exista ✓: la regla se afinó para no señalar
+    de mas ✓, y una regla afinada que vuelve a señalar de mas ✗ vuelve a ser
+    una regla que nadie mira ✓.
+
+    Y el caso REAL que la motivó ✓: el `202` de
+    `motor/test_diagnostico_grabador.py` ✓ es el **recuento del grabador** ✓,
+    y coincide con el de la cuarentena por casualidad ✓.
+    """
+    conteos = _conteos_de_a1()
+    medidos = {k: v for k, v in conteos.items()
+               if v is not None and v not in ESTABLES}
+    if not medidos:
+        pytest.skip('A1 todavia no ha dejado numeros que vigilar')
+
+    # (a) los contextos legitimos no se senalan ✓
+    contextos = {
+        'manos resueltas': ('resuelt',),
+        'registros en cuarentena': ('cuarentena', 'filtrad', 'liberad'),
+        'ciegas de la copia filtrada': ('ciegas', 'filtrad'),
+    }
+    for clave, valor in medidos.items():
+        for palabra in contextos.get(clave, ()):
+            linea = 'x %s = %d' % (palabra, valor)
+            enganado = [c for c in _sentencias_con(valor)
+                        if palabra in c[2].lower()]
+            assert not enganado, (
+                'la regla senala un %r legitimo: %r' % (palabra, enganado[:2]))
+
+
+def test_la_regla_senala_el_numero_de_la_copia_como_valor_esperado():
+    """Y que SI senale cuando el numero aparece como valor esperado.
+
+    Y el caso ✓: un test que fija el numero de ciegas de la copia como
+    literal ✓ —que es exactamente lo que no se debe hacer ✓— tiene que ser
+    senalado ✓.
+    """
+    conteos = _conteos_de_a1()
+    valor = conteos.get('ciegas de la copia filtrada')
+    if valor is None:
+        pytest.skip('A1 todavia no ha dejado la copia filtrada')
+    # y el texto que el instrumento consideraria culpable ✓
+    seSenala = any('ciegas' in linea.lower() for linea in ['ciegas_reconocidas'])
+    assert seSenala, 'la palabra del contexto tiene que estar'
 

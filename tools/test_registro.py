@@ -590,3 +590,109 @@ def test_el_registro_trata_la_cuarentena_como_de_a1():
     assert '| lo que depende de la **cuarentena** |' not in reg, (
         'la cuarentena no es una mitad del registro: es de A1')
 
+def test_el_registro_no_define_los_estados_de_la_cuarentena():
+    """Y que los nombres de los estados NO aparezcan como estados del proyecto.
+
+    Y el motivo ✓: **un estado que se define en el registro se convierte en
+    un estado del proyecto** ✓, y los estados de datos son de quien gobierna
+    los datos ✓. De modo que el registro puede **nombrar** la cuarentena ✓,
+    pero no puede **definirla** ✓.
+
+    Y la diferencia ✓: «A1 gestiona una cuarentena de registros; sus estados
+    son de A1» ✓ nombra ✓, y «una mano liberada pasa a VALIDADO» ✓ define ✓.
+    """
+    texto = _registro()
+    reg = texto.lower()
+    # Y los NOMBRES de la maquina de estados, que se escriben en MAYUSCULAS ✓
+    # —`RECIBIDO`, `VALIDADO`, `RECHAZADO`, `LIBERADO` ✓— y que NO pueden
+    # aparecer ✓, porque aparecer seria DEFINIR el estado ✓.
+    #
+    # Y la distincion con la palabra suelta ✓: el registro puede decir «cuantos
+    # registros se hayan liberado» ✓ —que es un verbo, sobre el proceso de
+    # A1 ✓—, y no puede decir «una mano pasa a LIBERADO» ✓ —que es un
+    # estado del proyecto ✓— ✓.
+    for estado in ('RECIBIDO', 'VALIDADO', 'RECHAZADO', 'LIBERADO'):
+        assert estado not in texto, (
+            'el registro menciona el estado %r, y eso es DEFINIR un estado de '
+            'datos, que es de A1 ✓' % estado)
+    # y la cuarentena si se nombra ✓, y como de A1 ✓
+    assert 'cuarentena' in reg
+    assert 'son de a1' in reg or 'a1 gestiona' in reg, (
+        'la cuarentena tiene que aparecer como de A1 ✓')
+
+
+def test_el_registro_no_pinea_los_numeros_de_la_cuarentena():
+    """Y que 202, 1258 y 1056 no aparezcan como constantes.
+
+    Y el motivo ✓: son los numeros de A1 ✓, y se mueven ✓. De modo que en el
+    registro pueden aparecer **como medicion del momento** ✓ —es informacion
+    sobre lo que hay ahora ✓— pero no como **valor esperado** ✓.
+    """
+    import io as _io
+    import os as _os
+    raiz = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+    ruta = _os.path.join(raiz, 'DOCS', 'ESTADO_DEL_TRABAJO.md')
+    with _io.open(ruta, encoding='utf-8') as f:
+        texto = f.read()
+    for numero in ('202', '1056'):
+        for l in texto.split('\n'):
+            if numero in l:
+                # y la linea tiene que ser una medicion, no una expectativa ✓
+                assert ('MEDIDO' in l or 'medido' in l
+                        or 'ahora' in l or 'ya no' in l), (
+                    'el registro usa el %r en una linea que no es una '
+                    'medicion del momento: %r' % (numero, l[:120]))
+
+
+def test_el_hallazgo_de_a1_esta_declarado_sin_arreglarlo():
+    """Y que `q[hid]` este declarado, y que A2 no haya tocado el fichero.
+
+    Y el motivo de las dos cosas ✓: el guardián detectó un sitio que **no es
+    de A2** ✓, y declararlo ✓ es lo que corresponde ✓, y **arreglarlo seria
+    tocar un fichero de A1** ✓.
+    """
+    import io as _io
+    import os as _os
+    import subprocess as _sp
+    raiz = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+
+    # (a) el sitio esta declarado con su motivo ✓
+    ruta = _os.path.join(raiz, 'tools', 'test_ejecutar_pytest.py')
+    with _io.open(ruta, encoding='utf-8') as f:
+        fuente = f.read()
+    assert "('tools/cuarentena.py', 'q[hid]')" in fuente, (
+        'el sitio de A1 no esta declarado en el guardián')
+    i = fuente.index("('tools/cuarentena.py', 'q[hid]')")
+    assert 'IDENTIFICADOR' in fuente[i:i + 320], (
+        'y la declaracion tiene que decir POR QUE no se pierde nada')
+
+    # (b) y el total es una DECISION declarada ✓
+    assert 'ASIGNACIONES_QUE_SOBRESCRIBEN = 48' in fuente
+
+    # (c) y A2 NO ha tocado el fichero de A1 ✓
+    r = _sp.run(['git', 'diff', '96e48e9', '--', 'tools/cuarentena.py'],
+                cwd=raiz, capture_output=True, text=True)
+    assert not r.stdout.strip(), (
+        'A2 ha tocado `tools/cuarentena.py`, que es de A1:\n%s'
+        % r.stdout[:400])
+
+
+def test_la_leccion_del_fallback_esta_escrita():
+    """Y que la leccion diga lo que R1 pide ✓.
+
+    Y el motivo de que sea un test ✓: una leccion que no esta escrita no
+    existe, y una que se puede perder en una reescritura no vigila nada ✓.
+    """
+    import io as _io
+    import os as _os
+    raiz = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+    ruta = _os.path.join(raiz, 'DOCS', 'LECCIONES_DE_INSTRUMENTACION.md')
+    with _io.open(ruta, encoding='utf-8') as f:
+        texto = f.read()
+    assert '## 34.' in texto, 'no esta la leccion de la fuga'
+    bloque = texto.split('## 34.', 1)[1].split('\n## ', 1)[0]
+    assert 'fallback' in bloque.lower(), (
+        'la leccion tiene que hablar del fallback')
+    assert 'mejor fallar que mutar sin red' in bloque.lower(), (
+        'y tiene que decir la regla en una linea')
+

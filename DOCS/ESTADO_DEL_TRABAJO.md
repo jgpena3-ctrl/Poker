@@ -46,7 +46,7 @@
 | trabajo | dueño | condición de activación |
 |---|---|---|
 | las manos sin resolver | A1 | la revisión manual de cada una, con la grabación original. Y el NÚMERO es de A1 y **se mueve**: MEDIDO, eran 203 cuando este bloque empezó, y ahora son menos, porque A1 ha seguido resolviendo ✓. Y por eso aquí no se escribe la cifra: una cifra de A1 en un documento de A2 caduca sola ✓ |
-| la cuarentena de registros | A1 | A1 gestiona una cuarentena de registros ✓; los números y los estados son de A1 ✓, y A2 no los fija ✓. Y en el registro la cuarentena esta **dentro de la mitad de A1** ✓, y no como una cuarta mitad ✓, porque **A1 todavía no ha definido qué significa cada estado** ✓ |
+| la cuarentena de registros | A1 | **A1 ha dejado la cuarentena en `trabajo/`** ✓; sus ficheros y sus números son de A1 ✓, y **A2 no los fija ni define sus estados** ✓. Y la primera ejecución real de `integrar_copia.py` **dependerá de cuántos registros se hayan liberado de la cuarentena** ✓ |
 | el número de ciegas que la copia debe reconocer | A1 | haber cerrado las 203, y el número sale de los datos revisados. Y el procedimiento **no tiene un valor por defecto**: sin ese parámetro sale con código **2** |
 | las doce categorías que la copia debe dar | A1 | lo mismo, y por un motivo que está medido: **la copia no es solo una re-codificación** |
 | la primera ejecución real de `integrar_copia.py` | A1 | el número de ciegas declarado, y el control de categorías declarado |
@@ -270,7 +270,7 @@ Y lo que hay detrás de esa frase, y es lo que la sostiene:
 |---|---|
 | lo que depende de **A1** | las manos sin resolver, el número de ciegas de la copia y el control de categorías. Y **la cuarentena de registros**, que es una decisión de A1 ✓: los números y los estados son de A1 ✓ —MEDIDO, 202 registros en cuarentena y una copia filtrada de 1056 manos ✓— y **A2 no los fija** ✓, sino que los **mide** ✓. Y la cuarentena **no es un estado de A2** ✓: A2 no define estados de datos ✓ |
 | lo que depende de la **post-adopción** | **H4**, que esta en §3 ✓ con su dueño y su condicion ✓ —y cuya ficha esta en `AUDITORIA_RULES.md` §6 ✓—. Y tambien la recalibracion de las cifras derivadas ✓, y la eleccion de la reduccion estadistica ✓ |
-| lo que **ya está cerrado** | la auditoría de `rules.py` (`866e0c1`, `15ed74a`); los cuatro frentes auditados y clasificados (`7e0b3c7`, `25fe330`); el contrato de la `p`, con su inventario y su tabla de mutaciones (`25fe330`, `d12bff4`); los dos controles del procedimiento, con sus cuatro caminos (`25fe330`); y el experimento de la equity observable, preparado y con puerta (`25fe330`) |
+| lo que **ya está cerrado** | la auditoría de `rules.py` (`866e0c1`, `15ed74a`); los cuatro frentes auditados y clasificados (`7e0b3c7`, `25fe330`); el contrato de la `p`, con su inventario y su tabla de mutaciones (`25fe330`, `d12bff4`); los dos controles del procedimiento, con sus cuatro caminos (`25fe330`); el experimento de la equity observable, preparado y con puerta (`25fe330`); y el **hallazgo de A1** en `tools/cuarentena.py` —un acumulador por identificador de mano ✓— que el guardián de asignaciones detecto ✓: **A2 lo declara y no lo arregla** ✓, porque el fichero es de A1 ✓. Y el total de 48 ✓ es una **decision** ✓ y no un redondeo ✓ |
 
 > Y la diferencia entre «no hay trabajo» y «no hay trabajo que se pueda
 > hacer» es la diferencia entre un proyecto acabado y uno parado ✓. Y aquí

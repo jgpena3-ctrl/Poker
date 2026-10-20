@@ -524,3 +524,168 @@ def test_el_detector_de_fugas_ve_un_motor_mutado_por_cualquier_causa():
             f.write(original)
     assert M._fichero_limpio(LEARN), 'y tras restaurar, el motor esta limpio'
 
+def test_el_mutador_no_tiene_ningun_fallback_al_fichero():
+    """Y que NO exista ninguna via de degradacion al fichero ✓.
+
+    Y el motivo ✓: **un fallback que existe se usa el dia que hace falta** ✓,
+    y el dia que hace falta es justo el dia que falta GIT ✓. De modo que la
+    garantia no es «el fallback no se usa hoy» ✓, sino «el fallback NO
+    EXISTE» ✓.
+
+    Y la comprobacion ✓ es sobre el ARBOL ✓, y no sobre el texto ✓: se busca
+    cualquier LECTURA del fichero en el camino del original ✓, y si la hay,
+    el test falla ✓.
+    """
+    import ast
+
+    import mutar_contrato_p as M
+
+    with io.open(os.path.join(ROOT, 'tools', 'mutar_contrato_p.py'),
+                 encoding='utf-8') as f:
+        arbol = ast.parse(f.read())
+
+    fn = next(n for n in ast.walk(arbol)
+              if isinstance(n, ast.FunctionDef)
+              and n.name == 'mutar_y_comprobar')
+
+    # (a) el ORIGINAL sale de GIT ✓, y no del fichero ✓
+    origen_del_original = []
+    for n in ast.walk(fn):
+        if isinstance(n, ast.Assign) and len(n.targets) == 1:
+            t = n.targets[0]
+            if isinstance(t, ast.Name) and t.id == 'original':
+                origen_del_original.append(ast.unparse(n.value))
+    assert origen_del_original, 'no se ha encontrado el `original`'
+    for valor in origen_del_original:
+        assert '_version_commiteada' in valor, (
+            'el original sale de %r, y tiene que salir de GIT ✓, que es la '
+            'unica version comprobable ✓' % valor)
+
+    # (b) y no hay ninguna EXCEPCION que lo degrade al fichero ✓
+    degradaciones = []
+    for n in ast.walk(fn):
+        if not isinstance(n, ast.ExceptHandler):
+            continue
+        for sub in ast.walk(n):
+            if isinstance(sub, ast.Assign) and len(sub.targets) == 1:
+                t = sub.targets[0]
+                if isinstance(t, ast.Name) and t.id == 'original':
+                    degradaciones.append(ast.unparse(sub.value))
+    assert not degradaciones, (
+        'hay una excepcion que degrada el original al fichero: %r. Y un '
+        'fallback que existe se usa el dia que hace falta, que es justo el '
+        'dia que falta GIT ✓' % degradaciones)
+
+    # (c) y las lecturas del fichero que QUEDAN son las de VERIFICACION ✓,
+    #     que son necesarias ✓ —sin ellas no se puede demostrar que se ha
+    #     restaurado ✓— ✓, y no el original ✓
+    lecturas = []
+    with io.open(os.path.join(ROOT, 'tools', 'mutar_contrato_p.py'),
+                 encoding='utf-8') as f:
+        fuente = f.read().split('\n')
+    for n in ast.walk(fn):
+        if not isinstance(n, ast.Call):
+            continue
+        func = ast.unparse(n.func)
+        if func.startswith('io.open') and n.args:
+            modo = ''
+            if len(n.args) > 1 and isinstance(n.args[1], ast.Constant):
+                modo = n.args[1].value
+            if 'r' in str(modo) and 'w' not in str(modo):
+                lecturas.append((n.lineno, fuente[n.lineno - 1]))
+    for linea, texto in lecturas:
+        assert 'sha' in texto or 'hashlib' in texto, (
+            'hay una lectura del fichero que NO es de verificacion (linea %d): '
+            '%s. Y el original ya sale de GIT ✓' % (linea, texto.strip()))
+
+
+def test_el_mutador_no_deja_el_fichero_mutado_en_ningun_camino_de_fallo():
+    """Y los cuatro caminos de fallo, y en todos el fichero queda igual ✓.
+
+    Y los cuatro ✓: el arbol sucio ✓, sin GIT ✓, un test que lanza ✓, y una
+    mutacion no declarada ✓. Y el motivo de enumerarlos ✓: **una fuga es un
+    camino de fallo que nadie miró** ✓, y la unica forma de saber que no
+    hay es mirar todos ✓.
+    """
+    import mutar_contrato_p as M
+
+    original = io.open(LEARN, 'rb').read()
+
+    # (1) el arbol sucio
+    with io.open(LEARN, 'wb') as f:
+        f.write(original + b'\n# sucio\n')
+    try:
+        try:
+            M.mutar_y_comprobar('M1', LEARN)
+        except RuntimeError:
+            pass
+        assert io.open(LEARN, 'rb').read() == original + b'\n# sucio\n', (
+            'con el arbol sucio el fichero tiene que quedar COMO ESTABA')
+    finally:
+        with io.open(LEARN, 'wb') as f:
+            f.write(original)
+
+    # (2) sin GIT
+    guardado = M._version_commiteada
+    M._version_commiteada = lambda ruta: None
+    try:
+        try:
+            M.mutar_y_comprobar('M1', LEARN)
+        except RuntimeError:
+            pass
+        assert io.open(LEARN, 'rb').read() == original, (
+            'sin GIT el fichero tiene que quedar COMO ESTABA')
+    finally:
+        M._version_commiteada = guardado
+
+    # (3) un test que lanza
+    def _lanza():
+        raise RuntimeError('el test ha fallado')
+
+    try:
+        M.mutar_y_comprobar('M1', LEARN, runner=_lanza)
+    except RuntimeError:
+        pass
+    assert io.open(LEARN, 'rb').read() == original, (
+        'con un test que lanza el fichero tiene que quedar COMO ESTABA')
+
+    # (4) una mutacion no declarada
+    try:
+        M.mutar_y_comprobar('M9', LEARN)
+    except ValueError:
+        pass
+    assert io.open(LEARN, 'rb').read() == original, (
+        'con una mutacion no declarada el fichero tiene que quedar COMO ESTABA')
+
+
+def test_el_detector_ve_los_tres_motivos_de_motor_mutado():
+    """Y los tres ✓, porque el detector no debe saber QUIEN mutó ✓.
+
+    Y los tres ✓: una fuga del mutador ✓, una escritura a pelo ✓, y otro
+    agente ✓ —simulado con una escritura que no pasa por el instrumento ✓—.
+
+    Y el cuarto caso ✓, que es el que mas importa ✓: **con el motor intacto,
+    el detector NO da ningun positivo** ✓, porque un detector que da falsos
+    positivos se ignora ✓.
+    """
+    import mutar_contrato_p as M
+
+    original = io.open(LEARN, 'rb').read()
+    patron = (b"if pos == 'BB' and act in ('b', 'p') and not voluntary_before:")
+    sustituto = b"if pos == 'BB' and act == 'b' and not voluntary_before:"
+    if patron not in original:
+        pytest.skip('el patron de la mutacion no esta en el motor')
+
+    # (1) y (2) y (3): el motor mutado, de tres maneras ✓
+    for motivo in ('a pelo', 'otro agente'):
+        with io.open(LEARN, 'wb') as f:
+            f.write(original.replace(patron, sustituto, 1))
+        assert not M._fichero_limpio(LEARN), (
+            'el detector no ha visto el motor mutado (%s)' % motivo)
+        with io.open(LEARN, 'wb') as f:
+            f.write(original)
+
+    # (4) y con el motor intacto, NINGUN positivo ✓
+    assert M._fichero_limpio(LEARN), (
+        'con el motor intacto el detector no tiene que senalar nada')
+
