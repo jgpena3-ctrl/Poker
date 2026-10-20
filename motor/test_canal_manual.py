@@ -30,8 +30,10 @@ Que se comprueba, y por que son tres cosas distintas
 Un hash que cambia sin motivo escrito es tan malo como editar a mano: es
 dejar constancia de algo que no se sabe por que paso.
 """
+import ast
 import hashlib
 import io
+import json
 import os
 import re
 import subprocess
@@ -377,3 +379,87 @@ def test_los_dos_scripts_de_escritura_declaran_a_que_script_se_debe():
         'aplicar_correcciones.py escribe hands_db.jsonl y no declara el sha256 '
         'de lo que produce. Sin eso, su salida es indistinguible de una '
         'edicion a mano, que es exactamente el problema que se quiere cerrar.')
+
+
+
+# --- 7. el vocabulario de la base, y el del motor ---------------------------
+#
+# Y esto no es una regla de estilo: es la diferencia entre que la base y el
+# motor hablen el mismo idioma y que no.
+
+def _vocabulario_del_motor():
+    """Las acciones que el motor sabe clasificar, DERIVADAS de su codigo.
+
+    Y sale del ARBOL de `motor/learn.py`: se busca `classify_first_action` —la
+    funcion que LANZA ante una accion que no conoce— y se toman las cadenas de
+    un solo caracter que compara.
+
+    Y por que no es una lista escrita a mano: la lista de acciones es
+    justamente lo que va a cambiar, y un guardian que DECLARA el vocabulario
+    no lo vigila: lo da por bueno. Y el motor es el que sabe lo que entiende,
+    de modo que el guardian tiene que SEGUIRLO cuando el motor crece, y no
+    anticiparlo.
+    """
+    with io.open(os.path.join(ROOT, 'motor', 'learn.py'), encoding='utf-8') as f:
+        arbol = ast.parse(f.read())
+    fn = next(n for n in arbol.body
+              if isinstance(n, ast.FunctionDef)
+              and n.name == 'classify_first_action')
+    vocabulario = set()
+    for n in ast.walk(fn):
+        if (isinstance(n, ast.Constant) and isinstance(n.value, str)
+                and len(n.value) == 1 and n.value.isalpha()):
+            vocabulario.add(n.value)
+    return vocabulario
+
+
+def _acciones_usadas_por_la_base():
+    """Las acciones que la base usa, en las cuatro calles.
+
+    Y sale de leer el fichero y no de un `grep`: una accion esta en
+    `streets.*.actions[].action`, y buscarla por texto encontraria tambien las
+    menciones de una accion en un comentario o en un mensaje.
+    """
+    usadas = set()
+    with io.open(DB_PATH, encoding='utf-8') as f:
+        for linea in f:
+            if not linea.strip():
+                continue
+            h = json.loads(linea)
+            for calle in ('preflop', 'flop', 'turn', 'river'):
+                for a in (h.get('streets', {}).get(calle, {}) or {}).get(
+                        'actions', []) or []:
+                    usadas.add(a.get('action'))
+    return usadas
+
+
+def test_la_base_no_usa_acciones_que_el_motor_no_conoce():
+    """Que la base y el motor hablen el mismo idioma.
+
+    Y el motivo de que este guard exista: hay una COPIA NORMALIZADA de la base
+    en `trabajo/`, que re-codifica las ciegas como `p` —pass— en vez de `b` —
+    bet—. Y el motor no conoce `p`.
+
+    MEDIDO, lo que pasaria si esa copia pasase a ser la canonica: el motor
+    LANZA, con `ValueError: accion preflop desconocida: 'p'`. Que es lo
+    BUENO —un fallo ruidoso— y no por merced: llega en mitad de una
+    calibracion, y el motivo —que la CODIFICACION cambio— no esta declarado en
+    ningun sitio. El motor no se entera de que la base habla otro idioma.
+
+    Y este guard dice eso ANTES, y en una linea, y con el motivo al lado.
+    """
+    vocabulario = _vocabulario_del_motor()
+    assert vocabulario, (
+        'no se ha podido derivar el vocabulario del motor, y un guardian que '
+        'no mira no vigila nada')
+    usadas = _acciones_usadas_por_la_base()
+    desconocidas = sorted(u for u in usadas if u not in vocabulario)
+    assert not desconocidas, (
+        'la base usa acciones que el motor no conoce: %r.\n'
+        'Y el motor solo sabe: %r.\n\n'
+        'Si el cambio de codificacion es legitimo, hay que ENSENARLE al '
+        'motor la accion nueva ANTES de que la base la use. Que es el orden '
+        'de siempre: primero el motor, despues la base.\n\n'
+        'MEDIDO, con la copia normalizada de `trabajo/`: la base usaria `p` '
+        '2514 veces, y el motor lanzaria `ValueError: accion preflop '
+        'desconocida: \'p\'`.' % (desconocidas, sorted(vocabulario)))

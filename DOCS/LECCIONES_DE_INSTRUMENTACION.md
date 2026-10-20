@@ -1012,3 +1012,126 @@ Y la cifra vive en una constante, `ASIGNACIONES_QUE_SOBRESCRIBEN`, y el
 guardian la compara con la medida: asi, anadir un sitio nuevo obliga a
 declararlo, y quitarlo obliga a bajar la cifra a mano. Las dos son
 decisiones.
+## 26. Un invariante que da cero porque no puede dispararse
+
+Y esta es la más peligrosa de todas, porque **no da ningún síntoma**: verde.
+
+Y el caso, MEDIDO, con la COPIA NORMALIZADA de la base —que re-codifica las
+ciegas como `p` —pass— en vez de `b` —bet—:
+
+```
+la canónica :  921 de 1258 manos con ciega RECONOCIDA, y el invariante da 0
+la copia    :    6 de 1258 manos con ciega RECONOCIDA, y el invariante da 0
+```
+
+El MISMO cero, con dos significados opuestos:
+
+- en la canónica, cero quiere decir «ninguna mano lo viola»;
+- en la copia, cero quiere decir «**ya no hay ninguna `BB b` que pueda
+  violarlo**».
+
+> **La regla se ha apagado sola.** Y el motor la apaga sin decir nada, porque
+> la regla que decide —`_es_ciega_bb`— exige `act == 'b'`, y en la copia la
+> ciega ya no es una `b`.
+
+Y eso es la quinta forma de la familia de §25, y la peor:
+
+| | el instrumento | lo que no puede ver |
+|---|---|---|
+| §18 | un mutante escrito de memoria | el defecto de verdad |
+| §23 | un contador de definiciones | un nombre repetido |
+| §23 | un script re-ejecutado | lo que ya había aplicado |
+| §25 | un diccionario | una fila repetida |
+| **§26** | **un invariante que ya no puede dispararse** | **el hecho de que ya no mira** |
+
+Y la forma general, que es lo que hay que llevarse:
+
+> **Un invariante que da cero porque no hay nada que mirar no es un
+> invariante que pasa: es un invariante que ha dejado de mirar.** Y el cero
+> de un invariante no dice que el objeto esté bien: dice que el invariante no
+> ha mirado nada.
+
+### Y la regla que sale, y que es de las que mas cuesta
+
+> **Un invariante que puede dar cero tiene que declarar, ADEMAS de su cero,
+> CUANTAS COSAS ESTABA MIRANDO.** Y ese numero es una medida, no un supuesto,
+> y se compara con el declarado a mano: porque un `> 0` tolerado no distinguiría
+> «la base está bien» de «la regla se ha apagado».
+
+Y el numero va con la **REGLA**, que es la que decide: si la regla cambia, el
+numero cambia, y hay que actualizarlo. Que es el precio de que el guard vigile
+algo.
+
+### Y el otro guard, que es el hermano de este
+
+Y el del **vocabulario**, que vigila que la base y el motor hablen el mismo
+idioma. MEDIDO: la copia usa `p` 2514 veces, y `motor/learn.py` no menciona
+`p` ni una vez.
+
+Y las dos mitades juntas:
+
+> **Un invariante que se apaga, y un objeto que cambia de idioma, se
+> detectan con la MISMA pregunta: ¿qué está mirando esto, y cuántas cosas
+> están mirando?**
+
+Y el reproche al que se parecen los dos, y que es el reproche del §24:
+
+> Un invariante que no declara su alcance —qué mira, y cuántas cosas— no
+> vigila nada, y **no avisa de que no vigila nada**.
+## 27. Una lección escrita en un sitio no se cumple en el de al lado
+
+Y esta es corta, y es de las que más molestan, porque no es un fallo de
+nadie: es una regla que el repo **ya tenía escrita** y que no se cumplía una
+línea más abajo.
+
+MEDIDO, en `tools/test_verificador_caracteres.py`, que es un fichero de 13
+tests:
+
+```
+test_un_fichero_sin_seguimiento_es_todo_del_cambio
+    "Un test que depende del estado del repositorio es un test que se rompe
+     solo."
+
+test_un_fichero_rastreado_y_sin_cambios_no_tiene_lineas_nuevas      <-- el que
+    fijaba 'motor/test_canal_manual.py' como su ejemplo
+```
+
+Y el primero **explica** por qué el segundo no puede fijar un fichero: porque
+en cuanto el fichero del test se commitea, deja de estar «sin seguimiento» y
+el test empieza a fallar sin que nada haya cambiado. Y el segundo fijaba un
+fichero **del repo**, y de los que más se tocan.
+
+Y lo que lo rompió fue un cambio **legítimo y sin relacion**: añadir un
+guardian de vocabulario a `motor/test_canal_manual.py`. Y el sintoma fue un
+rojo en un sitio que no tiene nada que ver con el cambio.
+
+> **La lección, escrita a treinta líneas de distancia, no gobierna el test
+> de al lado.** Y el motivo es que una lección es prosa, y la prosa no se
+> comprueba: un test que depende del estado del repositorio sigue
+> dependiendo del estado del repositorio, por muy bien escrito que esté el
+> comentario de al lado.
+
+Y el arreglo, que es el de siempre: **el caso se CONSTRUYE, no se busca**. Y
+aquí, por la vía de derivarlo:
+
+```
+el fichero se BUSCA entre los rastreados y sin cambios
+    y se exige que NO este vacio            (un caso trivial no comprueba nada)
+    y se exige que tenga un caracter que el BARRIDO senalaria  (que el escenario
+                                                            sea el que se dice)
+    y se acota a las carpetas que el barrido recorre  (un caso que nadie mira
+                                                    no comprueba nada)
+```
+
+Y las tres exigencias son MEDIDAS, porque cada una se hizo necesaria al
+ver que la anterior dejaba un caso trivial: sin la del tamaño, el helper
+encontraba `motor/__init__.py`; sin la del caracter, el escenario no era el
+que el test describia.
+
+Y la general, que es la de siempre pero vista por el otro lado:
+
+> **Un comentario que explica una regla no la hace cumplir.** Lo que la hace
+> cumplir es un test que construye el caso, y que falla si el caso no se
+> puede construir. Y un caso que no se puede construir tiene que **fallar**,
+> no pasar: porque un caso que no se ha comprobado no es un caso que ha
+> pasado.

@@ -448,3 +448,63 @@ def test_el_verificador_detecta_una_revertida_que_reaparece(tmp_path, capsys):
     salida = capsys.readouterr().out
     assert rc != 0, 'el verificador dio 0 con una revertida reaparecida'
     assert 'REVERTIDAS' in salida, salida
+
+
+
+# --- el invariante, y que todavia pueda dispararse --------------------------
+#
+# Y este es el otro guard, y el mas peligroso de los dos: un invariante que
+# da CERO porque no hay nada que mirar.
+
+# MEDIDO, y el numero es una MEDIDA y no un supuesto: las manos de la base en
+# las que el motor RECONOCE la ciega del BB con su propia regla.
+#
+# Y por que es un numero y no un «> 0»: porque un 0 tolerado no distinguiría
+# «la base está bien» de «la regla se ha apagado». Y la diferencia entre esas
+# dos cosas es de 921 contra 6.
+CIEGAS_RECONOCIDAS = 921
+
+
+def test_el_invariante_de_cm004_puede_dispararse():
+    """Que la regla de CM-004 todavia tenga algo que mirar.
+
+    Y el motivo, que es el mas importante de este fichero: el invariante da
+    CERO, y ese cero puede significar dos cosas muy distintas:
+
+        · que ninguna mano lo viola            ->  la base esta bien
+        · que ya no hay ninguna `BB b` que pueda violarlo  ->  la regla esta
+          APAGADA, y su cero no dice NADA
+
+    Y MEDIDO, la diferencia, con la COPIA NORMALIZADA de la base —que re-codifica
+    las ciegas como `p` —pass— en vez de `b` —bet——:
+
+        la canonica : 921 de 1258 manos con ciega reconocida, y el invariante da 0
+        la copia    :   6 de 1258 manos con ciega reconocida, y el invariante da 0
+
+    O sea que el MISMO CERO, con dos significados opuestos, y nada en la suite
+    que los distinga. **Un verde que miente es peor que un rojo**, porque el
+    rojo se ve y el verde se copia.
+
+    Y por que la cuenta va en la REGLA y no en el texto: la regla que decide
+    es `_es_ciega_bb`, que esta en `motor/learn.py`, y el numero se mide con
+    ella. De modo que si la regla cambia, el numero cambia, y hay que
+    actualizarlo a mano —que es el precio de que el guard vigile algo.
+    """
+    manos = learn.load_hands(reliable_only=False)
+    con_ciega = 0
+    for h in manos:
+        seq = learn._preflop_sequence(h)
+        if any(learn._es_ciega_bb(i, pos, act, amount, is_blind, False)
+               for i, (pos, act, amount, is_blind) in enumerate(seq)):
+            con_ciega += 1
+    assert con_ciega == CIEGAS_RECONOCIDAS, (
+        'el motor reconoce la ciega en %d de %d manos, y el declarado es %d.\n\n'
+        'Y el motivo de que sea un numero y no un «> 0»: porque un 0 tolerado '
+        'no distinguiría «la base esta bien» de «la regla se ha apagado». Y la '
+        'diferencia entre esas dos cosas es de %d contra 6.\n\n'
+        'MEDIDO, con la copia normalizada de `trabajo/`: %d manos con ciega '
+        'reconocida, y el invariante de CM-004 daria CERO igual. O sea que el '
+        'CERO de un invariante no dice que la base este bien: dice que el '
+        'invariante no ha mirado nada.'
+        % (con_ciega, len(manos), CIEGAS_RECONOCIDAS,
+           CIEGAS_RECONOCIDAS, 6))
