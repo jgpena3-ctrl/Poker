@@ -462,6 +462,22 @@ def test_el_verificador_detecta_una_revertida_que_reaparece(tmp_path, capsys):
 # Y por que es un numero y no un «> 0»: porque un 0 tolerado no distinguiría
 # «la base está bien» de «la regla se ha apagado». Y la diferencia entre esas
 # dos cosas es de 921 contra 6.
+#
+# Y ESTE NUMERO ES EL CONTROL DE REGRESION DE LA BASE DE HOY, Y NO MAS
+# -------------------------------------------------------------------
+# Y la distincion importa, y es la que R1 pidio:
+#
+# > Este número es un control de la BASE CANONICA DE HOY. Cuando se adopte
+# > la base normalizada, el número esperado se fija A PARTIR DE DATOS YA
+# > REVISADOS, y no de la copia.
+#
+# Y el motivo es concreto: la copia tiene 2514 postes y la base de hoy tiene
+# cero, de modo que el número de manos con ciega reconocida es OTRO, y tomarlo
+# de la copia seria fijarlo sobre datos que todavia no son los canonicos.
+#
+# MEDIDO, de lo que seria: con la regla nueva —que acepta la `p` de
+# `DOCS/CONTRATO_ACCION_P.md`— la base de HOY da 921, los MISMOS de antes, y
+# la copia da 1258. Y 1258 NO es un numero que se pueda declarar aqui.
 CIEGAS_RECONOCIDAS = 921
 
 

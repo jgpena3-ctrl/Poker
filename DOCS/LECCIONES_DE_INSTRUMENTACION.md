@@ -1135,3 +1135,85 @@ Y la general, que es la de siempre pero vista por el otro lado:
 > puede construir. Y un caso que no se puede construir tiene que **fallar**,
 > no pasar: porque un caso que no se ha comprobado no es un caso que ha
 > pasado.
+## 28. Una codificación no es una forma de escribirlo, y su neutralidad hay que PROBARLA
+
+Y esta es la quinta de la familia de §25, y la más sutil, porque el
+instrumento no es un detector: es **una base de datos con dos codificaciones**.
+
+### El experimento
+
+Y la forma de enumerar los consumidores que hay que enseñar, sin leer cuarenta
+y cinco sitios esperando encontrarles:
+
+> Se coge la base **de hoy**, se recodifican sus ciegas como `p` —un cambio
+> químico, sin tocar la base ni la copia— y se mide **qué consumidores dan otra
+> respuesta**.
+
+MEDIDO, manos de 1258 cuya respuesta cambia:
+
+```
+  la primera accion del preflop            921
+  classify_first_action de la primera      921
+  la secuencia preflop completa            922
+  el dinero puesto (b + r)                 922
+  la ciega reconocida (regla VIEJA)        921
+  la ciega reconocida (regla NUEVA)          0   <-- retrocompatible
+  el numero de acciones                    0
+```
+
+Y de ahí sale la lista de consumidores, y la lista **no se escribió de
+memoria**: salió del experimento.
+
+### Y la neutralidad, que es lo que de verdad importa
+
+MEDIDO, y con la base de HOY, que es la que alimenta las cifras:
+
+```
+las doce categorias de la primera decision   ->  IDENTICAS antes y despues
+las manos con ciega reconocida               ->  921, las mismas
+```
+
+> **Una codificación es neutra cuando el motor la trata igual, y eso no se
+> supone: se mide con el experimento que la rompe.** Y el experimento es
+> siempre el mismo: **recodificar lo que ya se tiene y ver qué se mueve**.
+
+Y el recíproco, que es la mitad interesante:
+
+> **El bote, en las dos codificaciones, sale IGUAL: 1258 de 1258 las dos
+> veces.** Y yo suponía lo contrario —que la ciega grabada como `b`\subía el
+> nivel y corrompía el bote—, y la medición lo desmintió.
+
+### Y el hallazgo que NO se buscaba
+
+Y el experimento encontró un defecto que no tenía nada que ver con las
+codificaciones:
+
+> Una apuesta de 0.5 BB o menos se **clasifica** como `limp` —y el docstring
+> de `classify_first_action` dice que «no se cuenta como subida real»— pero
+> el contador de `preflop_events` la cuenta como **subida** de todas
+> maneras. Las dos cosas no pueden ser verdad.
+>
+> MEDIDO: **52 de 1258** manos, y **43 de las 877 de la ventana fiable**, que
+> es la que alimenta las cifras publicadas.
+
+Y **no se ha arreglado**, y el motivo es el mismo de siempre y es la parte
+importante:
+
+> Arreglarlo **recalibra**. Y una cifra publicada no se mueve como efecto
+> secundario de un arreglo. De modo que el defecto se **declara**, con su
+> medición, y se arregla cuando las cifras se re-derivan contra la base que
+> se adopte.
+
+### Y la clase general
+
+> **Un experimento que compara dos formas de representar lo mismo encuentra
+> los defectos del MODELO, no solo las diferencias entre las formas.** Y eso
+> vale más que la diferencia que ibas a buscar, porque la diferencia se
+> arrange y el defecto no.
+
+Y una segunda, que es de las que más cuestan:
+
+> **Una propiedad de equivalencia no se supone, se mide, y su medicion es un
+> CONTRATO.** Porque un contrato que dice «estas dos formas son la misma» sin
+> el experimento que lo demuestra es una promesa, y las promesas no se
+> fiscalizan.

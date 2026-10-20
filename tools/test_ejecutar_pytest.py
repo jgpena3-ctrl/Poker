@@ -3628,7 +3628,7 @@ CARPETAS_DEL_INVENTARIO = ('tools', 'motor', 'recorder')
 # fichero de esa taille es una tabla que nadie mantiene, y una tabla que nadie
 # mantiene es decoracion.
 
-TESTS_POR_CARPETA = {'motor': 836, 'recorder': 4, 'tools': 487}
+TESTS_POR_CARPETA = {'motor': 852, 'recorder': 4, 'tools': 488}
 
 
 # Y los FICHEROS, que son OTRA medida. MEDIDO, y sin ellos el guardia
@@ -3641,7 +3641,7 @@ TESTS_POR_CARPETA = {'motor': 836, 'recorder': 4, 'tools': 487}
 # es cierto. Y «hoy» no es una propiedad. O sea que el guardia no baja,
 # pero FALLA si algun dia hay tests abajo: es el unico caso en el que
 # bajaria, y bajarlo sin querer seria decir «el repo entero» sin serlo.
-FICHEROS_POR_CARPETA = {'motor': 68, 'recorder': 4, 'tools': 112}
+FICHEROS_POR_CARPETA = {'motor': 70, 'recorder': 4, 'tools': 112}
 # Y LA MAGNITUD QUE MIDE ESTE GUARDIA, que es lo que R2 pregunta, y que hay
 # que responder por la magnitud y no solo por el numero.
 #
@@ -3673,7 +3673,7 @@ FICHEROS_POR_CARPETA = {'motor': 68, 'recorder': 4, 'tools': 112}
 # cambia ese numero. Lo que NO se puede tapar sin ejecutar pytest es el numero
 # de CASOS de cada una, y eso queda declarado como punto ciego y no como
 # garantia.
-PARAMETRIZADOS_ABAJO = 17
+PARAMETRIZADOS_ABAJO = 18
 
 def _tests_de(directorio):
     """Cuantos `def test_` hay en los `.py` de `directorio`, y cuantos ficheros.
@@ -5105,6 +5105,65 @@ ACUMULADORES_REPETIBLES = {
 
 # Y el total, que es una cifra y por lo tanto vive en una constante.
 ASIGNACIONES_QUE_SOBRESCRIBEN = 46
+
+
+# Los ficheros de CODIGO que estan fuera de las tres carpetas del inventario,
+# y el motivo de cada uno.
+#
+# Y MEDIDO, el motivo de que esta lista exista: el codigo del repo vive en
+# `tools/`, `motor/` y `recorder/`, y lo que se queda fuera no lo vigila
+# NADA: ni el inventario, ni el control de caracteres, ni el de docstrings.
+#
+# Y un fichero que nadie vigila es un fichero que nadie lee. De modo que
+# esta lista los NOMBRA, y el guardián de mas abajo falla si aparece uno que
+# no este aqui. Que es lo contrario de ampliar la lista de excepciones: es
+# obligar a decidir.
+FUERA_DEL_INVENTARIO = {
+    'hand_editor.py':
+        'el editor de la COPIA de trabajo, del trabajo en paralelo de la base',
+    'trabajo/ABRIR_EDITOR_COPIA.py':
+        'el lanzador del editor, del trabajo en paralelo de la base',
+}
+
+
+def test_el_codigo_fuera_del_inventario_esta_declarado():
+    """Que no aparezca codigo fuera de las tres carpetas sin declararse.
+
+    Y el motivo: el inventario, el control de caracteres y el de docstrings
+    miran `tools/`, `motor/` y `recorder/`. Un `.py` en la raiz, o en
+    `trabajo/`, no lo mira NINGUNO. Y si no esta declarado, no lo vigila nadie
+    y no se sabe por que esta ahi.
+
+    Y el fallo tiene que NOMBRAR el fichero, porque un guardián que dice
+    «hay un problema» sin decir cual es un guardián que se mira por encima.
+    """
+    declarados = set(FUERA_DEL_INVENTARIO)
+    vistos = []
+    for nombre in sorted(os.listdir(ROOT)):
+        ruta = os.path.join(ROOT, nombre)
+        if nombre in CARPETAS_DEL_INVENTARIO or nombre.startswith('.'):
+            continue
+        if os.path.isfile(ruta) and nombre.endswith('.py'):
+            vistos.append(nombre)
+        elif os.path.isdir(nombre) and nombre == 'trabajo':
+            for n2 in sorted(os.listdir(ruta)):
+                if n2.endswith('.py'):
+                    vistos.append('trabajo/' + n2)
+    sin_declarar = sorted(set(vistos) - declarados)
+    assert not sin_declarar, (
+        'hay %d fichero(s) de codigo fuera de las carpetas del inventario y '
+        'sin declarar: %r.\n\nY no declararlos no es una opcion: un '
+        'fichero fuera del alcance de los guardianes no lo vigila nadie, y '
+        'eso hay que decidirlo, no dejarlo.\n\nLos declarados, con su '
+        'motivo: %r' % (len(sin_declarar), sin_declarar,
+                        sorted(FUERA_DEL_INVENTARIO)))
+    # Y lo declarado tiene que EXISTIR, que es la otra mitad: una declaracion
+    # de algo que ya no esta es una declaracion falsa.
+    que_faltan = sorted(declarados - set(vistos))
+    assert not que_faltan, (
+        'hay %d fichero(s) declarados que ya no estan: %r. Y una declaracion '
+        'de algo que no existe es una declaracion falsa.' % (len(que_faltan),
+                                                             que_faltan))
 
 
 def test_las_asignaciones_que_sobrescriben_estan_revisadas():

@@ -95,7 +95,14 @@ EXCEPCIONES = (
 # Y un hallazgo que se ARREGLA baja este numero, y el test falla, y hay que
 # subir la constante a mano. Y eso es lo que se quiere: que quitar un
 # defecto sea una decision, y no un efecto secundario.
-SOSPECHOSOS_ABAJO = 11
+#
+# Y MEDIDO, y por que subio de 11 a 13: al extender el alcance del barrido a
+# la raiz del repo y a `trabajo/`, aparecieron dos. Y son en
+# `APUESTAS_DIFICILES.md`, del trabajo en paralelo de la base: dos ideogramas
+# chinos pegados a un numero, en un documento en espanol. Y el motivo por el
+# que estan DECLARADOS y no corregidos es que el documento es de ese trabajo,
+# y la decision de si son una errata o una marca es suya.
+SOSPECHOSOS_ABAJO = 13
 
 # La UNICA correccion automatica, y por SECUENCIA DE CARACTERES.
 #
@@ -154,8 +161,25 @@ def correcciones_de(s):
 
 PREFIJOS = ('tools/', 'motor/', 'recorder/', 'DOCS/', 'tests/')
 
+# Y el alcance, y por que esta asi.
+#
+# MEDIDO, lo que hay FUERA de las tres carpetas del inventario:
+#
+#     los .py de la raiz y de `trabajo/` : 2, y los dos LIMPIOS
+#     los .md de la raiz y de `trabajo/` : 7, y uno con dos caracteres chinos
+#     los .jsonl de `trabajo/`            : 3, y los tres limpios
+#
+# Y la decision: **se extiende el alcance y se DECLARA lo que aparezca**, en
+# vez de ampliar la lista de excepciones. Un fichero que nadie vigila es un
+# fichero que nadie lee.
+#
+# Y los `.txt` de la raiz quedan FUERA, y el motivo es el de siempre: estan
+# en UTF-16LE, y leidos como texto dan un caracter de control por cada letra.
+# Los `.csv` tambien quedan fuera, y el motivo es que no son codigo ni
+# documentacion del motor.
 PATRONES = ('tools/*.py', 'motor/*.py', 'recorder/*.py', 'DOCS/*.md',
-            'tests/*.py')
+            'tests/*.py',
+            '*.py', 'trabajo/*.py', '*.md', 'trabajo/*.md')
 
 
 def revisar(patrones=None):
