@@ -3,6 +3,7 @@
 
     python tools/auditar_rango.py                       # hasta H_1014
     python tools/auditar_rango.py --hasta H_0500
+    python tools/auditar_rango.py --db <otra.jsonl>      # otra base o copia
     python tools/auditar_rango.py --json salida.json
     python tools/auditar_rango.py --validar             # autocomprobacion
 
@@ -65,11 +66,21 @@ decidir que lectura es la buena.
       WINNER_FOLDEO        `winner` incluye a alguien que foldeo
       SHOWDOWN_SIN_WINNER  showdown y winner no coinciden
       WINNER_VACIO         la mano no dice quien la gana
+      INACTIVO_QUE_ACTUA   jugador inactivo que tiene acciones
+
+    Formato
+      ACTIVO_SIN_POSICION  jugador activo sin posicion asignada
 
     Ausencia
+      ACTIVO_SIN_ACCION    activo que no actua nunca, ni foldea ni va all-in
+      ACTIVO_SIN_ACCION_CALLE  activo que desaparece en una calle con acciones
       SIN_ALLIN            el campo `allin` falta o no es una lista
       SIN_RESPUESTA_BB     el BB tiene entrada, no vuelve a actuar, y el
                            preflop se cierra con una subida viva de otro
+
+    Forma (no defecto)
+      INACTIVO_CON_POSICION  inactivo que conserva posicion: solo es defecto
+                             cuando ademas actua (`INACTIVO_QUE_ACTUA`)
 """
 import argparse
 import collections
@@ -325,6 +336,90 @@ def inactivo_que_actua(hand):
         if p.get('pos') and not p.get('active') and p.get('pos') in actions)
 
 
+def activo_sin_posicion(hand):
+    """Jugadores `active: true` sin una `pos` utilizable.
+
+    `active` no significa «sigue en la mano» (eso lo dice la accion), pero si
+    significa «se sento a jugar». Un jugador sentado sin posicion no se puede
+    situar en la mesa ni en el orden de accion: es un dato que falta.
+    """
+    fallos = []
+    for p in (hand.get('players') or []):
+        if not p.get('active'):
+            continue
+        if not (p.get('pos') or '').strip():
+            fallos.append('%s sin pos' % (p.get('name') or '?'))
+    return fallos
+
+
+def activo_sin_accion(hand):
+    """Activos que no actuaron en NINGUNA calle, y no foldearon ni fueron
+    all-in. Un jugador asi nunca tomo una decision: o el registro perdio sus
+    acciones, o la bandera `active` esta mal puesta.
+
+    No se cuentan los que foldearon (tuvieron su accion `f`) ni los all-in
+    (pueden no volver a actuar). La lista `allin` guarda pids (`p3`), no
+    posiciones, y se traduce con `pos_de_pid`.
+    """
+    acciones = {a.get('pos') for _s, a in todas_las_acciones(hand)
+                if a.get('pos')}
+    folds = {a.get('pos') for _s, a in todas_las_acciones(hand)
+             if a.get('action') == 'f' and a.get('pos')}
+    allin = {pos_de_pid(hand, pid) for pid in (hand.get('allin') or [])}
+    allin.discard(None)
+    fallos = []
+    for p in (hand.get('players') or []):
+        if not p.get('active') or not p.get('pos'):
+            continue
+        pos = p.get('pos')
+        if pos in acciones or pos in folds or pos in allin:
+            continue
+        fallos.append('%s sin accion ni fold ni all-in' % pos)
+    return fallos
+
+
+def activo_sin_accion_calle(hand):
+    """Por calle: activos que no actuaron en una calle CON acciones, sin estar
+    foldeados ni all-in al empezar esa calle.
+
+    Es mas fino que `activo_sin_accion`: detecta al que actuo en preflop y
+    desaparece en el flop. Las calles sin acciones (check-check no grabado o
+    mano terminada) no se cuentan: ahi no falta una accion, falta el registro.
+    """
+    allin = {pos_de_pid(hand, pid) for pid in (hand.get('allin') or [])}
+    allin.discard(None)
+    folds = set()
+    fallos = []
+    for s in calles(hand):
+        acts = acciones_de(hand, s)
+        if not acts:
+            continue
+        actuaron = {a.get('pos') for a in acts if a.get('pos')}
+        for p in (hand.get('players') or []):
+            pos = p.get('pos')
+            if not p.get('active') or not pos:
+                continue
+            if pos in folds or pos in allin:
+                continue
+            if pos not in actuaron:
+                fallos.append('%s sin accion en %s' % (pos, s))
+        folds |= {a.get('pos') for a in acts
+                  if a.get('action') == 'f' and a.get('pos')}
+    return fallos
+
+
+def inactivo_con_posicion(hand):
+    """Jugadores `active: false` que conservan una `pos`.
+
+    Es una FORMA, no un defecto por si sola: en la base son jugadores que se
+    sentaron y no jugaron. Se publica como metrica porque el subconjunto que
+    ademas actua —`INACTIVO_QUE_ACTUA`— si es una contradiccion.
+    """
+    return sorted('%s(%s)' % (p.get('pos'), p.get('name') or '?')
+                  for p in (hand.get('players') or [])
+                  if not p.get('active') and (p.get('pos') or '').strip())
+
+
 def accion_fantasma(hand):
     """Posiciones que actuaron y no estan en la mesa. Una posicion esta en la
     mesa si ALGUN jugador la tiene puesta, este activo o no.
@@ -520,6 +615,12 @@ CLASES = (
      winner_vacio, 'contradiccion'),
     ('INACTIVO_QUE_ACTUA', 'jugador marcado ausente que tiene acciones',
      inactivo_que_actua, 'contradiccion'),
+    ('ACTIVO_SIN_POSICION', 'jugador activo sin posicion asignada',
+     activo_sin_posicion, 'formato'),
+    ('ACTIVO_SIN_ACCION', 'activo que no actua en ninguna calle ni foldea ni '
+     'va all-in', activo_sin_accion, 'ausencia'),
+    ('ACTIVO_SIN_ACCION_CALLE', 'activo que desaparece en una calle con '
+     'acciones', activo_sin_accion_calle, 'ausencia'),
     ('SIN_ALLIN', 'el campo allin falta o no es una lista',
      sin_allin, 'ausencia'),
     ('AUSENCIA_RESPUESTA_BB', 'el BB esta en la mesa y no responde',
@@ -533,6 +634,9 @@ METRICAS_NO_FALLA = (
     ('PATRON_BB_SIN_RESPUESTA',
      'el preflop cierra con una subida de un no-BB (forma, no defecto)',
      patron_bb_sin_respuesta),
+    ('INACTIVO_CON_POSICION',
+     'jugador inactivo que conserva posicion (forma; solo es defecto si actua)',
+     inactivo_con_posicion),
 )
 
 SOLO_PATRON = 'PATRON_BB_SIN_RESPUESTA'
@@ -622,6 +726,8 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument('--hasta', default='H_1014',
                     help='ultimo hand_id del rango (por defecto H_1014)')
+    ap.add_argument('--db', default=DB_PATH,
+                    help='base a auditar (por defecto data/hands_db.jsonl)')
     ap.add_argument('--json', dest='json_out',
                     help='volcar el resultado en JSON')
     ap.add_argument('--validar', action='store_true',
@@ -632,14 +738,14 @@ def main(argv=None):
         return validar()
 
     limite = num(args.hasta)
-    todas = cargar()
+    todas = cargar(args.db)
     rango = [h for h in todas if limite is None
              or (num(h['hand_id']) or 0) <= limite]
     fuera = [h['hand_id'] for h in todas if limite is not None
              and (num(h['hand_id']) or 0) > limite]
 
     print('=' * 78)
-    print('AUDITORIA DE hands_db.jsonl   ·   H_0001..%s' % args.hasta)
+    print('AUDITORIA DE %s   ·   H_0001..%s' % (args.db, args.hasta))
     print('=' * 78)
     print('manos en el rango : %d' % len(rango))
     print('fuera del rango   : %d  (%s .. %s)'

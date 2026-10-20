@@ -221,6 +221,27 @@ LOTES = (
          'el posting del BB: indice y importe',
          'la accion marcada: por que la considera tardia'],
     ),
+    Lote(
+        'ESTADO_JUGADORES',
+        LECTURA_DOBLE,
+        ['ACTIVO_SIN_POSICION', 'ACTIVO_SIN_ACCION',
+         'ACTIVO_SIN_ACCION_CALLE'],
+        'activos sin posicion, sin accion, o que desaparecen en una calle',
+        'El jugador esta en la mesa, pero el dato no dice si eso significa '
+        '"repartido" o solo "sentado". Tres formas: activo sin posicion; '
+        'activo con posicion que nunca actua; activo que desaparece en una '
+        'calle con acciones.\n'
+        'LECTURA A: el grabador perdio acciones o la posicion, y el jugador '
+        'si estaba en la mano. LECTURA B: el jugador solo estaba sentado y '
+        'la bandera `active` o la `pos` esta mal puesta.\n'
+        'La diferencia importa: A deja la mano incompleta; B es una forma '
+        'benigna que no debe contarse como defecto. Se decide mirando si '
+        'tiene cartas, si el orden de accion lo alcanza, y si su stack se '
+        'movio.',
+        ['players[].pos, name, active y cards de todos',
+         'las acciones de cada calle, y quien falta en cada una',
+         'allin, stack y final_pot, para ver si hubo compromiso'],
+    ),
     # (1) Las que hoy dan 0. Se declaran con 0 y se quedan declaradas.
     Lote(
         'LIMPIO',

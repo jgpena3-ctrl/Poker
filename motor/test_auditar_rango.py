@@ -206,3 +206,62 @@ def test_accion_de_una_posicion_que_no_esta_en_la_mesa():
 def test_accion_de_una_posicion_que_si_esta_no_es_fantasma():
     h = mano(preflop=[acc('BB', 'b', 1.0)], activos=('UTG', 'BB'))
     assert A.accion_fantasma(h) == []
+
+
+# --------------------------------------------------------------------------
+# ESTADO DE LOS JUGADORES — las cuatro clases nuevas
+# --------------------------------------------------------------------------
+
+def test_activo_sin_posicion():
+    h = mano(players=[
+        {'active': True, 'pos': '', 'name': 'sin_asiento'},
+        {'active': True, 'pos': 'BB', 'name': 'sentado'},
+        {'active': False, 'pos': '', 'name': 'fuera'},
+    ])
+    assert A.activo_sin_posicion(h) == ['sin_asiento sin pos']
+
+
+def test_activo_sin_accion_no_cuenta_al_que_foldeo_ni_al_allin():
+    h = mano(preflop=[acc('UTG', 'f', 0.0), acc('MP', 'c', 1.0)],
+             activos=('UTG', 'MP', 'CO'), allin=['p2'])
+    # UTG foldeo; CO (p3) esta all-in; MP actuo. Nadie queda sin accion.
+    assert A.activo_sin_accion(h) == []
+
+
+def test_activo_sin_accion_detecta_al_que_nunca_actuo():
+    h = mano(preflop=[acc('UTG', 'f', 0.0), acc('BB', 'x', 0.0)],
+             activos=('UTG', 'MP', 'BB'))
+    assert A.activo_sin_accion(h) == ['MP sin accion ni fold ni all-in']
+
+
+def test_activo_sin_accion_calle_detecta_al_que_desaparece():
+    h = mano(preflop=[acc('BB', 'p', 1.0), acc('UTG', 'x', 0.0),
+                      acc('BB', 'x', 0.0)],
+             flop=[acc('UTG', 'b', 2.0)], activos=('UTG', 'BB'))
+    # el BB actuo en preflop, pero no en el flop, donde si hubo accion.
+    assert A.activo_sin_accion_calle(h) == ['BB sin accion en flop']
+
+
+def test_activo_sin_accion_calle_no_cuenta_al_que_ya_foldeo_ni_al_allin():
+    h = mano(preflop=[acc('BB', 'p', 1.0), acc('UTG', 'f', 0.0)],
+             flop=[acc('BB', 'b', 2.0)], activos=('UTG', 'BB'))
+    assert A.activo_sin_accion_calle(h) == []
+    # el BB esta all-in: no se le exige accion en el flop; UTG si desaparece.
+    h2 = mano(preflop=[acc('BB', 'p', 1.0), acc('UTG', 'x', 0.0)],
+              flop=[acc('BB', 'b', 2.0)], activos=('UTG', 'BB'),
+              allin=['p1'])
+    fallos = A.activo_sin_accion_calle(h2)
+    assert 'BB sin accion en flop' not in fallos, fallos
+    assert fallos == ['UTG sin accion en flop'], fallos
+
+
+def test_inactivo_con_posicion_es_metrica_y_no_defecto():
+    h = mano(players=[
+        {'active': False, 'pos': 'SB', 'name': 'ausente'},
+        {'active': False, 'pos': '', 'name': 'fuera'},
+        {'active': True, 'pos': 'BB', 'name': 'sentado'},
+    ])
+    assert A.inactivo_con_posicion(h) == ['SB(ausente)']
+    assert 'INACTIVO_CON_POSICION' in [c for c, _e, _f
+                                       in A.METRICAS_NO_FALLA]
+    assert 'INACTIVO_CON_POSICION' not in [c for c, _e, _f, _n in A.CLASES]

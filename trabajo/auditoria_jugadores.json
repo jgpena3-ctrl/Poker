@@ -1,0 +1,1833 @@
+{
+  "rango": {
+    "desde": "H_0001",
+    "hasta": "H_9999",
+    "manos": 1109
+  },
+  "clases": {
+    "SHOWDOWN_SIN_WINNER": [
+      {
+        "hand_id": "H_0447",
+        "detalle": "showdown cita a quien no gano: BB"
+      },
+      {
+        "hand_id": "H_0511",
+        "detalle": "showdown cita a quien no gano: CO"
+      },
+      {
+        "hand_id": "H_0744",
+        "detalle": "showdown cita a quien no gano: UTG"
+      },
+      {
+        "hand_id": "H_0751",
+        "detalle": "showdown cita a quien no gano: CO"
+      },
+      {
+        "hand_id": "H_0833",
+        "detalle": "showdown cita a quien no gano: BB"
+      }
+    ],
+    "INACTIVO_QUE_ACTUA": [
+      {
+        "hand_id": "H_0294",
+        "detalle": [
+          "SB(CCE)"
+        ]
+      }
+    ],
+    "ACTIVO_SIN_POSICION": [
+      {
+        "hand_id": "H_0030",
+        "detalle": [
+          "P5 sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0033",
+        "detalle": [
+          "mur420 sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0035",
+        "detalle": [
+          "mur420 sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0038",
+        "detalle": [
+          "mur420 sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0050",
+        "detalle": [
+          "JHONCASH sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0051",
+        "detalle": [
+          "Hachirama sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0055",
+        "detalle": [
+          "Juanmabm sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0057",
+        "detalle": [
+          "Juanmabm sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0059",
+        "detalle": [
+          "Juanmabm sin pos",
+          "Arquejandro sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0061",
+        "detalle": [
+          "HERO sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0063",
+        "detalle": [
+          "Jeffer30bog sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0064",
+        "detalle": [
+          "Jeffer30bog sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0065",
+        "detalle": [
+          "Jeffer30bog sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0067",
+        "detalle": [
+          "Jeffer30bog sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0072",
+        "detalle": [
+          "Mateo sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0073",
+        "detalle": [
+          "Mateo sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0134",
+        "detalle": [
+          "Juanfelipe1 sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0135",
+        "detalle": [
+          "Juanfelipe1 sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0137",
+        "detalle": [
+          "Juanfelipe1 sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0151",
+        "detalle": [
+          "Elyessi27 sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0167",
+        "detalle": [
+          "Johan Otero sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0168",
+        "detalle": [
+          "Johan Otero sin pos",
+          "P1 sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0170",
+        "detalle": [
+          "P1 sin pos",
+          "Geilyn21 sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0171",
+        "detalle": [
+          "Geilyn21 sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0172",
+        "detalle": [
+          "Geilyn21 sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0173",
+        "detalle": [
+          "Geilyn21 sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0174",
+        "detalle": [
+          "Geilyn21 sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0175",
+        "detalle": [
+          "Maicolp sin pos",
+          "Geilyn21 sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0177",
+        "detalle": [
+          "Maicolp sin pos",
+          "P5 sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0178",
+        "detalle": [
+          "Maicolp sin pos",
+          "P5 sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0179",
+        "detalle": [
+          "Maicolp sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0207",
+        "detalle": [
+          "Johan Otero sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0208",
+        "detalle": [
+          "Johan Otero sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0209",
+        "detalle": [
+          "Johan Otero sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0210",
+        "detalle": [
+          "Johan Otero sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0211",
+        "detalle": [
+          "Johan Otero sin pos",
+          "Maicolp sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0212",
+        "detalle": [
+          "Johan Otero sin pos",
+          "MegustanLas... sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0220",
+        "detalle": [
+          "LaloMora sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0222",
+        "detalle": [
+          "HERO sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0224",
+        "detalle": [
+          "HERO sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0225",
+        "detalle": [
+          "Elyessi27 sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0226",
+        "detalle": [
+          "Elyessi27 sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0232",
+        "detalle": [
+          "P2 sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0234",
+        "detalle": [
+          "Elyessi27 sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0235",
+        "detalle": [
+          "Elyessi27 sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0241",
+        "detalle": [
+          "Elyessi27 sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0242",
+        "detalle": [
+          "Elyessi27 sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0257",
+        "detalle": [
+          "P1 sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0258",
+        "detalle": [
+          "P1 sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0261",
+        "detalle": [
+          "Rolitoyerda sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0262",
+        "detalle": [
+          "Rolitoyerda sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0279",
+        "detalle": [
+          "triki12 sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0280",
+        "detalle": [
+          "triki12 sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0281",
+        "detalle": [
+          "triki12 sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0282",
+        "detalle": [
+          "triki12 sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0283",
+        "detalle": [
+          "triki12 sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0302",
+        "detalle": [
+          "Rolitoyerda sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0323",
+        "detalle": [
+          "triki12 sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0324",
+        "detalle": [
+          "triki12 sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0325",
+        "detalle": [
+          "triki12 sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0326",
+        "detalle": [
+          "triki12 sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0327",
+        "detalle": [
+          "triki12 sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0359",
+        "detalle": [
+          "p4 sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0360",
+        "detalle": [
+          "p4 sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0361",
+        "detalle": [
+          "p4 sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0363",
+        "detalle": [
+          "p4 sin pos"
+        ]
+      },
+      {
+        "hand_id": "H_0448",
+        "detalle": [
+          "santibenavides sin pos"
+        ]
+      }
+    ],
+    "ACTIVO_SIN_ACCION": [
+      {
+        "hand_id": "H_0017",
+        "detalle": [
+          "MP sin accion ni fold ni all-in"
+        ]
+      },
+      {
+        "hand_id": "H_0018",
+        "detalle": [
+          "BTN sin accion ni fold ni all-in"
+        ]
+      },
+      {
+        "hand_id": "H_0028",
+        "detalle": [
+          "BTN sin accion ni fold ni all-in"
+        ]
+      },
+      {
+        "hand_id": "H_0044",
+        "detalle": [
+          "MP sin accion ni fold ni all-in"
+        ]
+      },
+      {
+        "hand_id": "H_0066",
+        "detalle": [
+          "BTN sin accion ni fold ni all-in"
+        ]
+      },
+      {
+        "hand_id": "H_0068",
+        "detalle": [
+          "CO sin accion ni fold ni all-in"
+        ]
+      },
+      {
+        "hand_id": "H_0072",
+        "detalle": [
+          "BTN sin accion ni fold ni all-in"
+        ]
+      },
+      {
+        "hand_id": "H_0089",
+        "detalle": [
+          "BTN sin accion ni fold ni all-in"
+        ]
+      },
+      {
+        "hand_id": "H_0091",
+        "detalle": [
+          "BTN sin accion ni fold ni all-in"
+        ]
+      },
+      {
+        "hand_id": "H_0095",
+        "detalle": [
+          "BTN sin accion ni fold ni all-in"
+        ]
+      },
+      {
+        "hand_id": "H_0148",
+        "detalle": [
+          "MP sin accion ni fold ni all-in"
+        ]
+      },
+      {
+        "hand_id": "H_0150",
+        "detalle": [
+          "CO sin accion ni fold ni all-in"
+        ]
+      },
+      {
+        "hand_id": "H_0159",
+        "detalle": [
+          "BTN sin accion ni fold ni all-in"
+        ]
+      },
+      {
+        "hand_id": "H_0211",
+        "detalle": [
+          "BTN sin accion ni fold ni all-in"
+        ]
+      },
+      {
+        "hand_id": "H_0217",
+        "detalle": [
+          "MP sin accion ni fold ni all-in"
+        ]
+      },
+      {
+        "hand_id": "H_0224",
+        "detalle": [
+          "BTN sin accion ni fold ni all-in"
+        ]
+      },
+      {
+        "hand_id": "H_0229",
+        "detalle": [
+          "BTN sin accion ni fold ni all-in"
+        ]
+      },
+      {
+        "hand_id": "H_0232",
+        "detalle": [
+          "UTG sin accion ni fold ni all-in"
+        ]
+      },
+      {
+        "hand_id": "H_0245",
+        "detalle": [
+          "UTG sin accion ni fold ni all-in"
+        ]
+      },
+      {
+        "hand_id": "H_0246",
+        "detalle": [
+          "UTG sin accion ni fold ni all-in"
+        ]
+      },
+      {
+        "hand_id": "H_0277",
+        "detalle": [
+          "MP sin accion ni fold ni all-in"
+        ]
+      },
+      {
+        "hand_id": "H_0278",
+        "detalle": [
+          "MP sin accion ni fold ni all-in"
+        ]
+      },
+      {
+        "hand_id": "H_0292",
+        "detalle": [
+          "BTN sin accion ni fold ni all-in"
+        ]
+      },
+      {
+        "hand_id": "H_0333",
+        "detalle": [
+          "UTG sin accion ni fold ni all-in"
+        ]
+      },
+      {
+        "hand_id": "H_0484",
+        "detalle": [
+          "MP sin accion ni fold ni all-in"
+        ]
+      },
+      {
+        "hand_id": "H_0557",
+        "detalle": [
+          "CO sin accion ni fold ni all-in"
+        ]
+      },
+      {
+        "hand_id": "H_0686",
+        "detalle": [
+          "UTG sin accion ni fold ni all-in"
+        ]
+      },
+      {
+        "hand_id": "H_0864",
+        "detalle": [
+          "CO sin accion ni fold ni all-in"
+        ]
+      },
+      {
+        "hand_id": "H_0898",
+        "detalle": [
+          "UTG sin accion ni fold ni all-in"
+        ]
+      },
+      {
+        "hand_id": "H_1069",
+        "detalle": [
+          "BTN sin accion ni fold ni all-in"
+        ]
+      },
+      {
+        "hand_id": "H_1105",
+        "detalle": [
+          "CO sin accion ni fold ni all-in"
+        ]
+      }
+    ],
+    "ACTIVO_SIN_ACCION_CALLE": [
+      {
+        "hand_id": "H_0002",
+        "detalle": [
+          "SB sin accion en flop"
+        ]
+      },
+      {
+        "hand_id": "H_0008",
+        "detalle": [
+          "SB sin accion en flop",
+          "SB sin accion en turn"
+        ]
+      },
+      {
+        "hand_id": "H_0014",
+        "detalle": [
+          "SB sin accion en flop",
+          "SB sin accion en turn"
+        ]
+      },
+      {
+        "hand_id": "H_0015",
+        "detalle": [
+          "BB sin accion en flop",
+          "BB sin accion en turn",
+          "BB sin accion en river"
+        ]
+      },
+      {
+        "hand_id": "H_0017",
+        "detalle": [
+          "MP sin accion en preflop"
+        ]
+      },
+      {
+        "hand_id": "H_0018",
+        "detalle": [
+          "BTN sin accion en preflop"
+        ]
+      },
+      {
+        "hand_id": "H_0020",
+        "detalle": [
+          "SB sin accion en flop",
+          "SB sin accion en turn",
+          "SB sin accion en river"
+        ]
+      },
+      {
+        "hand_id": "H_0021",
+        "detalle": [
+          "BB sin accion en flop"
+        ]
+      },
+      {
+        "hand_id": "H_0028",
+        "detalle": [
+          "BTN sin accion en preflop",
+          "BTN sin accion en flop",
+          "SB sin accion en flop"
+        ]
+      },
+      {
+        "hand_id": "H_0036",
+        "detalle": [
+          "BB sin accion en flop"
+        ]
+      },
+      {
+        "hand_id": "H_0041",
+        "detalle": [
+          "CO sin accion en flop",
+          "CO sin accion en turn",
+          "CO sin accion en river"
+        ]
+      },
+      {
+        "hand_id": "H_0044",
+        "detalle": [
+          "MP sin accion en preflop",
+          "MP sin accion en flop"
+        ]
+      },
+      {
+        "hand_id": "H_0066",
+        "detalle": [
+          "BTN sin accion en preflop",
+          "BTN sin accion en flop"
+        ]
+      },
+      {
+        "hand_id": "H_0068",
+        "detalle": [
+          "CO sin accion en preflop",
+          "CO sin accion en flop"
+        ]
+      },
+      {
+        "hand_id": "H_0072",
+        "detalle": [
+          "BTN sin accion en preflop"
+        ]
+      },
+      {
+        "hand_id": "H_0075",
+        "detalle": [
+          "MP sin accion en turn",
+          "UTG sin accion en turn"
+        ]
+      },
+      {
+        "hand_id": "H_0078",
+        "detalle": [
+          "SB sin accion en turn",
+          "SB sin accion en river"
+        ]
+      },
+      {
+        "hand_id": "H_0084",
+        "detalle": [
+          "CO sin accion en turn",
+          "CO sin accion en river"
+        ]
+      },
+      {
+        "hand_id": "H_0089",
+        "detalle": [
+          "BTN sin accion en preflop",
+          "BTN sin accion en flop",
+          "BTN sin accion en turn",
+          "BTN sin accion en river"
+        ]
+      },
+      {
+        "hand_id": "H_0091",
+        "detalle": [
+          "BTN sin accion en preflop",
+          "BTN sin accion en flop",
+          "BTN sin accion en turn",
+          "BTN sin accion en river"
+        ]
+      },
+      {
+        "hand_id": "H_0095",
+        "detalle": [
+          "BTN sin accion en preflop",
+          "BTN sin accion en flop",
+          "BTN sin accion en turn",
+          "BTN sin accion en river"
+        ]
+      },
+      {
+        "hand_id": "H_0148",
+        "detalle": [
+          "MP sin accion en preflop",
+          "MP sin accion en flop",
+          "MP sin accion en turn",
+          "MP sin accion en river"
+        ]
+      },
+      {
+        "hand_id": "H_0150",
+        "detalle": [
+          "CO sin accion en preflop",
+          "CO sin accion en flop",
+          "CO sin accion en turn",
+          "CO sin accion en river"
+        ]
+      },
+      {
+        "hand_id": "H_0159",
+        "detalle": [
+          "BTN sin accion en preflop",
+          "BTN sin accion en flop",
+          "BTN sin accion en turn"
+        ]
+      },
+      {
+        "hand_id": "H_0211",
+        "detalle": [
+          "BTN sin accion en preflop"
+        ]
+      },
+      {
+        "hand_id": "H_0215",
+        "detalle": [
+          "BB sin accion en turn"
+        ]
+      },
+      {
+        "hand_id": "H_0217",
+        "detalle": [
+          "MP sin accion en preflop"
+        ]
+      },
+      {
+        "hand_id": "H_0224",
+        "detalle": [
+          "BTN sin accion en preflop"
+        ]
+      },
+      {
+        "hand_id": "H_0229",
+        "detalle": [
+          "BTN sin accion en preflop",
+          "BTN sin accion en flop",
+          "BTN sin accion en turn",
+          "BTN sin accion en river"
+        ]
+      },
+      {
+        "hand_id": "H_0232",
+        "detalle": [
+          "UTG sin accion en preflop"
+        ]
+      },
+      {
+        "hand_id": "H_0245",
+        "detalle": [
+          "UTG sin accion en preflop",
+          "UTG sin accion en flop",
+          "UTG sin accion en turn",
+          "UTG sin accion en river"
+        ]
+      },
+      {
+        "hand_id": "H_0246",
+        "detalle": [
+          "UTG sin accion en preflop"
+        ]
+      },
+      {
+        "hand_id": "H_0277",
+        "detalle": [
+          "MP sin accion en preflop",
+          "MP sin accion en flop",
+          "MP sin accion en turn",
+          "MP sin accion en river"
+        ]
+      },
+      {
+        "hand_id": "H_0278",
+        "detalle": [
+          "MP sin accion en preflop"
+        ]
+      },
+      {
+        "hand_id": "H_0292",
+        "detalle": [
+          "BTN sin accion en preflop"
+        ]
+      },
+      {
+        "hand_id": "H_0333",
+        "detalle": [
+          "UTG sin accion en preflop",
+          "UTG sin accion en flop",
+          "UTG sin accion en turn",
+          "UTG sin accion en river"
+        ]
+      },
+      {
+        "hand_id": "H_0439",
+        "detalle": [
+          "UTG sin accion en flop"
+        ]
+      },
+      {
+        "hand_id": "H_0484",
+        "detalle": [
+          "MP sin accion en preflop"
+        ]
+      },
+      {
+        "hand_id": "H_0507",
+        "detalle": [
+          "UTG sin accion en flop",
+          "UTG sin accion en turn",
+          "UTG sin accion en river"
+        ]
+      },
+      {
+        "hand_id": "H_0517",
+        "detalle": [
+          "SB sin accion en flop"
+        ]
+      },
+      {
+        "hand_id": "H_0557",
+        "detalle": [
+          "CO sin accion en preflop",
+          "CO sin accion en flop",
+          "CO sin accion en turn"
+        ]
+      },
+      {
+        "hand_id": "H_0564",
+        "detalle": [
+          "BTN sin accion en river"
+        ]
+      },
+      {
+        "hand_id": "H_0673",
+        "detalle": [
+          "MP sin accion en river"
+        ]
+      },
+      {
+        "hand_id": "H_0686",
+        "detalle": [
+          "UTG sin accion en preflop",
+          "UTG sin accion en flop",
+          "UTG sin accion en turn",
+          "UTG sin accion en river"
+        ]
+      },
+      {
+        "hand_id": "H_0744",
+        "detalle": [
+          "MP sin accion en flop"
+        ]
+      },
+      {
+        "hand_id": "H_0864",
+        "detalle": [
+          "CO sin accion en preflop",
+          "CO sin accion en flop"
+        ]
+      },
+      {
+        "hand_id": "H_0898",
+        "detalle": [
+          "UTG sin accion en preflop",
+          "UTG sin accion en flop",
+          "UTG sin accion en turn",
+          "UTG sin accion en river"
+        ]
+      },
+      {
+        "hand_id": "H_0906",
+        "detalle": [
+          "BB sin accion en flop",
+          "BB sin accion en turn"
+        ]
+      },
+      {
+        "hand_id": "H_0944",
+        "detalle": [
+          "CO sin accion en turn",
+          "BB sin accion en turn",
+          "CO sin accion en river"
+        ]
+      },
+      {
+        "hand_id": "H_1069",
+        "detalle": [
+          "BTN sin accion en preflop",
+          "BTN sin accion en flop",
+          "BTN sin accion en turn",
+          "BTN sin accion en river"
+        ]
+      },
+      {
+        "hand_id": "H_1105",
+        "detalle": [
+          "CO sin accion en preflop",
+          "CO sin accion en flop"
+        ]
+      },
+      {
+        "hand_id": "H_1259",
+        "detalle": [
+          "BB sin accion en river"
+        ]
+      }
+    ],
+    "SIN_ALLIN": [
+      {
+        "hand_id": "H_0001",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0002",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0003",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0004",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0005",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0006",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0007",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0008",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0009",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0010",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0011",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0012",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0013",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0014",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0015",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0016",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0017",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0018",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0019",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0020",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0021",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0023",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0024",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0025",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0027",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0028",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0029",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0030",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0031",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0033",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0035",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0036",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0038",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0039",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0040",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0041",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0042",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0043",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0044",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0045",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0046",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0047",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0048",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0050",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0051",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0052",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0055",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0056",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0057",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0059",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0061",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0062",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0063",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0064",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0065",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0066",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0067",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0068",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0069",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0070",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0071",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0072",
+        "detalle": "campo ausente"
+      },
+      {
+        "hand_id": "H_0073",
+        "detalle": "campo ausente"
+      }
+    ],
+    "AUSENCIA_RESPUESTA_BB": [
+      {
+        "hand_id": "H_1241",
+        "detalle": "el BB NO ACTUA tras la subida de BTN (20.0)"
+      }
+    ]
+  },
+  "metricas_no_falla": {
+    "PATRON_BB_SIN_RESPUESTA": [
+      "H_0006",
+      "H_0014",
+      "H_0020",
+      "H_0039",
+      "H_0055",
+      "H_0082",
+      "H_0091",
+      "H_0116",
+      "H_0122",
+      "H_0124",
+      "H_0130",
+      "H_0144",
+      "H_0152",
+      "H_0154",
+      "H_0160",
+      "H_0174",
+      "H_0189",
+      "H_0196",
+      "H_0212",
+      "H_0241",
+      "H_0247",
+      "H_0250",
+      "H_0251",
+      "H_0253",
+      "H_0256",
+      "H_0257",
+      "H_0267",
+      "H_0280",
+      "H_0310",
+      "H_0315",
+      "H_0323",
+      "H_0325",
+      "H_0326",
+      "H_0336",
+      "H_0349",
+      "H_0351",
+      "H_0352",
+      "H_0354",
+      "H_0355",
+      "H_0364",
+      "H_0367",
+      "H_0370",
+      "H_0371",
+      "H_0374",
+      "H_0376",
+      "H_0378",
+      "H_0382",
+      "H_0385",
+      "H_0387",
+      "H_0388",
+      "H_0389",
+      "H_0393",
+      "H_0395",
+      "H_0397",
+      "H_0399",
+      "H_0401",
+      "H_0402",
+      "H_0404",
+      "H_0405",
+      "H_0406",
+      "H_0408",
+      "H_0409",
+      "H_0411",
+      "H_0412",
+      "H_0413",
+      "H_0414",
+      "H_0415",
+      "H_0416",
+      "H_0418",
+      "H_0419",
+      "H_0423",
+      "H_0427",
+      "H_0429",
+      "H_0430",
+      "H_0435",
+      "H_0436",
+      "H_0438",
+      "H_0439",
+      "H_0440",
+      "H_0441",
+      "H_0443",
+      "H_0444",
+      "H_0447",
+      "H_0448",
+      "H_0450",
+      "H_0452",
+      "H_0453",
+      "H_0456",
+      "H_0458",
+      "H_0459",
+      "H_0461",
+      "H_0464",
+      "H_0466",
+      "H_0467",
+      "H_0469",
+      "H_0470",
+      "H_0471",
+      "H_0472",
+      "H_0479",
+      "H_0483",
+      "H_0484",
+      "H_0485",
+      "H_0486",
+      "H_0487",
+      "H_0489",
+      "H_0491",
+      "H_0492",
+      "H_0494",
+      "H_0495",
+      "H_0496",
+      "H_0500",
+      "H_0501",
+      "H_0502",
+      "H_0503",
+      "H_0506",
+      "H_0509",
+      "H_0510",
+      "H_0513",
+      "H_0514",
+      "H_0520",
+      "H_0525",
+      "H_0530",
+      "H_0535",
+      "H_0536",
+      "H_0542",
+      "H_0549",
+      "H_0550",
+      "H_0551",
+      "H_0552",
+      "H_0553",
+      "H_0555",
+      "H_0557",
+      "H_0558",
+      "H_0563",
+      "H_0564",
+      "H_0565",
+      "H_0566",
+      "H_0567",
+      "H_0568",
+      "H_0570",
+      "H_0571",
+      "H_0572",
+      "H_0573",
+      "H_0574",
+      "H_0575",
+      "H_0576",
+      "H_0577",
+      "H_0578",
+      "H_0579",
+      "H_0580",
+      "H_0582",
+      "H_0591",
+      "H_0592",
+      "H_0600",
+      "H_0601",
+      "H_0604",
+      "H_0606",
+      "H_0607",
+      "H_0609",
+      "H_0611",
+      "H_0613",
+      "H_0615",
+      "H_0617",
+      "H_0618",
+      "H_0619",
+      "H_0621",
+      "H_0624",
+      "H_0626",
+      "H_0627",
+      "H_0629",
+      "H_0632",
+      "H_0633",
+      "H_0634",
+      "H_0635",
+      "H_0637",
+      "H_0638",
+      "H_0639",
+      "H_0640",
+      "H_0645",
+      "H_0646",
+      "H_0648",
+      "H_0652",
+      "H_0653",
+      "H_0655",
+      "H_0656",
+      "H_0657",
+      "H_0658",
+      "H_0659",
+      "H_0660",
+      "H_0661",
+      "H_0664",
+      "H_0665",
+      "H_0667",
+      "H_0669",
+      "H_0670",
+      "H_0671",
+      "H_0672",
+      "H_0673",
+      "H_0679",
+      "H_0685",
+      "H_0686",
+      "H_0694",
+      "H_0698",
+      "H_0699",
+      "H_0700",
+      "H_0701",
+      "H_0702",
+      "H_0704",
+      "H_0706",
+      "H_0707",
+      "H_0708",
+      "H_0710",
+      "H_0711",
+      "H_0714",
+      "H_0716",
+      "H_0717",
+      "H_0720",
+      "H_0723",
+      "H_0728",
+      "H_0729",
+      "H_0731",
+      "H_0734",
+      "H_0735",
+      "H_0736",
+      "H_0741",
+      "H_0742",
+      "H_0744",
+      "H_0745",
+      "H_0746",
+      "H_0747",
+      "H_0750",
+      "H_0751",
+      "H_0753",
+      "H_0754",
+      "H_0755",
+      "H_0756",
+      "H_0758",
+      "H_0760",
+      "H_0762",
+      "H_0765",
+      "H_0767",
+      "H_0769",
+      "H_0770",
+      "H_0771",
+      "H_0772",
+      "H_0775",
+      "H_0776",
+      "H_0777",
+      "H_0778",
+      "H_0780",
+      "H_0781",
+      "H_0782",
+      "H_0783",
+      "H_0784",
+      "H_0785",
+      "H_0787",
+      "H_0788",
+      "H_0789",
+      "H_0790",
+      "H_0791",
+      "H_0792",
+      "H_0793",
+      "H_0794",
+      "H_0795",
+      "H_0796",
+      "H_0799",
+      "H_0800",
+      "H_0801",
+      "H_0802",
+      "H_0803",
+      "H_0804",
+      "H_0805",
+      "H_0806",
+      "H_0807",
+      "H_0808",
+      "H_0809",
+      "H_0811",
+      "H_0812",
+      "H_0813",
+      "H_0814",
+      "H_0815",
+      "H_0816",
+      "H_0817",
+      "H_0818",
+      "H_0821",
+      "H_0823",
+      "H_0824",
+      "H_0826",
+      "H_0827",
+      "H_0828",
+      "H_0829",
+      "H_0830",
+      "H_0831",
+      "H_0832",
+      "H_0834",
+      "H_0836",
+      "H_0837",
+      "H_0841",
+      "H_0842",
+      "H_0843",
+      "H_0844",
+      "H_0847",
+      "H_0849",
+      "H_0850",
+      "H_0851",
+      "H_0852",
+      "H_0853",
+      "H_0854",
+      "H_0856",
+      "H_0857",
+      "H_0858",
+      "H_0859",
+      "H_0860",
+      "H_0861",
+      "H_0863",
+      "H_0864",
+      "H_0865",
+      "H_0866",
+      "H_0867",
+      "H_0868",
+      "H_0871",
+      "H_0873",
+      "H_0874",
+      "H_0875",
+      "H_0876",
+      "H_0877",
+      "H_0878",
+      "H_0880",
+      "H_0885",
+      "H_0886",
+      "H_0887",
+      "H_0890",
+      "H_0892",
+      "H_0893",
+      "H_0894",
+      "H_0895",
+      "H_0899",
+      "H_0900",
+      "H_0902",
+      "H_0903",
+      "H_0905",
+      "H_0906",
+      "H_0907",
+      "H_0911",
+      "H_0913",
+      "H_0916",
+      "H_0917",
+      "H_0918",
+      "H_0920",
+      "H_0922",
+      "H_0925",
+      "H_0927",
+      "H_0929",
+      "H_0933",
+      "H_0934",
+      "H_0935",
+      "H_0939",
+      "H_0940",
+      "H_0942",
+      "H_0943",
+      "H_0945",
+      "H_0946",
+      "H_0948",
+      "H_0949",
+      "H_0952",
+      "H_0954",
+      "H_0956",
+      "H_0958",
+      "H_0959",
+      "H_0960",
+      "H_0961",
+      "H_0964",
+      "H_0966",
+      "H_0972",
+      "H_0975",
+      "H_0977",
+      "H_0981",
+      "H_0982",
+      "H_0983",
+      "H_0987",
+      "H_0989",
+      "H_0991",
+      "H_0994",
+      "H_0995",
+      "H_0996",
+      "H_0997",
+      "H_0999",
+      "H_1002",
+      "H_1005",
+      "H_1007",
+      "H_1014",
+      "H_1016",
+      "H_1017",
+      "H_1019",
+      "H_1023",
+      "H_1025",
+      "H_1029",
+      "H_1032",
+      "H_1034",
+      "H_1038",
+      "H_1039",
+      "H_1041",
+      "H_1042",
+      "H_1044",
+      "H_1045",
+      "H_1048",
+      "H_1051",
+      "H_1052",
+      "H_1054",
+      "H_1055",
+      "H_1057",
+      "H_1060",
+      "H_1061",
+      "H_1062",
+      "H_1063",
+      "H_1064",
+      "H_1067",
+      "H_1071",
+      "H_1072",
+      "H_1073",
+      "H_1074",
+      "H_1075",
+      "H_1076",
+      "H_1077",
+      "H_1078",
+      "H_1081",
+      "H_1082",
+      "H_1083",
+      "H_1084",
+      "H_1085",
+      "H_1086",
+      "H_1088",
+      "H_1089",
+      "H_1090",
+      "H_1092",
+      "H_1093",
+      "H_1094",
+      "H_1095",
+      "H_1096",
+      "H_1098",
+      "H_1104",
+      "H_1105",
+      "H_1106",
+      "H_1110",
+      "H_1113",
+      "H_1114",
+      "H_1115",
+      "H_1116",
+      "H_1117",
+      "H_1119",
+      "H_1121",
+      "H_1122",
+      "H_1124",
+      "H_1128",
+      "H_1130",
+      "H_1132",
+      "H_1136",
+      "H_1142",
+      "H_1143",
+      "H_1144",
+      "H_1145",
+      "H_1147",
+      "H_1149",
+      "H_1151",
+      "H_1152",
+      "H_1154",
+      "H_1155",
+      "H_1156",
+      "H_1158",
+      "H_1161",
+      "H_1166",
+      "H_1168",
+      "H_1169",
+      "H_1172",
+      "H_1174",
+      "H_1177",
+      "H_1178",
+      "H_1181",
+      "H_1183",
+      "H_1185",
+      "H_1186",
+      "H_1188",
+      "H_1191",
+      "H_1193",
+      "H_1197",
+      "H_1199",
+      "H_1202",
+      "H_1204",
+      "H_1205",
+      "H_1206",
+      "H_1207",
+      "H_1208",
+      "H_1209",
+      "H_1210",
+      "H_1211",
+      "H_1213",
+      "H_1214",
+      "H_1216",
+      "H_1217",
+      "H_1218",
+      "H_1221",
+      "H_1222",
+      "H_1223",
+      "H_1225",
+      "H_1226",
+      "H_1229",
+      "H_1230",
+      "H_1233",
+      "H_1237",
+      "H_1239",
+      "H_1241",
+      "H_1242",
+      "H_1244",
+      "H_1247",
+      "H_1250",
+      "H_1253",
+      "H_1257",
+      "H_1258",
+      "H_1259",
+      "H_1261",
+      "H_1262",
+      "H_1263",
+      "H_1264",
+      "H_1265",
+      "H_1266",
+      "H_1269",
+      "H_1271",
+      "H_1272",
+      "H_1274",
+      "H_1276",
+      "H_1277",
+      "H_1278",
+      "H_1279",
+      "H_1280"
+    ],
+    "INACTIVO_CON_POSICION": [
+      "H_0019",
+      "H_0201",
+      "H_0283",
+      "H_0294",
+      "H_0295",
+      "H_0312",
+      "H_0439",
+      "H_0532",
+      "H_0679",
+      "H_0717",
+      "H_0968",
+      "H_1005",
+      "H_1103",
+      "H_1186",
+      "H_1249",
+      "H_1265",
+      "H_1268"
+    ]
+  }
+}

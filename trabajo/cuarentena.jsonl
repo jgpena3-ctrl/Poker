@@ -1,0 +1,202 @@
+{"hand_id": "H_0002", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION_CALLE", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0008", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION_CALLE", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0014", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION_CALLE", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0015", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION_CALLE", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0017", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION", "AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0018", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION", "AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0020", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION_CALLE", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0021", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION_CALLE", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0022", "motivos": ["STACK"], "clase": "UNICA_TOL", "causa": null}
+{"hand_id": "H_0026", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0028", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION", "AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0032", "motivos": ["ACCION_AMBIGUA:REPARTO"], "clase": "ACCION_AMBIGUA", "causa": "REPARTO"}
+{"hand_id": "H_0034", "motivos": ["NADA", "STACK"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0036", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION_CALLE", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0037", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0041", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION_CALLE", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0044", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION", "AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0049", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0053", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0054", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0058", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0060", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0066", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION", "AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0068", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION", "AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0072", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION", "AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0074", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0075", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION_CALLE", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0078", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION_CALLE", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0080", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0084", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION_CALLE", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0085", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0089", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION", "AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0091", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION", "AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0093", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0095", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION", "AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0102", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0103", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0104", "motivos": ["ACCION_AMBIGUA:REPARTO"], "clase": "ACCION_AMBIGUA", "causa": "REPARTO"}
+{"hand_id": "H_0112", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0117", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0127", "motivos": ["ACCION_AMBIGUA:REPARTO"], "clase": "ACCION_AMBIGUA", "causa": "REPARTO"}
+{"hand_id": "H_0129", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0136", "motivos": ["ACCION_AMBIGUA:REPARTO"], "clase": "ACCION_AMBIGUA", "causa": "REPARTO"}
+{"hand_id": "H_0138", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0139", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0145", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0146", "motivos": ["ACCION_AMBIGUA:NETO_IGUAL"], "clase": "ACCION_AMBIGUA", "causa": "NETO_IGUAL"}
+{"hand_id": "H_0148", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION", "AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0150", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION", "AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0157", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0158", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0159", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION", "AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0169", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0176", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0180", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0181", "motivos": ["ACCION_AMBIGUA:NETO_IGUAL"], "clase": "ACCION_AMBIGUA", "causa": "NETO_IGUAL"}
+{"hand_id": "H_0185", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0188", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0200", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0211", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION", "AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0213", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0215", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION_CALLE", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0217", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION", "AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0223", "motivos": ["ACCION_AMBIGUA:REPARTO"], "clase": "ACCION_AMBIGUA", "causa": "REPARTO"}
+{"hand_id": "H_0224", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION", "AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0229", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION", "AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0232", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION", "AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0236", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0240", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0243", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0245", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION", "AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0246", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION", "AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0259", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0260", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0263", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0277", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION", "AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0278", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION", "AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0284", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0291", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0292", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION", "AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0293", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0294", "motivos": ["AUDITORIA:INACTIVO_QUE_ACTUA"], "clase": "INACTIVO_QUE_ACTUA", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0303", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0311", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0321", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0322", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0330", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0333", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION", "AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0356", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0357", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0358", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0362", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0369", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0396", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0403", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0407", "motivos": ["ACCION_AMBIGUA:REPARTO"], "clase": "ACCION_AMBIGUA", "causa": "REPARTO"}
+{"hand_id": "H_0420", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0425", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0439", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION_CALLE", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0445", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0451", "motivos": ["ACCION_AMBIGUA:REAL"], "clase": "ACCION_AMBIGUA", "causa": "REAL"}
+{"hand_id": "H_0455", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0460", "motivos": ["ACCION_AMBIGUA:REPARTO"], "clase": "ACCION_AMBIGUA", "causa": "REPARTO"}
+{"hand_id": "H_0465", "motivos": ["ACCION_AMBIGUA:REPARTO"], "clase": "ACCION_AMBIGUA", "causa": "REPARTO"}
+{"hand_id": "H_0484", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION", "AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0507", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION_CALLE", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0512", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0517", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION_CALLE", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0519", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0521", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0526", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0534", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0537", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0544", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0546", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0548", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0554", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0557", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION", "AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0564", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION_CALLE", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0581", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0585", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0588", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0589", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0590", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0593", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0594", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0595", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0602", "motivos": ["ACCION_AMBIGUA:REPARTO"], "clase": "ACCION_AMBIGUA", "causa": "REPARTO"}
+{"hand_id": "H_0612", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0642", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0643", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0644", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0673", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION_CALLE", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0676", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0677", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0678", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0686", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION", "AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0689", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0691", "motivos": ["STACK"], "clase": "UNICA_TOL", "causa": null}
+{"hand_id": "H_0697", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0709", "motivos": ["ACCION_AMBIGUA:NETO_IGUAL"], "clase": "ACCION_AMBIGUA", "causa": "NETO_IGUAL"}
+{"hand_id": "H_0713", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0726", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0739", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0740", "motivos": ["STACK"], "clase": "UNICA_TOL", "causa": null}
+{"hand_id": "H_0743", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0744", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION_CALLE", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0757", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0773", "motivos": ["ACCION_AMBIGUA:NETO_IGUAL"], "clase": "ACCION_AMBIGUA", "causa": "NETO_IGUAL"}
+{"hand_id": "H_0774", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0797", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0798", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0835", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0855", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0864", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION", "AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0872", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0896", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0897", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0898", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION", "AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0901", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0904", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0906", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION_CALLE", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0909", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0912", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0921", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0923", "motivos": ["ACCION_AMBIGUA:REPARTO"], "clase": "ACCION_AMBIGUA", "causa": "REPARTO"}
+{"hand_id": "H_0926", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0928", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0932", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0938", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0941", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0944", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION_CALLE", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_0950", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0957", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0973", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0978", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0985", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_0993", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_1011", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_1022", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_1053", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_1069", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION", "AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_1080", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_1105", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION", "AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_1112", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_1118", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_1123", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_1137", "motivos": ["ACCION_AMBIGUA:NETO_IGUAL"], "clase": "ACCION_AMBIGUA", "causa": "NETO_IGUAL"}
+{"hand_id": "H_1140", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_1150", "motivos": ["ACCION_AMBIGUA:NETO_IGUAL"], "clase": "ACCION_AMBIGUA", "causa": "NETO_IGUAL"}
+{"hand_id": "H_1153", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_1179", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_1190", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_1196", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_1198", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_1212", "motivos": ["ACCION_AMBIGUA:REPARTO"], "clase": "ACCION_AMBIGUA", "causa": "REPARTO"}
+{"hand_id": "H_1224", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_1228", "motivos": ["ACCION_AMBIGUA:REPARTO"], "clase": "ACCION_AMBIGUA", "causa": "REPARTO"}
+{"hand_id": "H_1231", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_1259", "motivos": ["AUDITORIA:ACTIVO_SIN_ACCION_CALLE"], "clase": "ACTIVO_SIN_ACCION_CALLE", "causa": "ausencia de accion no reconstruible"}
+{"hand_id": "H_1260", "motivos": ["NADA"], "clase": "NADA", "causa": null}
+{"hand_id": "H_1270", "motivos": ["ACCION_AMBIGUA:REPARTO"], "clase": "ACCION_AMBIGUA", "causa": "REPARTO"}
