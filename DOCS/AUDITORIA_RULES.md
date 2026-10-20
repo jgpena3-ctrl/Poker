@@ -178,7 +178,7 @@ Y la ficha, completa ✓, para que no sea una nota sin contenido ✓:
 | **qué es** | una apuesta de 0.5 BB o menos se clasifica como `limp` y a la vez cuenta como subida |
 | **dónde está** | `motor/learn.py`: `classify_first_action` (la etiqueta) frente a `preflop_events` (el contador) |
 | **por qué no se arregla aquí** | **es post-adopción**: arreglarlo **recalibra**, y una cifra publicada no se mueve como efecto secundario de un arreglo |
-| **qué condición lo activaría** | que las cifras publicadas se re-deriven contra la base **adoptada** |
+| **qué condición lo activaría** | que las cifras publicadas se re-deriven contra la base **adoptada** —y la entrada operativa, con su dueño y su condición, esta en `ESTADO_DEL_TRABAJO.md` §3 ✓, que es donde se lleva el trabajo ✓ |
 | **cómo está visible mientras tanto** | declarado y **fijado**: `motor/test_defectos_declarados.py` afirma la conducta actual y su medición, de modo que no se olvide |
 
 > Y este hallazgo **es el mismo** que el «defecto del contador de subidas» del

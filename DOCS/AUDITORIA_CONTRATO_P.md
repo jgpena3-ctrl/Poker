@@ -73,9 +73,10 @@ demostrar. Y el método es **mutar el motor** y mirar si los tests lo notan ✓:
 
 | mutación | qué rompe | resultado |
 |---|---|---|
-| M1 | el salto de las posts en `preflop_events` | **los tests lo notan** ✓ |
+| M1 | `preflop_events` se salta las posts | **los tests lo notan** ✓ |
 | M2 | `_es_ciega_bb` deja de reconocer la `p` como ciega | **los tests lo notan** ✓ |
-| M3 | `entradas_bb_rechazadas` deja de marcar «el BB ya posteó» | **los tests NO lo notaban** ✗ |
+| M3 | `entradas_bb_rechazadas` deja de marcar «el BB ya posteó» | **los tests lo notan** ✓, despues del arreglo |
+| M4 | el motor deja de rechazar las ciegas tardias (`entradas_bb_rechazadas`) | **los tests lo notan** ✓ |
 
 > **Y M3 encontró un hueco REAL.** Y el hueco era este: que un BB que ya
 > posteó la ciega, y después tiene una `b`, no puede tener una ciega
@@ -120,14 +121,6 @@ Y sus cuatro condiciones de seguridad, que están comprobadas ✓:
 > el test que la tabla declara** ✓.
 
 Y la tabla, con sus cuatro filas ✓:
-
-| mutacion | el invariante que rompe | el test que tiene que notarla |
-|---|---|---|
-| M1 | una posta no es una decision, y el jugador sigue sin decidir | `test_una_p_sola_no_es_ninguna_decision` |
-| M2 | la ciega del BB puede escribirse de las dos maneras | `test_la_ciega_del_bb_grabada_como_p_se_reconoce` |
-| M3 | un BB que YA posteo la ciega no puede tener una ciega segunda | `test_un_bb_que_ya_posteo_no_vuelve_a_ser_una_ciega` |
-| M4 | un BB que NO posteo antes y tiene una `b` tarde es un rechazo | `test_sin_la_p_de_antes_la_b_del_bb_si_es_un_rechazo` |
-
 > Y **una mutacion que nadie nota no es un detalle: es una BRECHA DE
 > COBERTURA** ✓, y no un motivo para relajar el test ✓.
 

@@ -278,3 +278,93 @@ def _registro_matrix():
     with _io.open(ruta, encoding='utf-8') as f:
         return f.read()
 
+# ---------------------------------------------------------------------------
+# NINGUN HALLAZGO SIN FICHA
+# ---------------------------------------------------------------------------
+
+# Y la declaracion de los hallazgos, y la lista ES la declaracion ✓: un
+# hallazgo que no esta aqui no esta vigilado ✓, y uno que esta aqui tiene que
+# seguir con su ficha ✓.
+#
+# Y las tres cosas que se comprueban ✓, y que son las que hacen que un
+# hallazgo no se olvide ✓: el **nombre** ✓, la **ubicacion** ✓, y el **estado**
+# ✓ —el motivo de no arreglarlo ✓ y la condicion de activacion ✓, cuando
+# los hay— ✓.
+HALLAZGOS = (
+    # (documento, ancla del hallazgo, nombre, ubicacion, estado)
+    ('AUDITORIA_RULES.md', '## 6. H4', 'H4', 'motor/learn.py',
+     'post-adopción'),
+    ('AUDITORIA_MATRIX.md', '| **H1** |', 'H1', 'profile.load_base_rates',
+     'corregido'),
+    ('AUDITORIA_MATRIX.md', '| **H2** |', 'H2', 'player_ranges._prior_grid',
+     'corregido'),
+    ('AUDITORIA_MATRIX.md', '| **H3** |', 'H3', 'asistente_live._recom_preflop',
+     'no se toca'),
+    ('AUDITORIA_MATRIX.md', '| **H4** |', 'H4', 'Tres lectores',
+     'documentado'),
+    ('AUDITORIA_MATRIX.md', '| **H5** |', 'H5', 'preflop_matrices.json',
+     'RESERVADO PARA A1'),
+    ('AUDITORIA_CONTRATO_P.md', '| M1 |', 'M1', 'preflop_events',
+     'los tests lo notan'),
+    ('AUDITORIA_CONTRATO_P.md', '| M2 |', 'M2', '_es_ciega_bb',
+     'los tests lo notan'),
+    ('AUDITORIA_CONTRATO_P.md', '| M3 |', 'M3', 'entradas_bb_rechazadas',
+     'los tests lo notan'),
+    ('AUDITORIA_CONTRATO_P.md', '| M4 |', 'M4', 'entradas_bb_rechazadas',
+     'los tests lo notan'),
+)
+
+
+def _documento(nombre):
+    ruta = os.path.join(ROOT, 'DOCS', nombre)
+    with io.open(ruta, encoding='utf-8') as f:
+        return f.read()
+
+
+def test_ningun_hallazgo_sin_ficha():
+    """Y que cada hallazgo tenga nombre, ubicacion y estado.
+
+    Y el motivo de que la lista este en el TEST y no en el documento ✓: una
+    lista en el documento se puede editar sin que nadie la mire ✓, y una
+    lista en el test **falla cuando el documento y la lista dejan de
+    coincidir** ✓.
+
+    Y el motivo de que el estado sea una palabra y no un parrafo ✓: es lo que
+    permite distinguir **«corregido»** ✓ de **«no se toca, y por que»** ✓, y
+    un hallazgo sin estado es un asunto abierto ✓.
+    """
+    for documento, ancla, nombre, ubicacion, estado in HALLAZGOS:
+        texto = _documento(documento)
+        assert ancla in texto, (
+            'el hallazgo %s no esta en %s con la forma declarada (%r)'
+            % (nombre, documento, ancla))
+        # y el bloque del hallazgo, con su ubicacion y su estado
+        bloque = texto.split(ancla, 1)[1].split('\n## ', 1)[0]
+        assert ubicacion in bloque, (
+            'el hallazgo %s de %s no dice donde esta (%r)'
+            % (nombre, documento, ubicacion))
+        assert estado.lower() in bloque.lower(), (
+            'el hallazgo %s de %s no dice su estado (%r): un hallazgo sin '
+            'estado es un asunto abierto'
+            % (nombre, documento, estado))
+
+
+def test_h3_y_h5_declaran_su_motivo_de_no_arreglarse():
+    """Y que los dos que NO se arreglan, digan POR QUE.
+
+    Y son los dos que mas tentacion hay de tocar ✓: el de la convencion de
+    la `p` ✓ —que la fijan los tests, y tocarla es mudar una decision— ✓ y el
+    de la intencion del fichero de matrices ✓ —que es de A1— ✓.
+
+    Y el motivo de que haga falta ✓: un hallazgo que no se arregla y no dice
+    por que se parece a un hallazgo olvidado ✓, y en los dos casos se
+    convertiria en un agujero ✓.
+    """
+    texto = _documento('AUDITORIA_MATRIX.md')
+    h3 = texto.split('| **H3** |', 1)[1].split('\n## ', 1)[0]
+    assert 'NO se toca' in h3 or 'No se toca' in h3, (
+        'H3 tiene que decir que NO se toca, y por que: %r' % h3[:200])
+    h5 = texto.split('| **H5** |', 1)[1].split('\n## ', 1)[0]
+    assert 'A1' in h5, (
+        'H5 tiene que decir que la decision es de A1: %r' % h5[:200])
+

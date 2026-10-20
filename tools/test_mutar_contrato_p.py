@@ -392,3 +392,44 @@ def test_los_pares_de_la_tabla_tienen_su_contraparte_sensible():
             'lados del mismo hueco y cada uno vigila el suyo'
             % (contraparte, del_otro, mutacion))
 
+def test_el_instrumento_no_muta_sobre_un_arbol_sucio():
+    """Y que se niegue, y que el motor no se toque.
+
+    Y el motivo de esta garantia ✓: **el «original» del que se restaura se
+    lee de GIT** ✓, y si el fichero esta ya sucio ✓, mutarlo encima haria que
+    la restauracion devolviese la mutacion ✓ —y el sha coincidiria ✓, y el
+    instrumento creeria que ha restaurado ✓.
+
+    Y la razon de que se niegue en vez de avisar ✓: una garantia que solo
+    avisa se puede pasar por alto ✓, y una que se niega no ✓.
+
+    Y el caso, que es el que se dio ✓: la suite entera se ejecuto con el
+    motor mutado ✓ —con el soporte de la `p` desaparecido ✓— y lo unico que
+    lo detecto fue **el detector de fugas** ✓, que fallo ✓✓. Y eso es
+    instrumentacion que funciona ✓, pero es mejor que no llegue a pasar ✓.
+    """
+    import mutar_contrato_p as M
+
+    # (a) el motor esta como debe, y el instrumento muta bien
+    assert M._fichero_limpio(LEARN), 'el motor deberia estar limpio'
+
+    # (b) y con el motor sucio, el instrumento SE NIEGA
+    original = io.open(LEARN, 'rb').read()
+    sucio = original + b'\n# una modification sin commitear\n'
+    with io.open(LEARN, 'wb') as f:
+        f.write(sucio)
+    try:
+        M.mutar_y_comprobar('M1', LEARN)
+    except RuntimeError as e:
+        assert 'sin commitear' in str(e) or 'COMITEADA' in str(e), str(e)
+    else:
+        raise AssertionError(
+            'el instrumento TENIA que negarse a mutar un arbol sucio, y no se '
+            'nrego')
+    finally:
+        with io.open(LEARN, 'wb') as f:
+            f.write(original)
+
+    # (c) y el motor ha quedado como estaba
+    assert io.open(LEARN, 'rb').read() == original
+

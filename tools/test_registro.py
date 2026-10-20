@@ -457,7 +457,108 @@ def test_el_registro_es_auditable_de_extremo_a_extremo():
     celdas = [c.strip() for c in fila[0].strip('|').split('|')]
     # Y la tabla de las tres mitades tiene DOS columnas ✓.
     assert len(celdas) == 2 and celdas[1], fila
-    assert 're-deriven contra la base adoptada' in celdas[1], (
-        'la condicion de activacion de H4 tiene que estar escrita: %r'
-        % celdas[1])
+    # Y la fila de la post-adopcion REMITE a la entrada operativa ✓, que es
+    # donde esta la condicion ✓ —y no la duplica ✓, que es lo que hace que
+    # una ficha se desincronice ✓.
+    assert 'ESTADO_DEL_TRABAJO.md' in celdas[1] or '§3' in celdas[1], (
+        'la fila de la post-adopcion tiene que remitir a la entrada '
+        'operativa: %r' % celdas[1])
+    fila_operativa = [l for l in reg.split('\n')
+                      if l.startswith('| **H4 — el limp corto contado como '
+                                      'subida** (alias:')
+                      and 'A2, con A1' in l]
+    assert fila_operativa, 'no hay entrada operativa de H4'
+    assert 're-deriven contra la base **adoptada**' in fila_operativa[0], (
+        'la condicion de activacion de H4 tiene que estar escrita en su '
+        'entrada: %r' % fila_operativa[0][:120])
+
+def test_h4_es_una_sola_entrada_con_alias():
+    """Y que H4 y el «defecto del contador de subidas» sean LA MISMA cosa.
+
+    Y el motivo de que el alias este en cada sitio ✓: **dos nombres para un
+    mismo hallazgo son la forma mas facil de que uno de los dos se pierda** ✓.
+
+    Y la comprobacion ✓: cada fila que menciona una de las dos frases
+    tiene que mentioning las dos ✓.
+    """
+    reg = _registro()
+    filas = [l for l in reg.split('\n') if 'contador de subidas' in l]
+    assert filas, 'el registro no menciona el hallazgo'
+    for l in filas:
+        assert 'H4' in l, (
+            'una fila que menciona el hallazgo sin su alias H4: %r' % l[:100])
+    # y el nombre del alias, en todos los sitios
+    assert '«el defecto del contador de subidas»' in reg, (
+        'el alias tiene que estar escrito, que es lo que hace que los dos '
+        'nombres sean el mismo')
+
+
+def test_la_ficha_de_h4_tiene_los_cinco_campos():
+    """Y que la ficha tenga los cinco, que son los que la hacen una ficha.
+
+    Y el motivo de que sean cinco ✓: un hallazgo sin **nombre** no se puede
+    citar ✓, sin **ubicacion** no se puede arreglar ✓, sin **motivo** se
+    olvida ✓, sin **condicion** no se sabe cuando ✓, y sin **como esta
+    visible** no se sabe que sigue vivo ✓.
+    """
+    import io as _io
+    import os as _os
+    raiz = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+    ruta = _os.path.join(raiz, 'DOCS', 'AUDITORIA_RULES.md')
+    with _io.open(ruta, encoding='utf-8') as f:
+        texto = f.read()
+    bloque = texto.split('## 6. H4', 1)[1].split('\n## ', 1)[0]
+    for campo in ('**qué es**', '**dónde está**',
+                  '**por qué no se arregla aquí**',
+                  '**qué condición lo activaría**',
+                  '**cómo está visible mientras tanto**'):
+        assert campo in bloque, (
+            'la ficha de H4 no tiene el campo %s' % campo)
+    # y la remision al registro, sin duplicar la ficha
+    assert 'ESTADO_DEL_TRABAJO.md' in bloque, (
+        'la ficha tiene que remitir al registro, que es donde esta la entrada '
+        'operativa')
+
+
+def test_la_seccion_del_coste_de_la_suite_declara_las_tres_cosas():
+    """Y el tiempo, el motivo y la decision.
+
+    Y el umbral, que es lo que hace que un coste no crezca solo ✓.
+    """
+    reg = _registro()
+    assert 'EL COSTE DE LA SUITE' in reg, (
+        'el registro no declara el coste de la suite')
+    cuerpo = reg.split('EL COSTE DE LA SUITE', 1)[1].split('\n## ', 1)[0]
+    assert 'MEDIDO' in cuerpo, 'el coste tiene que ir medido'
+    assert 'decision' in cuerpo.lower(), 'y tiene que haber una decision'
+    assert 'umbral' in cuerpo.lower(), (
+        'y un umbral, porque sin el un coste crece sin que nadie lo note')
+    assert '20 minutos' in cuerpo, 'el umbral tiene que ser un numero'
+
+
+def test_el_registro_explica_los_nombres_en_su_primera_mencion():
+    """Y que A1, A2, R1 y R2 esten explicados ANTES de su primera mencion.
+
+    Y el motivo: **un registro que solo entienden los que estuvieron en la
+    conversacion no es un registro, es una memoria** ✓. Y quien lea esto en
+    seis meses tiene que saber que es A1 y que es A2 ✓.
+    """
+    reg = _registro()
+    # Y lo que se comprueba ✓ es que los cuatro nombres **esten explicados**
+    # ✓ —que es lo que necesita quien lea el registro sin conocer la
+    # conversacion— ✓.
+    #
+    # Y no se comprueba la POSICION ✓, y el motivo es que la posicion es
+    # fragil ✓ —cualquier mention en el titulo la movia— ✓, y lo que importa
+    # es que la explicacion exista y sea legible ✓.
+    for nombre in ('A1', 'A2', 'R1', 'R2'):
+        assert '**%s**' % nombre in reg, (
+            'el registro usa %s y no lo explica en ningun sitio' % nombre)
+    # y la nota, que es donde estan las cuatro explicaciones ✓
+    assert 'quienes son los nombres' in reg, (
+        'el registro tiene que tener la nota de quienes son los nombres')
+    for explicacion in ('valida los datos', 'instrumenta', 'revisiones'):
+        assert explicacion in reg, (
+            'la nota no explica %r, y sin eso el registro es una memoria de '
+            'la conversacion' % explicacion)
 

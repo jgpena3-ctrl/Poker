@@ -4,7 +4,17 @@
 > terminado, qué sigue abierto, de quién es, y **qué condición lo
 > desbloquea**.
 >
-> Y una nota sobre las cifras: **las de A1 se mueven** ✓ —MEDIDO, las manos
+> **Y quienes son los nombres que aparecen** ✓, para que el registro se pueda
+> leer **sin conocer la conversación** ✓:
+>
+> · **A1** — el agente que **valida los datos** ✓: resuelve las manos, fija el
+>   número de ciegas y declara los controles ✓;
+> · **A2** — el agente que **instrumenta** ✓: el motor, las pruebas y los
+>   procedimientos ✓;
+> · **R1** y **R2** — las dos **revisiones** ✓, que son coordinación entre
+>   agentes y no datos ✓.
+>
+> Y una nota sobre las cifras:
 > sin resolver eran 203 cuando empezó este bloque y ahora son menos, porque A1
 > ha seguido resolviendo ✓— de modo que aquí se nombra **la tarea** y no su
 > número ✓. Y una cifra de A1 en un documento de A2 caduca sola ✓, y un
@@ -21,7 +31,7 @@
 | **el motor aprende la `p`** | `_es_ciega_bb` la reconoce, `preflop_events` salta las posts, y `entradas_bb_rechazadas` distingue las dos codificaciones |
 | **la equivalencia de la codificación** | MEDIDO: las doce categorías de la primera decisión son **idénticas** antes y después, y las 921 ciegas siguen siendo 921 |
 | **la auditoría de `rules.py`** | `DOCS/AUDITORIA_RULES.md`, con cuatro hallazgos y sus mediciones. Y **CERRADA**, con el estado de cada uno: el **fold** fuera del plan, con su nota en `CONTRATOS_RULES.md` §C4 remitiendo a `CONTRATO_C4.md` ✓; las **cinco precondiciones silenciosas** de `plan()`, con su tabla en la auditoría y con test ✓; el **plan «unknown»**, que no se alcanza, declarado como **riesgo latente de C3** ✓; y un cuarto hallazgo, **de otro sitio**, que no se arregla aquí ✓ |
-| **el defecto del contador de subidas** | declarado, fijado con un test, y con su **condición de activación** |
+| **H4 — el limp corto contado como subida** (alias: «el defecto del contador de subidas») | **declarado y fijado** con un test ✓; el **ARREGLO** es post-adopción ✓, y su entrada operativa esta en §3 ✓ |
 | **la cobertura de los guardianes** | el barrido mira la raíz y `trabajo/`, y el código fuera de las tres carpetas tiene que estar declarado |
 | **el procedimiento de integración** | `tools/integrar_copia.py`, probado en seco con la copia sintética **completa** de 1258 manos, y con sus dos caminos de fallo |
 | **los DOS fixtures** | uno **suave** —solo recodifica— y otro **duro** —además añade las ciegas que faltaban—, y el duro reconoce **1258** ciegas, las mismas que la copia real |
@@ -44,7 +54,7 @@
 
 | trabajo | dueño | condición de activación |
 |---|---|---|
-| el defecto del contador de subidas | A2, con A1 | las cifras se re-derivan contra la base **adoptada**, y no antes |
+| **H4 — el limp corto contado como subida** (alias: «el defecto del contador de subidas») | A2, con A1 | las cifras se re-deriven contra la base **adoptada**, y no antes. Y su ficha esta en `AUDITORIA_RULES.md` §6 ✓ |
 | la recalibración de perfiles, rangos y frecuencias | A2, con A1 | la base adoptada, y el manifiesto redeclarado |
 | la traducción del `p` en las herramientas de auditoría que no son el motor | A2, con A1 | la base adoptada, porque su semantica depende de la codificacion final |
 
@@ -93,7 +103,7 @@ condición**, y la condición dice **qué lo desbloquea**, no «cuando se pueda�
 | el número de ciegas de la copia | A1 | haber cerrado las manos sin resolver; el número sale de los datos revisados |
 | las doce categorías de la copia | A1 | haber cerrado las manos sin resolver; y el número sale de los datos revisados, y no del fichero de la copia |
 | la primera ejecucion real de la integracion | A1 | el umbral declarado, y la copia validada |
-| el defecto del contador de subidas | A2, con A1 | las cifras se re-derivan contra la base adoptada, y no antes |
+| **H4 — el limp corto contado como subida** (alias: «el defecto del contador de subidas») | A2, con A1 | las cifras se re-deriven contra la base adoptada, y no antes |
 | la recalibracion de derivados | A2, con A1 | la base adoptada, y el manifiesto redeclarado |
 | la traduccion del `p` en las auditorias | A2, con A1 | la base adoptada, porque su semantica depende de la codificacion final |
 | `matrix` | A2 | ninguna: se puede empezar ya |
@@ -144,7 +154,7 @@ superstición se negocia.
 
 | | lo que no se toca | por qué |
 |---|---|---|
-| 1 | **el defecto del contador de subidas** | MEDIDO, un limp corto de ≤ 0.5 BB cuenta como una subida, y arreglarlo **recalibra**: toca 43 de las 877 manos de la ventana |
+| 1 | **H4 — el limp corto contado como subida** (alias: «el defecto del contador de subidas») | MEDIDO, un limp corto de ≤ 0.5 BB cuenta como una subida, y arreglarlo **recalibra**: toca 43 de las 877 manos de la ventana |
 | 2 | **el AUC publicado** | su calculo depende del numero de manos (877 hoy) y de las DECISIONES de la base; y una recalibracion va despues de la adopcion |
 | 3 | **el grafo de `preflop_matrices.json`** | lo leen **siete** modulos, y la intencion del fichero la declara A1: un cambio en el grafo sin la intencion fijada es un cambio a ciegas |
 | 4 | **las cifras derivadas** | frecuencias, rangos y perfiles se derivan de la base; derivarlos contra una base que todavia no es canonica es medir sobre nada |
@@ -192,7 +202,45 @@ de las reglas ✓, uno con su tabla y su test ✓, y uno declarado como riesgo
 latente ✓—, y reabrirlos sin nada nuevo que aportar es volver a tocar el
 contrato firmado ✓.
 
-## 13. EL ESTADO DE ESPERA
+## 13. EL COSTE DE LA SUITE, Y POR QUE SE ACEPTA
+
+Y aqui hay una **correccion** ✓, y es de este bloque ✓: el informe anterior
+atribuyo el crecimiento de la suite —de 5:30 a 11:45— a los **tests de
+mutacion** ✓, y **eso era falso** ✓. MEDIDO ✓:
+
+| | coste MEDIDO |
+|---|---|
+| `tools/test_mutar_contrato_p.py` (13 tests) | **22 s** |
+| `tools/test_integrar_copia.py` (17 tests) | **57 s** |
+| `tools/test_fixture_duro.py` (4 tests) | **~10 s** |
+
+> Y el crecimiento de la suite **no es de estos tests** ✓: 22 s no explican
+> cuatro minutos ✓. Y la explicacion mas honesta es la **carga de la
+> maquina** ✓ —que en este periodo tenia a A1 trabajando en paralelo ✓—, y
+> no un cambio de A2 ✓. Y la diferencia entre un informe y otro **es el
+> propio dato que hay que corregir** ✓.
+
+Y la **decision** ✓, que es lo que tiene que ser una decision y no una nota
+✓:
+
+> **La evidencia reproducible vale su coste** ✓. Y los tests de mutacion se
+> quedan, porque son lo que convierte «los tests pasan» en «los tests vigilan
+> algo» ✓. Y si en el futuro se quisiera reducirlos, que sea **una decision
+> declarada con su trade-off** ✓, y no un recorte silencioso ✓.
+
+Y el **umbral** ✓, que sin el un coste crece sin que nadie lo note ✓:
+
+> **Si la suite pasa de 20 minutos, se declara una decision** ✓: o se acepta
+> el coste, con su motivo ✓, o se reduce la evidencia, con lo que eso deja de
+> comprobar ✓. Y lo que no se hace es **que crezca solo** ✓.
+>
+> Y el umbral es de **20** y no de 15 ✓ porque el tiempo medido **varia con la
+> carga de la maquina** ✓: MEDIDO, el mismo codigo ha tardado **5:30** con la
+> maquina descargada ✓ y **25:43** con A1 trabajando en paralelo ✓. Y el
+> umbral que sirve es el de la maquina **descargada** ✓, porque el otro no
+> mide el codigo ✓, mide la cola ✓.
+## 14. EL ESTADO DE ESPERA
+
 
 > **A2 no tiene trabajo pendiente que no dependa de A1 o de la
 > post-adopción.** Y si en el futuro aparece algo, que sea una **decisión
@@ -203,14 +251,14 @@ Y lo que hay detrás de esa frase, y es lo que la sostiene:
 | | |
 |---|---|
 | lo que depende de **A1** | las manos sin resolver, el número de ciegas de la copia, el control de categorías, y las tres decisiones de `matrix` |
-| lo que depende de la **post-adopción** | **H4 — el limp corto contado como subida** (el «defecto del contador de subidas» de `AUDITORIA_RULES.md` §6 ✓, que es de `motor/learn.py` ✓): se corrige **cuando las cifras publicadas se re-deriven contra la base adoptada** ✓. Y tambien la recalibración de las cifras derivadas ✓, y la elección de la reducción estadística ✓ |
+| lo que depende de la **post-adopción** | **H4**, que esta en §3 ✓ con su dueño y su condicion ✓ —y cuya ficha esta en `AUDITORIA_RULES.md` §6 ✓—. Y tambien la recalibracion de las cifras derivadas ✓, y la eleccion de la reduccion estadistica ✓ |
 | lo que **ya está cerrado** | la auditoría de `rules.py` (`866e0c1`, `15ed74a`); los cuatro frentes auditados y clasificados (`7e0b3c7`, `25fe330`); el contrato de la `p`, con su inventario y su tabla de mutaciones (`25fe330`, `d12bff4`); los dos controles del procedimiento, con sus cuatro caminos (`25fe330`); y el experimento de la equity observable, preparado y con puerta (`25fe330`) |
 
 > Y la diferencia entre «no hay trabajo» y «no hay trabajo que se pueda
 > hacer» es la diferencia entre un proyecto acabado y uno parado ✓. Y aquí
 > es lo segundo, y la causa es de A1 ✓.
 
-## 14. QUÉ DEBE HACER A1 ANTES DE DISPARAR
+## 15. QUÉ DEBE HACER A1 ANTES DE DISPARAR
 
 Y son cuatro pasos, y cada uno tiene su criterio de **hecho**, que es lo que
 los hace comprobables y no una lista de intenciones.

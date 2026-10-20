@@ -185,6 +185,32 @@ def tabla_de_mutaciones():
     return filas
 
 
+def _version_commiteada(ruta):
+    """El contenido COMITEADO del fichero, y `None` si no se puede leer.
+
+    Y el motivo de que sea de GIT y no del disco ✓: el disco puede estar
+    sucio ✓, y un «original» sucio hace que la restauracion restaure la
+    mutacion ✓.
+    """
+    try:
+        relativo = os.path.relpath(os.path.abspath(ruta), ROOT)
+        r = subprocess.run(['git', 'show', 'HEAD:%s' % relativo.replace('\\', '/')],
+                           cwd=ROOT, capture_output=True)
+        if r.returncode != 0:
+            return None
+        return r.stdout
+    except Exception:                                  # noqa: BLE001
+        return None
+
+
+def _fichero_limpio(ruta):
+    """Si el fichero tiene cambios sin commitear."""
+    relativo = os.path.relpath(os.path.abspath(ruta), ROOT).replace('\\', '/')
+    r = subprocess.run(['git', 'status', '--porcelain', relativo],
+                       cwd=ROOT, capture_output=True, text=True)
+    return r.returncode == 0 and not r.stdout.strip()
+
+
 def mutar_y_comprobar(etiqueta, ruta=None, runner=None, tests=None):
     """Muta el motor, mira si los tests lo notan, y lo RESTAURA SIEMPRE.
 
@@ -203,8 +229,27 @@ def mutar_y_comprobar(etiqueta, ruta=None, runner=None, tests=None):
     ruta = ruta or os.path.join(ROOT, *LEARN_REL.split('/'))
     runner = runner or _correr
     mut = MUTACIONES[etiqueta]
-    original = io.open(ruta, 'rb').read()
+
+    # Y EL ORIGINAL SE LEE DE GIT, y no del fichero ✓. Y el motivo es el que
+    # costó una fuga ✓: si el fichero esta ya sucio ✓ —por una fuga
+    # anterior, o por la accion de otro agente en el mismo repositorio ✓—
+    # leerlo de ahi da un «original» que ya es el mutado ✓, y la restauracion
+    # vuelve a dejar la mutacion ✓, y el sha coincide ✓, y el instrumento
+    # cree que ha restaurado ✓.
+    original = _version_commiteada(ruta)
+    if original is None:
+        raise RuntimeError(
+            'no se puede leer la version COMITEADA de %s, y sin ella la '
+            'restauracion no se puede comprobar ✓' % ruta)
     sha = hashlib.sha256(original).hexdigest()
+
+    # Y ADEMAS, no se muta un fichero que no este limpio ✓, que es lo que
+    # hace imposible mutar sobre una mutacion ✓.
+    if not _fichero_limpio(ruta):
+        raise RuntimeError(
+            'el fichero %s tiene cambios sin commitear, y el instrumento NO '
+            'muta sobre un arbol sucio: la restauracion no seria comprobable'
+            % ruta)
     texto = original.decode('utf-8')
     if texto.count(mut['viejo']) != 1:
         return False, ('el patron aparece %d veces, y se esperaba 1'

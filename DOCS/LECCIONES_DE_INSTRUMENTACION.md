@@ -1469,3 +1469,40 @@ palabra de A1** ✓ —«resuelt», «ciegas_reconocidas», «candidata»— ✓
 el 1258 es **a la vez** el de la base canonica ✓ —que es legitimo— ✓ y el de
 la copia ✓ —que no lo es como valor esperado— ✓, y lo que los distingue **de
 que son** ✓ y no el numero ✓.
+## 34. El «original» de una restauracion se lee de donde se puede comprobar
+
+Y esta es la decima de la familia, y es la que **dejo la suite entera
+ejecutandose con el motor mutado** ✓.
+
+MEDIDO, lo que pasó. El instrumento de mutación leia el «original» —el
+contenido que hay que dejar al restaurar— **del propio fichero que iba a
+mutar** ✓. De modo que:
+
+    el fichero ya estaba sucio  ->  el «original» ya era el mutado
+                               ->  la restauracion devuelve la mutacion
+                               ->  el sha COINCIDE
+                               ->  el instrumento cree que ha restaurado
+
+Y el desenlace ✓: la suite entera se ejecutó con el motor mutado ✓ —con el
+soporte de la `p` desaparecido ✓— y **cuatro tests de mutación fallaron** ✓ y
+**el detector de fugas falló** ✓✓, que es justo lo que hace ✓.
+
+> Y la lección, que es de las maselvables de esta familia ✓: **un «original»
+> que se lee del sitio que vas a modificar no es un original, es una copia de
+> lo que hay** ✓. Y un original que no se puede comprobar no sirve para
+> restaurar ✓.
+
+Y el arreglo, que son dos cosas ✓:
+
+  · **el original se lee de GIT** ✓, que es la unica version que se puede
+    comprobar ✓;
+  · y **el instrumento se niega a mutar un arbol sucio** ✓, con lo que
+    ninguna via puede mutar sobre una mutacion ✓.
+
+Y la generalizacion ✓, que es lo que hay que aplicar en cualquier
+instrumento que restaure algo ✓:
+
+> **Un instrumento que restaura tiene que poder DEMOSTRAR que ha restaurado**
+> ✓. Y para poder demostrarlo, lo que restaura tiene que venir de una fuente
+> verificable ✓ —un commit, un fichero de referencia, un hash declarado ✓— y
+> no del propio sitio que modifica ✓.
