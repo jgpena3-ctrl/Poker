@@ -100,6 +100,11 @@ def test_el_experimento_no_toca_la_herramienta_del_auc_publicado():
     herramienta SI se ha corregido —un comentario no cambia ningun numero—,
     de modo que un hash moveria por un motivo que no es el que se vigila. Lo
     que se vigila es la RAMA, que es la que decide el numero.
+
+    > **CAMBIAR ESTA RAMA A LA EQUITY OBSERVABLE MOVERIA EL AUC PUBLICADO, que
+    > es post-adopcion.** Y si se cambia, el test tiene que cambiar CON UNA
+    > MEDICION ADJUNTA, y no por accidente: porque el numero que sale de
+    > ahi es el AUC del proyecto, y moverlo es una recalibracion.
     """
     arbol = _arbol('tools/equity_de_mano.py')
     fn = next(n for n in ast.walk(arbol)
@@ -138,6 +143,49 @@ def test_el_experimento_usa_el_rango_y_no_las_cartas_del_rival():
         'y la equity tiene que ser la OBSERVABLE: %r' % sorted(llamadas))
 
 
+def test_sin_la_variable_de_autorizacion_el_experimento_no_se_ejecuta():
+    """Y que la puerta sea de verdad, y no un aviso.
+
+    Y el motivo de que sea una VARIABLE DE ENTORNO y no un parametro: un
+    parametro se puede pasar por error de verdad, y una variable de entorno
+    hay que escribirla a proposito.
+
+    Y el codigo de salida es 2, que es el de «no se puede saber», y no 1: no
+    es un fallo del script, es que el script no se ha ejecutado ✓.
+    """
+    from tools import auditar_equity_observable as EXP
+    os.environ.pop(EXP.VARIABLE_DE_AUTORIZACION, None)
+    rc = EXP.main([])
+    assert rc == 2, (
+        'sin la variable de autorizacion el script tiene que negarse a '
+        'ejecutarse, y ha salido con %d' % rc)
+
+
+def test_el_coste_impreso_coincide_con_la_formula():
+    """Y que el coste que imprime sea el de la formula, y no un numero suelto.
+
+    Y la formula, que es la del contrato: `manos x combos x C(48,5)`. Y el
+    motivo de que sea un test y no una frase: un coste impreso que no cuadra
+    con la formula es un coste del que nadie se puede fiar, y el que lo lea
+    no tiene forma de saber si es un numero o una cuenta.
+    """
+    from tools import auditar_equity_observable as EXP
+    os.environ[EXP.VARIABLE_DE_AUTORIZACION] = '1'
+    try:
+        rc = EXP.main(['--manos', '1', '--n-combos', '2'])
+    finally:
+        os.environ.pop(EXP.VARIABLE_DE_AUTORIZACION, None)
+    # el codigo 1 es «no hay las dos clases», que con una mano es lo que
+    # pasa, y lo que importa aqui es que el script LLEGO a medir
+    assert rc == 1, rc
+    fuente = io.open(os.path.join(ROOT, 'tools',
+                                  'auditar_equity_observable.py'),
+                     encoding='utf-8').read()
+    assert 'coste = len(validacion) * n_combos * SORTEOS_POR_COMBO' in fuente, (
+        'el coste no se calcula con la formula del contrato')
+    assert EXP.SORTEOS_POR_COMBO == 1712304
+
+
 def test_el_piloto_devuelve_que_no_hay_las_dos_clases():
     """Y que con una sola mano el script diga que NO se puede calcular el AUC.
 
@@ -156,10 +204,12 @@ def test_el_piloto_devuelve_que_no_hay_las_dos_clases():
         return 0.25
 
     EXP.equity_preflop_rango = _falso
+    os.environ[EXP.VARIABLE_DE_AUTORIZACION] = '1'
     try:
         rc = EXP.main(['--manos', '1'])
     finally:
         EXP.equity_preflop_rango = original
+        os.environ.pop(EXP.VARIABLE_DE_AUTORIZACION, None)
     assert rc == 1, (
         'con una sola mano el script tiene que decir que no se puede '
         'calcular el AUC, y ha salido con %d' % rc)

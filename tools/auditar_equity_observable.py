@@ -60,6 +60,18 @@ SEED_POR_DEFECTO = 7
 # Y el coste por combo, que es el dato que hay que declarar antes de empezar.
 SORTEOS_POR_COMBO = 1712304
 
+# Y LA PUERTA, que es una VARIABLE DE ENTORNO y no un parametro, y el motivo
+# es que un parametro se puede pasar por error de verdad y una variable de
+# entorno hay que escribirla a proposito.
+#
+# Y MEDIDO, el coste: una mano con dos combos tarda 54 s, y las 47 con 40
+# combos son 1880 enumeraciones de C(48,5), o sea de HORAS. De modo que esto
+# no se lanza por accidente.
+#
+# Y el valor es el que dice el nombre, para que se vea en la lista de
+# variables y no haya que buscarlo.
+VARIABLE_DE_AUTORIZACION = 'POKER_EQUITY_OBSERVABLE'
+
 
 def _modelos(ajuste):
     """El ajuste de rangos, y las etiquetas de perfil.
@@ -146,6 +158,26 @@ def main(argv=None):
                     help='una sola mano y dos combos, para comprobar que el '
                          'experimento funciona sin pagar el coste')
     args = ap.parse_args(argv)
+
+    # Y LA PUERTA, antes de nada: sin la variable de entorno, este script no
+    # se ejecuta. Y el motivo de que la puerta este ANTES de calcular nada
+    # es que el calculo de las etiquetas y del modelo ya cuesta.
+    if os.environ.get(VARIABLE_DE_AUTORIZACION) != '1':
+        print('ESTE EXPERIMENTO NO SE EJECUTA SIN AUTORIZACION.')
+        print()
+        print('   Y el motivo es el coste: MEDIDO, una mano con dos combos tarda')
+        print('   54 s, y la particion de validacion son 47 manos con 40 combos,')
+        print('   que son 1880 enumeraciones de C(48,5): de HORAS.')
+        print()
+        print('   Para ejecutarlo hay que escribir a proposito:')
+        print('       %s=1 python %s ...'
+              % (VARIABLE_DE_AUTORIZACION,
+                 os.path.basename(__file__)))
+        print()
+        print('   Y la autorizacion es de A1, porque el experimento mide si la')
+        print('   equity observable ordena las manos, y esa medicion es una')
+        print('   CIFRA NUEVA, no una sustitucion del AUC publicado.')
+        return 2
 
     n_combos = 2 if args.piloto else args.n_combos
     manos = 1 if args.piloto else args.manos

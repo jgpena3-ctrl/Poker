@@ -121,7 +121,20 @@ herramienta que genera el AUC publicado**, y no lo toca porque usarla
 movería el AUC. Y hay un test que lo comprueba por el árbol: la rama preflop
 de `equity_contra` sigue usando la enumeración contra la mano real.
 
-## 6. Y LO QUE NO SE HACE
+## 6. Y EL EXPERIMENTO NO SE EJECUTA HASTA QUE A1 LO AUTORICE
+
+Y la puerta es una **variable de entorno**, `POKER_EQUITY_OBSERVABLE=1`, y
+sin ella el script se niega a ejecutar y dice por qué. Y el motivo de que sea
+una variable y no un parámetro: **un parámetro se puede pasar por error de
+verdad, y una variable de entorno hay que escribirla a propósito**.
+
+> Y el piloto, que **se ha ejecutado a mano**, dijo: **«NO HAY LAS DOS
+> CLASES»** —una mano medida, y con una sola mano no se puede calcular un
+> AUC—. Y eso **es el resultado correcto, y no un fallo**: un AUC con una
+> sola clase no es un AUC, es un número, y un 0,5 inventado sería peor que
+> un «no se puede».
+
+## 7. Y LO QUE NO SE HACE
 
 | | |
 |---|---|

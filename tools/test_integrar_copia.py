@@ -121,6 +121,20 @@ def _correr(destino, candidata, *args):
     return subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
 
 
+def _linea_de_incompleta(salida):
+    """La LINEA del veredicto de incompleta, y no todo el informe.
+
+    Y el motivo: el informe explica los controles en otras lineas —y con
+    razon—, de modo que buscar el nombre de un control en todo el informe
+    daria un falso positivo. Y lo que se comprueba es lo que DICE EL
+    VEREDICTO, que es lo que lee quien tiene que decidir.
+    """
+    for l in salida.split('\n'):
+        if 'INCOMPLETA' in l:
+            return l
+    return ''
+
+
 def _destino_temporal(alta):
     destino = os.path.join(alta, 'destino.jsonl')
     shutil.copyfile(CANON, destino)
@@ -674,6 +688,118 @@ def test_la_autorizacion_no_se_estima_si_la_integridad_no_ha_pasado():
             'y la seccion de autorizacion tiene que decirlo: %s'
             % r.stdout[-1000:])
         assert 'NO SE EVALUA' in r.stdout, r.stdout[-800:]
+    finally:
+        shutil.rmtree(alta, ignore_errors=True)
+
+# ---------------------------------------------------------------------------
+# LOS CUATRO CAMINOS DE DECLARACION
+# ---------------------------------------------------------------------------
+
+def test_camino_completo_los_dos_controles_declarados():
+    """Y el camino del exito: los dos controles declarados, y correctos.
+
+    Y el sha: el destino tiene que volver a ser byte a byte lo que era, que
+    es la verificacion de que la restauracion ocurrio ✓.
+    """
+    alta, candidata, informe = _candidata(FIX.DUREZA_DURA)
+    try:
+        destino = _destino_temporal(alta)
+        antes = io.open(destino, 'rb').read()
+        sha_antes = _sha(destino)
+
+        r = _correr(destino, candidata,
+                    '--ciegas-esperadas', str(informe['ciegas_reconocidas']),
+                    '--control-categorias', _control(alta))
+        assert r.returncode == 0, (
+            'con los dos controles declarados el codigo tiene que ser 0, y ha '
+            'salido con %d:\n%s' % (r.returncode, r.stdout[-1200:]))
+        assert _sha(destino) == sha_antes, 'el sha de la base destino ha cambiado'
+        assert io.open(destino, 'rb').read() == antes
+    finally:
+        shutil.rmtree(alta, ignore_errors=True)
+
+
+def test_camino_sin_el_control_de_categorias():
+    """Y el camino de «solo falta el control de categorias».
+
+    Y el mensaje tiene que decir ESA, y no el numero de ciegas: porque quien
+    lo lee tiene que saber que declaracion le falta, y no una lista.
+    """
+    alta, candidata, informe = _candidata(FIX.DUREZA_DURA)
+    try:
+        destino = _destino_temporal(alta)
+        antes = io.open(destino, 'rb').read()
+
+        r = _correr(destino, candidata,
+                    '--ciegas-esperadas', str(informe['ciegas_reconocidas']))
+        assert r.returncode == 2, (
+            'sin el control de categorias el codigo tiene que ser el 2, y ha '
+            'salido con %d:\n%s' % (r.returncode, r.stdout[-1200:]))
+        linea = _linea_de_incompleta(r.stdout)
+        assert 'el control de las categorias' in linea, (
+            'el veredicto tiene que NOMBRAR el control que falta: %r' % linea)
+        assert 'el numero de ciegas' not in linea, (
+            'y NO puede nombrar el que NO falta, que es lo que haria que el '
+            'mensaje fuera una lista: %r' % linea)
+        assert io.open(destino, 'rb').read() == antes
+    finally:
+        shutil.rmtree(alta, ignore_errors=True)
+
+
+def test_camino_sin_el_numero_de_ciegas():
+    """Y el camino de «solo falta el numero de ciegas».
+
+    Y el simetrico del anterior ✓, y el motivo de que haga falta: los dos
+    controles son independientes, y un mensaje que siempre dijera lo mismo
+    no distinguiria los dos casos.
+    """
+    alta, candidata, _informe = _candidata(FIX.DUREZA_DURA)
+    try:
+        destino = _destino_temporal(alta)
+        antes = io.open(destino, 'rb').read()
+
+        r = _correr(destino, candidata,
+                    '--control-categorias', _control(alta))
+        assert r.returncode == 2, (
+            'sin el numero de ciegas el codigo tiene que ser el 2, y ha '
+            'salido con %d:\n%s' % (r.returncode, r.stdout[-1200:]))
+        linea = _linea_de_incompleta(r.stdout)
+        assert 'el numero de ciegas' in linea, (
+            'el veredicto tiene que NOMBRAR el control que falta: %r' % linea)
+        assert 'el control de las categorias' not in linea, (
+            'y NO puede nombrar el que NO falta: %r' % linea)
+        assert io.open(destino, 'rb').read() == antes
+    finally:
+        shutil.rmtree(alta, ignore_errors=True)
+
+
+def test_el_mensaje_de_incompleta_no_sugiere_un_valor_por_defecto():
+    """Y que no proponga nada.
+
+    Y el motivo: una decision que no se ha tomado no se resuelve con una
+    sugerencia. Y si el mensaje dijera «puedes usar 921», estarias
+    contestando una pregunta que nadie ha hecho, con un numero que es el
+    control de otra base.
+    """
+    alta, candidata, _informe = _candidata(FIX.DUREZA_DURA)
+    try:
+        destino = _destino_temporal(alta)
+        r = _correr(destino, candidata)
+        assert r.returncode == 2
+        # y si faltan LOS DOS, los nombra a los dos
+        linea = _linea_de_incompleta(r.stdout)
+        assert 'el numero de ciegas' in linea, (
+            'el veredicto tiene que nombrar los dos controles que faltan: %r'
+            % linea)
+        assert 'el control de las categorias' in linea, (
+            'el veredicto tiene que nombrar los dos controles que faltan: %r'
+            % linea)
+        salida = r.stdout.lower()
+        for sugerencia in ('puedes usar', 'podrias usar', 'por defecto',
+                           'se asume', 'vale 921'):
+            assert sugerencia not in salida, (
+                'el mensaje sugiere %r, y una decision no tomada no se '
+                'resuelve con una sugerencia: %s' % (sugerencia, r.stdout[-800:]))
     finally:
         shutil.rmtree(alta, ignore_errors=True)
 

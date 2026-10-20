@@ -234,3 +234,22 @@ def test_la_seccion_de_lo_que_no_se_toca_existe_y_tiene_motivos():
         assert ancla in texto, (
             'falta el elemento %r en la lista de lo que no se toca' % ancla)
 
+def test_el_registro_declara_el_estado_de_a2_y_de_a1():
+    """Y que la linea exista, y que sea la que dice.
+
+    Y el motivo de que sea una DECLARACION y no un hecho: el estado de un
+    trabajo se escribe a mano, y una frase que no esta escrita puede ser
+    cierta o falsa sin que nadie lo sepa. Y esta, al menos, esta vigilada.
+    """
+    reg = _registro()
+    assert 'A2 ha cerrado todo lo que puede cerrar sin A1' in reg, (
+        'el registro no declara el estado de A2')
+    assert 'post-adopci' in reg, (
+        'y la declaracion tiene que decir que lo que queda abierto es de A1 '
+        'o POST-ADOPCION')
+    # y los dos controles, con quien los declara y que pasa sin ellos
+    assert 'los **dos controles** del procedimiento los declara **A1**' in reg, (
+        'el registro no dice que los dos controles los declara A1')
+    assert 'no tiene valor por defecto para ninguno de los dos' in reg, (
+        'y no dice que el script no tiene valores por defecto')
+

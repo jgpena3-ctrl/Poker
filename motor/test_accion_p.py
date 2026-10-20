@@ -209,3 +209,126 @@ def test_la_base_de_hoy_no_se_mueve():
         'la base canonica tiene %d acciones `p`, y el cambio que este fichero '
         'prueba es para la codificacion NUEVA. Si la base ya tiene `p`, este '
         'test ya no es el control de «nada se mueve».' % con_p)
+
+# --- 5. LOS CASOS QUE FALTABAN, Y QUE SON LOS QUE MAS IMPORTAN -----------
+
+def test_el_ante_grabado_como_p_no_es_una_decision():
+    """Y un ante es una POSTA, y no una decision, y no sube el nivel.
+
+    Y el caso, MEDIDO en la copia real: la copia convierte los antes que
+    faltan en `p` de 1.0, y los que ya estaban grabados como `b` los deja
+    como `b`. Y en los dos casos el ante NO es una decision del jugador.
+
+    Y por que el ante importa mas que la ciega: **la ciega del BB la
+    reconoce `_es_ciega_bb` en las dos codificaciones, y el ante no**. De
+    modo que un ante mal tratado se cuela en el recuento de limps, que es un
+    contador GLOBAL de la mesa.
+    """
+    h = _hand([('UTG', 'p', 1.0), ('MP', 'b', 2.5)])
+    assert _eventos(h, 'UTG') == [], (
+        'un ante no es una decision: %r' % (_eventos(h, 'UTG'),))
+    cat = [(e.pos, e.category) for e in learn.preflop_events(h)]
+    assert cat == [('MP', 'open')], cat
+
+    # y el ante NO sube el nivel: el MP abre, y no es un limp
+    h2 = _hand([('UTG', 'p', 1.0), ('MP', 'c', 1.0)])
+    cat2 = [(e.pos, e.category) for e in learn.preflop_events(h2)]
+    assert cat2 == [('MP', 'limp')], (
+        'con un ante de por medio, el MP tiene que ver una mesa vacia: %r'
+        % (cat2,))
+
+
+def test_una_entrada_desconocida_no_se_convierte_en_una_accion_valida():
+    """Y una accion que el motor NO conoce lanza, y no se inventa nada.
+
+    Y el motivo de que sea un caso aparte: la `p` es una accion CONOCIDA que
+    el motor no clasifica, porque no es una decision. Y una accion
+    DESCONOCIDA es otra cosa: no hay contrato para ella, y lo que tiene que
+    pasar es que el motor lo diga, y no que le invente una categoria.
+
+    Y el error que evita: si el motor le pusiera una categoria por defecto a
+    lo que no conoce, ese numero se publicaria, y nadie sabria que no
+    significa nada.
+    """
+    with pytest.raises(ValueError):
+        learn.classify_first_action('z', 1.0, 0, 0)
+
+    # y en el recorrido completo, que es donde importa: el motor lo dice y
+    # no sigue como si nada
+    h = _hand([('UTG', 'z', 1.0), ('MP', 'b', 2.5)])
+    with pytest.raises(ValueError):
+        list(learn.preflop_events(h))
+
+
+def test_el_invariante_de_cm004_con_la_codificacion_nueva():
+    """Y que una ciega TARDIA se vea como tal, con la codificacion nueva.
+
+    Y el motivo: el invariante de CM-004 existe para que una `BB b` mal
+    ordenada salga, y con la codificacion nueva la ciega puede ser una `p`. De
+    modo que el invariante tiene que mirar las dos, y una `BB p` tarde tiene
+    que salir como rechazo, igual que una `BB b` tarde.
+
+    Y el comparativo, que es lo que demuestra que el invariante no se ha
+    quedado con la codificacion vieja: las dos hands Gives el mismo motivo.
+    """
+    vieja = _hand([('UTG', 'b', 2.5), ('BB', 'b', 1.0)])
+    nueva = _hand([('UTG', 'b', 2.5), ('BB', 'p', 1.0)])
+
+    assert learn.manos_con_orden_ciega_malo([vieja]), (
+        'una `BB b` tarde tiene que salir en el invariante')
+    assert learn.manos_con_orden_ciega_malo([nueva]), (
+        'una `BB p` tarde tiene que salir en el invariante, igual que la `b`')
+
+    # y el motivo, el mismo
+    assert (learn.entradas_bb_rechazadas(vieja)[0][2]
+            == learn.entradas_bb_rechazadas(nueva)[0][2])
+
+    # y una ciega EN SU SITIO no sale en ninguna de las dos
+    bien_vieja = _hand([('BB', 'b', 1.0), ('UTG', 'b', 2.5)])
+    bien_nueva = _hand([('BB', 'p', 1.0), ('UTG', 'b', 2.5)])
+    assert learn.manos_con_orden_ciega_malo([bien_vieja]) == []
+    assert learn.manos_con_orden_ciega_malo([bien_nueva]) == []
+
+
+def test_las_ciegas_consecutivas_no_generan_ninguna_decision():
+    """Y SB y BB posteadas, una detras de otra, no generan ni una.
+
+    Y el motivo: es el caso de la copia real —las dos ciegas van al
+    principio— y es donde un `decided` mal puesto haria que la segunda
+    decision de alguien contase como la primera. De modo que este caso
+    mira lo que NO tiene que haber: ninguna decision de SB ni de BB.
+    """
+    h = _hand([('SB', 'p', 0.5), ('BB', 'p', 1.0), ('UTG', 'b', 2.5),
+               ('MP', 'c', 2.5)])
+    evs = [(e.pos, e.category) for e in learn.preflop_events(h)]
+    assert ('SB', 'limp') not in evs, evs
+    assert ('BB', 'limp') not in evs, evs
+    assert evs == [('UTG', 'open'), ('MP', 'call_open')], evs
+
+def test_un_bb_que_ya_posteo_no_vuelve_a_ser_una_ciega():
+    """Y el BB que YA posteo la ciega, y despues tiene una `b`.
+
+    Y este caso lo ha encontrado la MUTACION, y no la lectura: se quito de
+    `entradas_bb_rechazadas` la marca de «el BB ya posteo», y **ningun test
+    se dio cuenta**.
+
+    Y el motivo de que el caso importa: la `p` del BB dice que la ciega ya
+    esta puesta, de modo que una `b` posterior del BB es una ACCION
+    VOLUNTARIA y no una ciega fuera de sitio. Y sin la marca, cada `b` del BB
+    que venga despues se marcaría como rechazo —un falso positivo—.
+
+    Y el caso discriminante, que es la contraparte del anterior: la misma
+    mano, con la ciega grabada como `b` y sin `p` antes, SI es un rechazo.
+    """
+    h = _hand([('BB', 'p', 1.0), ('UTG', 'b', 2.5), ('BB', 'b', 3.0)])
+    assert learn.entradas_bb_rechazadas(h) == [], (
+        'un BB que ya posteo la ciega no puede tener una ciega segunda: %r'
+        % (learn.entradas_bb_rechazadas(h),))
+
+    # y la contraparte: sin la `p` de antes, la `b` del BB ES la ciega, y
+    # estar despues de una accion voluntaria es lo que la hace un rechazo
+    h2 = _hand([('UTG', 'b', 2.5), ('BB', 'b', 1.0)])
+    rechazos = learn.entradas_bb_rechazadas(h2)
+    assert rechazos, 'una `BB b` tarde tiene que salir como rechazo'
+    assert rechazos[0][2] == learn.CAUSA_ORDEN, rechazos
+

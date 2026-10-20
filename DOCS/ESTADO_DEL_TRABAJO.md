@@ -20,6 +20,7 @@
 | **el procedimiento de integración** | `tools/integrar_copia.py`, probado en seco con la copia sintética **completa** de 1258 manos, y con sus dos caminos de fallo |
 | **los DOS fixtures** | uno **suave** —solo recodifica— y otro **duro** —además añade las ciegas que faltaban—, y el duro reconoce **1258** ciegas, las mismas que la copia real |
 | **el número de ciegas, que no es una constante global** | lo mide cada fixture y lo dice en su informe, y es **exacto** y no un mínimo: un control que no puede fallar no es un control |
+| **la auditoría del contrato de la `p`** | `DOCS/AUDITORIA_CONTRATO_P.md`: el inventario de los lectores y los productores, los tres efectos, los casos sintéticos, la compatibilidad con CM-004, y la **mutación** que demuestra que los tests no son vacíos |
 | **la auditoría de `matrix`** | `DOCS/AUDITORIA_MATRIX.md`: el mapa real de los lectores, los contratos de lectura, y los cinco hallazgos con su categoría. Y sus tres decisiones, declaradas como de A1 |
 | **la vía preflop observable** | `DOCS/OBSERVABLE_PREFLOP.md`: qué es observable, quién lo valida sin sesgo, y qué está medido y qué es hipótesis |
 | **la declaración de los escritores** | `motor/test_quien_escribe.py`, y ahora **verificable**: qué escribe, dónde y bajo qué condición |
@@ -148,7 +149,30 @@ superstición se negocia.
 > vuelve a medir al adoptar**. Y ninguna se toca antes, porque antes no
 > hay una base que las sostenga.
 
-## 11. QUÉ DEBE HACER A1 ANTES DE DISPARAR
+## 11. EL ESTADO DE A2, Y EL DE A1
+
+> **A2 ha cerrado todo lo que puede cerrar sin A1; lo que queda abierto es de
+> A1 o post-adopción.**
+
+Y lo que queda abierto, con su dueño, está en §2 (lo de A1) y en §3 (lo de
+A2 que depende de A1). Y lo que está en §4 son los frentes **independientes**,
+que se han auditado y clasificado, y cuya decisión es de alcance.
+
+Y los **dos controles** del procedimiento los declara **A1**, y el script
+**no tiene valor por defecto para ninguno de los dos**:
+
+| | quién lo declara | y qué pasa sin él |
+|---|---|---|
+| el número de ciegas | A1, al cerrar las 203 | el script sale con el código **2**, y el veredicto nombra **el número de ciegas** |
+| el control de las doce categorías | A1, sobre la copia ya revisada | el script sale con el código **2**, y el veredicto nombra **el control de las categorias** |
+
+> Y el motivo de que no haya valores por defecto: el de las doce categorías de
+> la base de hoy es el control de **neutralidad de la codificación**, que es
+> otra pregunta, y usarlo por defecto sería responder una que nadie ha
+> hecho. Y el del número de ciegas sale de datos que todavía no son
+> canónicos.
+
+## 12. QUÉ DEBE HACER A1 ANTES DE DISPARAR
 
 Y son cuatro pasos, y cada uno tiene su criterio de **hecho**, que es lo que
 los hace comprobables y no una lista de intenciones.
