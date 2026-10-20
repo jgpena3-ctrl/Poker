@@ -150,11 +150,27 @@ CONTRATO_PREFLOP.md
     ## Lo que queda abierto
 ```
 
-> **El contrato de la vía preflop está escrito y NO está firmado, y su propia
-> sección de decisiones pendientes es lo que falta.** De modo que el frente no
-> es «escribir el contrato» —está escrito— sino **tomar las dos decisiones que
-> el contrato dice que hay que tomar antes de codificar**, y que son:
-> muestreado con `n_combos = 40`, y que la varianza es admisible.
+> **El contrato de la vía preflop está escrito y NO está firmado, y sus dos
+> decisiones YA ESTÁN TOMADAS.** Y aquí hay que corregirse, porque el bloque
+> anterior escribió lo contrario: `muestreado con n_combos = 40` y `la
+> varianza es admisible` no son decisiones *pendientes*, son las **Decisión 1**
+> y la **Decisión 2** del propio contrato, y están escritas ✓.
+>
+> De modo que el frente no es «tomar dos decisiones»: es **firmar**, y lo que
+> falta para firmar son las **cuestiones de alcance**, que son de otro dueño.
+
+Y la separación, que es lo que R2 pide:
+
+| | |
+|---|---|
+| **DECIDIDO, y en el contrato** | muestreado con `n_combos = 40`; la varianza es admisible; la firma `equity_preflop_rango(hero_codes, villain_reach, …)`; y un desacuerdo **declarado**: `DEFAULT_RUNOUT_COMBOS` sigue en 200 y no baja a 40 |
+| **de ALCANCE, y de otro dueño** | que la equity sea **observable** en preflop —hoy el 62 % es retrospectiva—; más manos de validación —41 es pocas—; y si la equity preflop observable **ordena** las manos, que se mide *después* de implementarla |
+
+> Y la circularidad que hay detrás, y que está escrita en los dos contratos:
+> la cobertura preflop no se amplía hasta que `L_sec` esté firmado, y
+> `L_sec` necesita la equity observable en preflop para poder afirmarse. Y
+> romperlo por un lado no es una decisión de instrumentación: es una decisión
+> de alcance.
 
 **DEL CÓDIGO:** la forma del contrato, sus dos decisiones pendientes y sus
 apartados de «lo que NO resuelve».
@@ -179,12 +195,29 @@ tools/auditar_auc.py:299
 | dónde | `equity_de_mano()` la calcula, y `auditar_auc.py` la consume |
 | por qué la mediana | con 415 de 877 cortes con más de un rival, «la equity del héroe» no es un número: es una lista |
 
-**DEL CÓDIGO:** la lógica de agregación, que es una línea, y su condición de
+**DEL CÓDIGO:** la lógica de agregación, que era una línea, y su condición de
 aplicación, que es «los rivales vivos en la calle de corte».
+
+> Y la condición, ahora VERIFICABLE y no una frase: la agregación se ha
+> extraído a `tools/equity_de_mano.py::agrega_equities`, y su test, con datos
+> sintéticos, fija **cuándo se aplica la mediana**:
+>
+> · se aplica sobre **los rivales que se pudieron evaluar**, y no sobre los
+>   rivales del bote: los que fallaron no están, y su motivo queda aparte;
+> · y por eso el resultado lleva **`n_evaluados`**, que antes no se decía: una
+>   mediana de dos rivales y una de cinco se veían igual;
+> · con un rival la mediana es ese valor y la dispersión es 0.0 —que no es
+>   «no hay dispersión», sino «no se puede medir»;
+> · y sin ninguna, un error que lo dice, y no el `nan` que devuelve
+>   `numpy.median([])`, que es un número que se propaga sin que nadie lo note.
+
 **DE QUIEN DECIDE EL OBJETIVO:** si la mediana es la reducción correcta, que es
 una cuestión de póquer y no de instrumentación. Y por eso **no se toca**: un
 cambio de reducción cambia la métrica, y la métrica publicada no se mueve por
-criterio de un bloque de instrumentación.
+criterio de un bloque de instrumentación. Y lo que ya está medido es que
+**para este AUC la reducción no importa** (`tools/test_reduccion_auc.py`
+compara seis), de modo que la pregunta es para la métrica SIGUIENTE, y esa es
+de quien la decide.
 
 ## 5. Y EL RESUMEN, que es lo que hay que llevarse
 
@@ -192,8 +225,8 @@ criterio de un bloque de instrumentación.
 |---|---|---|
 | las 5 divergentes | 27 de 29 son un resumen truncado, y se clasifican sin la grabación | 2 cartas, una en `H_0915` y otra en `H_0921`. Y la cuenta hay que repetirla tras la adopción |
 | `matrix` | el grafo: 7 módulos del motor dependen del fichero | la intención del fichero |
-| la vía preflop | el contrato está escrito, con sus dos decisiones pendientes | las dos decisiones, y el alcance del contrato |
-| el peso por rival | la agregación es una línea, y su condición son los rivales vivos | si la mediana es la reducción correcta |
+| la vía preflop | el contrato está escrito, y sus **dos decisiones ya están tomadas**; lo que falta son las cuestiones de alcance | que la equity sea observable en preflop, más manos de validación, y si la equity preflop observable ordena las manos |
+| el peso por rival | la agregación, su condición —los rivales **evaluables**— y su cuenta, con test sintético | si la mediana es la reducción correcta, y para la métrica siguiente |
 
 > Y el patrón de los cuatro es el mismo, y es el del proyecto entero:
 > **la parte que se puede decidir desde el código está medida y es pequeña; y

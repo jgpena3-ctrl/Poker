@@ -43,10 +43,10 @@
 
 | trabajo | dueño | condición de activación |
 |---|---|---|
-| `matrix`: auditar el origen de las discrepancias y las dependencias del calculo, sin regenerar derivados | A2 | ninguna: se puede empezar ya |
-| las 5 manos con board divergente: clasificar cuales se pueden analizar desde el codigo y cuales dependen de A1 | A2 | ninguna para la clasificacion; la resolucion depende de A1 |
-| la via preflop: revisar el recorrido de las acciones, sus contratos y la propagacion de estados, con pruebas sinteticas | A2 | ninguna: se puede empezar ya |
-| el peso por rival: auditar la logica de asignacion y sus condiciones de aplicacion, sin recalibrar con la copia | A2 | ninguna: se puede empezar ya |
+| `matrix`: auditar el origen de las discrepancias y las dependencias del calculo, sin regenerar derivados | A2 | **AUDITADO**: `DOCS/AUDITORIA_MATRIX.md`. Y lo que sale de el, y es de A1: que significa una celda, el 22 % de spots sin tabla, y la regla de `Call_OR` |
+| las 5 manos con board divergente: clasificar cuales se pueden analizar desde el codigo y cuales dependen de A1 | A2 | **AUDITADO**: 27 de 29 son un resumen truncado, y 2 son de A1 (`H_0915` y `H_0921`) |
+| la via preflop: revisar el recorrido de las acciones, sus contratos y la propagacion de estados, con pruebas sinteticas | A2 | **AUDITADO**: sus dos decisiones ya estan tomadas, y lo que falta son las cuestiones de ALCANCE, que no son de instrumentacion |
+| el peso por rival: auditar la logica de asignacion y sus condiciones de aplicacion, sin recalibrar con la copia | A2 | **AUDITADO**: la mediana se aplica sobre los rivales EVALUABLES, y ahora la cuenta se dice. Y si la mediana es la reduccion correcta, de quien decide el objetivo |
 
 > Y los cuatro **auditados y clasificados** en
 > [`AUDITORIA_FRONTES.md`](AUDITORIA_FRONTES.md), que dice, para cada uno, qué

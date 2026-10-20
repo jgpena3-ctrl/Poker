@@ -324,6 +324,32 @@ def candidatos(h, hero_pos, calle):
 
 
 # --------------------------------------------------------------------- main
+def agrega_equities(salida):
+    """La REDUCCION de las equities de los rivales a un numero, y con cuenta.
+
+    Y la population, que es lo que hay que tener presente: **`salida` son los
+    rivales que se PUDIERON evaluar**. Los que fallaron no estan, y su motivo
+    queda en la lista de motivos. De modo que la mediana es la de un
+    SUBCONJUNTO de los rivales del bote, y el numero de cuantos es lo que
+    dice si ese subconjunto es el bote entero.
+
+    Y por eso se devuelve tambien `n_evaluados`: sin ese numero, una mediana
+    de dos rivales y una de cinco se ven igual.
+
+    Y la dispersion es `max - min`, y es 0.0 cuando hay un solo rival, que no
+    es «no hay dispersion» sino «no se puede medir».
+    """
+    if not salida:
+        raise ValueError('agrega_equities: sin equities que agregar')
+    valores = list(salida.values())
+    return {
+        'mediana': float(np.median(valores)),
+        'dispersion': (max(valores) - min(valores)
+                       if len(valores) > 1 else 0.0),
+        'n_evaluados': len(valores),
+    }
+
+
 def equity_de_mano(hand, labels, modelos, rival_unico=None):
     """Equity del hero en `hand` contra cada rival vivo. Dict por rival.
 
@@ -345,6 +371,8 @@ def equity_de_mano(hand, labels, modelos, rival_unico=None):
     salida = {}
     motivos = []
     detalle = None
+    # Y la agregacion se hace al final, sobre lo que se pudo evaluar, y con
+    # la cuenta de cuantos. Y la cuenta es lo que hace visible el subconjunto.
     for r in rivales:
         eq, det = equity_contra(hand, r, labels, modelos['preflop'],
                                 modelos.get('postflop'))
@@ -360,12 +388,13 @@ def equity_de_mano(hand, labels, modelos, rival_unico=None):
         detalle = det
     if not salida:
         return None, '; '.join(motivos) or 'sin motivos'
+    agregado = agrega_equities(salida)
     return salida, {
         'calle': calle,
         'hero_pos': hero_pos,
-        'dispersion': (max(salida.values()) - min(salida.values())
-                       if len(salida) > 1 else 0.0),
-        'mediana': float(np.median(list(salida.values()))),
+        'mediana': agregado['mediana'],
+        'dispersion': agregado['dispersion'],
+        'n_evaluados': agregado['n_evaluados'],
     }, detalle
 
 
