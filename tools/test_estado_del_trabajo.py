@@ -13,6 +13,7 @@ ciertas, y las tres se pueden comprobar:
 """
 import io
 import os
+import shutil
 import subprocess
 import sys
 
@@ -64,9 +65,17 @@ def test_el_procedimiento_de_integracion_sin_umbral_dice_incompleta():
     algo y no una frase.
     """
     assert os.path.isfile(SCRIPT), 'el procedimiento de integracion no existe'
-    r = subprocess.run([sys.executable, SCRIPT, '--destino',
-                        os.path.join(ROOT, 'data', 'hands_db.jsonl')],
-                       cwd=ROOT, capture_output=True, text=True)
+    # Y el destino es TEMPORAL, y no la base canonica. Y el motivo: este test
+    # intercambia la base, y la base canonica no es de este trabajo. Y la
+    # restauracion es garantizada, pero «garantizada» no es «imposible que
+    # pase»: si el proceso muere entre el intercambio y la restauracion, la
+    # base se queda cambiada. Y eso no lo decide un test.
+    import tempfile
+    with tempfile.TemporaryDirectory() as alta:
+        destino = os.path.join(alta, 'destino.jsonl')
+        shutil.copyfile(os.path.join(ROOT, 'data', 'hands_db.jsonl'), destino)
+        r = subprocess.run([sys.executable, SCRIPT, '--destino', destino],
+                           cwd=ROOT, capture_output=True, text=True)
     # Sin umbral, el procedimiento tiene que salir con codigo DISTINTO de cero
     # y decir por que. Y el codigo 2 es el de «incompleta».
     assert r.returncode == 2, (

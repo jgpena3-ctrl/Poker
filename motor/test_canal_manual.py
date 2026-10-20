@@ -44,7 +44,12 @@ from motor import learn
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB_REL = 'data/hands_db.jsonl'
-DB_PATH = os.path.join(ROOT, *DB_REL.split('/'))
+# Y la base que mira este fichero se puede APUNTAR a otra, con
+# `POKER_DB_PATH`. Y el motivo es que el procedimiento de integracion tiene
+# que poder probarse contra un destino TEMPORAL, sin tocar la base canonica.
+# Y sin la variable, el comportamiento es el de siempre.
+DB_PATH = os.environ.get('POKER_DB_PATH') or os.path.join(
+    ROOT, *DB_REL.split('/'))
 CANONICO = 'DOCS/CANAL_MANUAL_CERRADO.md'
 
 
@@ -387,29 +392,69 @@ def test_los_dos_scripts_de_escritura_declaran_a_que_script_se_debe():
 # Y esto no es una regla de estilo: es la diferencia entre que la base y el
 # motor hablen el mismo idioma y que no.
 
-def _vocabulario_del_motor():
-    """Las acciones que el motor sabe clasificar, DERIVADAS de su codigo.
+# Los modulos del motor que DESPACHAN sobre acciones. Y la lista es
+# EXPRESA, y no se deriva del repositorio entero, porque hay letras de un
+# solo caracter que no son acciones, y porque `recorder/` y `tools/` tienen
+# las suyas.
+MODULOS_QUE_DESPACHAN_SOBRE_ACCIONES = (
+    'learn', 'multiway', 'stats', 'hierarchy', 'observations', 'behavior',
+)
 
-    Y sale del ARBOL de `motor/learn.py`: se busca `classify_first_action` —la
-    funcion que LANZA ante una accion que no conoce— y se toman las cadenas de
-    un solo caracter que compara.
+# Y los nombres que son de ACCION. Y no es `a`, porque `a` se usa de sobra
+# para otras cosas, y por eso el filtro mira el NOMBRE COMPLETO.
+NOMBRES_DE_ACCION = ('action', 'act', 'acc', 'accion')
+
+
+def _es_nombre_de_accion(nombre):
+    n = nombre.lower()
+    return any(n == x or n.endswith('_' + x) for x in NOMBRES_DE_ACCION)
+
+
+def _vocabulario_del_motor():
+    """Las acciones que el motor despacha, DERIVADAS de su codigo.
+
+    Y sale del ARBOL, y la derivacion es: **las acciones son las letras que
+    el motor COMPARA contra un nombre de accion**. Ni mas ni menos.
+
+    Y por que no `classify_first_action`, que era la derivacion anterior: esa
+    funcion clasifica una DECISION, y una POSTA —`p`— no lo es, de modo que la
+    `p` no sale de ahi. Y el guardian senalaba como desconocida una accion que
+    el motor SI maneja: el guardian estaba mirando el sitio equivocado.
+
+    Y por que no «todas las constantes de un solo caracter»: MEDIDO, esa
+    derivacion mete `w`, `a` y `n`, que no son acciones, y dejaria pasar una
+    accion mal escrita.
 
     Y por que no es una lista escrita a mano: la lista de acciones es
     justamente lo que va a cambiar, y un guardian que DECLARA el vocabulario
     no lo vigila: lo da por bueno. Y el motor es el que sabe lo que entiende,
-    de modo que el guardian tiene que SEGUIRLO cuando el motor crece, y no
-    anticiparlo.
+    de modo que el guardian tiene que SEGUIRLO cuando el motor crece.
     """
-    with io.open(os.path.join(ROOT, 'motor', 'learn.py'), encoding='utf-8') as f:
-        arbol = ast.parse(f.read())
-    fn = next(n for n in arbol.body
-              if isinstance(n, ast.FunctionDef)
-              and n.name == 'classify_first_action')
     vocabulario = set()
-    for n in ast.walk(fn):
-        if (isinstance(n, ast.Constant) and isinstance(n.value, str)
-                and len(n.value) == 1 and n.value.isalpha()):
-            vocabulario.add(n.value)
+    for modulo in MODULOS_QUE_DESPACHAN_SOBRE_ACCIONES:
+        ruta = os.path.join(ROOT, 'motor', modulo + '.py')
+        if not os.path.exists(ruta):
+            continue
+        with io.open(ruta, encoding='utf-8') as f:
+            arbol = ast.parse(f.read())
+        for nodo in ast.walk(arbol):
+            if not isinstance(nodo, ast.Compare):
+                continue
+            if not isinstance(nodo.left, ast.Name):
+                continue
+            if not _es_nombre_de_accion(nodo.left.id):
+                continue
+            for comp in nodo.comparators:
+                if (isinstance(comp, ast.Constant)
+                        and isinstance(comp.value, str)
+                        and len(comp.value) == 1 and comp.value.isalpha()):
+                    vocabulario.add(comp.value)
+                elif isinstance(comp, (ast.Tuple, ast.List, ast.Set)):
+                    for e in comp.elts:
+                        if (isinstance(e, ast.Constant)
+                                and isinstance(e.value, str)
+                                and len(e.value) == 1 and e.value.isalpha()):
+                            vocabulario.add(e.value)
     return vocabulario
 
 

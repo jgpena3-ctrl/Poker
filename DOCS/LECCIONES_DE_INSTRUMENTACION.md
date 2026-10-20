@@ -1269,3 +1269,57 @@ vigila el codigo.
 > Y eso es lo que un guardián bien puesto hace: **no vigila al autor, vigila al
 > material.** Y el mio habia visto cuatro caracteres raros escritos a mano en
 > dos bloques, y no habia visto ni uno de los que el propio codigo genera.
+## 30. Un guardián que mira el sitio equivocado, y no lo dice
+
+Y este es el hallazgo del bloque, y es de la familia de §25, pero con una
+peculiaridad: **el guardián fallaba, y su fallo era el correcto, y su verdad
+era la incorrecta.**
+
+MEDIDO, lo que pasó. El guardián de vocabulario —«la base no usa acciones que
+el motor no conoce»— derivaba el vocabulario del motor de
+`classify_first_action`, que es donde el motor **LANZA** ante una acción que no
+conoce. Y `classify_first_action` clasifica una **DECISIÓN**, y una **POSTA**
+—`p`— no lo es. De modo que:
+
+```
+la `p` no sale de `classify_first_action`   ->  el guardian la senala como
+                                                desconocida
+y el motor SI la maneja: la salta en `preflop_events` y la reconoce como
+                                 ciega en `_es_ciega_bb`
+```
+
+> **El guardián miraba el sitio equivocado, y lo que medía no era lo que
+> decía medir.** Y no daba ningún síntoma: el guardián fallaba, que es lo que
+> se espera de un guardián, y lo que fallaba era una cosa distinta de la que
+> su nombre dice.
+
+Y el arreglo, que es el de siempre y que ya estaba escrito: **el guardián
+tiene que mirar el MOTOR, no una función del motor.** Y la derivacion
+correcta, MEDIDA:
+
+> **Las acciones son las letras que el motor COMPARA contra un nombre de
+> acción.** Ni más ni menos. Y eso da `{b, c, f, p, r, x}`, que es
+> exactamente el conjunto que el motor despacha.
+
+Y las dos derivaciones que se descartaron, y por qué, que es lo que hace
+útil la lección:
+
+| derivación | resultado | por qué no vale |
+|---|---|---|
+| las constantes de `classify_first_action` | `{b, c, f, r, x}` | se salta la `p`, que el motor sí maneja |
+| todas las constantes de un caracter de `learn.py` | `{b, c, f, p, r, w, x}` | mete `w`, que no es una acción, y dejaría pasar una acción mal escrita |
+
+Y la clase general, que es la sexta de la familia:
+
+> **Un guardián que deriva de un sitio concreto deriva de ese sitio, no de lo
+> que dice vigilar.** Y si ese sitio es una de las varios piezas que manejan
+> la cosa, el guardián vigila una esquina y se cree que vigila el conjunto.
+
+Y la pregunta que hay que hacerse, y que es de una linea:
+
+> **¿De dónde sale lo que el guardián mira, y es el mismo sitio del que sale
+> lo que el motor mira?**
+
+Y el caso de este bloque, en una frase: el guardián de vocabulario miraba
+`classify_first_action`, y el motor mira el preflop entero. Y el guardián no
+tenía por qué saberlo, y por eso no lo decía.

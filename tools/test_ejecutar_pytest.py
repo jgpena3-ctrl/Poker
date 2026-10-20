@@ -3628,7 +3628,7 @@ CARPETAS_DEL_INVENTARIO = ('tools', 'motor', 'recorder')
 # fichero de esa taille es una tabla que nadie mantiene, y una tabla que nadie
 # mantiene es decoracion.
 
-TESTS_POR_CARPETA = {'motor': 855, 'recorder': 4, 'tools': 497}
+TESTS_POR_CARPETA = {'motor': 857, 'recorder': 4, 'tools': 501}
 
 
 # Y los FICHEROS, que son OTRA medida. MEDIDO, y sin ellos el guardia
@@ -3641,7 +3641,7 @@ TESTS_POR_CARPETA = {'motor': 855, 'recorder': 4, 'tools': 497}
 # es cierto. Y «hoy» no es una propiedad. O sea que el guardia no baja,
 # pero FALLA si algun dia hay tests abajo: es el unico caso en el que
 # bajaria, y bajarlo sin querer seria decir «el repo entero» sin serlo.
-FICHEROS_POR_CARPETA = {'motor': 71, 'recorder': 4, 'tools': 115}
+FICHEROS_POR_CARPETA = {'motor': 71, 'recorder': 4, 'tools': 117}
 # Y LA MAGNITUD QUE MIDE ESTE GUARDIA, que es lo que R2 pregunta, y que hay
 # que responder por la magnitud y no solo por el numero.
 #
@@ -5079,7 +5079,7 @@ def _asignaciones_que_sobrescriben():
 # esto sea una DECLARACION y no una lista: un test no puede juzgar un texto,
 # pero si puede comprobar que NO FALTA ninguno.
 ACUMULADORES_REPETIBLES = {
-    ('motor/preflop.py', 'tables[name]'):
+    ('tools/test_integrar_copia.py', 'pre[j]'):        'una LISTA y no un diccionario, y cada indice se escribe una vez: la forma es mas ancha que el defecto',    ('motor/preflop.py', 'tables[name]'):
         'la clave es el NOMBRE de una tabla, y las claves de un dict son '
         'unicas',
     ('motor/test_ranges.py', 'rank_pair_data[rank_key]'):
@@ -5104,7 +5104,12 @@ ACUMULADORES_REPETIBLES = {
 }
 
 # Y el total, que es una cifra y por lo tanto vive en una constante.
-ASIGNACIONES_QUE_SOBRESCRIBEN = 46
+# Y MEDIDO, por que el numero se declara y no se deriva: la FORMA `d[clave] =
+# <lista o dict>` no distingue un DICCIONARIO de una LISTA, y una lista no
+# pierde nada al sobrescribir —cada indice se escribe una vez—. De modo que la
+# forma es mas ANCHA que el defecto, y por eso el numero se declara: cada
+# sitio nuevo es una decision, y el total es el que se vigila.
+ASIGNACIONES_QUE_SOBRESCRIBEN = 47
 
 
 # Los ficheros que estan fuera de las tres carpetas del inventario, y el

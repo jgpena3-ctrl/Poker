@@ -506,7 +506,15 @@ def test_el_invariante_de_cm004_puede_dispararse():
     ella. De modo que si la regla cambia, el numero cambia, y hay que
     actualizarlo a mano —que es el precio de que el guard vigile algo.
     """
-    manos = learn.load_hands(reliable_only=False)
+    # Y la base que se mira se puede APUNTAR a otra, con `POKER_DB_PATH`, y el
+    # motivo es el mismo que en el otro guardian: que el procedimiento de
+    # integracion se pueda probar contra un destino temporal.
+    #
+    # Y el 921 sigue siendo el control de la base ACTUAL: de modo que contra
+    # una candidata con otro numero de ciegas este test FALLA, y tiene que
+    # fallar, porque el 921 no es el umbral de la copia.
+    ruta = os.environ.get('POKER_DB_PATH') or None
+    manos = learn.load_hands(path=ruta, reliable_only=False)
     con_ciega = 0
     for h in manos:
         seq = learn._preflop_sequence(h)
