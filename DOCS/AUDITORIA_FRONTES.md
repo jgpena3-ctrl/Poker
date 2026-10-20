@@ -32,6 +32,32 @@ Las 5 del documento están entre las 29 ✓.
 > Y por eso el alcance hay que decirlo, porque quien lo lea va a esperar 5 y
 > va a medir 29.
 
+### LAS DOS CIFRAS, CON SU DEFINICION, Y SU CONDICION DE REPETICION
+
+| cifra | definicion exacta | que cuenta |
+|---:|---|---|
+| **5** | las manos en las que el board **hasta la calle de corte** difiere entre `comunitarias` y `streets` | la divergencia **en el board que el motor usa para esa decision** |
+| **29** | las manos de la ventana de 877 en las que el board **entero** tiene un numero distinto de cartas entre las dos fuentes | la divergencia **de las fuentes**, sin cortar |
+
+Y las dos son MEDIDAS sobre la base de hoy, y las dos se han de volver a
+medir **despues de la adopcion**:
+
+> **LA CONDICION DE REPETICION, y es la que hay que respetar:** la ventana
+> fiable son 877 manos **de la base de HOY**, y la copia tiene 1258. De modo
+> que **el 29 de hoy no es el 29 de despues**, y el 5 tampoco. Y el numero
+> que importa no es el que salga, sino que **se vuelve a medir y se vuelve a
+> escribir**, con la base que esté adoptada.
+>
+> Y la razón de que haga falta decirlo: un número que se cita sin la base
+> que lo produjo es un número que se cita mal. Y entre la base de hoy y la
+> adoptada, el corte puede cambiar, porque el corte depende de la decision
+> que se está mirando.
+
+Y lo que NO se hace con estas dos cifras, y es lo importante: **no se corrige
+ninguna de las dos**. La cifra de 5 del documento es la de una divergencia que
+solo se ve en el board que se usa, y corregirla cambia los números, y eso va
+con la recalibración, que va con la adopción.
+
 ### Y la clasificación, que es lo que se pedía
 
 **DEL CÓDIGO, y se puede hacer ya:**
@@ -76,6 +102,31 @@ tools/auditar_matrix.py
 > `matrix` no es «un fichero que hay que entender»: es **el fichero del que
 > dependen siete módulos**, y cualquier cosa que se le cambie se propaga a
 > todos.
+
+### Y EL GRAFO NO SE TOCA, HASTA QUE A1 DECLARE LA INTENCIÓN
+
+> **El grafo de los siete módulos que dependen de `preflop_matrices.json` NO
+> se toca hasta que A1 declare qué significa el fichero.** Y un cambio en el
+> grafo sin la intención fijada es un **cambio a ciegas**: se puede medir,
+> pero no se puede saber si lo que se ha movido es lo que se quería.
+
+Y la razón de que la intención la tenga que declarar A1, y no se deduzca: la
+intención es lo que NO está en el fichero. `QUE_ES_MATRIX.md` dice que la
+pregunta sigue abierta, y una pregunta abierta no se contesta leyendo el
+código que la pregunta tiene por objeto.
+
+Y el alcance de la inmovilidad, que es lo que hay que vigilar:
+
+| | |
+|---|---|
+| qué queda inmóvil | los ficheros de `motor/` que ya dependían de `preflop_matrices` en el ancla de la auditoría |
+| qué NO queda inmóvil | los ficheros NUEVOS que dependan de él, que se declaran uno a uno, con su motivo |
+| por qué | porque un test nuevo que depende del fichero es una dependencia nueva sobre un fichero cuya intención no está fijada |
+
+Y el ancla, y su sha, están en `tools/test_auditoria_frentes.py`: la
+comparación es contra un **commit concreto**, y el sha del ancla se comprueba,
+porque un commit no garantiza por sí solo que siga siendo la versión que se
+creyó.
 
 Y lo que NO se hace, y por qué: no se regenera ninguna matriz, y no se cambia
 la semántica de ninguna. La pregunta de `QUE_ES_MATRIX.md` —qué significa el

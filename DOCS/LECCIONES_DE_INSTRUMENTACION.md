@@ -1323,3 +1323,48 @@ Y la pregunta que hay que hacerse, y que es de una linea:
 Y el caso de este bloque, en una frase: el guardián de vocabulario miraba
 `classify_first_action`, y el motor mira el preflop entero. Y el guardián no
 tenía por qué saberlo, y por eso no lo decía.
+## 31. Un test que fija una convención es una DECLARACIÓN, y hay que leerlo
+
+Y este es el hallazgo del bloque, y es del genero de §29, pero con la
+dirección contraria: **lo que yo iba a arreglar era correcto**.
+
+MEDIDO, lo que pasó. La auditoría de `preflop_matrices.json` encontró que
+`asistente_live._recom_preflop` convierte la **ausencia de tabla** en una
+frecuencia **cero** con un `or 0.0`. Y la consecuencia medida era seria:
+`ROL_UTG` no existe en el fichero, y un UTG con un limp delante se leía como
+«over-limp 0 %», o sea **«retirar 100 %»** — una certeza inventada a partir de
+una tabla que no existe.
+
+Y el arreglo estaba escrito, era de tres líneas, y **rompió dos tests**:
+
+```
+test_recom_preflop_sb_no_pide_call_sin_tabla
+    # SB vs apertura: NO existe tabla Call_OR_SB_* -> no se inventa un call
+    # (lo más apegado a las tablas): igualar queda en 0.
+```
+
+> **La convención estaba DECLARADA, en un test, con su motivo.** Y yo la iba
+> a cambiar sin haber leído los tests. Y el motivo por el que la auditoría
+> no la vio es que la auditoría miraba el **código** y el **fichero**, y no
+> los **tests**, que es donde el proyecto guarda las decisiones.
+
+Y la clase general, que es la séptima de la familia:
+
+> **Una convención que está fijada por un test no es un defecto: es una
+> DECLARACIÓN.** Y la auditoría que llama «defecto» a una declaración no está
+> auditando el código: está auditando sus propias preferencias.
+
+Y la regla que sale, y que es la que hay que aplicar la próxima vez:
+
+> **Antes de llamar defecto a un comportamiento, hay que leer los tests que
+> lo fijan.** Y si hay uno que lo fija, no es un defecto: es una decisión, y
+> lo que se hace es **documentarla** y **fijarla con un test propio**, que es
+> lo que se hizo: la convención quedó escrita en `motor/test_lectura_matrices.py`,
+> y su comportamiento sigue igual.
+
+Y la trampa de fondo, que es la de siempre pero girada:
+
+> **Un `or 0.0` parece un descuido y es una decisión.** Y lo que lo delata no
+> es el `or`: es que el resto del proyecto se comportara de otra manera en
+> el caso equivalente —la rama de la apertura devolvía `None`—, y esa
+> incoherencia era la pista de que había algo escrito detrás.

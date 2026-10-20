@@ -1,16 +1,17 @@
 # -*- coding: utf-8 -*-
-"""El procedimiento de integracion, contra una copia sintetica COMPLETA.
+"""El procedimiento de integracion, contra dos copias sinteticas.
 
 Y lo que se prueba, y en que orden:
 
-  · el camino de EXITO, contra las 1258 manos de la copia sintetica, con un
-    umbral declarado PARA EL FIXTURE (que no es el de la copia real);
+  · el camino de EXITO, contra el fixture SUAVE —que solo recodifica— y
+    contra el fixture DURO —que ademas anade las ciegas que faltaban—, cada
+    uno con SU umbral, que es el que el propio fixture mide;
+  · que el umbral de uno NO sirve para el otro, en los dos sentidos, y que
+    cuando se pone el equivocado el script no da verde;
   · el camino de FALLO por un error de clasificacion inyectado;
-  · el camino de FALLO por ciegas insuficientes;
   · que no deja RASTRO: ni el sha de la base, ni un fichero temporal;
   · que un sha de candidata que no cuadra falla SIN tocar la base;
-  · y que el codigo de «incompleta» no se puede leer como una integracion
-    satisfactoria.
+  · y que el codigo de «incompleta» no se puede leer como un exito.
 
 Y los dos caminos de FALLO van contra un destino TEMPORAL, y no contra la
 base canonica. Y el camino de EXITO tambien, gracias a `POKER_DB_PATH`, que
@@ -18,6 +19,15 @@ permite que los guardianes miren otro destino.
 
 Y en ninguno de los dos se toca la base canonica, y hay un test que lo
 comprueba DESPUES de cada uno.
+
+## Y EL UMBRAL NO ES UNA CONSTANTE GLOBAL
+
+Y esto no es un detalle de estilo: el fixture suave reconoce 921 ciegas y el
+duro 1258, y un unico numero para los dos seria un numero que no distingue
+nada. Y el numero de cada uno **lo mide el fixture** y lo dice en su informe,
+y el test lo pasa como parametro explicito. Y por eso hay un test que
+comprueba que los dos umbrales son DISTINTOS: si alguien los unificara, el
+control dejaria de discriminar.
 """
 import hashlib
 import io
@@ -42,8 +52,8 @@ def _sha(ruta):
         return hashlib.sha256(f.read()).hexdigest()
 
 
-def _candidata(inyectar_error=False):
-    """La copia sintetica completa, y su informe.
+def _candidata(dureza=FIX.DUREZA_SUAVE, inyectar_error=False):
+    """La copia sintetica del grado pedido, y su informe.
 
     Y con `inyectar_error`, se le mete a UNA mano una accion que el motor no
     conoce, para que la clasificacion falle. Y el fallo tiene que ser real: si
@@ -51,7 +61,7 @@ def _candidata(inyectar_error=False):
     """
     alta = tempfile.mkdtemp(prefix='fixture_copia_')
     destino = os.path.join(alta, 'candidata.jsonl')
-    informe = FIX.construir(destino)
+    informe = FIX.construir(destino, dureza=dureza)
     if inyectar_error:
         with io.open(destino, encoding='utf-8') as f:
             lineas = [l for l in f if l.strip()]
@@ -92,18 +102,28 @@ def _correr(destino, candidata, *args):
     return subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
 
 
-def test_el_flujo_completo_pasa_contra_la_copia_sintetica_completa():
+def _destino_temporal(alta):
+    destino = os.path.join(alta, 'destino.jsonl')
+    shutil.copyfile(CANON, destino)
+    return destino
+
+
+def test_el_flujo_completo_pasa_contra_el_fixture_suave():
     """El camino de exito, con las 1258 manos y los dos guardianes.
 
-    Y el umbral es el del FIXTURE, medido, y no el de la copia real: porque el
-    921 es el control de la base de HOY, y el fixture recodifica las ciegas
-    SIN cambiar cuantas manos tienen ciega, de modo que el numero coincide.
+    Y el umbral es el del FIXTURE, medido por el propio fixture, y no el de la
+    copia real: porque el 921 es el control de la base de HOY, y el fixture
+    suave recodifica las ciegas SIN cambiar cuantas manos tienen ciega, de
+    modo que el numero coincide.
     """
-    alta, candidata, informe = _candidata()
+    alta, candidata, informe = _candidata(FIX.DUREZA_SUAVE)
     try:
         assert informe['manos'] == 1258, informe
         assert informe['revisadas_disponibles'] == 1055, informe
-        assert informe['recodificadas'] > 0, informe
+        assert informe['tocadas'] > 0, informe
+        # Y el umbral sale de aqui, y no de una constante.
+        assert informe['ciegas_reconocidas'] == 921, informe
+
         # Y las 203 PENDIENTES quedan intactas, que es lo que significa
         # «recodificar solo las revisadas». Y el numero de manos que quedan
         # sin tocar es MAYOR que 203, porque hay revisadas que no tienen la
@@ -128,11 +148,11 @@ def test_el_flujo_completo_pasa_contra_la_copia_sintetica_completa():
             'tocar las revisadas.' % (203 - len(intactas)))
         assert informe['dejadas'] == 456, informe['dejadas']
 
-        destino = os.path.join(alta, 'destino.jsonl')
-        shutil.copyfile(CANON, destino)
+        destino = _destino_temporal(alta)
         antes = io.open(destino, 'rb').read()
 
-        r = _correr(destino, candidata, '--umbral-ciegas', '921')
+        r = _correr(destino, candidata,
+                    '--ciegas-esperadas', str(informe['ciegas_reconocidas']))
         assert r.returncode == 0, (
             'el camino de exito ha fallado con el codigo %d:\n%s'
             % (r.returncode, r.stdout[-1500:]))
@@ -148,6 +168,111 @@ def test_el_flujo_completo_pasa_contra_la_copia_sintetica_completa():
         shutil.rmtree(alta, ignore_errors=True)
 
 
+def test_el_flujo_completo_pasa_contra_el_fixture_duro():
+    """El mismo flujo, contra la copia que se parece a la REAL.
+
+    Y el motivo de que este test exista: el fixture suave reconoce 921
+    ciegas, y la copia real reconoce 1258. De modo que el procedimiento solo
+    se ha probado contra una candidata que se parece a la base de HOY, y no
+    contra una que se parece a la que va a entrar.
+
+    Y el fixture duro, MEDIDO: 1258 ciegas, 0 errores, 0 violaciones, y las
+    doce categorias de control —que es lo que hace que el cambio de
+    codificacion sea neutro—.
+    """
+    alta, candidata, informe = _candidata(FIX.DUREZA_DURA)
+    try:
+        assert informe['manos'] == 1258, informe
+        # Y el numero que importa: TODAS las manos con ciega reconocida.
+        assert informe['ciegas_reconocidas'] == 1258, informe
+        assert informe['tocadas'] == 1258, informe
+        assert informe['dejadas'] == 0, informe
+
+        destino = _destino_temporal(alta)
+        antes = io.open(destino, 'rb').read()
+
+        r = _correr(destino, candidata,
+                    '--ciegas-esperadas', str(informe['ciegas_reconocidas']))
+        assert r.returncode == 0, (
+            'el camino de exito con el fixture DURO ha fallado con el codigo '
+            '%d:\n%s' % (r.returncode, r.stdout[-1500:]))
+        assert 'INCOMPLETA' not in r.stdout, r.stdout[-800:]
+        assert io.open(destino, 'rb').read() == antes
+    finally:
+        shutil.rmtree(alta, ignore_errors=True)
+
+
+def test_los_dos_fixtures_tienen_umbrales_distintos():
+    """Y que el umbral NO sea una constante global, que es el punto.
+
+    Y el motivo: si los dos fixtures tuvieran el mismo numero de ciegas, el
+    control no distinguiria una candidata de la otra, y el parametro no
+    estaria haciendo nada. Y un parametro que no puede cambiar el resultado
+    no es un parametro.
+    """
+    alta_s, _c_s, inf_s = _candidata(FIX.DUREZA_SUAVE)
+    try:
+        alta_d, _c_d, inf_d = _candidata(FIX.DUREZA_DURA)
+        try:
+            assert inf_s['ciegas_reconocidas'] == 921, inf_s
+            assert inf_d['ciegas_reconocidas'] == 1258, inf_d
+            assert inf_s['ciegas_reconocidas'] != inf_d['ciegas_reconocidas']
+        finally:
+            shutil.rmtree(alta_d, ignore_errors=True)
+    finally:
+        shutil.rmtree(alta_s, ignore_errors=True)
+
+
+def test_el_umbral_del_suave_no_sirve_para_el_duro():
+    """Y que el umbral equivocado NO da verde.
+
+    Y el caso concreto: el 921 del fixture suave aplicado al fixture duro.
+    Y el motivo de que sea el caso mas importante: el 921 es un numero REAL,
+    de una base real, y el error mas probable es exactamente este: pillar un
+    numero que se sabe de memoria y aplicarlo donde no toca.
+
+    Y el numero es EXACTO y no un minimo, y por eso falla: con un minimo,
+    1258 ciegas exceeding 921 darian verde, y un control que no puede fallar
+    no es un control.
+    """
+    alta, candidata, _informe = _candidata(FIX.DUREZA_DURA)
+    try:
+        destino = _destino_temporal(alta)
+        antes = io.open(destino, 'rb').read()
+
+        r = _correr(destino, candidata, '--ciegas-esperadas', '921')
+        assert r.returncode == 1, (
+            'con el umbral del fixture suave en el duro, el script tiene que '
+            'fallar, y ha salido con %d:\n%s' % (r.returncode, r.stdout[-1200:]))
+        assert 'NUMERO DE CIEGAS' in r.stdout, r.stdout[-800:]
+        assert io.open(destino, 'rb').read() == antes
+    finally:
+        shutil.rmtree(alta, ignore_errors=True)
+
+
+def test_el_umbral_del_duro_no_sirve_para_el_suave():
+    """Y al reves, que tambien es un caso real.
+
+    Y el motivo: el mismo numero, al reves, es el error de tratar el umbral
+    como si fuera un minimo. Y en el caso del fixture suave, el resultado es
+    que el motor reconoce MENOS ciegas de las declaradas, que es exactamente
+    lo que un umbral minimo dejaria pasar.
+    """
+    alta, candidata, _informe = _candidata(FIX.DUREZA_SUAVE)
+    try:
+        destino = _destino_temporal(alta)
+        antes = io.open(destino, 'rb').read()
+
+        r = _correr(destino, candidata, '--ciegas-esperadas', '1258')
+        assert r.returncode == 1, (
+            'con el umbral del fixture duro en el suave, el script tiene que '
+            'fallar, y ha salido con %d:\n%s' % (r.returncode, r.stdout[-1200:]))
+        assert 'NUMERO DE CIEGAS' in r.stdout, r.stdout[-800:]
+        assert io.open(destino, 'rb').read() == antes
+    finally:
+        shutil.rmtree(alta, ignore_errors=True)
+
+
 def test_un_error_de_clasificacion_inyectado_hace_fallar_y_restaura():
     """Y un fallo de clasificacion real, inyectado.
 
@@ -155,13 +280,12 @@ def test_un_error_de_clasificacion_inyectado_hace_fallar_y_restaura():
     fallo es del motor y no del script. Y el script tiene que salir con
     FALLO y devolver la base.
     """
-    alta, candidata, _informe = _candidata(inyectar_error=True)
+    alta, candidata, _informe = _candidata(FIX.DUREZA_SUAVE, inyectar_error=True)
     try:
-        destino = os.path.join(alta, 'destino.jsonl')
-        shutil.copyfile(CANON, destino)
+        destino = _destino_temporal(alta)
         antes = io.open(destino, 'rb').read()
 
-        r = _correr(destino, candidata, '--umbral-ciegas', '921')
+        r = _correr(destino, candidata, '--ciegas-esperadas', '921')
         assert r.returncode == 1, (
             'con un error de clasificacion inyectado el script tiene que '
             'fallar, y ha salido con %d:\n%s' % (r.returncode, r.stdout[-1200:]))
@@ -172,30 +296,6 @@ def test_un_error_de_clasificacion_inyectado_hace_fallar_y_restaura():
         assert io.open(destino, 'rb').read() == antes, (
             'la base destino no ha vuelto a ser la que era, y con un fallo de '
             'clasificacion encima')
-    finally:
-        shutil.rmtree(alta, ignore_errors=True)
-
-
-def test_menos_ciegas_que_el_umbral_hace_fallar_y_restaura():
-    """Y un umbral que no se cumple, que es el otro fallo que importa.
-
-    Y el motivo de que este caso sea el importante: es el que atrapa a una
-    copia que el motor lee, pero a la que le faltan ciegas. Y el 921 es el
-    control de la base de HOY, de modo que el umbral de la copia es OTRO, y
-    lo pone A1.
-    """
-    alta, candidata, _informe = _candidata()
-    try:
-        destino = os.path.join(alta, 'destino.jsonl')
-        shutil.copyfile(CANON, destino)
-        antes = io.open(destino, 'rb').read()
-
-        r = _correr(destino, candidata, '--umbral-ciegas', '1258')
-        assert r.returncode == 1, (
-            'con un umbral de 1258 y unas ciegas de menos, el script tiene que '
-            'fallar, y ha salido con %d:\n%s' % (r.returncode, r.stdout[-1200:]))
-        assert 'INSUFICIENTE' in r.stdout, r.stdout[-800:]
-        assert io.open(destino, 'rb').read() == antes
     finally:
         shutil.rmtree(alta, ignore_errors=True)
 
@@ -214,13 +314,12 @@ def test_la_ejecucion_no_deja_rastro():
     antes_data = _listado(os.path.join(ROOT, 'data'))
     antes_sha = _sha(CANON)
 
-    alta, candidata, _informe = _candidata()
+    alta, candidata, _informe = _candidata(FIX.DUREZA_DURA)
     try:
-        destino = os.path.join(alta, 'destino.jsonl')
-        shutil.copyfile(CANON, destino)
-        _correr(destino, candidata, '--umbral-ciegas', '921')
+        destino = _destino_temporal(alta)
+        _correr(destino, candidata, '--ciegas-esperadas', '1258')
         # Y un camino de FALLO, que es donde mas se puede dejar rastro.
-        _correr(destino, candidata, '--umbral-ciegas', '99999')
+        _correr(destino, candidata, '--ciegas-esperadas', '99999')
     finally:
         shutil.rmtree(alta, ignore_errors=True)
 
@@ -241,10 +340,9 @@ def test_un_sha_que_no_cuadra_falla_limpiamente_sin_tocar_la_base():
     codigo de salida es otro, que es el de «la candidata no es la que se
     creia».
     """
-    alta, candidata, _informe = _candidata()
+    alta, candidata, _informe = _candidata(FIX.DUREZA_SUAVE)
     try:
-        destino = os.path.join(alta, 'destino.jsonl')
-        shutil.copyfile(CANON, destino)
+        destino = _destino_temporal(alta)
         antes = io.open(destino, 'rb').read()
 
         r = _correr(destino, candidata, '--sha-esperada', '0' * 64)
@@ -260,14 +358,13 @@ def test_un_sha_que_no_cuadra_falla_limpiamente_sin_tocar_la_base():
 def test_el_codigo_de_incompleta_no_es_una_integracion_satisfactoria():
     """Y que el codigo 2 no se puede leer como un exito.
 
-    Y el motivo: sin el umbral, el procedimiento NO puede decir si la copia
-    vale. Y un codigo de salida que significa «no se puede saber» y que
-    devuelve cero, es un codigo que alguien va a leer como «todo bien».
+    Y el motivo: sin el numero de ciegas, el procedimiento NO puede decir si
+    la copia vale. Y un codigo de salida que significa «no se puede saber» y
+    que devuelve cero, es un codigo que alguien va a leer como «todo bien».
     """
-    alta, candidata, _informe = _candidata()
+    alta, candidata, _informe = _candidata(FIX.DUREZA_SUAVE)
     try:
-        destino = os.path.join(alta, 'destino.jsonl')
-        shutil.copyfile(CANON, destino)
+        destino = _destino_temporal(alta)
         antes = io.open(destino, 'rb').read()
 
         r = _correr(destino, candidata)

@@ -533,6 +533,48 @@ def test_el_invariante_de_cm004_puede_dispararse():
         % (con_ciega, len(manos), CIEGAS_RECONOCIDAS,
            CIEGAS_RECONOCIDAS, 6))
 
+def test_el_invariante_tiene_algo_que_mirar():
+    """La no vacuidad, en la base que se le diga, y no solo en la de hoy.
+
+    Y por que este test es DISTINTO del de las 921, y por que hace falta:
+
+    El control del 921 es el control de REGRESION de la base de HOY. Y durante
+    una integracion, el sitio de la canonica lo ocupa la CANDIDATA, que tiene
+    otro numero de ciegas. De modo que el 921, alli, no falla: es que **no
+    dice nada**. Y un control que no se puede aplicar no es un control: es un
+    adorno que ademas distrae, porque parece que se esta comprobando.
+
+    Y lo que SI tiene sentido en cualquier base es la no vacuidad: que la
+    regla de la ciega tenga ALGO que mirar. Y es exactamente el fallo que el
+    921 documenta: un invariante que da cero porque no hay nada que mirar.
+
+    Y el motivo de que mire `POKER_DB_PATH` es el de siempre: el procedimiento
+    de integracion tiene que poder probarse contra un destino TEMPORAL, sin
+    tocar la base canonica.
+
+    Y el 921 NO se reutiliza aqui: R2 lo dice, y es que el numero de la copia
+    lo declara A1, con datos revisados. Este test solo mira que haya algo que
+    mirar, y eso no es un numero de manos: es una pregunta de si el motor esta
+    VIVO.
+    """
+    ruta = os.environ.get('POKER_DB_PATH') or None
+    manos = learn.load_hands(path=ruta, reliable_only=False)
+    con_ciega = 0
+    for h in manos:
+        seq = learn._preflop_sequence(h)
+        if any(learn._es_ciega_bb(i, pos, act, amount, is_blind, False)
+               for i, (pos, act, amount, is_blind) in enumerate(seq)):
+            con_ciega += 1
+    assert con_ciega > 0, (
+        'el motor NO reconoce ninguna ciega en %d manos, y con 0 el '
+        'invariante de CM-004 no tiene nada que mirar: su cero no dice si la '
+        'base esta bien, dice que la regla esta apagada.\n\n'
+        'Y esto pasa con CUALQUIER base, y no solo con la de hoy: por eso este '
+        'test no mira el 921, que es el control de la base canonica de hoy.'
+        % len(manos))
+
+
+
 def test_el_921_no_puede_ser_el_valor_esperado_de_la_copia():
     """Que el 921 no aparezca como constante de la COPIA normalizada.
 
