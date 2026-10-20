@@ -696,3 +696,88 @@ def test_la_leccion_del_fallback_esta_escrita():
     assert 'mejor fallar que mutar sin red' in bloque.lower(), (
         'y tiene que decir la regla en una linea')
 
+def test_el_diseno_del_recalibrador_existe_y_no_se_implementa():
+    """Y que el diseño exista ✓, y que declare que NO se implementa ✓.
+
+    Y el motivo de que el test exista ✓: **un diseño declarado no es un frente
+    abierto** ✓, y lo que lo hace un frente abierto es el código ✓. De modo
+    que la condición de no apertura tiene que estar **ESCRITA** ✓ y
+    comprobada ✓, y no solorecordada ✓.
+    """
+    import io as _io
+    import os as _os
+    raiz = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+    ruta = _os.path.join(raiz, 'DOCS', 'DISENO_RECALIBRADOR_INCREMENTAL.md')
+    assert _os.path.exists(ruta), 'el diseño del recalibrador no existe'
+    with _io.open(ruta, encoding='utf-8') as f:
+        texto = f.read()
+    assert 'NO se implementa' in texto, (
+        'el diseño tiene que declarar que NO se implementa hasta que R1 y R2 '
+        'resuelvan la discrepancia')
+    assert 'R1 y R2' in texto, (
+        'y tiene que decir QUIEN decide, que es R1 y R2')
+
+
+def test_el_diseno_no_trae_codigo():
+    """Y que el diseño NO contenga codigo ✓, porque un diseño es un documento ✓.
+
+    Y el motivo ✓: **el código es un frente abierto** ✓, y el frente no está
+    autorizado ✓. De modo que un bloque de codigo en el diseño —incluso un
+    ejemplo— lo convertiría en un frente abierto sin querer ✓.
+    """
+    import io as _io
+    import os as _os
+    raiz = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+    ruta = _os.path.join(raiz, 'DOCS', 'DISENO_RECALIBRADOR_INCREMENTAL.md')
+    with _io.open(ruta, encoding='utf-8') as f:
+        texto = f.read()
+    assert '```' not in texto, (
+        'el diseño tiene bloques de codigo, y el codigo es un frente abierto')
+    assert 'def ' not in texto and 'import ' not in texto, (
+        'el diseño parece traer codigo')
+
+
+def test_el_diseno_declara_lo_que_no_toca_y_lo_que_recibe():
+    """Y que declare las dos cosas que lo hacen compatible con el limite ✓.
+
+    Y las dos ✓: que **recibe una poblacion explicita** ✓ —y por eso no
+    depende de datos de A1 ✓— ✓, y que **no toca las cifras oficiales** ✓.
+    """
+    import io as _io
+    import os as _os
+    raiz = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+    ruta = _os.path.join(raiz, 'DOCS', 'DISENO_RECALIBRADOR_INCREMENTAL.md')
+    with _io.open(ruta, encoding='utf-8') as f:
+        texto = f.read()
+    # Y la busqueda es SIN TILDES ✓, porque el documento las lleva ✓ y una
+    # busqueda con tilde seria un falso negativo ✓.
+    import unicodedata
+    bajo = ''.join(c for c in unicodedata.normalize('NFD', texto.lower())
+                   if unicodedata.category(c) != 'Mn')
+    assert 'poblacion' in bajo and 'explicita' in bajo, (
+        'el diseño tiene que decir que recibe una población EXPLÍCITA')
+    assert 'no toca' in bajo or 'no se escriben' in bajo, (
+        'el diseño tiene que decir que NO toca las cifras oficiales')
+    for limite in ('cifras oficiales', 'base canonica', 'manifiesto',
+                   'preflop_matrices'):
+        assert limite in bajo, (
+            'el diseño tiene que declarar que no toca %r' % limite)
+
+
+def test_el_registro_declara_la_discrepancia_y_quien_decide():
+    """Y que la discrepancia este declarada, con su condicion de resolucion ✓.
+
+    Y el motivo de que la declare el REGISTRO ✓ y no solo el informe ✓: el
+    registro es lo que se lee cuando alguien vuelve ✓, y una discrepancia
+    sin escribir se resuelve sola, que es la peor forma ✓.
+    """
+    reg = _registro()
+    assert 'DISCREPANCIAS ENTRE REVISIONES' in reg, (
+        'el registro no declara la discrepancia entre revisiones')
+    cuerpo = reg.split('DISCREPANCIAS ENTRE REVISIONES', 1)[1].split('\n## ', 1)[0]
+    for ancla in ('R1', 'R2', 'A2'):
+        assert ancla in cuerpo, (
+            'la seccion tiene que decir que pide %s' % ancla)
+    assert 'no A2' in cuerpo or 'R1 y R2' in cuerpo, (
+        'y tiene que decir QUIEN decide, que no es A2')
+

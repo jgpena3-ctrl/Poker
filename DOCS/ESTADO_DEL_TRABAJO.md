@@ -276,7 +276,28 @@ Y lo que hay detrás de esa frase, y es lo que la sostiene:
 > hacer» es la diferencia entre un proyecto acabado y uno parado ✓. Y aquí
 > es lo segundo, y la causa es de A1 ✓.
 
-## 16. QUÉ DEBE HACER A1 ANTES DE DISPARAR
+## 16. DISCREPANCIAS ENTRE REVISIONES
+
+Y hay una, y se declara aqui ✓ en vez de resolverse en silencio ✓, porque
+**una discrepancia entre dos revisiones se resuelve pidiendo la
+aclaración** ✓ y no abriendo el frente ✓.
+
+| | |
+|---|---|
+| **qué pide R1** | no abrir frentes nuevos de código ✓, y resolver la discrepancia pidiendo la aclaración ✓ |
+| **qué pide R2** | una prueba de concepto aislada de recalibración ✓, sobre una población explícita ✓, con la salida candidata separada de la oficial ✓ |
+| **qué ha hecho A2** | los cinco puntos de contención ✓, y **el diseño** del recalibrador ✓ —un documento ✓— **sin una línea de código** ✓ |
+| **qué espera para abrir el frente** | que **R1 y R2 resuelvan la discrepancia** ✓, y que la resolución sea **explícita** ✓, no inferida del texto de una revisión ✓ |
+| **quién decide** | **R1 y R2** ✓, y **no A2** ✓ |
+
+> Y el diseño, `DOCS/DISENO_RECALIBRADOR_INCREMENTAL.md` ✓, es lo que permite
+> decidir **con información** ✓. Y mientras tanto **no se implementa** ✓, que
+> es lo que las dos revisiones piden ✓ —R1 de forma directa ✓, y R2 con su
+> propia condicion ✓: «si R1 prohíbe incluso ese experimento, registra la
+> discrepancia antes de ejecutarlo» ✓.
+
+
+## 17. QUÉ DEBE HACER A1 ANTES DE DISPARAR
 
 Y son cuatro pasos, y cada uno tiene su criterio de **hecho**, que es lo que
 los hace comprobables y no una lista de intenciones.
