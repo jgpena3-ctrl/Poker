@@ -4,15 +4,15 @@ Generado por `tools/aritmetica_botes.py`.
 
 | motivo | manos |
 |---|---:|
-| `STACK` (alguna accion supera el stack: no se normaliza) | 13 |
-| `NADA` (el bote no coincide con ninguna lectura) | 129 |
-| `ACCION_AMBIGUA` (bote unico, acciones no unicas) | 61 |
+| `STACK` (alguna accion supera el stack: no se normaliza) | 4 |
+| `NADA` (el bote no coincide con ninguna lectura) | 125 |
+| `ACCION_AMBIGUA` (bote unico, acciones no unicas) | 20 |
 
 En las `STACK` el registro ya es imposible (un jugador compromete mas que su stack), asi que normalizarlo dispararia el bote: se dejan intactas. En las `NADA` el bote declarado no sale con ninguna combinacion de apuestas parciales/absolutas, con ni sin comision, ni con ni sin la ciega del SB.
 
-De las `ACCION_AMBIGUA`: `DEVUELTA` 44 (la diferencia esta en una subida no pagada; el bote neto NO cambia), `REPARTO` 11 (mismo neto y bruto; cambia quien aporta), `NETO_IGUAL` 5 (mismo neto; cambian importes igualados), `REAL` 1 (el neto cambia; hay que decidir). Solo `REAL` afecta a la ganancia.
+De las `ACCION_AMBIGUA`: `REPARTO` 13 (mismo neto y bruto; cambia quien aporta), `NETO_IGUAL` 6 (mismo neto; cambian importes igualados), `REAL` 1 (el neto cambia; hay que decidir). Solo `REAL` afecta a la ganancia. Las `DEVUELTA` (subida no pagada; el neto no cambia) se resuelven solas eligiendo la lectura absoluta.
 
-## STACK (13)
+## STACK (4)
 
 ### H_0022 - 2026-07-27
 
@@ -24,7 +24,7 @@ De las `ACCION_AMBIGUA`: `DEVUELTA` 44 (la diferencia esta en una subida no paga
 - **Stacks**: MP=65.8, CO=136.7, BTN=81.2, SB=100.0, BB=None, UTG=31.0
 - **Supera stack**: UTG total=36.0 stack=31.0 exceso=+5.00
 - **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG b 2.0 | MP f 0.0 | CO r 8.0 | BTN c 7.5 | SB f 0.0 | BB f 0.0 | UTG c 8.0
+- **preflop**: SB p 0.5 | BB p 1.0 | UTG b 2.0 | MP f 0.0 | CO r 8.0 | BTN c 8.0 | SB f 0.0 | BB f 0.0 | UTG c 8.0
 - **flop**: BTN x 0.0 | UTG b 28.0 | CO f 0.0 | BTN f 0.0
 - **Lecturas alternativas** (1):
   1. SB p 0.50 | BB p 1.00 | UTG b absoluta 2.00 | MP f | CO r absoluta 8.00 | BTN c 8.00 | SB f | BB f | UTG c 8.00 | BTN x | CO f | BTN f
@@ -41,135 +41,6 @@ De las `ACCION_AMBIGUA`: `DEVUELTA` 44 (la diferencia esta en una subida no paga
 - **Acciones**:
 - **preflop**: SB p 0.5 | BB p 1.0 | UTG f 0.0 | MP b 1.0 | SB r 88.6 | BB f 0.0
 
-### H_0036 - 2026-07-28
-
-- **Pot declarado**: 10.5
-- **Combinaciones**: 1
-- **Netos posibles**: [10.45]
-- **Brutos posibles**: [94.15]
-- **Coincidencia**: neto = 10.45 (dif -0.05)
-- **Stacks**: MP=70.5, CO=136.7, BTN=87.8, SB=161.0, BB=80.2, UTG=45.7
-- **Supera stack**: UTG total=88.7 stack=45.7 exceso=+43.00
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG b 5.0 | MP f 0.0 | CO f 0.0 | BTN f 0.0 | SB c 5.0 | BB x 0.0
-- **flop**: SB x 0.0 | UTG b 83.7 | SB f 0.0
-- **Lecturas alternativas** (1):
-  1. SB p 0.50 | BB p 1.00 | UTG b absoluta 5.00 | MP f | CO f | BTN f | SB c 5.00 | BB x | SB x | SB f
-
-### H_0055 - 2026-07-28
-
-- **Pot declarado**: 24.0
-- **Combinaciones**: 2
-- **Netos posibles**: [24.52, 26.43]
-- **Brutos posibles**: [37.62, 39.52]
-- **Coincidencia**: neto_sin_sb = 24.025 (dif 0.025)
-- **Stacks**: SB=141.2, BB=88.4, UTG=175.3, MP=24.5, BTN=123.1
-- **Supera stack**: MP total=25.0 stack=24.5 exceso=+0.50
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG f 0.0 | MP c 1.0 | BTN b 2.5 | SB f 0.0 | BB f 0.0 | MP r 7.0 | BTN c 7.0
-- **flop**: MP x 0.0 | BTN b 4.9 | MP r 18.0
-- **Lecturas alternativas** (1):
-  1. SB p 0.50 | BB p 1.00 | UTG f | MP c 1.00 | BTN b absoluta 2.50 | SB f | BB f | MP r absoluta 7.00 | BTN c 7.00 | MP x | BTN b absoluta 4.90
-
-### H_0077 - 2026-07-29
-
-- **Pot declarado**: 37.1
-- **Combinaciones**: 1
-- **Netos posibles**: [24.98]
-- **Brutos posibles**: [125.98]
-- **Neto mas cercano**: 24.98 (dif -12.12)
-- **Stacks**: BTN=46.2, SB=140.6, BB=101.4, UTG=113.7, MP=21.5, CO=40.7
-- **Supera stack**: MP total=110.4 stack=21.5 exceso=+88.90
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG b 3.0 | MP c 3.0 | CO c 3.0 | BTN c 3.0 | SB f 0.0 | BB f 0.0
-- **flop**: UTG x 0.0 | MP x 0.0 | CO x 0.0 | BTN x 0.0
-- **turn**: UTG b 6.4 | MP c 6.4 | CO f 0.0 | BTN f 0.0
-- **river**: UTG x 0.0 | MP b 101.0
-
-### H_0084 - 2026-07-29
-
-- **Pot declarado**: 39.0
-- **Combinaciones**: 1
-- **Netos posibles**: [22.99]
-- **Brutos posibles**: [52.69]
-- **Neto mas cercano**: 22.99 (dif -16.01)
-- **Stacks**: SB=34.3, BB=134.6, UTG=111.0, MP=118.2, CO=20.0, BTN=14.0
-- **Supera stack**: SB total=41.3 stack=34.3 exceso=+7.00
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG f 0.0 | MP f 0.0 | CO b 4.5 | BTN f 0.0 | SB c 4.5 | BB f 0.0
-- **flop**: SB x 0.0 | CO b 7.1 | SB r 36.8
-- **turn**: SB x 0.0
-- **river**: SB x 0.0
-
-### H_0136 - 2026-07-29
-
-- **Pot declarado**: 16.2
-- **Combinaciones**: 4
-- **Netos posibles**: [16.15, 18.05]
-- **Brutos posibles**: [45.75, 47.65]
-- **Coincidencia**: neto = 16.15 (dif -0.05)
-- **Causa**: `REPARTO`
-- **Diferencia**: preflop SB b [2.5, 2.0]
-- **Stacks**: SB=31.6, BB=109.8, UTG=13.5, MP=94.7, BTN=91.2
-- **Supera stack**: SB total=37.6 stack=31.6 exceso=+6.00
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG c 1.0 | MP f 0.0 | BTN f 0.0 | SB b 2.0 | BB r 8.0 | UTG f 0.0 | SB c 8.0
-- **flop**: SB x 0.0 | BB x 0.0
-- **turn**: SB b 29.6 | BB f 0.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | UTG c 1.00 | MP f | BTN f | SB b parcial 2.50 | BB r absoluta 8.00 | UTG f | SB c 8.00 | SB x | BB x | BB f
-  2. SB p 0.50 | BB p 1.00 | UTG c 1.00 | MP f | BTN f | SB b absoluta 2.00 | BB r absoluta 8.00 | UTG f | SB c 8.00 | SB x | BB x | BB f
-
-### H_0190 - 2026-07-30
-
-- **Pot declarado**: 27.0
-- **Combinaciones**: 1
-- **Netos posibles**: [27.17]
-- **Brutos posibles**: [27.17]
-- **Coincidencia**: neto = 27.17 (dif 0.17)
-- **Stacks**: MP=113.2, CO=12.7, BTN=50.2, SB=108.1, BB=130.3, UTG=26.4
-- **Supera stack**: CO total=12.8 stack=12.7 exceso=+0.10
-- **Nota**: el exceso <= 0.2 esta dentro de la tolerancia del bote; puede ser redondeo, no un error de stack.
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | MP f 0.0 | UTG c 1.0 | CO c 1.0 | BTN c 1.0 | SB c 1.0 | BB x 0.0
-- **flop**: BB x 0.0 | UTG x 0.0 | BTN x 0.0 | SB b 2.4 | BB f 0.0 | UTG f 0.0 | CO r 6.8 | BTN f 0.0 | SB c 6.8
-- **turn**: SB x 0.0 | CO b 5.0 | SB c 4.9
-- **river**: SB x 0.0 | CO x 0.0
-- **Lecturas alternativas** (1):
-  1. SB p 0.50 | BB p 1.00 | MP f | UTG c 1.00 | CO c 1.00 | BTN c 1.00 | SB c 1.00 | BB x | BB x | UTG x | BTN x | SB b absoluta 2.40 | BB f | UTG f | CO r absoluta 6.80 | BTN f | SB c 6.80 | SB x | SB c 5.00 | SB x | CO x
-
-### H_0194 - 2026-07-30
-
-- **Pot declarado**: 57.9
-- **Combinaciones**: 1
-- **Netos posibles**: [57.8]
-- **Brutos posibles**: [167.4]
-- **Coincidencia**: neto = 57.8 (dif -0.1)
-- **Stacks**: BTN=111.7, SB=18.6, BB=47.2, UTG=110.2, MP=128.8, CO=22.4
-- **Supera stack**: MP total=132.0 stack=128.8 exceso=+3.20, CO total=131.3 stack=22.4 exceso=+108.90
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG c 1.0 | MP b 5.0 | CO c 5.0 | BTN c 5.0 | SB f 0.0 | BB c 5.0 | UTG c 5.0
-- **flop**: BB x 0.0 | UTG x 0.0 | MP b 121.0 | CO c 121.0 | BTN f 0.0 | BB f 0.0 | UTG f 0.0
-- **turn**: MP b 6.0 | CO c 5.3
-- **river**: MP x 0.0
-- **Lecturas alternativas** (1):
-  1. SB p 0.50 | BB p 1.00 | UTG c 1.00 | MP b absoluta 5.00 | CO c 5.00 | BTN c 5.00 | SB f | BB c 5.00 | UTG c 5.00 | BB x | UTG x | MP b absoluta 121.00 | CO c all-in 17.40 | BTN f | BB f | UTG f | CO c all-in 0.00 | MP x
-
-### H_0311 - 2026-08-01
-
-- **Pot declarado**: 129.9
-- **Combinaciones**: 1
-- **Netos posibles**: [94.5]
-- **Brutos posibles**: [109.8]
-- **Neto mas cercano**: 94.5 (dif -35.4)
-- **Stacks**: BTN=113.9, SB=45.5, BB=120.6, UTG=33.2, MP=151.0, CO=173.3
-- **Supera stack**: SB total=60.7 stack=45.5 exceso=+15.20
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG c 1.0 | MP b 5.0 | CO f 0.0 | BTN f 0.0 | SB c 5.0 | BB f 0.0 | UTG c 5.0
-- **flop**: SB x 0.0 | UTG x 0.0 | MP x 0.0
-- **turn**: SB b 5.0 | UTG f 0.0 | MP r 5.1
-- **river**: SB b 8.2 | MP r 50.7 | SB c 50.7
-
 ### H_0691 - 2026-09-15
 
 - **Pot declarado**: 35.6
@@ -185,23 +56,6 @@ De las `ACCION_AMBIGUA`: `DEVUELTA` 44 (la diferencia esta en una subida no paga
 - **turn**: MP b 13.0 | BTN c 13.0
 - **Lecturas alternativas** (1):
   1. SB p 0.50 | BB p 1.00 | MP c 1.00 | CO f | BTN r absoluta 5.00 | SB f | BB f | MP c 5.00 | MP x | BTN x | BTN c 13.00
-
-### H_0713 - 2026-09-15
-
-- **Pot declarado**: 44.7
-- **Combinaciones**: 1
-- **Netos posibles**: [42.84]
-- **Brutos posibles**: [44.74]
-- **Coincidencia**: bruto = 44.745 (dif 0.045)
-- **Stacks**: MP=95.6, CO=176.4, BTN=45.4, SB=153.5, BB=57.4, UTG=21.8
-- **Supera stack**: UTG total=23.7 stack=21.8 exceso=+1.90
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG c 1.0 | MP r 5.0 | CO f 0.0 | SB f 0.0 | BB f 0.0 | UTG c 5.0
-- **flop**: UTG x 0.0 | MP b 2.7 | UTG c 2.7
-- **turn**: UTG x 0.0 | MP b 8.0 | UTG c 8.0
-- **river**: UTG x 0.0 | MP b 8.0 | UTG c 8.0
-- **Lecturas alternativas** (1):
-  1. SB p 0.50 | BB p 1.00 | UTG c 1.00 | MP r absoluta 5.00 | CO f | SB f | BB f | UTG c 5.00 | UTG x | MP b absoluta 2.70 | UTG c 2.70 | UTG x | MP b absoluta 8.00 | UTG c 8.00 | UTG x | MP b absoluta 8.00 | UTG c all-in 6.10
 
 ### H_0740 - 2026-09-15
 
@@ -221,7 +75,7 @@ De las `ACCION_AMBIGUA`: `DEVUELTA` 44 (la diferencia esta en una subida no paga
 - **Lecturas alternativas** (1):
   1. SB p 0.50 | BB p 1.00 | UTG f | MP f | CO c 1.00 | BTN f | SB r absoluta 2.00 | BB c 2.00 | CO c 2.00 | SB b absoluta 2.90 | BB c 2.90 | CO f | SB b absoluta 3.70 | BB c 3.70 | BB f
 
-## NADA (129)
+## NADA (125)
 
 ### H_0026 - 2026-07-27
 
@@ -236,56 +90,6 @@ De las `ACCION_AMBIGUA`: `DEVUELTA` 44 (la diferencia esta en una subida no paga
 - **flop**: SB b 3.4 | MP c 3.4
 - **turn**: SB b 5.6 | MP c 5.6
 - **river**: SB b 9.1 | MP f 0.0
-
-### H_0027 - 2026-07-27
-
-- **Pot declarado**: 3.8
-- **Combinaciones**: 1
-- **Netos posibles**: [2.85]
-- **Brutos posibles**: [9.85]
-- **Neto mas cercano**: 2.85 (dif -0.95)
-- **Stacks**: BTN=66.0, SB=125.4, BB=66.6, UTG=146.6, MP=74.3, CO=60.6
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | BTN b 1.0 | SB c 1.0 | CO x 0.0 | BB x 0.0
-- **flop**: SB x 0.0 | BB x 0.0 | CO x 0.0 | BTN b 7.0 | SB f 0.0 | BB f 0.0 | CO f 0.0
-
-### H_0030 - 2026-07-28
-
-- **Pot declarado**: 20.0
-- **Combinaciones**: 2
-- **Netos posibles**: [14.63]
-- **Brutos posibles**: [17.53, 21.03]
-- **Neto mas cercano**: 14.63 (dif -5.37)
-- **Stacks**: UTG=67.5, MP=122.7, BTN=63.4, SB=150.0, BB=77.2
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG f 0.0 | MP f 0.0 | BTN c 1.0 | SB c 1.0 | BB x 0.0
-- **flop**: SB x 0.0 | BB x 0.0 | BTN b 1.4 | SB c 1.4 | BB c 1.4
-- **turn**: SB x 0.0 | BB x 0.0 | BTN b 3.5 | SB r 4.1 | BB f 0.0 | BTN r 7.0
-- **river**: SB x 0.0 | BTN x 0.0
-
-### H_0031 - 2026-07-28
-
-- **Pot declarado**: 3.0
-- **Combinaciones**: 2
-- **Netos posibles**: [2.0]
-- **Brutos posibles**: [6.0, 7.0]
-- **Neto mas cercano**: 2.0 (dif -1.0)
-- **Stacks**: UTG=67.5, BTN=122.7, SB=64.4, BB=148.0
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG f 0.0 | BTN f 0.0 | SB c 1.0 | BB r 5.0 | SB f 0.0
-
-### H_0032 - 2026-07-28
-
-- **Pot declarado**: 29.4
-- **Combinaciones**: 4
-- **Netos posibles**: [34.2, 36.1]
-- **Brutos posibles**: [43.9, 45.8]
-- **Neto mas cercano**: 34.2 (dif 4.8)
-- **Stacks**: BTN=67.5, SB=137.6, BB=50.0, UTG=148.0, MP=79.2
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG f 0.0 | BTN f 0.0 | SB b 5.0 | BB r 9.0 | SB c 9.0 | MP x 0.0
-- **flop**: SB x 0.0 | BB b 6.0 | MP c 0 | SB c 5.9
-- **turn**: SB x 0.0 | MP x 0.0 | BB b 9.7 | SB f 0.0
 
 ### H_0037 - 2026-07-28
 
@@ -338,20 +142,6 @@ De las `ACCION_AMBIGUA`: `DEVUELTA` 44 (la diferencia esta en una subida no paga
 - **Acciones**:
 - **preflop**: SB p 0.5 | BB p 1.0 | UTG f 0.0 | MP f 0.0 | CO f 0.0 | BTN b 5.0 | SB f 0.0 | BB f 0.0
 
-### H_0056 - 2026-07-28
-
-- **Pot declarado**: 9.0
-- **Combinaciones**: 1
-- **Netos posibles**: [8.07]
-- **Brutos posibles**: [8.07]
-- **Neto mas cercano**: 8.07 (dif -0.93)
-- **Stacks**: BB=145.7, UTG=88.4, MP=175.3, BTN=20.0, SB=123.6
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG f 0.0 | MP f 0.0 | SB f 0.5 | BTN x 0.0 | BB x 0.0
-- **flop**: BB x 0.0 | BTN x 0.0
-- **turn**: BB b 1.2 | BTN c 1.2
-- **river**: BB b 2.3 | BTN c 2.3 | BB c 2.3
-
 ### H_0058 - 2026-07-28
 
 - **Pot declarado**: 37.8
@@ -390,20 +180,6 @@ De las `ACCION_AMBIGUA`: `DEVUELTA` 44 (la diferencia esta en una subida no paga
 - **flop**: BTN x 0.0
 - **turn**: BTN x 0.0
 - **river**: BTN x 0.0
-
-### H_0078 - 2026-07-29
-
-- **Pot declarado**: 40.7
-- **Combinaciones**: 2
-- **Netos posibles**: [33.44, 36.29]
-- **Brutos posibles**: [37.24, 40.09]
-- **Neto mas cercano**: 36.29 (dif -4.41)
-- **Stacks**: SB=52.2, BB=159.0, UTG=101.4, MP=113.7, CO=21.5, BTN=18.4
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG f 0.0 | MP f 0.0 | CO f 0.0 | BTN c 1.0 | SB c 1.0 | BB r 6.0 | BTN c 6.0 | SB c 6.0
-- **flop**: SB x 0.0 | BB b 8.6 | BTN r 12.4
-- **turn**: BB x 0.0
-- **river**: BB x 0.0
 
 ### H_0080 - 2026-07-29
 
@@ -785,6 +561,20 @@ De las `ACCION_AMBIGUA`: `DEVUELTA` 44 (la diferencia esta en una subida no paga
 - **Stacks**: BB=166.5, UTG=49.9, MP=124.6, CO=20.0, BTN=152.5, SB=130.5
 - **Acciones**:
 - **preflop**: SB p 0.5 | BB p 1.0 | UTG c 1.0 | MP r 6.0 | CO f 0.0 | BTN f 0.0 | SB f 0.0 | BB f 1.0 | UTG f 0.0
+
+### H_0311 - 2026-08-01
+
+- **Pot declarado**: 110.2
+- **Combinaciones**: 1
+- **Netos posibles**: [94.5]
+- **Brutos posibles**: [109.7]
+- **Neto mas cercano**: 94.5 (dif -15.7)
+- **Stacks**: BTN=113.9, SB=45.5, BB=120.6, UTG=33.2, MP=151.0, CO=173.3
+- **Acciones**:
+- **preflop**: SB p 0.5 | BB p 1.0 | UTG c 1.0 | MP b 5.0 | CO f 0.0 | BTN f 0.0 | SB c 5.0 | BB f 0.0 | UTG c 5.0
+- **flop**: SB x 0.0 | UTG x 0.0 | MP x 0.0
+- **turn**: SB b 5.0 | UTG f 0.0 | MP c 5.0
+- **river**: SB b 8.2 | MP r 50.7 | SB c 35.5
 
 ### H_0321 - 2026-08-01
 
@@ -1306,6 +1096,20 @@ De las `ACCION_AMBIGUA`: `DEVUELTA` 44 (la diferencia esta en una subida no paga
 - **Stacks**: SB=85.5, BB=125.1, UTG=51.1, MP=100.0, CO=None, BTN=23.5
 - **Acciones**:
 - **preflop**: SB p 0.5 | BB p 1.0 | UTG c 1.0 | MP f 0.0 | CO f 0.0 | BTN r 3.5 | SB f 0.0 | BB f 0.0 | UTG f 0.0
+
+### H_0713 - 2026-09-15
+
+- **Pot declarado**: 44.7
+- **Combinaciones**: 1
+- **Netos posibles**: [46.45]
+- **Brutos posibles**: [46.45]
+- **Neto mas cercano**: 46.45 (dif 1.75)
+- **Stacks**: MP=95.6, CO=176.4, BTN=45.4, SB=153.5, BB=57.4, UTG=21.8
+- **Acciones**:
+- **preflop**: SB p 0.5 | BB p 1.0 | UTG c 1.0 | MP r 5.0 | CO f 0.0 | SB f 0.0 | BB f 0.0 | UTG c 5.0
+- **flop**: UTG x 0.0 | MP b 2.7 | UTG c 2.7
+- **turn**: UTG x 0.0 | MP b 8.0 | UTG c 8.0
+- **river**: UTG x 0.0 | MP b 8.0 | UTF c 7.1
 
 ### H_0726 - 2026-09-15
 
@@ -1876,746 +1680,48 @@ De las `ACCION_AMBIGUA`: `DEVUELTA` 44 (la diferencia esta en una subida no paga
 - **turn**: UTG x 0.0 | CO b 10.9 | UTG c 10.9
 - **river**: UTG x 0.0 | CO b 21.3 | UTG c 21.3
 
-## ACCION_AMBIGUA (61)
+## ACCION_AMBIGUA (20)
 
 La `causa` describe por que hay mas de una traza. `DEVUELTA` no es un error de bote: la subida no se paga y las fichas extra se devuelven; el neto es el mismo. `REPARTO` y `NETO_IGUAL` tampoco cambian el bote neto, pero dejan el `amount` de alguna accion sin determinar. `REAL` es el unico caso en que el bote neto depende de la lectura. El sufijo `+SB` indica que la coincidencia usa la variante que descuenta la ciega del SB.
 
-### DEVUELTA (subida no pagada; el neto no cambia) - 44
+### REPARTO (mismo bote; cambia quien aporta) - 13
 
-### H_0016 - 2026-07-27
+### H_0032 - 2026-07-28
 
-- **Pot declarado**: 3.0
-- **Combinaciones**: 2
-- **Netos posibles**: [3.0]
-- **Brutos posibles**: [6.0, 7.0]
-- **Coincidencia**: neto = 3.0 (dif 0.0)
-- **Causa**: `DEVUELTA`
-- **Diferencia**: preflop BB r [5.0, 4.0]
-- **Stacks**: MP=71.5, BTN=None, SB=67.7, BB=112.0, UTG=35.0
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG f 0.0 | MP c 1.0 | BTN f 0.0 | SB c 1.0 | BB r 4.0 | MP f 0.0 | SB f 0.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | UTG f | MP c 1.00 | BTN f | SB c 1.00 | BB r parcial 5.00 | MP f | SB f
-  2. SB p 0.50 | BB p 1.00 | UTG f | MP c 1.00 | BTN f | SB c 1.00 | BB r absoluta 4.00 | MP f | SB f
-
-### H_0024 - 2026-07-27
-
-- **Pot declarado**: 28.7
-- **Combinaciones**: 2
-- **Netos posibles**: [28.69]
-- **Brutos posibles**: [28.79, 30.09]
-- **Coincidencia**: neto = 28.69 (dif -0.01)
-- **Causa**: `DEVUELTA`
-- **Diferencia**: turn BB r [4.8, 3.5]
-- **Stacks**: SB=66.8, BB=124.4, UTG=78.2, BTN=47.4
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG b 1.0 | BTN c 1.0 | SB c 1.0 | BB x 0.0
-- **flop**: SB x 0.0 | BB x 0.0 | UTG x 0.0 | BTN x 0.0
-- **turn**: SB x 0.0 | BB b 1.3 | UTG r 3.4 | BTN c 3.4 | SB f 0.0 | BB r 3.5
-- **river**: BB x 0.0 | UTG x 0.0 | BTN b 8.0 | BB c 8.0 | UTG f 0.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | UTG b absoluta 1.00 | BTN c 1.00 | SB c 1.00 | BB x | SB x | BB x | UTG x | BTN x | SB x | BB b absoluta 1.30 | UTG r absoluta 3.40 | BTN c 3.40 | SB f | BB r parcial 4.80 | BB x | UTG x | BTN b absoluta 8.00 | BB c 8.00 | UTG f
-  2. SB p 0.50 | BB p 1.00 | UTG b absoluta 1.00 | BTN c 1.00 | SB c 1.00 | BB x | SB x | BB x | UTG x | BTN x | SB x | BB b absoluta 1.30 | UTG r absoluta 3.40 | BTN c 3.40 | SB f | BB r absoluta 3.50 | BB x | UTG x | BTN b absoluta 8.00 | BB c 8.00 | UTG f
-
-### H_0051 - 2026-07-28
-
-- **Pot declarado**: 2.0
-- **Combinaciones**: 2
-- **Netos posibles**: [2.0]
-- **Brutos posibles**: [6.0, 7.0]
-- **Coincidencia**: neto = 2.0 (dif 0.0)
-- **Causa**: `DEVUELTA`
-- **Diferencia**: preflop BB r [6.0, 5.0]
-- **Stacks**: SB=48.0, BB=143.2, UTG=86.9, MP=168.4, BTN=42.9
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG f 0.0 | MP f 0.0 | BTN f 0.0 | SB c 1.0 | BB r 5.0 | SB f 0.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | UTG f | MP f | BTN f | SB c 1.00 | BB r parcial 6.00 | SB f
-  2. SB p 0.50 | BB p 1.00 | UTG f | MP f | BTN f | SB c 1.00 | BB r absoluta 5.00 | SB f
-
-### H_0100 - 2026-07-29
-
-- **Pot declarado**: 2.0
-- **Combinaciones**: 2
-- **Netos posibles**: [2.0]
-- **Brutos posibles**: [4.0, 4.5]
-- **Coincidencia**: neto = 2.0 (dif 0.0)
-- **Causa**: `DEVUELTA`
-- **Diferencia**: preflop SB b [3.5, 3.0]
-- **Stacks**: CO=40.7, BTN=133.7, SB=71.5, BB=132.3, UTG=24.7, MP=21.0
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG f 0.0 | MP f 0.0 | CO f 0.0 | BTN f 0.0 | SB b 3.0 | BB f 0.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | UTG f | MP f | CO f | BTN f | SB b parcial 3.50 | BB f
-  2. SB p 0.50 | BB p 1.00 | UTG f | MP f | CO f | BTN f | SB b absoluta 3.00 | BB f
-
-### H_0109 - 2026-07-29
-
-- **Pot declarado**: 2.0
-- **Combinaciones**: 2
-- **Netos posibles**: [2.0]
-- **Brutos posibles**: [4.0, 5.0]
-- **Coincidencia**: neto = 2.0 (dif 0.0)
-- **Causa**: `DEVUELTA`
-- **Diferencia**: preflop BB r [4.0, 3.0]
-- **Stacks**: BB=35.0, UTG=124.2, MP=64.2, CO=133.8, BTN=24.0, SB=19.5
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG f 0.0 | MP f 0.0 | CO f 0.0 | BTN f 0.0 | SB c 1.0 | BB r 3.0 | SB f 0.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | UTG f | MP f | CO f | BTN f | SB c 1.00 | BB r parcial 4.00 | SB f
-  2. SB p 0.50 | BB p 1.00 | UTG f | MP f | CO f | BTN f | SB c 1.00 | BB r absoluta 3.00 | SB f
-
-### H_0116 - 2026-07-29
-
-- **Pot declarado**: 6.0
-- **Combinaciones**: 2
-- **Netos posibles**: [6.0]
-- **Brutos posibles**: [15.5, 16.0]
-- **Coincidencia**: neto = 6.0 (dif 0.0)
-- **Causa**: `DEVUELTA`
-- **Diferencia**: preflop SB r [12.5, 12.0]
-- **Stacks**: UTG=50.7, MP=113.0, BTN=64.5, SB=101.1, BB=55.9
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG f 0.0 | MP f 0.0 | BTN b 2.5 | SB r 12.0 | BB f 0.0 | BTN f 0.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | UTG f | MP f | BTN b absoluta 2.50 | SB r parcial 12.50 | BB f | BTN f
-  2. SB p 0.50 | BB p 1.00 | UTG f | MP f | BTN b absoluta 2.50 | SB r absoluta 12.00 | BB f | BTN f
-
-### H_0119 - 2026-07-29
-
-- **Pot declarado**: 2.0
-- **Combinaciones**: 2
-- **Netos posibles**: [2.0]
-- **Brutos posibles**: [3.0, 3.5]
-- **Coincidencia**: neto = 2.0 (dif 0.0)
-- **Causa**: `DEVUELTA`
-- **Diferencia**: preflop SB b [2.5, 2.0]
-- **Stacks**: BB=114.5, UTG=66.0, MP=102.1, BTN=48.8, SB=38.0
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG f 0.0 | MP f 0.0 | BTN f 0.0 | SB b 2.0 | BB f 0.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | UTG f | MP f | BTN f | SB b parcial 2.50 | BB f
-  2. SB p 0.50 | BB p 1.00 | UTG f | MP f | BTN f | SB b absoluta 2.00 | BB f
-
-### H_0122 - 2026-07-29
-
-- **Pot declarado**: 6.0
-- **Combinaciones**: 2
-- **Netos posibles**: [6.0]
-- **Brutos posibles**: [12.0, 12.5]
-- **Coincidencia**: neto = 6.0 (dif 0.0)
-- **Causa**: `DEVUELTA`
-- **Diferencia**: preflop SB r [9.0, 8.5]
-- **Stacks**: BTN=117.0, SB=50.5, BB=103.6, UTG=62.1, MP=37.5
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG f 0.0 | MP f 0.0 | BTN b 2.5 | SB r 8.5 | BB f 0.0 | BTN f 0.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | UTG f | MP f | BTN b absoluta 2.50 | SB r parcial 9.00 | BB f | BTN f
-  2. SB p 0.50 | BB p 1.00 | UTG f | MP f | BTN b absoluta 2.50 | SB r absoluta 8.50 | BB f | BTN f
-
-### H_0128 - 2026-07-29
-
-- **Pot declarado**: 3.0
-- **Combinaciones**: 2
-- **Netos posibles**: [3.0]
-- **Brutos posibles**: [7.0, 7.5]
-- **Coincidencia**: neto = 3.0 (dif 0.0)
-- **Causa**: `DEVUELTA`
-- **Diferencia**: preflop SB b [5.5, 5.0]
-- **Stacks**: BTN=9.4, SB=100.3, BB=50.0, UTG=98.5, MP=73.4, CO=39.0
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG f 0.0 | MP f 0.0 | CO f 0.0 | BTN c 1.0 | SB b 5.0 | BB f 0.0 | BTN f 0.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | UTG f | MP f | CO f | BTN c 1.00 | SB b parcial 5.50 | BB f | BTN f
-  2. SB p 0.50 | BB p 1.00 | UTG f | MP f | CO f | BTN c 1.00 | SB b absoluta 5.00 | BB f | BTN f
-
-### H_0209 - 2026-07-31
-
-- **Pot declarado**: 4.0
-- **Combinaciones**: 2
-- **Netos posibles**: [4.0]
-- **Brutos posibles**: [9.0, 9.5]
-- **Coincidencia**: neto = 4.0 (dif 0.0)
-- **Causa**: `DEVUELTA`
-- **Diferencia**: preflop SB b [6.5, 6.0]
-- **Stacks**: MP=29.7, BTN=91.1, SB=120.6, BB=41.2
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | MP c 1.0 | BTN c 1.0 | SB b 6.0 | BB f 0.0 | MP f 0.0 | BTN f 0.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | MP c 1.00 | BTN c 1.00 | SB b parcial 6.50 | BB f | MP f | BTN f
-  2. SB p 0.50 | BB p 1.00 | MP c 1.00 | BTN c 1.00 | SB b absoluta 6.00 | BB f | MP f | BTN f
-
-### H_0232 - 2026-07-31
-
-- **Pot declarado**: 2.0
-- **Combinaciones**: 2
-- **Netos posibles**: [2.0]
-- **Brutos posibles**: [4.0, 4.5]
-- **Coincidencia**: neto = 2.0 (dif 0.0)
-- **Causa**: `DEVUELTA`
-- **Diferencia**: preflop SB b [3.5, 3.0]
-- **Stacks**: SB=118.5, BB=107.1, UTG=79.3, MP=102.2, BTN=94.9
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | MP f 0.0 | BTN f 0.0 | SB b 3.0 | BB f 0.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | MP f | BTN f | SB b parcial 3.50 | BB f
-  2. SB p 0.50 | BB p 1.00 | MP f | BTN f | SB b absoluta 3.00 | BB f
-
-### H_0239 - 2026-07-31
-
-- **Pot declarado**: 2.0
-- **Combinaciones**: 2
-- **Netos posibles**: [2.0]
-- **Brutos posibles**: [4.0, 4.5]
-- **Coincidencia**: neto = 2.0 (dif 0.0)
-- **Causa**: `DEVUELTA`
-- **Diferencia**: preflop SB b [3.5, 3.0]
-- **Stacks**: CO=100.7, BTN=107.5, SB=50.0, BB=78.3, UTG=100.7, MP=115.5
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG f 0.0 | MP f 0.0 | CO f 0.0 | BTN f 0.0 | SB b 3.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | UTG f | MP f | CO f | BTN f | SB b parcial 3.50
-  2. SB p 0.50 | BB p 1.00 | UTG f | MP f | CO f | BTN f | SB b absoluta 3.00
-
-### H_0247 - 2026-07-31
-
-- **Pot declarado**: 5.0
-- **Combinaciones**: 2
-- **Netos posibles**: [5.0]
-- **Brutos posibles**: [14.0, 14.5]
-- **Coincidencia**: neto = 5.0 (dif 0.0)
-- **Causa**: `DEVUELTA`
-- **Diferencia**: preflop SB r [11.5, 11.0]
-- **Stacks**: CO=115.2, BTN=29.6, SB=104.0, BB=20.0, UTG=100.0, MP=100.0
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG f 0.0 | MP b 2.0 | CO f 0.0 | BTN f 0.0 | SB r 11.0 | BB f 0.0 | MP f 0.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | UTG f | MP b absoluta 2.00 | CO f | BTN f | SB r parcial 11.50 | BB f | MP f
-  2. SB p 0.50 | BB p 1.00 | UTG f | MP b absoluta 2.00 | CO f | BTN f | SB r absoluta 11.00 | BB f | MP f
-
-### H_0248 - 2026-07-31
-
-- **Pot declarado**: 2.0
-- **Combinaciones**: 2
-- **Netos posibles**: [2.0]
-- **Brutos posibles**: [9.0, 10.0]
-- **Coincidencia**: neto = 2.0 (dif 0.0)
-- **Causa**: `DEVUELTA`
-- **Diferencia**: preflop BB r [9.0, 8.0]
-- **Stacks**: MP=115.2, CO=29.6, BTN=107.0, SB=19.0, BB=100.0, UTG=100.0
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG f 0.0 | MP f 0.0 | CO f 0.0 | BTN f 0.0 | SB c 1.0 | BB r 8.0 | SB f 0.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | UTG f | MP f | CO f | BTN f | SB c 1.00 | BB r parcial 9.00 | SB f
-  2. SB p 0.50 | BB p 1.00 | UTG f | MP f | CO f | BTN f | SB c 1.00 | BB r absoluta 8.00 | SB f
-
-### H_0262 - 2026-07-31
-
-- **Pot declarado**: 2.0
-- **Combinaciones**: 2
-- **Netos posibles**: [2.0]
-- **Brutos posibles**: [6.0, 7.0]
-- **Coincidencia**: neto = 2.0 (dif 0.0)
-- **Causa**: `DEVUELTA`
-- **Diferencia**: preflop BB r [6.0, 5.0]
-- **Stacks**: BTN=147.7, SB=27.8, BB=103.7, UTG=126.2, MP=100.0
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG f 0.0 | MP f 0.0 | BTN f 0.0 | SB c 1.0 | BB r 5.0 | SB f 0.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | UTG f | MP f | BTN f | SB c 1.00 | BB r parcial 6.00 | SB f
-  2. SB p 0.50 | BB p 1.00 | UTG f | MP f | BTN f | SB c 1.00 | BB r absoluta 5.00 | SB f
-
-### H_0273 - 2026-07-31
-
-- **Pot declarado**: 2.0
-- **Combinaciones**: 2
-- **Netos posibles**: [2.0]
-- **Brutos posibles**: [6.0, 6.5]
-- **Coincidencia**: neto = 2.0 (dif 0.0)
-- **Causa**: `DEVUELTA`
-- **Diferencia**: preflop SB b [5.5, 5.0]
-- **Stacks**: BTN=184.2, SB=104.7, BB=14.0, UTG=122.2, MP=109.2
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG f 0.0 | MP f 0.0 | BTN f 0.0 | SB b 5.0 | BB f 0.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | UTG f | MP f | BTN f | SB b parcial 5.50 | BB f
-  2. SB p 0.50 | BB p 1.00 | UTG f | MP f | BTN f | SB b absoluta 5.00 | BB f
-
-### H_0275 - 2026-07-31
-
-- **Pot declarado**: 2.0
-- **Combinaciones**: 2
-- **Netos posibles**: [2.0]
-- **Brutos posibles**: [4.0, 4.5]
-- **Coincidencia**: neto = 2.0 (dif 0.0)
-- **Causa**: `DEVUELTA`
-- **Diferencia**: preflop SB b [3.5, 3.0]
-- **Stacks**: UTG=171.2, MP=105.7, BTN=25.7, SB=121.2, BB=109.2
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG f 0.0 | MP f 0.0 | BTN f 0.0 | SB b 3.0 | BB f 0.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | UTG f | MP f | BTN f | SB b parcial 3.50 | BB f
-  2. SB p 0.50 | BB p 1.00 | UTG f | MP f | BTN f | SB b absoluta 3.00 | BB f
-
-### H_0279 - 2026-07-31
-
-- **Pot declarado**: 2.0
-- **Combinaciones**: 2
-- **Netos posibles**: [2.0]
-- **Brutos posibles**: [6.0, 7.0]
-- **Coincidencia**: neto = 2.0 (dif 0.0)
-- **Causa**: `DEVUELTA`
-- **Diferencia**: preflop BB r [6.0, 5.0]
-- **Stacks**: UTG=171.2, BTN=106.6, SB=25.2, BB=107.7
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG f 0.0 | BTN f 0.0 | SB c 1.0 | BB r 5.0 | SB f 0.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | UTG f | BTN f | SB c 1.00 | BB r parcial 6.00 | SB f
-  2. SB p 0.50 | BB p 1.00 | UTG f | BTN f | SB c 1.00 | BB r absoluta 5.00 | SB f
-
-### H_0292 - 2026-07-31
-
-- **Pot declarado**: 2.5
-- **Combinaciones**: 2
-- **Netos posibles**: [2.5]
-- **Brutos posibles**: [6.5, 7.5]
-- **Coincidencia**: neto = 2.5 (dif 0.0)
-- **Causa**: `DEVUELTA`
-- **Diferencia**: preflop BB r [6.0, 5.0]
-- **Stacks**: BB=159.2, UTG=12.5, MP=115.1, CO=21.3, BTN=152.2, SB=112.7
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG c 1.0 | MP f 0.0 | CO f 0.0 | SB f 0.0 | BB r 5.0 | UTG f 0.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | UTG c 1.00 | MP f | CO f | SB f | BB r parcial 6.00 | UTG f
-  2. SB p 0.50 | BB p 1.00 | UTG c 1.00 | MP f | CO f | SB f | BB r absoluta 5.00 | UTG f
-
-### H_0298 - 2026-07-31
-
-- **Pot declarado**: 2.0
-- **Combinaciones**: 2
-- **Netos posibles**: [2.0]
-- **Brutos posibles**: [4.0, 4.5]
-- **Coincidencia**: neto = 2.0 (dif 0.0)
-- **Causa**: `DEVUELTA`
-- **Diferencia**: preflop SB b [3.5, 3.0]
-- **Stacks**: BB=169.5, UTG=120.5, MP=15.2, BTN=154.5, SB=111.2
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG f 0.0 | MP f 0.0 | BTN f 0.0 | SB b 3.0 | BB f 0.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | UTG f | MP f | BTN f | SB b parcial 3.50 | BB f
-  2. SB p 0.50 | BB p 1.00 | UTG f | MP f | BTN f | SB b absoluta 3.00 | BB f
-
-### H_0313 - 2026-08-01
-
-- **Pot declarado**: 3.0
-- **Combinaciones**: 2
-- **Netos posibles**: [3.0]
-- **Brutos posibles**: [28.2, 28.7]
-- **Coincidencia**: neto = 3.0 (dif 0.0)
-- **Causa**: `DEVUELTA`
-- **Diferencia**: preflop SB b [26.7, 26.2]
-- **Stacks**: MP=113.9, CO=50.0, BTN=119.1, SB=26.2, BB=199.9, UTG=175.6
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG f 0.0 | MP f 0.0 | CO c 1.0 | BTN f 0.0 | SB b 26.2
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | UTG f | MP f | CO c 1.00 | BTN f
-  2. SB p 0.50 | BB p 1.00 | UTG f | MP f | CO c 1.00 | BTN f
-
-### H_0334 - 2026-08-09
-
-- **Pot declarado**: 3.0
-- **Combinaciones**: 2
-- **Netos posibles**: [3.0]
-- **Brutos posibles**: [7.0, 7.5]
-- **Coincidencia**: neto = 3.0 (dif 0.0)
-- **Causa**: `DEVUELTA`
-- **Diferencia**: preflop SB b [5.5, 5.0]
-- **Stacks**: BB=19.0, BTN=63.5, SB=124.7
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | BTN c 1.0 | SB b 5.0 | BB f 0.0 | BTN f 0.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | BTN c 1.00 | SB b parcial 5.50 | BB f | BTN f
-  2. SB p 0.50 | BB p 1.00 | BTN c 1.00 | SB b absoluta 5.00 | BB f | BTN f
-
-### H_0370 - 2026-09-13
-
-- **Pot declarado**: 3.0
-- **Combinaciones**: 2
-- **Netos posibles**: [3.0]
-- **Brutos posibles**: [15.2, 15.7]
-- **Coincidencia**: neto = 3.0 (dif 0.0)
-- **Causa**: `DEVUELTA`
-- **Diferencia**: preflop SB r [13.7, 13.2]
-- **Stacks**: MP=99.8, CO=56.4, BTN=119.5, SB=13.2, BB=68.888, UTG=135.788
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG f 0.0 | MP f 0.0 | CO c 1.0 | BTN f 0.0 | SB r 13.2 | BB f 0.0 | CO f 0.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | UTG f | MP f | CO c 1.00 | BTN f | BB f | CO f
-  2. SB p 0.50 | BB p 1.00 | UTG f | MP f | CO c 1.00 | BTN f | BB f | CO f
-
-### H_0421 - 2026-09-13
-
-- **Pot declarado**: 1.5
-- **Combinaciones**: 2
-- **Netos posibles**: [2.0]
-- **Brutos posibles**: [4.0, 4.5]
-- **Coincidencia**: neto_sin_sb = 1.5 (dif 0.0)
-- **Causa**: `DEVUELTA+SB`
-- **Diferencia**: preflop SB b [3.5, 3.0]
-- **Stacks**: SB=90.0, BB=175.0, MP=18.0, CO=None, BTN=255.8
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | MP f 0.0 | CO f 0.0 | BTN f 0.0 | SB b 3.0 | BB f 0.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | MP f | CO f | BTN f | SB b parcial 3.50 | BB f
-  2. SB p 0.50 | BB p 1.00 | MP f | CO f | BTN f | SB b absoluta 3.00 | BB f
-
-### H_0424 - 2026-09-13
-
-- **Pot declarado**: 2.0
-- **Combinaciones**: 2
-- **Netos posibles**: [2.0]
-- **Brutos posibles**: [5.0, 6.0]
-- **Coincidencia**: neto = 2.0 (dif 0.0)
-- **Causa**: `DEVUELTA`
-- **Diferencia**: preflop BB r [5.0, 4.0]
-- **Stacks**: CO=95.5, BTN=173.5, SB=9.0, BB=20.0, MP=252.8
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | MP f 0.0 | CO f 0.0 | BTN f 0.0 | SB c 1.0 | BB r 4.0 | SB f 0.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | MP f | CO f | BTN f | SB c 1.00 | BB r parcial 5.00 | SB f
-  2. SB p 0.50 | BB p 1.00 | MP f | CO f | BTN f | SB c 1.00 | BB r absoluta 4.00 | SB f
-
-### H_0478 - 2026-09-14
-
-- **Pot declarado**: 2.0
-- **Combinaciones**: 2
-- **Netos posibles**: [2.0]
-- **Brutos posibles**: [4.0, 5.0]
-- **Coincidencia**: neto = 2.0 (dif 0.0)
-- **Causa**: `DEVUELTA`
-- **Diferencia**: preflop BB r [4.0, 3.0]
-- **Stacks**: BB=109.0, UTG=100.0, MP=65.8, CO=50.0, BTN=163.6, SB=66.0
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG f 0.0 | MP f 0.0 | CO f 0.0 | BTN f 0.0 | SB c 1.0 | BB r 3.0 | SB f 0.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | UTG f | MP f | CO f | BTN f | SB c 1.00 | BB r parcial 4.00 | SB f
-  2. SB p 0.50 | BB p 1.00 | UTG f | MP f | CO f | BTN f | SB c 1.00 | BB r absoluta 3.00 | SB f
-
-### H_0515 - 2026-09-14
-
-- **Pot declarado**: 2.0
-- **Combinaciones**: 2
-- **Netos posibles**: [2.0]
-- **Brutos posibles**: [6.0, 7.0]
-- **Coincidencia**: neto = 2.0 (dif 0.0)
-- **Causa**: `DEVUELTA`
-- **Diferencia**: preflop BB r [6.0, 5.0]
-- **Stacks**: BB=104.5, MP=None, CO=105.1, BTN=54.0
-- **Acciones**:
-- **preflop**: BB p 1.0 | MP f 0.0 | CO c 1.0 | BTN f 0.0 | BB r 5.0 | CO f 0.0
-- **Lecturas alternativas** (2):
-  1. BB p 1.00 | MP f | CO c 1.00 | BTN f | BB r parcial 6.00 | CO f
-  2. BB p 1.00 | MP f | CO c 1.00 | BTN f | BB r absoluta 5.00 | CO f
-
-### H_0527 - 2026-09-14
-
-- **Pot declarado**: 33.3
-- **Combinaciones**: 2
-- **Netos posibles**: [33.34]
-- **Brutos posibles**: [33.84, 36.84]
-- **Coincidencia**: neto = 33.345 (dif 0.045)
-- **Causa**: `DEVUELTA`
-- **Diferencia**: flop BB r [19.3, 16.3]
-- **Stacks**: SB=94.9, BB=58.9, MP=114.6, CO=16.8, BTN=32.4
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | MP c 1.0 | CO c 1.0 | BTN f 0.0 | SB f 0.0 | BB x 0.0
-- **flop**: BB b 3.0 | MP f 0.0 | CO r 7.0 | BB r 16.3 | CO c 8.1
-- **turn**: BB x 0.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | MP c 1.00 | CO c 1.00 | BTN f | SB f | BB x | BB b absoluta 3.00 | MP f | CO r absoluta 7.00 | BB r parcial 19.30 | CO c all-in 15.80 | BB x
-  2. SB p 0.50 | BB p 1.00 | MP c 1.00 | CO c 1.00 | BTN f | SB f | BB x | BB b absoluta 3.00 | MP f | CO r absoluta 7.00 | BB r absoluta 16.30 | CO c all-in 15.80 | BB x
-
-### H_0536 - 2026-09-15
-
-- **Pot declarado**: 1.5
-- **Combinaciones**: 2
-- **Netos posibles**: [2.0]
-- **Brutos posibles**: [4.0, 4.5]
-- **Coincidencia**: neto_sin_sb = 1.5 (dif 0.0)
-- **Causa**: `DEVUELTA+SB`
-- **Diferencia**: preflop SB r [3.5, 3.0]
-- **Stacks**: SB=160.5, BB=69.4, CO=103.8, BTN=104.8
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | CO f 0.0 | BTN f 0.0 | SB r 3.0 | BB f 0.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | CO f | BTN f | SB r parcial 3.50 | BB f
-  2. SB p 0.50 | BB p 1.00 | CO f | BTN f | SB r absoluta 3.00 | BB f
-
-### H_0662 - 2026-09-15
-
-- **Pot declarado**: 23.9
-- **Combinaciones**: 2
-- **Netos posibles**: [24.04]
-- **Brutos posibles**: [28.14, 29.14]
-- **Coincidencia**: neto = 24.035 (dif 0.135)
-- **Causa**: `DEVUELTA`
-- **Diferencia**: preflop BB r [15.0, 14.0]
-- **Stacks**: CO=114.5, BTN=120.7, SB=98.8, BB=108.7, UTG=71.0, MP=9.9
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG f 0.0 | MP r 5.0 | CO f 0.0 | BTN c 5.0 | SB f 0.0 | BB r 14.0 | MP c 9.9 | BTN f 0.0
-- **flop**: BB x 0.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | UTG f | MP r absoluta 5.00 | CO f | BTN c 5.00 | SB f | BB r parcial 15.00 | MP c all-in 9.90 | BTN f | BB x
-  2. SB p 0.50 | BB p 1.00 | UTG f | MP r absoluta 5.00 | CO f | BTN c 5.00 | SB f | BB r absoluta 14.00 | MP c all-in 9.90 | BTN f | BB x
-
-### H_0791 - 2026-09-15
-
-- **Pot declarado**: 1.5
-- **Combinaciones**: 2
-- **Netos posibles**: [2.0]
-- **Brutos posibles**: [4.0, 4.5]
-- **Coincidencia**: neto_sin_sb = 1.5 (dif 0.0)
-- **Causa**: `DEVUELTA+SB`
-- **Diferencia**: preflop SB r [3.5, 3.0]
-- **Stacks**: SB=133.5, BB=95.3, CO=40.8, BTN=161.0
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | CO f 0.0 | BTN f 0.0 | SB r 3.0 | BB f 0.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | CO f | BTN f | SB r parcial 3.50 | BB f
-  2. SB p 0.50 | BB p 1.00 | CO f | BTN f | SB r absoluta 3.00 | BB f
-
-### H_0831 - 2026-09-16
-
-- **Pot declarado**: 1.5
-- **Combinaciones**: 2
-- **Netos posibles**: [2.0]
-- **Brutos posibles**: [4.0, 4.5]
-- **Coincidencia**: neto_sin_sb = 1.5 (dif 0.0)
-- **Causa**: `DEVUELTA+SB`
-- **Diferencia**: preflop SB r [3.5, 3.0]
-- **Stacks**: CO=115.4, BTN=9.5, SB=106.4, BB=95.6, MP=16.0
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | MP f 0.0 | CO f 0.0 | BTN f 0.0 | SB r 3.0 | BB f 0.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | MP f | CO f | BTN f | SB r parcial 3.50 | BB f
-  2. SB p 0.50 | BB p 1.00 | MP f | CO f | BTN f | SB r absoluta 3.00 | BB f
-
-### H_0834 - 2026-09-16
-
-- **Pot declarado**: 2.5
-- **Combinaciones**: 2
-- **Netos posibles**: [2.5]
-- **Brutos posibles**: [5.5, 6.5]
-- **Coincidencia**: neto = 2.5 (dif 0.0)
-- **Causa**: `DEVUELTA`
-- **Diferencia**: preflop BTN r [5.0, 4.0]
-- **Stacks**: MP=None, CO=53.6, BTN=50.0, SB=72.1, BB=101.1
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | BTN b 1.0 | MP f 0.0 | CO f 0.0 | BTN r 4.0 | SB f 0.0 | BB f 0.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | BTN b absoluta 1.00 | MP f | CO f | BTN r parcial 5.00 | SB f | BB f
-  2. SB p 0.50 | BB p 1.00 | BTN b absoluta 1.00 | MP f | CO f | BTN r absoluta 4.00 | SB f | BB f
-
-### H_0837 - 2026-09-16
-
-- **Pot declarado**: 1.5
-- **Combinaciones**: 2
-- **Netos posibles**: [2.0]
-- **Brutos posibles**: [4.0, 4.5]
-- **Coincidencia**: neto_sin_sb = 1.5 (dif 0.0)
-- **Causa**: `DEVUELTA+SB`
-- **Diferencia**: preflop SB r [3.5, 3.0]
-- **Stacks**: SB=94.0, BB=79.8, UTG=50.0, MP=114.0, CO=151.8, BTN=28.338
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG f 0.0 | MP f 0.0 | CO f 0.0 | BTN f 0.0 | SB r 3.0 | BB f 0.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | UTG f | MP f | CO f | BTN f | SB r parcial 3.50 | BB f
-  2. SB p 0.50 | BB p 1.00 | UTG f | MP f | CO f | BTN f | SB r absoluta 3.00 | BB f
-
-### H_0906 - 2026-09-17
-
-- **Pot declarado**: 48.5
+- **Pot declarado**: 39.1
 - **Combinaciones**: 4
-- **Netos posibles**: [47.6, 48.6]
-- **Brutos posibles**: [137.8, 138.8, 139.8]
-- **Coincidencia**: neto = 48.6 (dif 0.1)
-- **Causa**: `DEVUELTA`
-- **Diferencia**: preflop CO r [114.0, 113.0]
-- **Stacks**: SB=86.0, BB=22.8, MP=347.8, CO=None, BTN=115.5
+- **Netos posibles**: [29.45, 31.35]
+- **Brutos posibles**: [39.15, 41.05]
+- **Coincidencia**: bruto = 39.15 (dif 0.05)
+- **Causa**: `REPARTO`
+- **Diferencia**: preflop SB b [5.5, 5.0]
+- **Stacks**: BTN=67.5, SB=137.6, BB=50.0, UTG=148.0, MP=79.2
 - **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | MP c 1.0 | CO c 1.0 | BTN c 1.0 | SB f 0.0 | BB r 3.0 | MP c 3.0 | CO r 113.0 | BTN f 0.0 | BB c 18.8 | MP f 0.0
-- **flop**: MP x 0.0
-- **turn**: MP x 0.0
+- **preflop**: SB p 0.5 | BB p 1.0 | UTG f 0.0 | MP c 1.0 | BTN f 0.0 | SB b 5.0 | BB r 9.0 | MP f 0.0 | SB c 9.0
+- **flop**: SB x 0.0 | BB b 6.0 | SB c 6.0
+- **turn**: SB x 0.0 | BB b 9.7 | SB f 0.0
 - **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | MP c 1.00 | CO c 1.00 | BTN c 1.00 | SB f | BB r parcial 4.00 | MP c 4.00 | CO r parcial 114.00 | BTN f | BB c all-in 22.80 | MP f | MP x | MP x
-  2. SB p 0.50 | BB p 1.00 | MP c 1.00 | CO c 1.00 | BTN c 1.00 | SB f | BB r parcial 4.00 | MP c 4.00 | CO r absoluta 113.00 | BTN f | BB c all-in 22.80 | MP f | MP x | MP x
-
-### H_0910 - 2026-09-17
-
-- **Pot declarado**: 4.0
-- **Combinaciones**: 2
-- **Netos posibles**: [4.0]
-- **Brutos posibles**: [113.3, 114.3]
-- **Coincidencia**: neto = 4.0 (dif 0.0)
-- **Causa**: `DEVUELTA`
-- **Diferencia**: preflop BB r [111.3, 110.3]
-- **Stacks**: CO=101.7, BTN=39.2, SB=393.9, BB=110.3, UTG=98.2, MP=65.4
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG f 0.0 | MP c 1.0 | CO c 1.0 | BTN f 0.0 | SB c 1.0 | BB r 110.3 | MP f 0.0 | CO f 0.0 | SB f 0.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | UTG f | MP c 1.00 | CO c 1.00 | BTN f | SB c 1.00 | MP f | CO f | SB f
-  2. SB p 0.50 | BB p 1.00 | UTG f | MP c 1.00 | CO c 1.00 | BTN f | SB c 1.00 | MP f | CO f | SB f
-
-### H_0917 - 2026-09-17
-
-- **Pot declarado**: 184.4
-- **Combinaciones**: 2
-- **Netos posibles**: [184.4]
-- **Brutos posibles**: [215.0, 216.0]
-- **Coincidencia**: neto = 184.4 (dif 0.0)
-- **Causa**: `DEVUELTA`
-- **Diferencia**: preflop MP r [122.3, 121.3]
-- **Stacks**: BTN=90.7, SB=42.4, BB=364.5, MP=121.3, CO=97.5
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | MP c 1.0 | CO f 0.0 | BTN r 5.0 | SB f 0.0 | BB c 5.0 | MP r 121.3 | BTN c 90.7 | BB f 0.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | MP c 1.00 | CO f | BTN r absoluta 5.00 | SB f | BB c 5.00 | BTN c all-in 90.70 | BB f
-  2. SB p 0.50 | BB p 1.00 | MP c 1.00 | CO f | BTN r absoluta 5.00 | SB f | BB c 5.00 | BTN c all-in 90.70 | BB f
-
-### H_0930 - 2026-09-17
-
-- **Pot declarado**: 12.0
-- **Combinaciones**: 2
-- **Netos posibles**: [12.0]
-- **Brutos posibles**: [127.3, 128.3]
-- **Coincidencia**: neto = 12.0 (dif 0.0)
-- **Causa**: `DEVUELTA`
-- **Diferencia**: preflop BB r [119.3, 118.3]
-- **Stacks**: CO=168.0, BTN=53.2, SB=591.9, BB=118.3, MP=77.4
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | MP f 0.0 | CO r 3.0 | BTN c 3.0 | SB c 3.0 | BB r 118.3 | CO f 0.0 | BTN f 0.0 | SB f 0.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | MP f | CO r absoluta 3.00 | BTN c 3.00 | SB c 3.00 | CO f | BTN f | SB f
-  2. SB p 0.50 | BB p 1.00 | MP f | CO r absoluta 3.00 | BTN c 3.00 | SB c 3.00 | CO f | BTN f | SB f
-
-### H_0931 - 2026-09-17
-
-- **Pot declarado**: 102.6
-- **Combinaciones**: 2
-- **Netos posibles**: [102.7]
-- **Brutos posibles**: [142.3, 146.6]
-- **Coincidencia**: neto = 102.7 (dif 0.1)
-- **Causa**: `DEVUELTA`
-- **Diferencia**: flop CO r [92.1, 87.8]
-- **Stacks**: UTG=164.0, MP=49.2, CO=587.9, BTN=131.3, SB=100.0, BB=77.4
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG c 1.0 | MP c 1.0 | CO c 1.0 | BTN f 0.0 | SB f 0.0 | BB x 0.0
-- **flop**: BB x 0.0 | UTG x 0.0 | MP x 0.0 | CO b 4.3 | BB f 0.0 | UTG c 4.3 | MP r 48.2 | CO r 87.8 | UTG f 0.0
-- **turn**: CO x 0.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | UTG c 1.00 | MP c 1.00 | CO c 1.00 | BTN f | SB f | BB x | BB x | UTG x | MP x | CO b absoluta 4.30 | BB f | UTG c 4.30 | MP r absoluta 48.20 | CO r parcial 92.10 | UTG f | CO x
-  2. SB p 0.50 | BB p 1.00 | UTG c 1.00 | MP c 1.00 | CO c 1.00 | BTN f | SB f | BB x | BB x | UTG x | MP x | CO b absoluta 4.30 | BB f | UTG c 4.30 | MP r absoluta 48.20 | CO r absoluta 87.80 | UTG f | CO x
-
-### H_0939 - 2026-09-17
-
-- **Pot declarado**: 10.0
-- **Combinaciones**: 2
-- **Netos posibles**: [10.0]
-- **Brutos posibles**: [162.5, 163.0]
-- **Coincidencia**: neto = 10.0 (dif 0.0)
-- **Causa**: `DEVUELTA`
-- **Diferencia**: preflop SB r [156.0, 155.5]
-- **Stacks**: MP=149.9, CO=25.8, BTN=618.4, SB=155.5, BB=131.0, UTG=74.7
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG f 0.0 | MP r 3.0 | CO f 0.0 | BTN c 3.0 | SB r 155.5 | BB f 0.0 | BTN f 0.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | UTG f | MP r absoluta 3.00 | CO f | BTN c 3.00 | BB f | BTN f
-  2. SB p 0.50 | BB p 1.00 | UTG f | MP r absoluta 3.00 | CO f | BTN c 3.00 | BB f | BTN f
-
-### H_0945 - 2026-09-17
-
-- **Pot declarado**: 5.0
-- **Combinaciones**: 2
-- **Netos posibles**: [5.0]
-- **Brutos posibles**: [190.2, 190.7]
-- **Coincidencia**: neto = 5.0 (dif 0.0)
-- **Causa**: `DEVUELTA`
-- **Diferencia**: preflop SB r [186.7, 186.2]
-- **Stacks**: MP=170.6, CO=18.3, BTN=569.7, SB=186.2, BB=134.1, UTG=78.2
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG f 0.0 | MP c 1.0 | CO c 1.0 | BTN c 1.0 | SB r 186.2 | BB f 0.0 | MP f 0.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | UTG f | MP c 1.00 | CO c 1.00 | BTN c 1.00 | BB f | MP f
-  2. SB p 0.50 | BB p 1.00 | UTG f | MP c 1.00 | CO c 1.00 | BTN c 1.00 | BB f | MP f
-
-### H_1086 - 2026-09-17
-
-- **Pot declarado**: 1.5
-- **Combinaciones**: 2
-- **Netos posibles**: [2.0]
-- **Brutos posibles**: [4.0, 4.5]
-- **Coincidencia**: neto_sin_sb = 1.5 (dif 0.0)
-- **Causa**: `DEVUELTA+SB`
-- **Diferencia**: preflop SB r [3.5, 3.0]
-- **Stacks**: BTN=87.8, SB=70.8, BB=97.5, UTG=135.6, MP=168.8, CO=66.4
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG f 0.0 | MP f 0.0 | CO f 0.0 | BTN f 0.0 | SB r 3.0 | BB f 0.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | UTG f | MP f | CO f | BTN f | SB r parcial 3.50 | BB f
-  2. SB p 0.50 | BB p 1.00 | UTG f | MP f | CO f | BTN f | SB r absoluta 3.00 | BB f
-
-### H_1188 - 2026-09-18
-
-- **Pot declarado**: 1.9
-- **Combinaciones**: 2
-- **Netos posibles**: [2.0]
-- **Brutos posibles**: [2.9, 3.4]
-- **Coincidencia**: neto = 2.0 (dif 0.1)
-- **Causa**: `DEVUELTA`
-- **Diferencia**: preflop SB r [2.4, 1.9]
-- **Stacks**: MP=132.6, CO=68.9, BTN=124.9, SB=64.10000000000001, BB=46.8
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | MP f 0.0 | CO f 0.0 | BTN f 0.0 | SB r 1.9 | BB f 0.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | MP f | CO f | BTN f | SB r parcial 2.40 | BB f
-  2. SB p 0.50 | BB p 1.00 | MP f | CO f | BTN f | SB r absoluta 1.90 | BB f
-
-### H_1241 - 2026-09-18
-
-- **Pot declarado**: 24.7
-- **Combinaciones**: 4
-- **Netos posibles**: [24.7, 26.6]
-- **Brutos posibles**: [32.7, 33.6, 34.7, 35.6]
-- **Coincidencia**: neto = 24.7 (dif 0.0)
-- **Causa**: `DEVUELTA`
-- **Diferencia**: preflop BTN r [22.0, 20.0]
-- **Stacks**: CO=128.7, BTN=86.3, SB=112.3, BB=12.0, UTG=63.3, MP=112.7
-- **Acciones**:
-- **preflop**: SB p 0.5 | BB p 1.0 | UTG f 0.0 | MP f 0.0 | CO f 0.0 | BTN r 2.0 | SB c 2.0 | BB r 12.0 | BTN r 20.0 | SB f 0.0
-- **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | UTG f | MP f | CO f | BTN r absoluta 2.00 | SB c 2.00 | BTN r parcial 22.00 | SB f
-  2. SB p 0.50 | BB p 1.00 | UTG f | MP f | CO f | BTN r absoluta 2.00 | SB c 2.00 | BTN r absoluta 20.00 | SB f
-
-### REPARTO (mismo bote; cambia quien aporta) - 11
+  1. SB p 0.50 | BB p 1.00 | UTG f | MP c 1.00 | BTN f | SB b parcial 5.50 | BB r absoluta 9.00 | MP f | SB c 9.00 | SB x | BB b absoluta 6.00 | SB c 6.00 | SB x | BB b absoluta 9.70 | SB f
+  2. SB p 0.50 | BB p 1.00 | UTG f | MP c 1.00 | BTN f | SB b absoluta 5.00 | BB r absoluta 9.00 | MP f | SB c 9.00 | SB x | BB b absoluta 6.00 | SB c 6.00 | SB x | BB b absoluta 9.70 | SB f
 
 ### H_0104 - 2026-07-29
 
 - **Pot declarado**: 19.4
 - **Combinaciones**: 4
-- **Netos posibles**: [18.05, 19.38]
-- **Brutos posibles**: [18.75, 20.38]
+- **Netos posibles**: [19.38, 20.71]
+- **Brutos posibles**: [19.38, 21.01]
 - **Coincidencia**: neto = 19.38 (dif -0.02)
 - **Causa**: `REPARTO`
 - **Diferencia**: preflop BB r [4.0, 3.0]
 - **Stacks**: UTG=31.0, MP=128.2, CO=72.5, BTN=132.3, SB=25.7, BB=9.7
 - **Acciones**:
 - **preflop**: SB p 0.5 | BB p 1.0 | UTG p 1.0 | UTG x 0.0 | MP f 0.0 | CO f 0.0 | BTN f 0.0 | SB c 1.0 | BB r 3.0 | UTG r 9.0 | SB f 0.0 | BB c 9.0
-- **flop**: UTG x 0.0 | BB b 0.7
+- **flop**: UTG x 0.0 | BB b 0.7 | UTG c 0.7
 - **turn**: UTG x 0.0
 - **river**: UTG x 0.0
 - **Lecturas alternativas** (2):
-  1. SB p 0.50 | BB p 1.00 | UTG p 1.00 | UTG x | MP f | CO f | BTN f | SB c 1.00 | BB r parcial 4.00 | UTG r parcial 10.00 | SB f | BB c all-in 9.70 | UTG x | UTG x | UTG x
-  2. SB p 0.50 | BB p 1.00 | UTG p 1.00 | UTG x | MP f | CO f | BTN f | SB c 1.00 | BB r absoluta 3.00 | UTG r parcial 10.00 | SB f | BB c all-in 9.70 | UTG x | UTG x | UTG x
+  1. SB p 0.50 | BB p 1.00 | UTG p 1.00 | UTG x | MP f | CO f | BTN f | SB c 1.00 | BB r parcial 4.00 | UTG r absoluta 9.00 | SB f | BB c 9.00 | UTG x | BB b absoluta 0.70 | UTG c 0.70 | UTG x | UTG x
+  2. SB p 0.50 | BB p 1.00 | UTG p 1.00 | UTG x | MP f | CO f | BTN f | SB c 1.00 | BB r absoluta 3.00 | UTG r absoluta 9.00 | SB f | BB c 9.00 | UTG x | BB b absoluta 0.70 | UTG c 0.70 | UTG x | UTG x
 
 ### H_0127 - 2026-07-29
 
@@ -2635,6 +1741,24 @@ La `causa` describe por que hay mas de una traza. `DEVUELTA` no es un error de b
 - **Lecturas alternativas** (2):
   1. SB p 0.50 | BB p 1.00 | MP f | CO c 1.00 | BTN f | SB f | BB r parcial 7.00 | BB c 8.40 | BB x | BB x | BB x
   2. SB p 0.50 | BB p 1.00 | MP f | CO c 1.00 | BTN f | SB f | BB r absoluta 6.00 | BB c 8.40 | BB x | BB x | BB x
+
+### H_0136 - 2026-07-29
+
+- **Pot declarado**: 39.8
+- **Combinaciones**: 4
+- **Netos posibles**: [16.15, 18.05]
+- **Brutos posibles**: [39.75, 41.65]
+- **Coincidencia**: bruto = 39.75 (dif -0.05)
+- **Causa**: `REPARTO`
+- **Diferencia**: preflop SB b [2.5, 2.0]
+- **Stacks**: SB=31.6, BB=109.8, UTG=13.5, MP=94.7, BTN=91.2
+- **Acciones**:
+- **preflop**: SB p 0.5 | BB p 1.0 | UTG c 1.0 | MP f 0.0 | BTN f 0.0 | SB b 2.0 | BB r 8.0 | UTG f 0.0 | SB c 8.0
+- **flop**: SB x 0.0 | BB x 0.0
+- **turn**: SB b 23.6 | BB f 0.0
+- **Lecturas alternativas** (2):
+  1. SB p 0.50 | BB p 1.00 | UTG c 1.00 | MP f | BTN f | SB b parcial 2.50 | BB r absoluta 8.00 | UTG f | SB c 8.00 | SB x | BB x | SB b absoluta 23.60 | BB f
+  2. SB p 0.50 | BB p 1.00 | UTG c 1.00 | MP f | BTN f | SB b absoluta 2.00 | BB r absoluta 8.00 | UTG f | SB c 8.00 | SB x | BB x | SB b absoluta 23.60 | BB f
 
 ### H_0223 - 2026-07-31
 
@@ -2792,7 +1916,7 @@ La `causa` describe por que hay mas de una traza. `DEVUELTA` no es un error de b
   1. SB p 0.50 | BB p 1.00 | UTG r absoluta 3.00 | MP f | CO f | BTN c 3.00 | SB f | BB r parcial 16.00 | BTN f | BB c 44.90
   2. SB p 0.50 | BB p 1.00 | UTG r absoluta 3.00 | MP f | CO f | BTN c 3.00 | SB f | BB r absoluta 15.00 | BTN f | BB c 44.90
 
-### NETO_IGUAL (mismo neto; cambian importes igualados) - 5
+### NETO_IGUAL (mismo neto; cambian importes igualados) - 6
 
 ### H_0146 - 2026-07-29
 
@@ -2831,6 +1955,23 @@ La `causa` describe por que hay mas de una traza. `DEVUELTA` no es un error de b
 - **Lecturas alternativas** (2):
   1. SB p 0.50 | BB p 1.00 | UTG c 1.00 | MP f | CO f | BTN c 1.00 | SB b parcial 6.50 | BB f | UTG f | BTN c 6.50 | SB b absoluta 13.30 | BTN c all-in 12.00 | SB x | SB x
   2. SB p 0.50 | BB p 1.00 | UTG c 1.00 | MP f | CO f | BTN c 1.00 | SB b absoluta 6.00 | BB f | UTG f | BTN c 6.00 | SB b absoluta 13.30 | BTN c all-in 12.50 | SB x | SB x
+
+### H_0709 - 2026-09-15
+
+- **Pot declarado**: 18.05
+- **Combinaciones**: 2
+- **Netos posibles**: [18.05]
+- **Brutos posibles**: [18.05, 19.05]
+- **Coincidencia**: neto = 18.05 (dif 0.0)
+- **Causa**: `NETO_IGUAL`
+- **Diferencia**: preflop BB r [6.0, 5.0]; preflop CO c [6.0, 5.0]; flop CO c [2.5, 3.5]
+- **Stacks**: SB=103.6, BB=159.8, UTG=42.7, MP=165.6, CO=8.5, BTN=9.1
+- **Acciones**:
+- **preflop**: SB p 0.5 | BB p 1.0 | UTG f 0.0 | MP c 1.0 | CO c 1.0 | BTN f 0.0 | SB c 1.0 | BB r 5.0 | MP f 0.0 | CO c 5.0 | SB f 0.0
+- **flop**: BB b 3.5 | CO c 3.5
+- **Lecturas alternativas** (2):
+  1. SB p 0.50 | BB p 1.00 | UTG f | MP c 1.00 | CO c 1.00 | BTN f | SB c 1.00 | BB r parcial 6.00 | MP f | CO c 6.00 | SB f | BB b absoluta 3.50 | CO c all-in 2.50
+  2. SB p 0.50 | BB p 1.00 | UTG f | MP c 1.00 | CO c 1.00 | BTN f | SB c 1.00 | BB r absoluta 5.00 | MP f | CO c 5.00 | SB f | BB b absoluta 3.50 | CO c 3.50
 
 ### H_0773 - 2026-09-15
 

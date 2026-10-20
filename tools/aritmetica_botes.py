@@ -31,12 +31,17 @@ SEMANTICA OBJETIVO (normalizacion, solo manos de lectura unica):
     mano se gana por fold; NETO si hay showdown. Asi el motor calcula la
     ganancia restando solo las apuestas del ganador.
 
+Las ambiguas por `DEVUELTA` (la diferencia esta en una subida no pagada y el
+neto no cambia) se resuelven solas: se elige la lectura absoluta cuyos
+importes coinciden con los grabados. `H_0024` queda excluida.
+
 Clasificacion por mano:
   UNICA_EXACTA | UNICA_TOL | ACCION_AMBIGUA | NADA
 
 USO
 ---
   python tools/aritmetica_botes.py [ruta] [--aplicar] [--doc RUTA]
+  python tools/aritmetica_botes.py --aplicar-resueltas
 """
 import argparse
 import io
@@ -53,6 +58,10 @@ COMISION_TOPE = 2.5
 MAX_ESTADOS_CALLE = 40000
 MAX_COMBOS = 120000
 EPS = 1e-9
+
+# H_0024: el usuario detecto que la accion grabada como `r` era una llamada
+# (`BB c 3.4`). No se resuelve por importe: se queda para revision manual.
+NO_RESOLVER_DEVUELTA = {'H_0024'}
 
 
 def _clave(c, folded, res):
@@ -356,6 +365,7 @@ def _diagnostico(mano, trazas, campo):
                  .get('actions') or [])[i]
             diferencias.append({
                 'street': st,
+                'i': i,
                 'pos': a.get('pos'),
                 'action': a.get('action'),
                 'valores': [None if v is None else round(v, 2)
@@ -377,7 +387,35 @@ def _diagnostico(mano, trazas, campo):
     return causa, diferencias[:10]
 
 
-def clasificar(mano):
+def _elegir_absoluta(mano, trazas, diferencias):
+    """Traza en la que cada accion dudosa vale lo grabado (lectura absoluta)."""
+    por_calle = {}
+    for st in STREETS:
+        por_calle[st] = (((mano.get('streets') or {}).get(st) or {})
+                         .get('actions') or [])
+    elegidos = []
+    for r in trazas:
+        plano = {}
+        for st, amounts in zip(r['calles'], r['res']):
+            for i, amt in enumerate(amounts):
+                plano[(st, i)] = amt
+        ok = True
+        for d in diferencias:
+            acts = por_calle.get(d['street']) or []
+            if d['i'] >= len(acts):
+                ok = False
+                break
+            raw = float(acts[d['i']].get('amount') or 0.0)
+            val = plano.get((d['street'], d['i']))
+            if val is None or abs(float(val) - raw) > 1e-9:
+                ok = False
+                break
+        if ok:
+            elegidos.append(r)
+    return elegidos[0] if len(elegidos) == 1 else None
+
+
+def clasificar(mano, resolver_devuelta=False):
     pot = round(float(mano.get('final_pot') or 0.0), 4)
     viol = violaciones_stack(mano)
     res = enumerar_mano(mano)
@@ -436,21 +474,35 @@ def clasificar(mano):
         causa, diferencias = _diagnostico(
             mano, _trazas_unicas(match), campo)
 
-    resuelto = None
+    r_ok = None
+    resuelta_por = None
     if n_trazas == 1 and match and not viol:
-        r = match[0]
-        objetivo = r['bruto'] if not r['showdown'] else r['neto']
+        r_ok = match[0]
+    elif (resolver_devuelta and not viol
+          and causa and causa.startswith('DEVUELTA')
+          and mano.get('hand_id') not in NO_RESOLVER_DEVUELTA):
+        r_ok = _elegir_absoluta(mano, _trazas_unicas(match), diferencias)
+        if r_ok is not None:
+            resuelta_por = 'DEVUELTA'
+            difs = [abs(c['diff']) for c in detalles if c]
+            clase = ('UNICA_EXACTA'
+                     if difs and min(difs) <= EXACTO else 'UNICA_TOL')
+
+    resuelto = None
+    if r_ok is not None:
+        objetivo = r_ok['bruto'] if not r_ok['showdown'] else r_ok['neto']
         resuelto = {
-            'showdown': r['showdown'],
+            'showdown': r_ok['showdown'],
             'pot_objetivo': round(objetivo, 4),
             'por_calle': [
                 {'street': st, 'amounts': [None if x is None else round(x, 4)
                                            for x in amounts]}
-                for st, amounts in zip(r['calles'], r['res'])
+                for st, amounts in zip(r_ok['calles'], r_ok['res'])
             ],
         }
 
-    if clase in ('UNICA_EXACTA', 'UNICA_TOL') and n_trazas > 1:
+    if (clase in ('UNICA_EXACTA', 'UNICA_TOL') and n_trazas > 1
+            and not resuelta_por):
         clase = 'ACCION_AMBIGUA'
 
     traza = match[0]['path'] if len(match) == 1 else None
@@ -484,6 +536,7 @@ def clasificar(mano):
         'stack_violations': viol,
         'causa': causa,
         'diferencias': diferencias,
+        'resuelta_por': resuelta_por,
         'resuelto': resuelto,
     }
 
@@ -491,13 +544,16 @@ def clasificar(mano):
 # --------------------------------------------------------------------------
 # Normalizacion de la copia de trabajo
 # --------------------------------------------------------------------------
-def aplicar_normalizacion(manos, detalle, ruta):
-    bak = ruta + '.bak_antes_normalizar'
+def aplicar_normalizacion(manos, detalle, ruta, solo_resueltas=False):
+    bak = ruta + ('.bak_antes_resolver_devuelta' if solo_resueltas
+                  else '.bak_antes_normalizar')
     shutil.copy2(ruta, bak)
     cambios_acc = 0
     cambios_pot = 0
     manos_n = 0
     for h, d in zip(manos, detalle):
+        if solo_resueltas and d.get('resuelta_por') != 'DEVUELTA':
+            continue
         r = d.get('resuelto')
         if not r:
             continue
@@ -563,14 +619,15 @@ def escribir_documento(manos, detalle, ruta):
                   'parciales/absolutas, con ni sin comision, ni con ni sin la '
                   'ciega del SB.')
     lineas.append('')
-    lineas.append('De las `ACCION_AMBIGUA`: `DEVUELTA` %d (la diferencia esta '
-                  'en una subida no pagada; el bote neto NO cambia), '
-                  '`REPARTO` %d (mismo neto y bruto; cambia quien aporta), '
-                  '`NETO_IGUAL` %d (mismo neto; cambian importes igualados), '
-                  '`REAL` %d (el neto cambia; hay que decidir). Solo `REAL` '
-                  'afecta a la ganancia.'
-                  % (len(amb_dev), len(amb_rep), len(amb_net),
-                     len(amb_real)))
+    lineas.append('De las `ACCION_AMBIGUA`: `REPARTO` %d (mismo neto y bruto; '
+                  'cambia quien aporta), `NETO_IGUAL` %d (mismo neto; cambian '
+                  'importes igualados), `REAL` %d (el neto cambia; hay que '
+                  'decidir). Solo `REAL` afecta a la ganancia. Las `DEVUELTA` '
+                  '(subida no pagada; el neto no cambia) se resuelven solas '
+                  'eligiendo la lectura absoluta%s.'
+                  % (len(amb_rep), len(amb_net), len(amb_real),
+                     ('' if not amb_dev else
+                      '; quedan %d sin resolver' % len(amb_dev))))
     lineas.append('')
 
     def acciones(h):
@@ -685,16 +742,23 @@ def main():
     ap.add_argument('--salida', default=os.path.join(
         os.getcwd(), 'trabajo', 'botes_aritmetica.jsonl'))
     ap.add_argument('--aplicar', action='store_true')
+    ap.add_argument('--no-resolver-devuelta', dest='resolver_devuelta',
+                    action='store_false',
+                    help='no resolver las ambiguas DEVUELTA (para inspeccion)')
+    ap.add_argument('--aplicar-resueltas', action='store_true')
     ap.add_argument('--doc', default=os.path.join(
         os.getcwd(), 'trabajo', 'BOTES_NO_ENCONTRADOS.md'))
     args = ap.parse_args()
+    if args.aplicar and args.aplicar_resueltas:
+        ap.error('usa --aplicar o --aplicar-resueltas, no ambos')
+    resolver = args.resolver_devuelta
     manos = cargar(args.ruta)
     if args.limite:
         manos = manos[:args.limite]
     cuentas = {}
     detalle = []
     for i, h in enumerate(manos, 1):
-        c = clasificar(h)
+        c = clasificar(h, resolver_devuelta=resolver)
         cuentas[c['clase']] = cuentas.get(c['clase'], 0) + 1
         detalle.append(c)
         if i % 100 == 0:
@@ -709,6 +773,17 @@ def main():
               'MULTI_TOL', 'NADA', 'EXPLOTA'):
         if k in cuentas:
             print('  %-14s %4d' % (k, cuentas[k]))
+    resueltas = sum(1 for d in detalle if d.get('resuelta_por'))
+    if resueltas:
+        print('  %-14s %4d' % ('DEVUELTA->UNICA', resueltas))
+    if args.aplicar_resueltas:
+        r = aplicar_normalizacion(manos, detalle, args.ruta,
+                                   solo_resueltas=True)
+        print()
+        print('RESUELTAS DEVUELTA aplicadas a %d manos' % r['manos'])
+        print('  acciones corregidas: %d' % r['acciones'])
+        print('  pots corregidos    : %d' % r['pots'])
+        print('  respaldo           : %s' % r['respaldo'])
     if args.aplicar:
         r = aplicar_normalizacion(manos, detalle, args.ruta)
         print()
