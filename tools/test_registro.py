@@ -670,7 +670,7 @@ def test_el_hallazgo_de_a1_esta_declarado_sin_arreglarlo():
     assert 'ASIGNACIONES_QUE_SOBRESCRIBEN = 48' in fuente
 
     # (c) y A2 NO ha tocado el fichero de A1 ✓
-    r = _sp.run(['git', 'diff', '96e48e9', '--', 'tools/cuarentena.py'],
+    r = _sp.run(['git', 'diff', '22a08b8', '--', 'tools/cuarentena.py'],
                 cwd=raiz, capture_output=True, text=True)
     assert not r.stdout.strip(), (
         'A2 ha tocado `tools/cuarentena.py`, que es de A1:\n%s'

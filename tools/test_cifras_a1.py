@@ -137,8 +137,16 @@ def test_ningun_test_pina_ningun_numero_de_a1():
     Y en un ARBOL lo que se mira es el VALOR y el CONTEXTO ✓.
     """
     conteos = _conteos_de_a1()
+    # Y el CERO no se busca ✓, y el motivo es que el cero es el numero
+    # de nadie ✓: si la cuarentena esta vacia ✓, el conteo es 0 ✓, y buscar
+    # el literal 0 en los tests encontraria miles de cosas ✓ —un 0 es un
+    # indice, un contador, un limite ✓— y el test daria un falso positivo ✓.
+    #
+    # Y la regla ✓: solo se buscan los numeros de A1 que **significan algo**
+    # ✓ —que son distintos de cero y de los estables ✓—, y cuando A1
+    # libere mas registros ✓, el numero deja de ser cero ✓ y se busca solo ✓.
     medidos = {k: v for k, v in conteos.items()
-               if v is not None and v not in ESTABLES}
+               if v is not None and v != 0 and v not in ESTABLES}
     if not medidos:
         return          # sin los ficheros de A1, no hay nada que comprobar
 
@@ -356,6 +364,13 @@ def test_una_liberacion_de_cuarentena_no_rompe_nada():
     if not (os.path.exists(origen_cuarentena)
             and os.path.exists(origen_filtrada)):
         pytest.skip('A1 todavia no ha dejado la cuarentena en `trabajo/`')
+    # y si la cuarentena esta vacia, no hay nada que liberar, y eso es
+    # precisamente el caso en el que A1 ha terminado
+    n_antes = sum(1 for l in io.open(origen_cuarentena, encoding='utf-8')
+                  if l.strip())
+    if n_antes == 0:
+        pytest.skip('la cuarentena esta vacia: A1 ha liberado todos los '
+                    'registros, y no hay nada que simular')
 
     with tempfile.TemporaryDirectory() as alta:
         cuarentena = os.path.join(alta, 'cuarentena.jsonl')
@@ -416,7 +431,7 @@ def test_la_regla_por_cifra_y_contexto_no_da_falsos_positivos():
     """
     conteos = _conteos_de_a1()
     medidos = {k: v for k, v in conteos.items()
-               if v is not None and v not in ESTABLES}
+               if v is not None and v != 0 and v not in ESTABLES}
     if not medidos:
         pytest.skip('A1 todavia no ha dejado numeros que vigilar')
 

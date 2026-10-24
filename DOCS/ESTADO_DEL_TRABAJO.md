@@ -35,6 +35,7 @@
 | **la cobertura de los guardianes** | el barrido mira la raíz y `trabajo/`, y el código fuera de las tres carpetas tiene que estar declarado |
 | **el procedimiento de integración** | `tools/integrar_copia.py`, probado en seco con la copia sintética **completa** de 1258 manos, y con sus dos caminos de fallo |
 | **los DOS fixtures** | uno **suave** —solo recodifica— y otro **duro** —además añade las ciegas que faltaban—, y el duro reconoce **1258** ciegas, las mismas que la copia real |
+| **la cuarentena de A1, cerrada** | MEDIDO: `trabajo/cuarentena.jsonl` tiene **0** registros. A1 ha resuelto y quitado los 5 que quedaban, y la copia filtrada es **1253** manos (era 1056). Y la cuarentena no es un estado de A2: A2 no la define ni fija sus números |
 | **el número de ciegas, que no es una constante global** | lo mide cada fixture y lo dice en su informe, y es **exacto** y no un mínimo: un control que no puede fallar no es un control |
 | **la auditoría del contrato de la `p`** | `DOCS/AUDITORIA_CONTRATO_P.md`: el inventario de los lectores y los productores, los tres efectos, los casos sintéticos, la compatibilidad con CM-004, y la **mutación** que demuestra que los tests no son vacíos |
 | **la auditoría de `matrix`** | `DOCS/AUDITORIA_MATRIX.md`: el mapa real de los lectores, los contratos de lectura, y los cinco hallazgos con su categoría. Y sus tres decisiones, declaradas como de A1 |
@@ -45,8 +46,10 @@
 
 | trabajo | dueño | condición de activación |
 |---|---|---|
-| las manos sin resolver | A1 | la revisión manual de cada una, con la grabación original. Y el NÚMERO es de A1 y **se mueve**: MEDIDO, eran 203 cuando este bloque empezó, y ahora son menos, porque A1 ha seguido resolviendo ✓. Y por eso aquí no se escribe la cifra: una cifra de A1 en un documento de A2 caduca sola ✓ |
-| la cuarentena de registros | A1 | **A1 ha dejado la cuarentena en `trabajo/`** ✓; sus ficheros y sus números son de A1 ✓, y **A2 no los fija ni define sus estados** ✓. Y la primera ejecución real de `integrar_copia.py` **dependerá de cuántos registros se hayan liberado de la cuarentena** ✓ |
+| el número de ciegas que la copia debe reconocer | A1 | haber cerrado las manos sin resolver ✓ (MEDIDO, la cuarentena ya tiene 0 registros y la copia filtrada tiene 1253 manos). Y el número sale de los datos revisados ✓. Y el procedimiento **no tiene un valor por defecto**: sin ese parámetro sale con código **2** |
+| las doce categorías que la copia debe dar | A1 | lo mismo, y por un motivo que está medido: **la copia no es solo una re-codificación** |
+| la primera ejecución real de `integrar_copia.py` | A1 | el número de ciegas declarado, y el control de categorías declarado |
+| la cuarentena de registros | A1 | **CERRADA por A1** ✓: MEDIDO, `trabajo/cuarentena.jsonl` tiene **0** registros, y la copia filtrada tiene **1253** manos. Y los ficheros y los números son de A1 ✓, y A2 no los fija ni define sus estados ✓ |
 | el número de ciegas que la copia debe reconocer | A1 | haber cerrado las 203, y el número sale de los datos revisados. Y el procedimiento **no tiene un valor por defecto**: sin ese parámetro sale con código **2** |
 | las doce categorías que la copia debe dar | A1 | lo mismo, y por un motivo que está medido: **la copia no es solo una re-codificación** |
 | la primera ejecución real de `integrar_copia.py` | A1 | el número de ciegas declarado, y el control de categorías declarado |
