@@ -267,7 +267,7 @@ def enumerar_mano(mano, tope=MAX_COMBOS):
             if aportado_calle >= live - 0.01 or all_in:
                 en_showdown += 1
         showdown = en_showdown >= 2
-        base = ig_t if showdown else round(ig_t - ig_u, 4)
+        base = ig_t  # comision sobre todas las apuestas igualadas (sin excedente)
         rake = min(COMISION_PORC * base, COMISION_TOPE) if base > 0 else 0.0
         resultados.append({
             'neto': round(ig_t - rake, 4),
