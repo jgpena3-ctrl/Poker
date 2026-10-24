@@ -8,7 +8,7 @@ externa y una copia filtrada para seguir trabajando sin las manos pendientes:
     trabajo/cuarentena.jsonl              una linea por mano: motivos
     trabajo/hands_db_sin_cuarentena.jsonl copia sin esas manos
 
-Motivos (salen de `trabajo/botes_aritmetica.jsonl`):
+Motivos (salen de `trabajo/botes_aritmetica_revision.jsonl`):
 
   * `STACK`             alguna accion supera el stack
   * `NADA`              el bote no coincide con ninguna lectura
@@ -42,7 +42,7 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB = os.path.join(ROOT, 'trabajo', 'hands_db_edicion.jsonl')
-TRAZA = os.path.join(ROOT, 'trabajo', 'botes_aritmetica.jsonl')
+TRAZA = os.path.join(ROOT, 'trabajo', 'botes_aritmetica_revision.jsonl')
 SALIDA = os.path.join(ROOT, 'trabajo', 'cuarentena.jsonl')
 SALIDA_DB = os.path.join(ROOT, 'trabajo', 'hands_db_sin_cuarentena.jsonl')
 
