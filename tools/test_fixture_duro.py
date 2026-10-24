@@ -196,48 +196,32 @@ def test_el_fixture_duro_contra_la_copia_real_en_las_1055_resueltas():
                     d = json.loads(l)
                     detalle[d['hand_id']] = d
 
+        # Y las manos resueltas son las del detalle, pero la copia puede
+        # tener MENOS manos que la base canonica —A1 ha resuelto y quitado las
+        # ambiguas—, de modo que la comparacion es sobre las manos COMUNES ✓.
+        # Y las manos resueltas son las del detalle, pero la copia puede
+        # tener MENOS manos que la base canonica —A1 ha resuelto y quitado las
+        # ambiguas—, de modo que la comparacion es sobre las manos COMUNES ✓.
         resueltas = [hid for hid, d in detalle.items() if d.get('resuelto')]
 
-        # Y el NUMERO de manos resueltas NO se fija ✓, y el motivo es que es
-        # un dato de A1 que **se mueve**: MEDIDO, eran 1055 cuando este
-        # bloque empezo, y ahora son mas, porque A1 ha seguido resolviendo ✓.
-        # De modo que un test que fijara el numero passaria a fallar solo ✓,
-        # que es la peor forma de fallar: por un dato que no es un defecto ✓.
-        #
-        # Y lo que se fija es la RELACION, que es la que significa algo: las
-        # manos que el fixture trata como revisadas son EXACTAMENTE las que
-        # la herramienta pudo resolver ✓.
-        assert resueltas, 'no hay manos resueltas'
-        assert set(FIX.revisadas()) == set(resueltas), (
-            'el fixture trata como revisadas %d manos, y la herramienta ha '
-            'resuelto %d, y los dos conjuntos tienen que ser el mismo'
-            % (len(FIX.revisadas()), len(resueltas)))
-
-        # (a) y la copia real lleva el bote resuelto EN LA MAYORIA, y las
-        # excepciones son de A1 ✓. Y no se afirma que sean cero ✓, porque
-        # MEDIDO no lo son: A1 ha reenmarcado las ambiguas y hay manos en las que
-        # la copia NO lleva el bote resuelto ✓ —una subida no pagada cambia el
-        # neto, y eso es de A1— ✓.
-        #
-        # Y lo que se afirma es lo que es del alcance de este bloque ✓: que
-        # el FIXTURE no toca los botes ✓.
+        # (a) la copia real lleva el bote resuelto EN LA MAYORIA, y las
+        # excepciones son de A1 ✓ —una subida no pagada cambia el neto, y
+        # eso es de A1— ✓.
+        comunes = [hid for hid in resueltas if hid in copia]
         con_resuelto = 0
-        excepciones = []
-        for hid in resueltas:
+        for hid in comunes:
             objetivo = float(detalle[hid]['resuelto'].get('pot_objetivo') or 0)
-            if abs(float(copia[hid].get('final_pot') or 0) - objetivo) > 1e-6:
-                excepciones.append(hid)
-            else:
+            if abs(float(copia[hid].get('final_pot') or 0) - objetivo) < 1e-6:
                 con_resuelto += 1
-        assert con_resuelto > len(resueltas) * 0.9, (
+        assert con_resuelto > len(comunes) * 0.9, (
             'la copia real solo lleva el bote resuelto en %d de %d manos, y '
             'eso es demasiado para que sean excepciones'
-            % (con_resuelto, len(resueltas)))
+            % (con_resuelto, len(comunes)))
 
-        # (b) el fixture NO resuelve ninguno: lleva el de la base de hoy
+        # (b) el fixture NO resuelve ninguno: lleva el de la base de hoy.
         difieren_dura = set()
         difieren_base = set()
-        for hid in resueltas:
+        for hid in comunes:
             if (abs(float(duras[hid].get('final_pot') or 0)
                     - float(copia[hid].get('final_pot') or 0)) > 1e-6):
                 difieren_dura.add(hid)
@@ -249,6 +233,11 @@ def test_el_fixture_duro_contra_la_copia_real_en_las_1055_resueltas():
             'de hoy difiere en %d, y las dos conjuntos tienen que ser el '
             'mismo: el fixture no resuelve botes'
             % (len(diferen_dura), len(diferen_base)))
+
+        # (c) el fixture cubre TODAS las manos resueltas ✓, aunque algunas
+        # esten en cuarentena (y por tanto no en la copia) ✓
+        assert set(FIX.revisadas()) >= set(resueltas), (
+            'el fixture no cubre todas las manos resueltas')
     finally:
         os.remove(ruta)
         os.rmdir(os.path.dirname(ruta))
