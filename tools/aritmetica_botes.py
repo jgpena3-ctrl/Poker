@@ -5,7 +5,9 @@ Para cada mano enumera TODAS las lecturas posibles de los importes:
 
   * una apuesta/subida `b`/`r` puede ser ABSOLUTA (el importe es el total
     comprometido en la calle) o PARCIAL (el importe se suma a lo que ese
-    jugador ya tenia comprometido en la calle).
+    jugador ya tenia comprometido en la calle). Si la accion trae
+    `amount_semantics: "absoluta"` o `"parcial"`, esa lectura es la unica
+    que se prueba para esa accion.
   * una llamada `c` se resuelve contra la apuesta viva; si el stack no
     alcanza, es un all-in corto.
 
@@ -128,10 +130,19 @@ def _expandir(estado, a, restante):
         if v <= EPS:
             return [nuevo(dict(c), set(folded), last,
                           '%s %s 0 (no-op)' % (pos, acc), None)]
+        semantica = a.get('amount_semantics')
         candidatos = []
-        if actual > EPS:
-            candidatos.append(('parcial', round(actual + v, 4)))
-        candidatos.append(('absoluta', round(v, 4)))
+        if semantica == 'absoluta':
+            candidatos.append(('absoluta', round(v, 4)))
+        elif semantica == 'parcial':
+            if actual > EPS:
+                candidatos.append(('parcial', round(actual + v, 4)))
+            else:
+                candidatos.append(('absoluta', round(v, 4)))
+        else:
+            if actual > EPS:
+                candidatos.append(('parcial', round(actual + v, 4)))
+            candidatos.append(('absoluta', round(v, 4)))
         out = []
         vistos = set()
         for tipo, val in candidatos:

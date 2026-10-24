@@ -479,7 +479,8 @@ def showdown_sin_winner(hand):
     texto = ' '.join(str(v) for v in sh.values())
     activos = {p.get('pos') for p in (hand.get('players') or [])
                if p.get('active') and p.get('pos')}
-    citados = {p for p in activos if p and p in texto}
+    citados = {p for p in activos
+               if p and re.search(r'\b%s\b' % re.escape(p), texto)}
     ganadores = {pos_de_pid(hand, w) for w in (hand.get('winner') or [])}
     ganadores.discard(None)
     if citados - ganadores:
