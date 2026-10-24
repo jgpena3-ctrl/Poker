@@ -428,6 +428,28 @@ def _elegir_absoluta(mano, trazas, diferencias):
 
 
 def clasificar(mano, resolver_devuelta=False):
+    # Manos con comision especial verificadas por el usuario: no se auditan
+    if mano.get('commission_special'):
+        return {'hand_id': mano.get('hand_id'),
+                'date': (mano.get('date') or '')[:10],
+                'clase': 'UNICA_EXACTA', 'campo': 'bruto',
+                'pot': round(float(mano.get('final_pot') or 0.0), 4),
+                'n_combinaciones': 0, 'netos_distintos': 0,
+                'netos': [], 'brutos': [], 'n_trazas': 0,
+                'coincidencias': [], 'traza': None, 'alternativas': [],
+                'stack_violations': [], 'causa': None, 'diferencias': [],
+                'resuelta_por': 'COMISION_ESPECIAL', 'resuelto': None}
+    # Manos con stack dentro de tolerancia verificadas por el usuario
+    if mano.get('stack_tolerance'):
+        return {'hand_id': mano.get('hand_id'),
+                'date': (mano.get('date') or '')[:10],
+                'clase': 'UNICA_EXACTA', 'campo': 'bruto',
+                'pot': round(float(mano.get('final_pot') or 0.0), 4),
+                'n_combinaciones': 0, 'netos_distintos': 0,
+                'netos': [], 'brutos': [], 'n_trazas': 0,
+                'coincidencias': [], 'traza': None, 'alternativas': [],
+                'stack_violations': [], 'causa': None, 'diferencias': [],
+                'resuelta_por': 'STACK_TOLERANCIA', 'resuelto': None}
     pot = round(float(mano.get('final_pot') or 0.0), 4)
     viol = violaciones_stack(mano)
     res = enumerar_mano(mano)
@@ -456,12 +478,12 @@ def clasificar(mano, resolver_devuelta=False):
     clase, campo, usados = 'NADA', None, []
     for c in ('neto', 'bruto', 'neto_sin_sb', 'bruto_sin_sb'):
         vals = valores(c)
-        e = sorted(v for v in vals if abs(v - pot) <= EXACTO)
+        e = sorted(v for v in vals if abs(v - pot) <= EXACTO + 1e-9)
         if e:
             clase = 'UNICA_EXACTA' if len(e) == 1 else 'MULTI_EXACTA'
             campo, usados = c, e
             break
-        t = sorted(v for v in vals if abs(v - pot) <= TOL)
+        t = sorted(v for v in vals if abs(v - pot) <= TOL + 1e-9)
         if t:
             clase = 'UNICA_TOL' if len(t) == 1 else 'MULTI_TOL'
             campo, usados = c, t
