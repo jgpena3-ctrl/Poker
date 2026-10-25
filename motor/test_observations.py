@@ -87,6 +87,16 @@ def test_un_jugador_sin_nombre_no_se_descarta():
     assert obs[0].pos == 'BTN'
 
 
+def test_las_postas_aportan_al_bote_pero_no_son_observaciones():
+    hand = _hand(streets={'preflop': _street([
+        {'pos': 'BB', 'action': 'p', 'amount': 1.0},
+        {'pos': 'BTN', 'action': 'b', 'amount': 2.5},
+    ])})
+    obs = extract_hand(hand)
+    assert [o.action for o in obs] == ['b']
+    assert obs[0].pot_before == 1.0
+
+
 def test_pot_before_y_facing_preflop():
     hand = _hand(streets={'preflop': _street([
         {'pos': 'BTN', 'action': 'b', 'amount': 2.0},

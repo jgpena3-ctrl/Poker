@@ -1,0 +1,14 @@
+{
+  "3bet": 86,
+  "bb_check": 348,
+  "call_3bet": 15,
+  "call_limp": 322,
+  "call_open": 594,
+  "fold": 2211,
+  "fold_vs_3bet": 139,
+  "fold_vs_open": 1471,
+  "limp": 564,
+  "open": 587,
+  "rol": 275,
+  "squeeze": 25
+}

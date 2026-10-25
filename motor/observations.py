@@ -144,6 +144,14 @@ def extract_hand(hand) -> List[Observation]:
             prev_board = list(board)
         street_facing = None          # label de la apuesta/raise vigente
         for pos, act, amt in acts:
+            # `p` es una posta, no una decisión. En la base normalizada
+            # aparece antes de las decisiones preflop; aporta al bote y al
+            # stack del jugador, pero no puede alimentar una tabla de
+            # comportamiento ni convertirse en una acción del Oracle.
+            if act == 'p':
+                total += amt
+                invested[pos] = invested.get(pos, 0.0) + amt
+                continue
             pot_before = total
             active = max(1, total_players - len(folded))
             pot_type = ('SRP' if pf_raises <= 0 else

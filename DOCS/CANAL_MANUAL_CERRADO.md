@@ -1,14 +1,35 @@
 # CANAL MANUAL CERRADO — `hands_db.jsonl`
 
 **Estado:** vigente.
-**Fecha:** 2026-10-19
+**Fecha:** 2026-10-24
 **Commit del estado canónico:** `12c7bed`
-**SHA-256:** `5ae2abd71832dccd3f1d58859a05b35494de24795841682f601e873b41ce4dc1`
-**Líneas:** 1258
+**SHA-256:** `7d3c55db7eca0a3f09282eedaf67032da38f511fa1b975e74e2c7b2a9f4ddc64`
+**Líneas:** 1253
 **Revisión manual:** **terminada**. `H_0001`..`H_1282`, en tres tramos.
 **Saneamiento:** empezado. 3 correcciones; el resto documentado en
 `DOCS/SANEAMIENTO.md`.
 **Vigila:** `motor/test_canal_manual.py` — 16 tests
+
+---
+
+## Adopción de la base normalizada — 2026-10-24
+
+`trabajo/hands_db_edicion.jsonl` pasa a ser la fuente canónica mediante una
+copia verificada, conservando el original local en `data/hands_db.jsonl.bak`.
+La adopción se autorizó después del cierre de la cuarentena: **1253 -> 1253**
+manos candidatas, **0 -> 0** registros en cuarentena y **0 -> 0** violaciones
+del orden de la ciega.
+
+El contrato de aceptación no reutiliza los números de la base anterior:
+el motor reconoce **1253** ciegas y las categorías de primera decisión son
+`3bet=86`, `bb_check=348`, `call_3bet=15`, `call_limp=322`,
+`call_open=594`, `fold=2211`, `fold_vs_3bet=139`, `fold_vs_open=1471`,
+`limp=564`, `open=587`, `rol=275`, `squeeze=25`.
+`trabajo/control_categorias_adopcion.json` fija ese contrato.
+
+El reemplazo retiró cinco manos que no formaban parte de la candidata
+validada: `H_0028`, `H_0072`, `H_0146`, `H_1123` y `H_1188`.
+Los derivados se reconstruyen después de esta adopción desde la nueva fuente.
 
 ---
 

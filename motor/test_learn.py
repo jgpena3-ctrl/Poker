@@ -407,19 +407,21 @@ def test_aceptacion_5_squeeze_necesita_apuesta_previa():
 
 
 def test_squeeze_regresion_sobre_las_900():
-    """Progreso de la correccion de squeeze: 95 -> 7 -> 32 -> 26.
+    """Progreso de la correccion de squeeze: 95 -> 7 -> 32 -> 26 -> 20 -> 18.
 
     - 95 : `limps` contaba cualquier 'c' (los callers del open contaban como
            limpes), lo que inflaba squeeze.
     - 7  : se conto `limps` solo con raises==0 y se rompio squeeze del todo.
     - 32 : se separo `callers`, pero `limps_before` seguia contando.
     - 26 : squeeze = `callers >= 1` unicamente.
-    - 20 : misma regla, pero la ventana paso de 900 a 877 al excluir
-           las 23 de CM-004. 6 de los squeeze estaban dentro.
+        - 20 : misma regla, pero la ventana paso de 900 a 877 al excluir
+               las 23 de CM-004. 6 de los squeeze estaban dentro.
+        - 18 : adopcion de la base normalizada; la ventana conserva 877
+               manos, pero dos decisiones dejan de ser squeeze.
     """
     st = PreflopStats.from_hands(load_hands(reliable_only=True))
     total = sum(st.cats[p]['squeeze'] for p in st.cats)
-    assert total == 20, 'squeeze=%d, se esperaba 20' % total
+    assert total == 18, 'squeeze=%d, se esperaba 18' % total
 
 
 def test_aceptacion_6_bb_no_detectado_si_hay_limp_antes():

@@ -125,7 +125,7 @@ Y con el resultado que se espera, para que repetirla no sea adivinar:
 | el procedimiento, en seco | `python tools/integrar_copia.py --destino <temporal> --origen <candidata> --ciegas-esperadas <N>` | codigo 0, y la base restaurada |
 | el procedimiento, sin el numero | el mismo, **sin** `--ciegas-esperadas` | codigo **2**, y `INCOMPLETA` en la salida |
 | el procedimiento, con el numero equivocado | `--ciegas-esperadas` con el de otra base | codigo **1**, y `EL NUMERO DE CIEGAS NO ES EL DECLARADO` |
-| la base canonica | `python -c "import hashlib,io;print(hashlib.sha256(io.open('data/hands_db.jsonl','rb').read()).hexdigest())"` | `5ae2abd71832dccd3f1d58859a05b35494de24795841682f601e873b41ce4dc1` |
+| la base canonica | `python -c "import hashlib,io;print(hashlib.sha256(io.open('data/hands_db.jsonl','rb').read()).hexdigest())"` | `7d3c55db7eca0a3f09282eedaf67032da38f511fa1b975e74e2c7b2a9f4ddc64` |
 
 ## 8. Y LO QUE NO SE HACE, Y POR QUÉ
 
@@ -321,4 +321,3 @@ los hace comprobables y no una lista de intenciones.
 > Y el paso 4 **no lo dispara este trabajo**. Es de A1, y por una razón que
 > no es de instrumentación: la adopción es una decisión sobre datos que
 > todavía se están validando.
-

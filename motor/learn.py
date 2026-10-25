@@ -107,8 +107,8 @@ RELIABLE_HANDS = 900
 # Documentacion: `DOCS/CANAL_MANUAL_CERRADO.md`, `DOCS/RANGO_VIGENTE.md`.
 HANDS_DB_COMMIT = '12c7bed'
 HANDS_DB_SHA256 = (
-    '5ae2abd71832dccd3f1d58859a05b35494de24795841682f601e873b41ce4dc1')
-HANDS_DB_LINEAS = 1258
+    '7d3c55db7eca0a3f09282eedaf67032da38f511fa1b975e74e2c7b2a9f4ddc64')
+HANDS_DB_LINEAS = 1253
 
 # El rango AUDITADO no es el de calibracion. Son dos cosas distintas y
 # confundirlas es lo que produjo tres cifras conviviendo:

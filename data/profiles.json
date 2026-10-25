@@ -30,9 +30,9 @@
       "vpip": 0.2584,
       "pfr": 0.1461,
       "b3": 0.027,
-      "wtsd": 0.4286,
+      "wtsd": 0.4167,
       "b4": 0.0,
-      "wsd": 0.3333,
+      "wsd": 0.4,
       "f2bar": 0.0,
       "c2cb": 1.0,
       "r2cb": 1.0,
@@ -51,7 +51,7 @@
     "label": "TIBURON",
     "subtype": "Regular",
     "stack_mean": 137.58,
-    "confidence": 0.599,
+    "confidence": 0.592,
     "reliability": "confiable"
   },
   "AZ de A": {
@@ -113,7 +113,7 @@
     "hero": false,
     "n": 11,
     "stats": {
-      "vpip": 0.9091,
+      "vpip": 0.8182,
       "pfr": 0.5455,
       "wtsd": 0.2727,
       "f2cb": 1.0,
@@ -162,7 +162,7 @@
     },
     "label": "PEZ",
     "subtype": "LAG",
-    "stack_mean": 23.74,
+    "stack_mean": 24.01,
     "confidence": 0.733,
     "reliability": "probable"
   },
@@ -171,7 +171,7 @@
     "hero": false,
     "n": 33,
     "stats": {
-      "vpip": 0.5455,
+      "vpip": 0.5758,
       "pfr": 0.0,
       "wtsd": 0.3333,
       "wsd": 0.6667,
@@ -192,17 +192,17 @@
     },
     "label": "PEZ",
     "subtype": "Loose-passive",
-    "stack_mean": 80.32,
+    "stack_mean": 80.35,
     "confidence": 0.62,
     "reliability": "probable"
   },
   "Antonia7": {
     "player": "Antonia7",
     "hero": false,
-    "n": 11,
+    "n": 12,
     "stats": {
-      "vpip": 0.6364,
-      "pfr": 0.0909,
+      "vpip": 0.5833,
+      "pfr": 0.0833,
       "wtsd": 1.0,
       "wsd": 0.5,
       "rb": 1.0,
@@ -220,23 +220,23 @@
     "label": "PEZ",
     "subtype": "Loose-passive",
     "stack_mean": 38.02,
-    "confidence": 0.696,
+    "confidence": 0.709,
     "reliability": "probable"
   },
   "Arquejandro": {
     "player": "Arquejandro",
     "hero": false,
-    "n": 18,
+    "n": 19,
     "stats": {
-      "vpip": 0.4444,
-      "pfr": 0.2778,
+      "vpip": 0.3684,
+      "pfr": 0.2632,
       "wtsd": 0.0,
       "cbet": 1.0,
+      "f2cb": 1.0,
       "b3": 0.2,
       "bar": 1.0,
       "rb": 1.0,
       "c2cb": 1.0,
-      "f2cb": 1.0,
       "b4": 0.0
     },
     "bins": {
@@ -248,8 +248,8 @@
     },
     "label": "TIBURON",
     "subtype": "Regular",
-    "stack_mean": 103.06,
-    "confidence": 0.91,
+    "stack_mean": 102.88,
+    "confidence": 0.865,
     "reliability": "probable"
   },
   "BLKsoul": {
@@ -302,7 +302,7 @@
     "label": "TIBURON",
     "subtype": "Regular",
     "stack_mean": 108.97,
-    "confidence": 0.625,
+    "confidence": 0.62,
     "reliability": "confiable"
   },
   "Bigmac14": {
@@ -313,10 +313,9 @@
       "vpip": 0.4286,
       "pfr": 0.2857,
       "cbet": 1.0,
-      "bar": 0.5,
-      "f2bar": 0.3333,
-      "wtsd": 0.3333,
-      "wsd": 0.0,
+      "bar": 0.0,
+      "f2bar": 0.5,
+      "wtsd": 0.0,
       "b3": 0.0
     },
     "bins": {
@@ -329,7 +328,7 @@
     "label": "PEZ",
     "subtype": "Regular",
     "stack_mean": 38.9,
-    "confidence": 0.695,
+    "confidence": 0.684,
     "reliability": "probable"
   },
   "Bogotano26": {
@@ -472,7 +471,7 @@
     "label": "TIBURON",
     "subtype": "Regular",
     "stack_mean": 52.81,
-    "confidence": 0.56,
+    "confidence": 0.53,
     "reliability": "confiable"
   },
   "Cash7": {
@@ -507,27 +506,27 @@
     "hero": false,
     "n": 31,
     "stats": {
-      "vpip": 0.1935,
-      "pfr": 0.129,
+      "vpip": 0.2258,
+      "pfr": 0.1613,
       "b3": 0.1667,
       "wtsd": 0.6,
       "f2bar": 0.5,
       "rb": 0.6667,
       "wsd": 0.6667,
       "bar": 0.0,
-      "cbet": 0.25
+      "cbet": 0.4
     },
     "bins": {
       "vpip": "mid",
       "pfr": "mid",
       "b3": "mid",
-      "cbet": "low",
+      "cbet": "mid",
       "wtsd": "high"
     },
     "label": "PEZ",
     "subtype": "Regular",
     "stack_mean": 48.95,
-    "confidence": 0.667,
+    "confidence": 0.627,
     "reliability": "probable"
   },
   "Chang2113": {
@@ -539,34 +538,32 @@
       "pfr": 0.0,
       "b3": 0.0,
       "c2cb": 1.0,
-      "f2bar": 0.0,
       "rb": 1.0,
-      "wtsd": 0.5,
-      "wsd": 1.0,
-      "bar": 0.0
+      "bar": 0.0,
+      "f2bar": 0.0
     },
     "bins": {
       "vpip": "loose",
       "pfr": "low",
       "b3": "mid",
       "cbet": "n/a",
-      "wtsd": "mid"
+      "wtsd": "n/a"
     },
     "label": "PEZ",
     "subtype": "Loose-passive",
     "stack_mean": 116.41,
-    "confidence": 0.718,
+    "confidence": 0.743,
     "reliability": "probable"
   },
   "ComboHunter": {
     "player": "ComboHunter",
     "hero": false,
-    "n": 28,
+    "n": 29,
     "stats": {
-      "vpip": 0.1786,
-      "pfr": 0.1071,
+      "vpip": 0.1724,
+      "pfr": 0.1034,
       "b3": 0.0,
-      "wtsd": 0.1429,
+      "wtsd": 0.1333,
       "wsd": 1.0,
       "bar": 0.0,
       "cbet": 1.0,
@@ -582,7 +579,7 @@
     "label": "TIBURON",
     "subtype": "Regular",
     "stack_mean": 101.51,
-    "confidence": 0.542,
+    "confidence": 0.55,
     "reliability": "probable"
   },
   "CorajeRaise": {
@@ -640,17 +637,17 @@
     },
     "label": "PEZ",
     "subtype": "Loose-passive",
-    "stack_mean": 57.69,
+    "stack_mean": 57.71,
     "confidence": 0.607,
     "reliability": "probable"
   },
   "Danielev": {
     "player": "Danielev",
     "hero": false,
-    "n": 16,
+    "n": 17,
     "stats": {
-      "vpip": 0.1875,
-      "pfr": 0.0625,
+      "vpip": 0.1765,
+      "pfr": 0.0588,
       "b4": 0.0,
       "cbet": 1.0,
       "b3": 0.0,
@@ -668,15 +665,15 @@
     "label": "TIBURON",
     "subtype": "Regular",
     "stack_mean": 53.46,
-    "confidence": 0.576,
+    "confidence": 0.568,
     "reliability": "probable"
   },
   "Danjer": {
     "player": "Danjer",
     "hero": false,
-    "n": 3,
+    "n": 4,
     "stats": {
-      "vpip": 0.6667,
+      "vpip": 0.5,
       "pfr": 0.0,
       "b3": 0.0,
       "wtsd": 0.3333,
@@ -692,7 +689,7 @@
     "label": "PEZ",
     "subtype": "Loose-passive",
     "stack_mean": 67.9,
-    "confidence": 0.629,
+    "confidence": 0.598,
     "reliability": "probable"
   },
   "Dannykill": {
@@ -723,10 +720,10 @@
   "Davi-Ari": {
     "player": "Davi-Ari",
     "hero": false,
-    "n": 105,
+    "n": 106,
     "stats": {
-      "vpip": 0.2,
-      "pfr": 0.1714,
+      "vpip": 0.1981,
+      "pfr": 0.1698,
       "b3": 0.0,
       "wtsd": 0.1538,
       "c2cb": 1.0,
@@ -748,7 +745,7 @@
     "label": "TIBURON",
     "subtype": "Regular",
     "stack_mean": 123.51,
-    "confidence": 0.636,
+    "confidence": 0.639,
     "reliability": "confiable"
   },
   "David P.": {
@@ -884,17 +881,18 @@
   "DominoSaurio": {
     "player": "DominoSaurio",
     "hero": false,
-    "n": 97,
+    "n": 96,
     "stats": {
-      "vpip": 0.1856,
-      "pfr": 0.1649,
-      "b3": 0.0488,
-      "wtsd": 0.0323,
+      "vpip": 0.1875,
+      "pfr": 0.1667,
+      "b3": 0.0556,
+      "wtsd": 0.0364,
       "wsd": 0.5,
       "cbet": 0.875,
       "bar": 0.5,
       "f2cb": 1.0,
       "rb": 0.6667,
+      "f2bar": 1.0,
       "c2cb": 1.0,
       "b4": 0.0
     },
@@ -907,17 +905,17 @@
     },
     "label": "TIBURON",
     "subtype": "Regular",
-    "stack_mean": 81.04,
-    "confidence": 0.683,
+    "stack_mean": 80.84,
+    "confidence": 0.682,
     "reliability": "confiable"
   },
   "Edgar28": {
     "player": "Edgar28",
     "hero": false,
-    "n": 28,
+    "n": 27,
     "stats": {
-      "vpip": 0.4643,
-      "pfr": 0.1429,
+      "vpip": 0.4815,
+      "pfr": 0.1481,
       "b3": 0.1429,
       "wtsd": 0.625,
       "wsd": 0.2,
@@ -937,7 +935,7 @@
     "label": "PEZ",
     "subtype": "Loose-passive",
     "stack_mean": 24.7,
-    "confidence": 0.646,
+    "confidence": 0.643,
     "reliability": "probable"
   },
   "Edup": {
@@ -947,9 +945,9 @@
     "stats": {
       "vpip": 0.5556,
       "pfr": 0.1111,
+      "f2bar": 1.0,
       "b3": 0.0,
       "wtsd": 0.0,
-      "f2bar": 1.0,
       "cbet": 1.0,
       "bar": 1.0
     },
@@ -963,7 +961,7 @@
     "label": "PEZ",
     "subtype": "Loose-passive",
     "stack_mean": 48.01,
-    "confidence": 0.653,
+    "confidence": 0.639,
     "reliability": "probable"
   },
   "Electr0": {
@@ -995,33 +993,31 @@
   "Elyessi27": {
     "player": "Elyessi27",
     "hero": false,
-    "n": 79,
+    "n": 82,
     "stats": {
-      "vpip": 0.481,
-      "pfr": 0.0759,
-      "wtsd": 0.1207,
-      "b3": 0.0455,
+      "vpip": 0.439,
+      "pfr": 0.061,
+      "wtsd": 0.1228,
+      "b3": 0.0,
       "bar": 0.9167,
-      "b4": 0.0,
       "wsd": 0.2857,
       "rb": 0.6,
-      "r2cb": 1.0,
-      "cbet": 1.0,
       "f2bar": 0.3333,
       "c2cb": 1.0,
-      "f2cb": 1.0
+      "f2cb": 1.0,
+      "cbet": 1.0
     },
     "bins": {
-      "vpip": "loose",
+      "vpip": "mid",
       "pfr": "low",
       "b3": "mid",
       "cbet": "high",
       "wtsd": "low"
     },
     "label": "PEZ",
-    "subtype": "Loose-passive",
-    "stack_mean": 97.02,
-    "confidence": 0.738,
+    "subtype": "Passive-reg",
+    "stack_mean": 98.35,
+    "confidence": 0.829,
     "reliability": "confiable"
   },
   "Franco1603": {
@@ -1031,7 +1027,6 @@
     "stats": {
       "vpip": 0.8269,
       "pfr": 0.0192,
-      "f2bar": 0.5,
       "wtsd": 0.3158,
       "b3": 0.0714,
       "cbet": 1.0,
@@ -1039,6 +1034,7 @@
       "bar": 1.0,
       "rb": 0.4,
       "wsd": 0.6667,
+      "f2bar": 0.4444,
       "c2cb": 1.0,
       "r2cb": 1.0
     },
@@ -1086,29 +1082,29 @@
     "hero": false,
     "n": 21,
     "stats": {
-      "vpip": 0.5714,
-      "pfr": 0.2381,
+      "vpip": 0.4286,
+      "pfr": 0.1429,
       "b4": 0.0,
-      "wtsd": 0.1176,
-      "b3": 0.2,
+      "wtsd": 0.125,
+      "b3": 0.0,
       "c2cb": 1.0,
-      "f2bar": 0.6,
+      "f2bar": 0.5,
       "rb": 1.0,
       "f2cb": 1.0,
       "wsd": 0.0,
-      "cbet": 0.5
+      "cbet": 0.0
     },
     "bins": {
-      "vpip": "loose",
+      "vpip": "mid",
       "pfr": "mid",
       "b3": "mid",
-      "cbet": "mid",
+      "cbet": "low",
       "wtsd": "low"
     },
     "label": "TIBURON",
-    "subtype": "Loose-passive",
-    "stack_mean": 139.78,
-    "confidence": 0.74,
+    "subtype": "Regular",
+    "stack_mean": 141.93,
+    "confidence": 0.61,
     "reliability": "probable"
   },
   "Goldy7": {
@@ -1142,36 +1138,30 @@
     "hero": false,
     "n": 1,
     "stats": {
-      "vpip": 1.0,
-      "pfr": 1.0,
-      "b3": 1.0,
-      "wtsd": 1.0,
-      "wsd": 0.0,
-      "cbet": 1.0,
-      "bar": 1.0,
-      "rb": 0.0
+      "vpip": 0.0,
+      "pfr": 0.0
     },
     "bins": {
-      "vpip": "loose",
-      "pfr": "high",
-      "b3": "high",
-      "cbet": "high",
-      "wtsd": "high"
+      "vpip": "mid",
+      "pfr": "mid",
+      "b3": "n/a",
+      "cbet": "n/a",
+      "wtsd": "n/a"
     },
     "label": "TIBURON",
-    "subtype": "LAG",
-    "stack_mean": 73.2,
-    "confidence": 0.857,
+    "subtype": "Regular",
+    "stack_mean": 73.0,
+    "confidence": 0.558,
     "reliability": "probable"
   },
   "Hachirama": {
     "player": "Hachirama",
     "hero": false,
-    "n": 41,
+    "n": 43,
     "stats": {
-      "vpip": 0.8049,
-      "pfr": 0.2683,
-      "b3": 0.1875,
+      "vpip": 0.7442,
+      "pfr": 0.2558,
+      "b3": 0.125,
       "wtsd": 0.0541,
       "cbet": 0.6667,
       "c2cb": 1.0,
@@ -1191,19 +1181,19 @@
     },
     "label": "TIBURON",
     "subtype": "Loose-passive",
-    "stack_mean": 59.91,
-    "confidence": 0.87,
+    "stack_mean": 59.89,
+    "confidence": 0.834,
     "reliability": "confiable"
   },
   "HarryPoker18": {
     "player": "HarryPoker18",
     "hero": false,
-    "n": 198,
+    "n": 201,
     "stats": {
-      "vpip": 0.2172,
-      "pfr": 0.1313,
-      "b3": 0.0128,
-      "wtsd": 0.2609,
+      "vpip": 0.2189,
+      "pfr": 0.1294,
+      "b3": 0.0125,
+      "wtsd": 0.25,
       "c2cb": 1.0,
       "f2bar": 0.6,
       "f2cb": 1.0,
@@ -1222,8 +1212,8 @@
     },
     "label": "TIBURON",
     "subtype": "Regular",
-    "stack_mean": 85.41,
-    "confidence": 0.709,
+    "stack_mean": 85.56,
+    "confidence": 0.704,
     "reliability": "confiable"
   },
   "Hector1320": {
@@ -1257,19 +1247,19 @@
   "Hellfish1": {
     "player": "Hellfish1",
     "hero": false,
-    "n": 38,
+    "n": 40,
     "stats": {
-      "vpip": 0.2368,
-      "pfr": 0.1316,
-      "wtsd": 0.1,
+      "vpip": 0.25,
+      "pfr": 0.125,
+      "wtsd": 0.1111,
       "wsd": 0.0,
       "cbet": 0.6667,
       "b3": 0.0,
       "f2bar": 1.0,
       "r2cb": 1.0,
-      "bar": 0.25,
-      "rb": 0.25,
-      "b4": 0.0
+      "b4": 0.0,
+      "bar": 0.3333,
+      "rb": 0.3333
     },
     "bins": {
       "vpip": "mid",
@@ -1281,8 +1271,8 @@
     "label": "PEZ",
     "subtype": "Regular",
     "stack_mean": 41.13,
-    "confidence": 0.609,
-    "reliability": "probable"
+    "confidence": 0.587,
+    "reliability": "confiable"
   },
   "Iker69": {
     "player": "Iker69",
@@ -1302,23 +1292,23 @@
       "pfr": "low",
       "b3": "mid",
       "cbet": "n/a",
-      "wtsd": "low"
+      "wtsd": "mid"
     },
     "label": "PEZ",
     "subtype": "Nit",
     "stack_mean": 44.84,
-    "confidence": 0.623,
+    "confidence": 0.597,
     "reliability": "probable"
   },
   "Irene_giraldo": {
     "player": "Irene_giraldo",
     "hero": false,
-    "n": 79,
+    "n": 78,
     "stats": {
-      "vpip": 0.2532,
-      "pfr": 0.2152,
-      "wtsd": 0.0213,
+      "vpip": 0.2564,
+      "pfr": 0.2179,
       "b3": 0.087,
+      "wtsd": 0.0217,
       "f2cb": 1.0,
       "b4": 0.0,
       "bar": 0.75,
@@ -1337,7 +1327,7 @@
     "label": "TIBURON",
     "subtype": "Regular",
     "stack_mean": 111.69,
-    "confidence": 0.743,
+    "confidence": 0.744,
     "reliability": "confiable"
   },
   "Isagomez": {
@@ -1367,56 +1357,34 @@
     "confidence": 0.8,
     "reliability": "probable"
   },
-  "JHONCACH": {
-    "player": "JHONCACH",
-    "hero": false,
-    "n": 1,
-    "stats": {
-      "vpip": 1.0,
-      "pfr": 1.0,
-      "cbet": 1.0
-    },
-    "bins": {
-      "vpip": "loose",
-      "pfr": "high",
-      "b3": "n/a",
-      "cbet": "high",
-      "wtsd": "n/a"
-    },
-    "label": "TIBURON",
-    "subtype": "LAG",
-    "stack_mean": 140.6,
-    "confidence": 0.822,
-    "reliability": "probable"
-  },
   "JHONCASH": {
     "player": "JHONCASH",
     "hero": false,
-    "n": 100,
+    "n": 101,
     "stats": {
-      "vpip": 0.19,
-      "pfr": 0.12,
-      "b3": 0.093,
-      "wtsd": 0.0833,
+      "vpip": 0.1881,
+      "pfr": 0.1287,
+      "b3": 0.0952,
+      "wtsd": 0.0862,
       "f2bar": 0.0,
-      "f2cb": 1.0,
-      "cbet": 0.2857,
-      "bar": 0.3333,
-      "wsd": 0.8,
       "rb": 0.4,
+      "f2cb": 1.0,
+      "cbet": 0.3333,
+      "bar": 0.4,
+      "wsd": 0.8,
       "b4": 0.0
     },
     "bins": {
       "vpip": "mid",
       "pfr": "mid",
       "b3": "mid",
-      "cbet": "low",
+      "cbet": "mid",
       "wtsd": "low"
     },
     "label": "TIBURON",
     "subtype": "Regular",
-    "stack_mean": 136.12,
-    "confidence": 0.705,
+    "stack_mean": 135.39,
+    "confidence": 0.689,
     "reliability": "confiable"
   },
   "JS99": {
@@ -1424,12 +1392,12 @@
     "hero": false,
     "n": 58,
     "stats": {
-      "vpip": 0.3793,
+      "vpip": 0.3966,
       "pfr": 0.2586,
+      "b3": 0.2083,
       "f2cb": 1.0,
       "wtsd": 0.3077,
       "wsd": 0.5,
-      "b3": 0.2174,
       "cbet": 0.7273,
       "bar": 0.25,
       "f2bar": 0.5,
@@ -1447,7 +1415,7 @@
     "label": "TIBURON",
     "subtype": "Regular",
     "stack_mean": 61.75,
-    "confidence": 0.774,
+    "confidence": 0.783,
     "reliability": "confiable"
   },
   "JaCkFlor": {
@@ -1480,18 +1448,18 @@
   "Jarduan": {
     "player": "Jarduan",
     "hero": true,
-    "n": 861,
+    "n": 866,
     "stats": {
-      "vpip": 0.3229,
-      "pfr": 0.2288,
-      "cbet": 0.3804,
-      "b3": 0.0683,
-      "b4": 0.0526,
-      "bar": 0.8305,
-      "rb": 0.6667,
+      "vpip": 0.3256,
+      "pfr": 0.2309,
+      "cbet": 0.3913,
+      "b3": 0.0662,
+      "b4": 0.0,
+      "bar": 0.8621,
+      "rb": 0.7083,
       "f2cb": 1.0,
       "c2cb": 1.0,
-      "f2bar": 0.4648,
+      "f2bar": 0.4722,
       "r2cb": 1.0
     },
     "bins": {
@@ -1503,14 +1471,14 @@
     },
     "label": "TIBURON",
     "subtype": "Regular",
-    "stack_mean": 124.26,
-    "confidence": 0.757,
+    "stack_mean": 124.41,
+    "confidence": 0.748,
     "reliability": "individual"
   },
   "Jeffer30bog": {
     "player": "Jeffer30bog",
     "hero": false,
-    "n": 1,
+    "n": 2,
     "stats": {
       "vpip": 0.0,
       "pfr": 0.0,
@@ -1527,7 +1495,7 @@
     "label": "PEZ",
     "subtype": "Loose-reg",
     "stack_mean": 20.0,
-    "confidence": 0.576,
+    "confidence": 0.544,
     "reliability": "probable"
   },
   "JhonvyB": {
@@ -1590,19 +1558,19 @@
   "Johan Otero": {
     "player": "Johan Otero",
     "hero": false,
-    "n": 48,
+    "n": 50,
     "stats": {
-      "vpip": 0.2708,
-      "pfr": 0.1875,
-      "b3": 0.0952,
-      "wtsd": 0.0938,
-      "b4": 0.3333,
+      "vpip": 0.28,
+      "pfr": 0.16,
+      "b3": 0.1053,
+      "wtsd": 0.1,
       "wsd": 0.6667,
-      "cbet": 0.8571,
-      "bar": 0.4,
+      "bar": 0.5,
       "rb": 0.0,
       "f2cb": 1.0,
-      "f2bar": 1.0
+      "cbet": 0.8333,
+      "f2bar": 1.0,
+      "b4": 0.0
     },
     "bins": {
       "vpip": "mid",
@@ -1613,8 +1581,8 @@
     },
     "label": "TIBURON",
     "subtype": "Regular",
-    "stack_mean": 92.34,
-    "confidence": 0.747,
+    "stack_mean": 91.98,
+    "confidence": 0.719,
     "reliability": "confiable"
   },
   "JohanV.": {
@@ -1622,9 +1590,9 @@
     "hero": false,
     "n": 9,
     "stats": {
-      "vpip": 0.5556,
+      "vpip": 0.6667,
       "pfr": 0.0,
-      "wtsd": 0.25,
+      "wtsd": 0.2222,
       "wsd": 0.5,
       "b3": 0.0,
       "bar": 1.0,
@@ -1640,7 +1608,7 @@
     "label": "PEZ",
     "subtype": "Loose-passive",
     "stack_mean": 18.82,
-    "confidence": 0.649,
+    "confidence": 0.686,
     "reliability": "probable"
   },
   "Jonatantarra": {
@@ -1728,10 +1696,10 @@
   "JuanPApada": {
     "player": "JuanPApada",
     "hero": false,
-    "n": 12,
+    "n": 13,
     "stats": {
-      "vpip": 0.4167,
-      "pfr": 0.25,
+      "vpip": 0.3846,
+      "pfr": 0.2308,
       "b3": 0.0,
       "wtsd": 0.0,
       "f2cb": 1.0,
@@ -1751,36 +1719,36 @@
     "label": "TIBURON",
     "subtype": "Regular",
     "stack_mean": 70.24,
-    "confidence": 0.713,
+    "confidence": 0.694,
     "reliability": "probable"
   },
   "Juancuellar987": {
     "player": "Juancuellar987",
     "hero": false,
-    "n": 12,
+    "n": 14,
     "stats": {
-      "vpip": 0.75,
-      "pfr": 0.0833,
+      "vpip": 0.7143,
+      "pfr": 0.0714,
+      "b3": 0.0,
       "wtsd": 0.4,
       "wsd": 0.5,
       "f2bar": 0.5,
       "cbet": 0.0,
       "bar": 0.0,
       "rb": 0.5,
-      "b3": 0.0,
       "c2cb": 1.0
     },
     "bins": {
       "vpip": "loose",
       "pfr": "mid",
-      "b3": "high",
+      "b3": "mid",
       "cbet": "low",
       "wtsd": "mid"
     },
     "label": "PEZ",
     "subtype": "Loose-passive",
     "stack_mean": 47.46,
-    "confidence": 0.639,
+    "confidence": 0.648,
     "reliability": "probable"
   },
   "Juanfelipe1": {
@@ -1790,13 +1758,12 @@
     "stats": {
       "vpip": 0.3125,
       "pfr": 0.25,
-      "wtsd": 0.0909,
+      "wtsd": 0.1,
       "cbet": 0.6667,
       "b4": 0.0,
-      "b3": 0.2857,
-      "f2cb": 1.0,
-      "wsd": 1.0,
-      "c2cb": 1.0
+      "b3": 0.3333,
+      "c2cb": 1.0,
+      "wsd": 1.0
     },
     "bins": {
       "vpip": "mid",
@@ -1807,19 +1774,19 @@
     },
     "label": "PEZ",
     "subtype": "Loose-reg",
-    "stack_mean": 48.54,
-    "confidence": 0.712,
+    "stack_mean": 42.46,
+    "confidence": 0.708,
     "reliability": "probable"
   },
   "Juanmabm": {
     "player": "Juanmabm",
     "hero": false,
-    "n": 50,
+    "n": 49,
     "stats": {
-      "vpip": 0.32,
-      "pfr": 0.02,
-      "b3": 0.0435,
-      "wtsd": 0.0556,
+      "vpip": 0.3265,
+      "pfr": 0.0,
+      "b3": 0.0,
+      "wtsd": 0.0571,
       "b4": 0.0,
       "bar": 1.0,
       "wsd": 0.0
@@ -1827,14 +1794,14 @@
     "bins": {
       "vpip": "mid",
       "pfr": "low",
-      "b3": "mid",
+      "b3": "low",
       "cbet": "n/a",
       "wtsd": "low"
     },
-    "label": "TIBURON",
+    "label": "PEZ",
     "subtype": "Passive-reg",
-    "stack_mean": 62.03,
-    "confidence": 0.659,
+    "stack_mean": 64.82,
+    "confidence": 0.786,
     "reliability": "confiable"
   },
   "Juanpablogrz": {
@@ -1842,11 +1809,10 @@
     "hero": false,
     "n": 18,
     "stats": {
-      "vpip": 0.5556,
+      "vpip": 0.5,
       "pfr": 0.0556,
-      "wtsd": 0.4,
+      "wtsd": 0.0,
       "b3": 0.0,
-      "wsd": 0.5,
       "f2bar": 0.4
     },
     "bins": {
@@ -1854,12 +1820,12 @@
       "pfr": "mid",
       "b3": "mid",
       "cbet": "n/a",
-      "wtsd": "mid"
+      "wtsd": "low"
     },
     "label": "PEZ",
     "subtype": "Loose-passive",
     "stack_mean": 70.53,
-    "confidence": 0.672,
+    "confidence": 0.705,
     "reliability": "probable"
   },
   "Juri": {
@@ -1917,15 +1883,14 @@
     "hero": false,
     "n": 28,
     "stats": {
-      "vpip": 0.5714,
+      "vpip": 0.4643,
       "pfr": 0.0,
-      "wtsd": 0.1667,
-      "f2cb": 1.0,
+      "wtsd": 0.16,
       "b3": 0.0,
-      "f2bar": 0.25,
+      "f2bar": 0.2,
       "wsd": 0.5,
       "bar": 0.8333,
-      "rb": 0.75,
+      "rb": 1.0,
       "b4": 0.0,
       "c2cb": 1.0
     },
@@ -1939,7 +1904,7 @@
     "label": "PEZ",
     "subtype": "Loose-passive",
     "stack_mean": 22.39,
-    "confidence": 0.753,
+    "confidence": 0.731,
     "reliability": "probable"
   },
   "KoKeB0y92": {
@@ -1991,7 +1956,7 @@
     },
     "label": "TIBURON",
     "subtype": "Regular",
-    "stack_mean": 113.24,
+    "stack_mean": 113.41,
     "confidence": 0.574,
     "reliability": "probable"
   },
@@ -2000,11 +1965,11 @@
     "hero": false,
     "n": 59,
     "stats": {
-      "vpip": 0.2203,
+      "vpip": 0.2373,
       "pfr": 0.2203,
-      "b3": 0.1429,
-      "wtsd": 0.3333,
+      "b3": 0.1333,
       "cbet": 0.4286,
+      "wtsd": 0.4444,
       "wsd": 1.0,
       "b4": 0.0,
       "f2cb": 1.0,
@@ -2021,7 +1986,7 @@
     "label": "TIBURON",
     "subtype": "Regular",
     "stack_mean": 167.1,
-    "confidence": 0.624,
+    "confidence": 0.672,
     "reliability": "confiable"
   },
   "La_Gaitana": {
@@ -2053,7 +2018,7 @@
     "stats": {
       "vpip": 0.3243,
       "pfr": 0.027,
-      "wtsd": 0.1818,
+      "wtsd": 0.2222,
       "rb": 0.0,
       "b3": 0.0,
       "f2bar": 0.5,
@@ -2071,8 +2036,8 @@
     },
     "label": "PEZ",
     "subtype": "Passive-reg",
-    "stack_mean": 57.06,
-    "confidence": 0.618,
+    "stack_mean": 57.03,
+    "confidence": 0.588,
     "reliability": "probable"
   },
   "LolaMora": {
@@ -2136,33 +2101,32 @@
   "Maicolp": {
     "player": "Maicolp",
     "hero": false,
-    "n": 65,
+    "n": 67,
     "stats": {
-      "vpip": 0.6,
-      "pfr": 0.0615,
+      "vpip": 0.5672,
+      "pfr": 0.0149,
       "wtsd": 0.1091,
-      "c2cb": 1.0,
       "b4": 0.0,
-      "b3": 0.125,
+      "b3": 0.0,
       "rb": 0.75,
       "wsd": 1.0,
       "bar": 1.0,
       "f2bar": 0.6471,
-      "cbet": 0.0,
+      "c2cb": 1.0,
       "f2cb": 1.0,
       "r2cb": 1.0
     },
     "bins": {
       "vpip": "loose",
       "pfr": "low",
-      "b3": "mid",
-      "cbet": "low",
+      "b3": "low",
+      "cbet": "n/a",
       "wtsd": "low"
     },
     "label": "PEZ",
     "subtype": "Loose-passive",
-    "stack_mean": 34.04,
-    "confidence": 0.862,
+    "stack_mean": 34.07,
+    "confidence": 0.898,
     "reliability": "confiable"
   },
   "Mateo": {
@@ -2184,7 +2148,7 @@
     },
     "label": "PEZ",
     "subtype": "Loose-passive",
-    "stack_mean": 29.62,
+    "stack_mean": 31.93,
     "confidence": 0.768,
     "reliability": "probable"
   },
@@ -2220,7 +2184,7 @@
       "pfr": 0.0,
       "b3": 0.0,
       "wtsd": 0.0952,
-      "f2bar": 0.5,
+      "f2bar": 0.4,
       "b4": 0.0,
       "wsd": 0.0,
       "rb": 1.0
@@ -2241,11 +2205,11 @@
   "MegustanLas...": {
     "player": "MegustanLas...",
     "hero": false,
-    "n": 30,
+    "n": 31,
     "stats": {
-      "vpip": 0.4667,
-      "pfr": 0.0333,
-      "wtsd": 0.3077,
+      "vpip": 0.4194,
+      "pfr": 0.0323,
+      "wtsd": 0.2963,
       "b3": 0.0,
       "wsd": 0.5,
       "c2cb": 1.0,
@@ -2256,16 +2220,16 @@
       "f2cb": 1.0
     },
     "bins": {
-      "vpip": "loose",
+      "vpip": "mid",
       "pfr": "low",
       "b3": "mid",
       "cbet": "n/a",
       "wtsd": "mid"
     },
     "label": "PEZ",
-    "subtype": "Loose-passive",
-    "stack_mean": 29.62,
-    "confidence": 0.674,
+    "subtype": "Passive-reg",
+    "stack_mean": 27.28,
+    "confidence": 0.675,
     "reliability": "probable"
   },
   "Memelo": {
@@ -2297,7 +2261,7 @@
     "hero": false,
     "n": 35,
     "stats": {
-      "vpip": 0.4,
+      "vpip": 0.3143,
       "pfr": 0.0286,
       "wtsd": 0.0,
       "f2bar": 0.8333,
@@ -2314,8 +2278,8 @@
     },
     "label": "PEZ",
     "subtype": "Passive-reg",
-    "stack_mean": 20.13,
-    "confidence": 0.736,
+    "stack_mean": 19.89,
+    "confidence": 0.646,
     "reliability": "probable"
   },
   "Mrcash": {
@@ -2328,9 +2292,9 @@
       "b3": 0.1379,
       "wtsd": 0.3333,
       "wsd": 1.0,
-      "cbet": 0.5,
+      "cbet": 0.6,
       "b4": 0.0,
-      "bar": 0.6667,
+      "bar": 1.0,
       "c2cb": 1.0,
       "f2bar": 1.0,
       "f2cb": 1.0
@@ -2345,7 +2309,7 @@
     "label": "TIBURON",
     "subtype": "Regular",
     "stack_mean": 151.62,
-    "confidence": 0.543,
+    "confidence": 0.552,
     "reliability": "confiable"
   },
   "MuckeDBoY": {
@@ -2432,12 +2396,12 @@
   "NESANVAR": {
     "player": "NESANVAR",
     "hero": false,
-    "n": 31,
+    "n": 29,
     "stats": {
-      "vpip": 0.871,
-      "pfr": 0.129,
-      "b3": 0.2308,
-      "wtsd": 0.0333,
+      "vpip": 0.8966,
+      "pfr": 0.1379,
+      "b3": 0.2143,
+      "wtsd": 0.0357,
       "wsd": 0.0,
       "bar": 0.7143,
       "rb": 0.25,
@@ -2456,8 +2420,8 @@
     },
     "label": "TIBURON",
     "subtype": "Loose-passive",
-    "stack_mean": 63.84,
-    "confidence": 0.757,
+    "stack_mean": 63.58,
+    "confidence": 0.748,
     "reliability": "probable"
   },
   "Nnn1": {
@@ -2593,97 +2557,6 @@
     "confidence": 0.567,
     "reliability": "probable"
   },
-  "P1": {
-    "player": "P1",
-    "hero": false,
-    "n": 1,
-    "stats": {
-      "vpip": 0.0,
-      "pfr": 0.0,
-      "b4": 0.0,
-      "wtsd": 0.0
-    },
-    "bins": {
-      "vpip": "mid",
-      "pfr": "mid",
-      "b3": "n/a",
-      "cbet": "n/a",
-      "wtsd": "mid"
-    },
-    "label": "PEZ",
-    "subtype": "Regular",
-    "stack_mean": 39.05,
-    "confidence": 0.514,
-    "reliability": "probable"
-  },
-  "P3": {
-    "player": "P3",
-    "hero": false,
-    "n": 1,
-    "stats": {
-      "vpip": 0.0,
-      "pfr": 0.0
-    },
-    "bins": {
-      "vpip": "mid",
-      "pfr": "mid",
-      "b3": "n/a",
-      "cbet": "n/a",
-      "wtsd": "n/a"
-    },
-    "label": "TIBURON",
-    "subtype": "Regular",
-    "stack_mean": 95.1,
-    "confidence": 0.558,
-    "reliability": "probable"
-  },
-  "P4": {
-    "player": "P4",
-    "hero": false,
-    "n": 1,
-    "stats": {
-      "vpip": 1.0,
-      "pfr": 1.0,
-      "wtsd": 0.0
-    },
-    "bins": {
-      "vpip": "loose",
-      "pfr": "high",
-      "b3": "n/a",
-      "cbet": "n/a",
-      "wtsd": "mid"
-    },
-    "label": "TIBURON",
-    "subtype": "LAG",
-    "stack_mean": 93.74,
-    "confidence": 0.724,
-    "reliability": "probable"
-  },
-  "P5": {
-    "player": "P5",
-    "hero": false,
-    "n": 1,
-    "stats": {
-      "vpip": 1.0,
-      "pfr": 0.0,
-      "b3": 0.0,
-      "wtsd": 0.0,
-      "c2cb": 1.0,
-      "f2bar": 0.0
-    },
-    "bins": {
-      "vpip": "loose",
-      "pfr": "mid",
-      "b3": "high",
-      "cbet": "n/a",
-      "wtsd": "mid"
-    },
-    "label": "PEZ",
-    "subtype": "Loose-passive",
-    "stack_mean": 993.27,
-    "confidence": 0.68,
-    "reliability": "probable"
-  },
   "PardoKing": {
     "player": "PardoKing",
     "hero": false,
@@ -2711,7 +2584,7 @@
     "hero": false,
     "n": 44,
     "stats": {
-      "vpip": 0.3409,
+      "vpip": 0.3636,
       "pfr": 0.0455,
       "bar": 0.6,
       "f2bar": 0.5,
@@ -2719,7 +2592,7 @@
       "rb": 0.8571,
       "cbet": 1.0,
       "c2cb": 1.0,
-      "wtsd": 0.25,
+      "wtsd": 0.2857,
       "wsd": 0.5,
       "f2cb": 1.0,
       "b4": 0.0
@@ -2734,16 +2607,16 @@
     "label": "PEZ",
     "subtype": "Passive-reg",
     "stack_mean": 27.86,
-    "confidence": 0.642,
+    "confidence": 0.653,
     "reliability": "confiable"
   },
   "Pipaaf182": {
     "player": "Pipaaf182",
     "hero": false,
-    "n": 23,
+    "n": 24,
     "stats": {
-      "vpip": 0.1739,
-      "pfr": 0.1739,
+      "vpip": 0.1667,
+      "pfr": 0.1667,
       "b3": 0.1538,
       "wtsd": 0.0,
       "rb": 0.0,
@@ -2760,7 +2633,7 @@
     "label": "TIBURON",
     "subtype": "Regular",
     "stack_mean": 110.47,
-    "confidence": 0.68,
+    "confidence": 0.669,
     "reliability": "probable"
   },
   "Prieto9610": {
@@ -2871,10 +2744,10 @@
   "Rolitoyerda": {
     "player": "Rolitoyerda",
     "hero": false,
-    "n": 46,
+    "n": 47,
     "stats": {
-      "vpip": 0.4565,
-      "pfr": 0.1304,
+      "vpip": 0.4468,
+      "pfr": 0.1277,
       "b3": 0.0,
       "wtsd": 0.2059,
       "wsd": 0.7143,
@@ -2887,15 +2760,15 @@
       "rb": 1.0
     },
     "bins": {
-      "vpip": "loose",
+      "vpip": "mid",
       "pfr": "mid",
       "b3": "mid",
       "cbet": "low",
       "wtsd": "low"
     },
     "label": "PEZ",
-    "subtype": "Loose-passive",
-    "stack_mean": 20.69,
+    "subtype": "Regular",
+    "stack_mean": 20.7,
     "confidence": 0.678,
     "reliability": "confiable"
   },
@@ -2929,12 +2802,12 @@
   "SAE_AAAA": {
     "player": "SAE_AAAA",
     "hero": false,
-    "n": 17,
+    "n": 18,
     "stats": {
-      "vpip": 0.5294,
-      "pfr": 0.2941,
+      "vpip": 0.5556,
+      "pfr": 0.3333,
       "b3": 0.1667,
-      "wtsd": 0.0833,
+      "wtsd": 0.0769,
       "f2bar": 0.3333,
       "cbet": 0.75,
       "rb": 1.0,
@@ -2952,18 +2825,18 @@
     "label": "TIBURON",
     "subtype": "Loose-passive",
     "stack_mean": 108.78,
-    "confidence": 0.846,
+    "confidence": 0.863,
     "reliability": "probable"
   },
   "SamPachero30": {
     "player": "SamPachero30",
     "hero": false,
-    "n": 47,
+    "n": 46,
     "stats": {
-      "vpip": 0.2979,
-      "pfr": 0.2553,
+      "vpip": 0.3043,
+      "pfr": 0.2609,
       "b3": 0.0,
-      "wtsd": 0.0769,
+      "wtsd": 0.08,
       "cbet": 0.125,
       "bar": 0.75,
       "rb": 0.5,
@@ -2982,7 +2855,7 @@
     "label": "TIBURON",
     "subtype": "Regular",
     "stack_mean": 114.68,
-    "confidence": 0.782,
+    "confidence": 0.768,
     "reliability": "confiable"
   },
   "Samuel1598": {
@@ -3026,8 +2899,8 @@
       "wtsd": 0.2727,
       "b4": 0.0,
       "r2cb": 1.0,
-      "bar": 0.0,
       "wsd": 0.3333,
+      "bar": 0.0,
       "rb": 0.6667,
       "b3": 0.0,
       "c2cb": 1.0
@@ -3051,10 +2924,10 @@
     "n": 40,
     "stats": {
       "vpip": 0.5,
-      "pfr": 0.225,
-      "cbet": 0.3333,
+      "pfr": 0.25,
+      "cbet": 0.4286,
       "f2bar": 0.8333,
-      "b3": 0.125,
+      "b3": 0.1333,
       "wtsd": 0.3333,
       "wsd": 0.5,
       "bar": 1.0,
@@ -3071,7 +2944,7 @@
     "label": "TIBURON",
     "subtype": "Loose-passive",
     "stack_mean": 66.84,
-    "confidence": 0.683,
+    "confidence": 0.658,
     "reliability": "confiable"
   },
   "Santiagovrga": {
@@ -3079,7 +2952,7 @@
     "hero": false,
     "n": 7,
     "stats": {
-      "vpip": 1.0,
+      "vpip": 0.8571,
       "pfr": 0.0,
       "f2bar": 0.0,
       "wtsd": 0.0,
@@ -3091,12 +2964,12 @@
       "pfr": "mid",
       "b3": "mid",
       "cbet": "n/a",
-      "wtsd": "low"
+      "wtsd": "mid"
     },
     "label": "PEZ",
     "subtype": "Loose-passive",
     "stack_mean": 65.93,
-    "confidence": 0.75,
+    "confidence": 0.7,
     "reliability": "probable"
   },
   "Sebas420": {
@@ -3125,31 +2998,31 @@
   "Silvio": {
     "player": "Silvio",
     "hero": false,
-    "n": 27,
+    "n": 30,
     "stats": {
-      "vpip": 0.8889,
-      "pfr": 0.0741,
-      "wtsd": 0.25,
+      "vpip": 0.9,
+      "pfr": 0.0667,
+      "wtsd": 0.2,
       "c2cb": 1.0,
       "f2cb": 1.0,
       "b3": 0.0,
       "cbet": 0.0,
       "bar": 0.3333,
       "rb": 0.5,
-      "f2bar": 0.3333,
-      "wsd": 0.5
+      "f2bar": 0.2857,
+      "wsd": 0.6667
     },
     "bins": {
       "vpip": "loose",
-      "pfr": "mid",
+      "pfr": "low",
       "b3": "mid",
       "cbet": "low",
       "wtsd": "mid"
     },
     "label": "PEZ",
     "subtype": "Loose-passive",
-    "stack_mean": 357.56,
-    "confidence": 0.593,
+    "stack_mean": 354.61,
+    "confidence": 0.648,
     "reliability": "probable"
   },
   "Sp1609": {
@@ -3210,7 +3083,7 @@
       "r2cb": 1.0,
       "wtsd": 0.1111,
       "c2cb": 1.0,
-      "rb": 1.0,
+      "rb": 0.6667,
       "b4": 0.0,
       "f2cb": 1.0,
       "wsd": 1.0,
@@ -3232,10 +3105,10 @@
   "Tio88": {
     "player": "Tio88",
     "hero": false,
-    "n": 27,
+    "n": 30,
     "stats": {
-      "vpip": 0.6296,
-      "pfr": 0.1111,
+      "vpip": 0.5667,
+      "pfr": 0.1,
       "wtsd": 0.4615,
       "f2cb": 1.0,
       "b3": 0.0,
@@ -3254,8 +3127,8 @@
     },
     "label": "TIBURON",
     "subtype": "Loose-passive",
-    "stack_mean": 92.99,
-    "confidence": 0.565,
+    "stack_mean": 97.42,
+    "confidence": 0.574,
     "reliability": "probable"
   },
   "Valentina22": {
@@ -3288,8 +3161,8 @@
     "stats": {
       "vpip": 0.6,
       "pfr": 0.0,
-      "wtsd": 0.5,
-      "wsd": 1.0,
+      "wtsd": 1.0,
+      "wsd": 0.5,
       "c2cb": 1.0,
       "f2bar": 0.0
     },
@@ -3298,12 +3171,12 @@
       "pfr": "mid",
       "b3": "n/a",
       "cbet": "n/a",
-      "wtsd": "mid"
+      "wtsd": "high"
     },
     "label": "PEZ",
     "subtype": "Loose-passive",
-    "stack_mean": 13.82,
-    "confidence": 0.652,
+    "stack_mean": 14.02,
+    "confidence": 0.737,
     "reliability": "probable"
   },
   "Woons": {
@@ -3312,7 +3185,7 @@
     "n": 39,
     "stats": {
       "vpip": 0.7179,
-      "pfr": 0.0769,
+      "pfr": 0.0256,
       "b3": 0.0,
       "rb": 0.6667,
       "wtsd": 0.2222,
@@ -3324,7 +3197,7 @@
     },
     "bins": {
       "vpip": "loose",
-      "pfr": "mid",
+      "pfr": "low",
       "b3": "low",
       "cbet": "low",
       "wtsd": "mid"
@@ -3332,7 +3205,7 @@
     "label": "PEZ",
     "subtype": "Loose-passive",
     "stack_mean": 68.18,
-    "confidence": 0.676,
+    "confidence": 0.717,
     "reliability": "probable"
   },
   "Zenin15": {
@@ -3624,17 +3497,17 @@
   "mur420": {
     "player": "mur420",
     "hero": false,
-    "n": 123,
+    "n": 133,
     "stats": {
-      "vpip": 0.3821,
-      "pfr": 0.0732,
-      "b3": 0.08,
+      "vpip": 0.3459,
+      "pfr": 0.0677,
+      "b3": 0.0566,
       "wtsd": 0.1667,
       "wsd": 0.7692,
       "rb": 0.0,
       "b4": 0.0,
       "cbet": 0.3333,
-      "f2bar": 0.3158,
+      "f2bar": 0.3,
       "c2cb": 1.0,
       "r2cb": 1.0,
       "f2cb": 1.0,
@@ -3649,8 +3522,8 @@
     },
     "label": "PEZ",
     "subtype": "Passive-reg",
-    "stack_mean": 57.53,
-    "confidence": 0.709,
+    "stack_mean": 57.12,
+    "confidence": 0.701,
     "reliability": "confiable"
   },
   "oscar123": {
@@ -3666,7 +3539,7 @@
       "wsd": 0.7143,
       "cbet": 0.5556,
       "bar": 0.3333,
-      "rb": 0.1667,
+      "rb": 0.2,
       "c2cb": 1.0,
       "f2bar": 1.0,
       "f2cb": 1.0
@@ -3713,12 +3586,12 @@
   "papa01": {
     "player": "papa01",
     "hero": false,
-    "n": 27,
+    "n": 30,
     "stats": {
       "vpip": 0.6667,
-      "pfr": 0.037,
-      "wtsd": 0.4286,
-      "wsd": 0.3333,
+      "pfr": 0.0333,
+      "wtsd": 0.3077,
+      "wsd": 0.25,
       "c2cb": 1.0,
       "f2bar": 0.0,
       "b3": 0.0,
@@ -3734,8 +3607,8 @@
     },
     "label": "PEZ",
     "subtype": "Loose-passive",
-    "stack_mean": 60.66,
-    "confidence": 0.674,
+    "stack_mean": 65.93,
+    "confidence": 0.657,
     "reliability": "probable"
   },
   "pardoKing": {
@@ -3768,29 +3641,30 @@
   "proplayer555": {
     "player": "proplayer555",
     "hero": false,
-    "n": 23,
+    "n": 26,
     "stats": {
-      "vpip": 0.5652,
-      "pfr": 0.3478,
-      "wtsd": 0.1538,
-      "bar": 0.4,
+      "vpip": 0.6154,
+      "pfr": 0.4231,
+      "wtsd": 0.25,
+      "bar": 0.4286,
       "rb": 0.25,
       "b3": 0.0,
+      "cbet": 0.7143,
       "f2cb": 1.0,
-      "wsd": 0.5,
-      "cbet": 0.75
+      "wsd": 0.3333,
+      "f2bar": 0.0
     },
     "bins": {
       "vpip": "loose",
-      "pfr": "mid",
+      "pfr": "high",
       "b3": "mid",
       "cbet": "high",
-      "wtsd": "low"
+      "wtsd": "mid"
     },
     "label": "TIBURON",
-    "subtype": "Loose-passive",
-    "stack_mean": 121.38,
-    "confidence": 0.772,
+    "subtype": "LAG",
+    "stack_mean": 119.53,
+    "confidence": 0.7,
     "reliability": "probable"
   },
   "santibenavides": {
@@ -3798,32 +3672,32 @@
     "hero": false,
     "n": 4,
     "stats": {
-      "vpip": 0.25,
+      "vpip": 0.0,
       "pfr": 0.0,
       "wtsd": 0.0,
       "b3": 0.0
     },
     "bins": {
-      "vpip": "mid",
+      "vpip": "tight",
       "pfr": "mid",
       "b3": "high",
       "cbet": "n/a",
       "wtsd": "mid"
     },
     "label": "TIBURON",
-    "subtype": "Loose-reg",
-    "stack_mean": 62.78,
-    "confidence": 0.516,
+    "subtype": "Tight-passive",
+    "stack_mean": 62.94,
+    "confidence": 0.55,
     "reliability": "probable"
   },
   "sergio39": {
     "player": "sergio39",
     "hero": false,
-    "n": 31,
+    "n": 32,
     "stats": {
-      "vpip": 0.3548,
-      "pfr": 0.2258,
-      "b3": 0.1538,
+      "vpip": 0.3438,
+      "pfr": 0.2188,
+      "b3": 0.1429,
       "f2cb": 1.0,
       "b4": 0.0,
       "wtsd": 0.25,
@@ -3843,18 +3717,18 @@
     "label": "TIBURON",
     "subtype": "Regular",
     "stack_mean": 322.53,
-    "confidence": 0.693,
+    "confidence": 0.675,
     "reliability": "probable"
   },
   "triki12": {
     "player": "triki12",
     "hero": false,
-    "n": 65,
+    "n": 69,
     "stats": {
-      "vpip": 0.1692,
-      "pfr": 0.1231,
-      "b3": 0.037,
-      "wtsd": 0.075,
+      "vpip": 0.1594,
+      "pfr": 0.1159,
+      "b3": 0.0385,
+      "wtsd": 0.0789,
       "wsd": 1.0,
       "r2cb": 1.0,
       "bar": 0.3333,
@@ -3863,16 +3737,16 @@
       "f2bar": 0.0
     },
     "bins": {
-      "vpip": "mid",
+      "vpip": "tight",
       "pfr": "mid",
       "b3": "mid",
       "cbet": "mid",
       "wtsd": "low"
     },
     "label": "TIBURON",
-    "subtype": "Regular",
-    "stack_mean": 143.83,
-    "confidence": 0.579,
+    "subtype": "Tight-passive",
+    "stack_mean": 140.9,
+    "confidence": 0.589,
     "reliability": "confiable"
   },
   "trombosis2.0": {
@@ -3881,26 +3755,25 @@
     "n": 5,
     "stats": {
       "vpip": 0.8,
-      "pfr": 0.2,
-      "wtsd": 0.4,
-      "cbet": 0.0,
+      "pfr": 0.0,
       "b3": 0.0,
+      "wtsd": 0.4,
+      "f2bar": 0.5,
       "wsd": 0.5,
       "c2cb": 1.0,
-      "f2bar": 0.0,
       "rb": 0.0
     },
     "bins": {
       "vpip": "loose",
       "pfr": "mid",
       "b3": "mid",
-      "cbet": "low",
+      "cbet": "n/a",
       "wtsd": "mid"
     },
     "label": "PEZ",
     "subtype": "Loose-passive",
     "stack_mean": 31.02,
-    "confidence": 0.692,
+    "confidence": 0.621,
     "reliability": "probable"
   },
   "vidents": {
