@@ -248,7 +248,7 @@
     },
     "label": "TIBURON",
     "subtype": "Regular",
-    "stack_mean": 102.88,
+    "stack_mean": 103.06,
     "confidence": 0.865,
     "reliability": "probable"
   },
@@ -1016,7 +1016,7 @@
     },
     "label": "PEZ",
     "subtype": "Passive-reg",
-    "stack_mean": 98.35,
+    "stack_mean": 97.02,
     "confidence": 0.829,
     "reliability": "confiable"
   },
@@ -1103,7 +1103,7 @@
     },
     "label": "TIBURON",
     "subtype": "Regular",
-    "stack_mean": 141.93,
+    "stack_mean": 139.78,
     "confidence": 0.61,
     "reliability": "probable"
   },
@@ -1150,7 +1150,7 @@
     },
     "label": "TIBURON",
     "subtype": "Regular",
-    "stack_mean": 73.0,
+    "stack_mean": 67.6,
     "confidence": 0.558,
     "reliability": "probable"
   },
@@ -1383,7 +1383,7 @@
     },
     "label": "TIBURON",
     "subtype": "Regular",
-    "stack_mean": 135.39,
+    "stack_mean": 135.71,
     "confidence": 0.689,
     "reliability": "confiable"
   },
@@ -1581,7 +1581,7 @@
     },
     "label": "TIBURON",
     "subtype": "Regular",
-    "stack_mean": 91.98,
+    "stack_mean": 92.34,
     "confidence": 0.719,
     "reliability": "confiable"
   },
@@ -1774,7 +1774,7 @@
     },
     "label": "PEZ",
     "subtype": "Loose-reg",
-    "stack_mean": 42.46,
+    "stack_mean": 48.54,
     "confidence": 0.708,
     "reliability": "probable"
   },
@@ -1800,7 +1800,7 @@
     },
     "label": "PEZ",
     "subtype": "Passive-reg",
-    "stack_mean": 64.82,
+    "stack_mean": 61.95,
     "confidence": 0.786,
     "reliability": "confiable"
   },
@@ -2036,7 +2036,7 @@
     },
     "label": "PEZ",
     "subtype": "Passive-reg",
-    "stack_mean": 57.03,
+    "stack_mean": 57.06,
     "confidence": 0.588,
     "reliability": "probable"
   },
@@ -2125,7 +2125,7 @@
     },
     "label": "PEZ",
     "subtype": "Loose-passive",
-    "stack_mean": 34.07,
+    "stack_mean": 34.04,
     "confidence": 0.898,
     "reliability": "confiable"
   },
@@ -2148,7 +2148,7 @@
     },
     "label": "PEZ",
     "subtype": "Loose-passive",
-    "stack_mean": 31.93,
+    "stack_mean": 30.54,
     "confidence": 0.768,
     "reliability": "probable"
   },
@@ -2228,7 +2228,7 @@
     },
     "label": "PEZ",
     "subtype": "Passive-reg",
-    "stack_mean": 27.28,
+    "stack_mean": 29.62,
     "confidence": 0.675,
     "reliability": "probable"
   },
@@ -2768,7 +2768,7 @@
     },
     "label": "PEZ",
     "subtype": "Regular",
-    "stack_mean": 20.7,
+    "stack_mean": 20.69,
     "confidence": 0.678,
     "reliability": "confiable"
   },
@@ -3522,7 +3522,7 @@
     },
     "label": "PEZ",
     "subtype": "Passive-reg",
-    "stack_mean": 57.12,
+    "stack_mean": 57.62,
     "confidence": 0.701,
     "reliability": "confiable"
   },
@@ -3686,7 +3686,7 @@
     },
     "label": "TIBURON",
     "subtype": "Tight-passive",
-    "stack_mean": 62.94,
+    "stack_mean": 62.78,
     "confidence": 0.55,
     "reliability": "probable"
   },
@@ -3745,7 +3745,7 @@
     },
     "label": "TIBURON",
     "subtype": "Tight-passive",
-    "stack_mean": 140.9,
+    "stack_mean": 143.83,
     "confidence": 0.589,
     "reliability": "confiable"
   },

@@ -614,19 +614,19 @@ def test_la_base_son_dos_grabadores():
 
     `data/hands_db.jsonl` esta escrito por DOS programas distintos:
 
-      · 1185 manos de `recorder_live.py`, que pone el campo `allin`;
-      · 73 manos de `record_hand.py`, que no lo pone.
+      · 1182 manos de `recorder_live.py`, que pone el campo `allin`;
+      · 71 manos de `record_hand.py`, que no lo pone.
 
-    Y son exactamente H_0001..H_0073, contiguas desde el principio. Lo que
-    parece un bloque inicial de captura es un bloque de otro grabador.
+    El bloque pequeno sigue siendo H_0001..H_0073, pero la adopcion retiro
+    `H_0028` y `H_0072`, asi que ya no es contiguo. Se declaran las dos
+    ausencias en vez de fingir que el bloque sigue intacto.
 
     Por que importa: todo lo que se mida sobre la base sin separar los dos
     grupos esta mezclando dos instrumentos con semanticas de `amount`
-    distintas. Y el grupo pequeno es el que tiene TODAS las rarezas que se
-    ven Rarezas (SIN_ALLIN, la letra rara de la apertura).
+    distintas.
 
     Se fija el reparto como regresion. Si alguien normaliza la base y mete el
-    campo que falta en las 73, esta prueba se rompe y obliga a volver a
+    campo que falta en las 71, esta prueba se rompe y obliga a volver a
     pensar el resto.
     """
     import json
@@ -639,23 +639,24 @@ def test_la_base_son_dos_grabadores():
         # sobre el dict parseado, no sobre el texto: `allin` puede aparecer
         # como valor de una clave cualquiera y daria un falso positivo
         (con if 'allin' in json.loads(linea) else sin).append(linea)
-    assert len(con) == 1185, 'manos de recorder_live: %d' % len(con)
-    assert len(sin) == 73, 'manos de record_hand: %d' % len(sin)
+    assert len(con) == 1182, 'manos de recorder_live: %d' % len(con)
+    assert len(sin) == 71, 'manos de record_hand: %d' % len(sin)
 
     ids = sorted(int(json.loads(x)['hand_id'].split('_')[-1]) for x in sin)
-    assert ids == list(range(1, 74)), (
-        'las 73 sin `allin` ya no son H_0001..H_0073: %s..%s' % (ids[0], ids[-1]))
+    assert ids == [i for i in range(1, 74) if i not in (28, 72)], (
+        'las 71 sin `allin` ya no son H_0001..H_0073 menos H_0028 y H_0072: '
+        '%s..%s' % (ids[0], ids[-1]))
 
 
-def test_la_apertura_no_tiene_la_misma_forma_en_los_dos():
-    """La mezcla se ve tambien en la LETRA, sin mirar ningun campo raro.
+def test_la_apertura_cambia_tras_la_normalizacion():
+    """La LETRA ya no separa los dos grabadores, y se fija el nuevo reparto.
 
-    `record_hand.py` decide la letra con `street_has_bet`, asi que la primera
-    apuesta con ciega viva sale `c`. `recorder_live.py` decide con `has_bet` de
-    la calle y una tolerancia de 0.15, asi que casi todo sale `b`.
-
-    Las dos distribuciones son incompatibles, y por eso el corte por el campo
-    `allin` no es una casualidad: es una medida.
+    Antes de normalizar, `recorder_live` emitia casi siempre `b` como primera
+    accion voluntaria porque contaba la ciega como apuesta viva. La
+    normalizacion convirtio las ciegas en `p` y recodifico las aperturas, asi
+    que ahora la primera `b`/`c`/`r` es una decision real: la mayoria son
+    calls (limps) y raises. El corte por `allin` sigue siendo valido; lo que
+    ya no vale es usar la letra como huella del grabador.
     """
     import collections
     import io
@@ -673,14 +674,11 @@ def test_la_apertura_no_tiene_la_misma_forma_en_los_dos():
             if a.get('action') in ('b', 'c', 'r'):
                 c[grupo][a['action']] += 1
                 break
-    assert c['live']['b'] > 1000, dict(c['live'])
-    # en record_hand la apertura reparte casi a partes iguales; en
-    # recorder_live es un `b` por cada siete. Medido, no supuesto.
-    assert dict(c['hand']) == {'b': 40, 'c': 26, 'r': 2}, dict(c['hand'])
-    assert dict(c['live']) == {'b': 1019, 'c': 100, 'r': 47}, dict(c['live'])
-    prop_live = c['live']['b'] / max(1, sum(c['live'].values()))
-    prop_hand = c['hand']['b'] / max(1, sum(c['hand'].values()))
-    assert prop_live > 0.85 and prop_hand < 0.65, (prop_live, prop_hand)
+    # Medido sobre la base normalizada. El grupo `hand` conserva su mezcla;
+    # el `live` ya no es un `b` por cada siete.
+    assert dict(c['hand']) == {'b': 31, 'c': 29, 'r': 4}, dict(c['hand'])
+    assert dict(c['live']) == {'b': 100, 'c': 520, 'r': 467}, dict(c['live'])
+    assert c['live']['c'] > c['live']['r'] > c['live']['b'], dict(c['live'])
 
 
 def test_el_allin_no_esta_confirmado():
@@ -712,7 +710,7 @@ def test_el_allin_no_esta_confirmado():
     rama = codigo[i:i + 600]
     assert '_allin_players.add(pid)' in rama, (
         'la rama de all-in ya no marca al jugador. El campo `allin` se '
-        'vaciaria y las 1185 manos que lo tienen perderian su unica senal.')
+        'vaciaria y las 1182 manos que lo tienen perderian su unica senal.')
     # y la lista final filtra por activo, que es el defecto INC-002 / H_0851
     j = codigo.find("out['allin']")
     assert j != -1
@@ -760,12 +758,12 @@ def test_el_campo_allin_no_lo_escribe_record_hand():
 # (5) LAS CIFRAS DE LA BASE
 # ---------------------------------------------------------------------------
 
-def test_las_498_no_las_503():
-    """El numero depende de una regla, y la regla ahora esta escrita.
+def test_las_42_calls_por_debajo_de_la_viva():
+    """La normalizacion redujo el defecto de 498 a 42.
 
-    El 503 de la revision tecnica calculaba la viva incluyendo tambien las
-    calls. Con la regla documentada —la viva sale solo de `b` y `r`— son 498.
-    Los 5 de diferencia son justamente los anomalos.
+    La regla no cambio: la viva sale solo de `b` y `r`. Lo que cambio es la
+    base, que ahora trae las cajas completas y los calls alineados. Quedan 42
+    calls que no llegan, y se fijan para que el detector siga mirando.
     """
     manos = DG.cargar()
     total = 0
@@ -779,25 +777,26 @@ def test_las_498_no_las_503():
                 total += 1
                 if e['viva_antes'] > 1e-6 and e['amount'] < e['viva_antes'] - 1e-6:
                     cortas += 1
-    assert total == 2558, total
-    assert cortas == 498, cortas
+    assert total == 2603, total
+    assert cortas == 42, cortas
 
 
-def test_la_falta_de_uno_dominante_y_no_es_solo_del_bb():
-    """337 de 498 con falta exactamente 1.0, en las seis posiciones.
+def test_la_falta_ya_no_es_dominante_pero_sigue_sin_ser_solo_del_bb():
+    """De las 42 calls cortas, solo 3 tienen falta 1.0 y 10 son del BB.
 
-    Es el hallazgo que hace que «es la ciega del BB» no alcance: la mitad de
-    las de los que NO postearon tambien valen 1.0.
+    El hallazgo original —«es la ciega del BB»— ya no explica la mayoria:
+    hay calls cortas en las seis posiciones. Se fija el reparto para que el
+    detector no se convierta en una explicacion unica.
     """
     manos = DG.cargar()
     calls = []
     for h in manos.values():
         calls.extend(DG.calls_por_debajo(h))
     uno = sum(1 for c in calls if abs(c['falta'] - 1.0) < 0.05)
-    assert len(calls) == 498, len(calls)
-    assert uno == 337, uno
+    assert len(calls) == 42, len(calls)
+    assert uno == 3, uno
     por_pos = collections.Counter(c['pos'] for c in calls)
-    assert por_pos['BB'] == 251, dict(por_pos)
+    assert por_pos['BB'] == 10, dict(por_pos)
     assert por_pos['MP'] > 0 and por_pos['CO'] > 0 and por_pos['UTG'] > 0
 
 
@@ -807,32 +806,21 @@ def test_la_clasificacion_sobre_la_base():
     for h in manos.values():
         for x in DG.clasificar_aportado(h):
             tot[x['resultado']] += 1
-    assert tot[DG.CALCULABLE] == 5433, dict(tot)
-    assert tot[DG.SOSPECHOSA] == 445, dict(tot)
-    assert tot[DG.INDETERMINADA] == 96, dict(tot)
+    assert tot[DG.CALCULABLE] == 5001, dict(tot)
+    assert tot[DG.SOSPECHOSA] == 29, dict(tot)
+    assert tot[DG.INDETERMINADA] == 23, dict(tot)
 
 
 def test_el_desglose_por_accion_por_resultado_es_coherente():
-    """La prueba 2D, en UNA sola pasada.
+    """La prueba 2D, en UNA sola pasada, sobre la base normalizada.
 
-    Antes el informe traia dos desgloses: uno por resultado (5433/445/96) y
-    otro por accion (1852/6/0, 2032/430/96, 1009/9/0), y **no cuadraban entre
-    si**: el total de las acciones que aportan era 5974, pero el desglose por
-    accion era de 5981. La fila de las `c` era de una version anterior del
-    clasificador y nadie se dio cuenta, porque cada desglose se comprobaba
-    por separado.
-
-    Y el REPARTO por accion se movio despues, y por una unidad: la correccion
-    de `H_1196` (`DOCS/INC-004_H_1196.md`) graba como `r` una accion que era
-    `b`, de modo que una `b` pasa a ser una `r` y el TOTAL de la matriz no
-    cambia. Por eso los totales van aparte del reparto, y no se puede
-    derivar uno del otro.
-
-    Aqui se calcula la matriz entera en una pasada, y se exige que:
+    La matriz ya no es la del informe antiguo (5433/445/96): la normalizacion
+    arreglo las cajas y el total baja a 5053. Se fija la matriz entera y se
+    exige que:
 
       1. las filas sumen el total de la matriz;
       2. las columnas sumen el total de la matriz;
-      3. las columnas sumen exactamente los totales absolutos published.
+      3. las columnas sumen exactamente los totales absolutos publicados.
 
     Si alguna vez el clasificador cambia, esto se rompe en vez de dejar dos
     numeros que ya no hablan entre si.
@@ -843,15 +831,16 @@ def test_el_desglose_por_accion_por_resultado_es_coherente():
         for x in DG.clasificar_aportado(h):
             matriz[x['action']][x['resultado']] += 1
 
-    esperado = {'b': {DG.CALCULABLE: 2391, DG.SOSPECHOSA: 6, DG.INDETERMINADA: 0},
-                'c': {DG.CALCULABLE: 2032, DG.SOSPECHOSA: 430, DG.INDETERMINADA: 96},
-                'r': {DG.CALCULABLE: 1010, DG.SOSPECHOSA: 9, DG.INDETERMINADA: 0}}
+    esperado = {'b': {DG.CALCULABLE: 1444, DG.SOSPECHOSA: 4},
+                'c': {DG.CALCULABLE: 2559, DG.SOSPECHOSA: 21,
+                      DG.INDETERMINADA: 23},
+                'r': {DG.CALCULABLE: 998, DG.SOSPECHOSA: 4}}
     assert {k: dict(v) for k, v in matriz.items()} == {
         k: {r: n for r, n in v.items() if n} for k, v in esperado.items()}, (
         {k: dict(v) for k, v in matriz.items()})
 
     total_matriz = sum(sum(f.values()) for f in matriz.values())
-    assert total_matriz == 5974, total_matriz
+    assert total_matriz == 5053, total_matriz
     for accion, fila in matriz.items():
         assert sum(fila.values()) == sum(esperado[accion].values()), accion
     assert (sum(matriz['b'][r] for r in matriz['b'])
@@ -861,9 +850,9 @@ def test_el_desglose_por_accion_por_resultado_es_coherente():
     col = collections.Counter()
     for fila in matriz.values():
         col.update(fila)
-    assert col[DG.CALCULABLE] == 5433, dict(col)
-    assert col[DG.SOSPECHOSA] == 445, dict(col)
-    assert col[DG.INDETERMINADA] == 96, dict(col)
+    assert col[DG.CALCULABLE] == 5001, dict(col)
+    assert col[DG.SOSPECHOSA] == 29, dict(col)
+    assert col[DG.INDETERMINADA] == 23, dict(col)
 
 
 def test_el_reparto_por_accion_suma_el_total_de_la_base():
@@ -878,10 +867,10 @@ def test_el_reparto_por_accion_suma_el_total_de_la_base():
     for h in manos.values():
         for x in DG.clasificar_aportado(h):
             tot[x['action']] += 1
-    assert tot['b'] == 2397, dict(tot)
-    assert tot['c'] == 2558, dict(tot)
-    assert tot['r'] == 1019, dict(tot)
-    assert sum(tot.values()) == 5974, dict(tot)
+    assert tot['b'] == 1448, dict(tot)
+    assert tot['c'] == 2603, dict(tot)
+    assert tot['r'] == 1002, dict(tot)
+    assert sum(tot.values()) == 5053, dict(tot)
 
 
 def test_las_repeticiones_no_son_consecutivas():
@@ -889,8 +878,8 @@ def test_las_repeticiones_no_son_consecutivas():
     reps = []
     for h in manos.values():
         reps.extend(DG.repeticiones(h))
-    assert len(reps) == 26, len(reps)
-    assert len({(r['hand_id'], r['calle']) for r in reps}) == 21
+    assert len(reps) == 2, len(reps)
+    assert len({(r['hand_id'], r['calle']) for r in reps}) == 2
     assert sum(1 for r in reps if r['consecutiva']) == 0, (
         'una repeticion CONSECUTIVA con la misma caja es la firma de una doble '
         'lectura, que es un defecto distinto del de una repeticion separada.')
@@ -906,7 +895,7 @@ def test_los_ids_se_resuelven_con_el_boton():
     Se dijo que `winner`, `allin` y `btn_player` eran irresolubles por falta de
     un campo `pid`. Es FALSO: `get_position(pid, btn_player)` los traduce.
 
-    Y no es una suposicion: 38 de los 202 ids de `allin` tienen un compromiso
+    Y no es una suposicion: 46 de los 204 ids de `allin` tienen un compromiso
     exactamente igual a su stack, que es la definicion de all-in.
     """
     manos = DG.cargar()
@@ -938,15 +927,16 @@ def test_los_ids_se_resuelven_con_el_boton():
                 compromiso += ultimo.get(pos, 0.0)
             if abs(compromiso - float(st)) <= 0.05:
                 confirmados += 1
-    assert resueltos == 202, resueltos
-    assert confirmados == 38, confirmados
+    assert resueltos == 204, resueltos
+    assert confirmados == 46, confirmados
 
 
 def test_h0546_el_allin_apunta_al_que_se_fue():
     """El `allin` de H_0546 es CORRECTO.
 
     `allin: ['p1']` con `btn_player='p1'` resuelve a BTN, que es quien subio
-    sus 52.3. El problema de esa mano esta solo en `final_pot`.
+    sus 52.3. La normalizacion tambien arreglo `final_pot` (102.7 frente a
+    105.1 aportados); este test sigue fijando la parte del all-in.
     """
     manos = DG.cargar()
     h = manos['H_0546']

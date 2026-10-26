@@ -447,18 +447,19 @@ def test_una_accion_de_una_posicion_sin_jugador_no_inventa_jugador():
     """El patron `player_of_pos(...) or pos` creaba jugadores enteros.
 
     Cuando la posicion no tiene jugador, el fallback devolvia la POSICION como
-    nombre. Con eso, `H_0846` producia un `PreflopEvent` con `player='MP'`, y
-    de ahi un "MP" y un "CO" en `player_stats.json` y `profiles.json` — este
+    nombre. Con eso, una mano producia un `PreflopEvent` con `player='MP'`, y
+    de ahi un "MP" y un "CO" en `player_stats.json` y `profiles.json` � este
     ultimo con etiqueta TIBURON y confianza 0.0, que es un numero inventado con
     forma de dato y que para en `profile_ranges.json`.
 
     Aqui `player` queda VACIO. No `pos`, porque eso es inventar un jugador.
     """
-    from motor.learn import load_hands
-    mano = next(h for h in load_hands(reliable_only=True)
-                if h['hand_id'] == 'H_0846')
+    mano = _hand(
+        players=[{'name': 'Jarduan', 'pos': 'CO', 'cards': ''}],
+        preflop=[{'pos': 'MP', 'action': 'f', 'amount': 0.0}],
+    )
     posiciones = {p.get('pos') for p in mano['players']}
-    assert 'MP' not in posiciones, 'la mano del ejemplo ya no tiene MP'
+    assert 'MP' not in posiciones
 
     evs = preflop_events(mano)
     sin_jugador = [e for e in evs if not e.player]
@@ -467,7 +468,7 @@ def test_una_accion_de_una_posicion_sin_jugador_no_inventa_jugador():
 
 
 def test_ningun_evento_de_la_base_usa_una_posicion_como_nombre():
-    """El invariante sobre las 1258 manos, no sobre el ejemplo.
+    """El invariante sobre la base entera, no sobre el ejemplo.
 
     El test anterior demuestra el caso; este demuestra que no queda ninguno,
     que es lo que hace que el arreglo sirva y no solo que funciona el ejemplo.
@@ -486,10 +487,14 @@ def test_un_evento_sin_jugador_sigue_contando_en_el_denominador():
     Descartar el evento habria hecho el resultado mas limpio y MENTIROSO: el
     denominador dejaria de contar una decision que ocurrio. Un hueco declarado
     vale mas que un numero que no existe."""
-    from motor.learn import load_hands
-    mano = next(h for h in load_hands(reliable_only=True)
-                if h['hand_id'] == 'H_0846')
+    mano = _hand(
+        players=[{'name': 'Jarduan', 'pos': 'CO', 'cards': ''}],
+        preflop=[
+            {'pos': 'MP', 'action': 'f', 'amount': 0.0},
+            {'pos': 'CO', 'action': 'c', 'amount': 1.0},
+        ],
+    )
     evs = preflop_events(mano)
-    assert len(evs) == 4, [(e.pos, e.player) for e in evs]
+    assert len(evs) == 2, [(e.pos, e.player) for e in evs]
     assert any(not e.player for e in evs), \
         'el evento sin jugador desaparecio del denominador'

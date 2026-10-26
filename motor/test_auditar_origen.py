@@ -118,21 +118,21 @@ def test_la_autocomprobacion_del_script_pasa():
 # --- (1) posiciones y ciegas ----------------------------------------------
 
 def test_las_cifras_de_posiciones_estan_fijadas():
-    """Las cifras de §1.1, una a una.
+    """Las cifras de §1.1, una a una, sobre la base normalizada.
 
-    Si `con_SB` baja de 1229, o `sin_SB` deja de ser 29, alguien ha cambiado
+    Si `con_SB` baja de 1220, o `sin_SB` deja de ser 33, alguien ha cambiado
     la base o el detector, y hay que saber cual antes de seguir con el informe.
     """
     manos = AO.cargar()
-    assert len(manos) == 1258
+    assert len(manos) == 1253
     s1 = AO.seccion_1(manos)
     inv = s1['inventario']
-    assert inv['con_BB'] == 1258, 'toda mano tiene BB'
+    assert inv['con_BB'] == 1253, 'toda mano tiene BB'
     assert inv['sin_BB'] == 0
-    assert inv['con_SB'] == 1229
-    assert inv['sin_SB'] == 29
-    assert inv['BB_sin_posting'] == 337
-    assert inv['SB_sin_posting'] == 1198
+    assert inv['con_SB'] == 1220
+    assert inv['sin_SB'] == 33
+    assert inv['BB_sin_posting'] == 0
+    assert inv['SB_sin_posting'] == 0
     assert inv['con_pos_duplicada'] == 0
 
 
@@ -158,7 +158,7 @@ def test_un_jugador_sin_pos_es_uno_que_no_jugo():
             if any(not a.get('pos') for calle in AO.CALLES
                    for a in AO.acciones(h, calle)):
                 con_accion += 1
-    assert sin_pos == 783, sin_pos
+    assert sin_pos == 804, sin_pos
     assert con_accion == 0, (
         '%d jugadores sin pos tienen acciones. La accion no se puede atribuir '
         'a nadie, porque `pos` es la unica clave. Si esto falla, la conclusion '
@@ -180,59 +180,45 @@ def test_no_hay_mesa_corta_ni_ante_ni_straddle():
     import collections
     manos = AO.cargar()
     e = AO.seccion_1e(manos)
-    assert e['n_jugadores'] == {6: 1258}, e['n_jugadores']
+    assert e['n_jugadores'] == {6: 1253}, e['n_jugadores']
 
-    # Lo que distinguiría un ante o un straddle es que **más de una posición
-    # cieguee**. Y se mide con `es_posting`, que decide por SECUENCIA (§1.3):
-    # una `b` que abre es posting si antes no hay dinero de nadie en el bote.
-    #
-    # No se usa «la racha inicial de acciones con importe» porque no
-    # distingue: en `H_0001` la racha es `UTG b 2.5 · MP c 2.5`, que es una
-    # apertura y una call, no dos ciegas. En 337 manos la ciega del BB no se
-    # capturó y la racha inicial es enteramente voluntaria. Un criterio que
-    # no sabe eso declara un ante donde no lo hay.
+    # El ante y el straddle se descartan por IMPORTE y por POSICION: una
+    # posta solo puede ser la ciega pequeña (0.5), la grande (1.0) o el limp
+    # de 1.0 que la normalizacion codifica como `p`. Un ante sería menor y un
+    # straddle mayor. Que haya varias `p` no es un ante: son ciegas y limps.
     for h in manos.values():
-        que_ciegan = [p for p in ('SB', 'BB')
-                      if AO.posting_de(h, p) and AO.es_posting(h, p)]
-        assert len(que_ciegan) <= 1, (
-            '%s: ciegan %s. Dos posiciones ciegueando seria un ante o un '
-            'straddle, y no hay ninguno.' % (h['hand_id'], que_ciegan))
-    # Y el importe de los postings, que es donde se ve la diferencia entre una
-    # ciega y una apertura. Solo se comprueba el BB, y por una razon que el
-    # propio dato impone:
-    #
-    #   `es_posting` NO puede distinguir una ciega de una APERTURA grabada
-    #   como `b`. El grabador escribe `b` a quien abre
-    #   (`record_hand.py:246`: `'b' if not street_has_bet else 'c'`), asi que
-    #   `H_0032` tiene `SB b 5.0` en la racha inicial y es una apertura, no
-    #   una ciega de 5.0. Aplicar el filtro de importe a la SB daria 9 falsos
-    #   positivos.
-    #
-    #   El BB no tiene ese problema: su `b` esta en el indice 0 en 921 de 921
-    #   manos que la tienen, y en el indice 0 no puede ser una apertura porque
-    #   una apertura requiere haber foldado o igualado antes.
+        for a in AO.acciones(h, 'preflop'):
+            if a.get('action') != 'p':
+                continue
+            assert a.get('pos') in AO.POSICIONES, (h['hand_id'], a)
+            assert float(a.get('amount') or 0.0) in (0.5, 1.0), (
+                '%s: la posta de %s es de %s. Un importe que no sea 0.5, 1.0 '
+                'seria un ante o un straddle, y no hay ninguno.'
+                % (h['hand_id'], a.get('pos'), a.get('amount')))
+    # Y el BB siempre postea, en el indice 0 o justo despues de la SB.
     for h in manos.values():
         post = AO.posting_de(h, 'BB')
-        if post and AO.es_posting(h, 'BB'):
-            assert post['indice'] == 0, (h['hand_id'], post)
-            assert post['amount'] in (0.5, 1.0), (
-                '%s: la posting del BB es de %s, y no es ni una ciega grande '
-                '(1.0) ni una ciega pequeña (0.5). Un 2.0 seria un ante o un '
-                'straddle.' % (h['hand_id'], post['amount']))
+        assert post is not None and AO.es_posting(h, 'BB'), h['hand_id']
+        assert post['indice'] in (0, 1), (h['hand_id'], post)
+        assert post['amount'] in (0.5, 1.0), (h['hand_id'], post)
+        if post['indice'] == 1:
+            primera = AO.acciones(h, 'preflop')[0]
+            assert (primera.get('pos'), primera.get('action')) == ('SB', 'p'), (
+                h['hand_id'], primera, post)
 
 
 def test_la_ciega_del_bb_que_existe_es_siempre_la_misma():
-    """921 postings, y 915 de ellos valen 1.0. Los otros 6 se DECLARAN."""
+    """1253 postings, y todos valen 1.0. La SB vale 0.5 en 1220."""
     manos = AO.cargar()
     s1 = AO.seccion_1(manos)
-    assert s1['bb_importes'] == {1.0: 915, 0.5: 6}, s1['bb_importes']
+    assert s1['bb_importes'] == {1.0: 1253}, s1['bb_importes']
+    assert s1['sb_importes'] == {0.5: 1220}, s1['sb_importes']
     for hid, h in manos.items():
         p = AO.posting_de(h, 'BB')
         if p is not None and AO.es_posting(h, 'BB'):
-            assert p['indice'] == 0, (
-                '%s: la ciega del BB no esta en el indice 0 sino en el %d. '
-                'La migracion que se provó y se revirtió asumia el indice 0, '
-                'y por eso no puede comprobarse solo aqui.' % (hid, p['indice']))
+            assert p['indice'] in (0, 1), (
+                '%s: la ciega del BB esta en el indice %d. Solo puede estar '
+                'en 0 o justo despues de la SB.' % (hid, p['indice']))
 
 
 # --- (2) semantica de importes -------------------------------------------
@@ -257,44 +243,44 @@ def test_la_semantica_viene_del_codigo_del_grabador_no_de_una_suposicion():
 
 
 def test_la_serie_acumulada_es_monotona():
-    """6354 de 6380, y NINGUNA `b` ni `r` la rompe.
+    """Solo UN caso no monotonico, declarado, y ninguna `r` lo rompe.
 
     Es lo que distingue un campo acumulado de un campo delta: con delta, una
     `b` posterior puede ser menor sin que pase nada. Con acumulado, no.
 
-    PERO NO ES LA MEDIDA DE CONSISTENCIA, y este docstring lo decía mal.
-    Monotonia solo comprueba que la caja de un jugador no BAJE. No comprueba
-    que una `c` LLEGUE a la apuesta viva, que es la propiedad fuerte.
+    El unico caso es `H_0357`: el BB postea 1.0 y luego aparece una `b` de
+    0.5. Es un defecto de la mano, no de la lectura; se declara con su id
+    para que no se cuele como normalidad.
 
-    Medida esa: **503 de 13826 acciones son calls que no llegan a la viva.**
+    PERO NO ES LA MEDIDA DE CONSISTENCIA. Monotonia solo comprueba que la
+    caja de un jugador no BAJE. La propiedad fuerte es que una `c` LLEGUE a
+    la apuesta viva: hoy son **42 de 13826** las que no llegan.
     Ver `test_las_calls_que_no_llegan_a_la_viva`.
     """
     manos = AO.cargar()
     s2 = AO.seccion_2(manos)
     pa = s2['por_accion']
-    for clave in ('preflop/b', 'preflop/r', 'flop/b', 'flop/r',
-                  'turn/b', 'turn/r', 'river/b', 'river/r'):
+    for clave in ('preflop/r', 'flop/b', 'flop/r', 'turn/b', 'turn/r',
+                  'river/b', 'river/r'):
         assert pa[clave]['NO_MONOTONA'] == 0, (
             '%s tiene %d casos no monotonos. Un `b` o una `r` que baja el '
             'acumulado significa que `amount` NO es un acumulado, y toda esta '
             'auditoria tendria que rehacerse.'
             % (clave, pa[clave]['NO_MONOTONA']))
+    assert pa['preflop/b']['NO_MONOTONA'] == 1, pa['preflop/b']
+    ejemplo = s2['ejemplos_no_monotona']['preflop/b'][0]
+    assert ejemplo[0] == 'H_0357', ejemplo
     total_no_mono = sum(v['NO_MONOTONA'] for v in pa.values())
-    assert total_no_mono == 26, total_no_mono
+    assert total_no_mono == 1, total_no_mono
 
 
 def test_las_calls_que_no_llegan_a_la_viva():
-    """503 de 13826. Esta es la cifra de consistencia, no las 26.
+    """42 de 13826. Esta es la cifra de consistencia, no la de monotonia.
 
-    Es la propiedad que `seccion_2` NO midia, y por eso el «99.6% monótono» del
-    informe anterior invite a leer «el dato es consistente en general». No lo
-    es: el numero fuerte es 503.
-
-    Y hay una segunda lectura de estos casos que no es «la caja esta mal»: una
-    lectura OBSOLETA. `record_hand.py:244` emite cuando `new_bet != old_bet`, y
-    el fallback por estado (`:256-285`) emite para un jugador NO detectado en
-    el primer bucle, leyendo la caja EN ESE MOMENTO. Si la caja todavia no se
-    ha actualizado, el importe emitido es el viejo. `H_0039` lo tiene claro.
+    La normalizacion redujo los calls por debajo de la viva de 503 a 42: el
+    caso patologico de `H_0039` ya no existe. El que queda se declara con una
+    mano concreta (`H_0058`), para que el test siga midiendo el defecto y no
+    solo el total.
     """
     manos = AO.cargar()
     total = 0
@@ -313,21 +299,18 @@ def test_las_calls_que_no_llegan_a_la_viva():
                     por_calle[calle] += 1
                 if act in ('b', 'r', 'c'):
                     viva = max(viva, imp)
-    assert total == 503, total
-    assert por_calle['preflop'] == 412, dict(por_calle)
-    # y el caso paradigmatico, byte a byte
-    h = manos['H_0039']
+    assert total == 42, total
+    assert dict(por_calle) == {'preflop': 8, 'flop': 12, 'turn': 12,
+                               'river': 10}, dict(por_calle)
+    # y el caso declarado, byte a byte
+    h = manos['H_0058']
     seq = [(a.get('pos'), a.get('action'), a.get('amount'))
-           for a in AO.acciones(h, 'preflop')]
-    assert seq[6] == ('BTN', 'c', 6.0), seq
-    assert seq[7] == ('SB', 'r', 11.0), seq
-    assert seq[8] == ('BTN', 'c', 6.0), (
-        'se esperaba la lectura OBSOLETA de H_0039[8]. Si aqui hay un 11.0, o '
-        'la mano cambio, o este test ha dejado de mirar lo que dice mirar.')
+           for a in AO.acciones(h, 'river')]
+    assert seq == [('BB', 'x', 0.0), ('MP', 'b', 15.3), ('BB', 'c', 9.1)], seq
 
 
 def test_las_manos_con_una_accion_repetida():
-    """21 manos. Y la repeticion NO es consecutiva en ninguna.
+    """2 acciones repetidas en 2 pares (mano, calle), y ninguna consecutiva.
 
     Eso importa para la formula `aportado = amount - acumulado_anterior`: una
     repeticion da `aportado = 0`, que es un importe inventado. Y como el
@@ -354,12 +337,10 @@ def test_las_manos_con_una_accion_repetida():
                         and a.get('action') == b.get('action')
                         and a.get('amount') == b.get('amount')):
                     consecutivas += 1
-    # dos cifras distintas y las dos certainas: 26 ACCIONES repetidas,
-    # repartidas en 21 pares (mano, calle). Una mano con dos acciones
-    # repetidas cuenta una vez en `pares` y dos en `claves`, y esa diferencia
-    # es la que hizo que una primera version de este test fallara.
-    assert claves == 26, claves
-    assert len(pares) == 21, len(pares)
+    # dos cifras distintas y las dos ciertas: 2 ACCIONES repetidas,
+    # repartidas en 2 pares (mano, calle). La normalizacion limpio el resto.
+    assert claves == 2, claves
+    assert len(pares) == 2, len(pares)
     assert consecutivas == 0, (
         '%d repeticiones consecutivas. Una repeticion CONSECUTIVA con la misma '
         'caja es la firma de una doble lectura, que es un defecto distinto del '
@@ -377,16 +358,15 @@ def test_las_no_monotonas_son_calls():
 
 
 def test_el_patron_del_bb_es_exacto_no_aproximado():
-    """44 de 44. Y 4 de 44 los dejarian pasar.
+    """51 de 52 parejas exactas; la unica diferencia se declara.
 
-    Esta es la afirmacion mas fuerte del informe, y por eso tiene el test mas
-    duro: si bajara de 44, la conclusion «el BB graba otra cosa» se caeria y
-    habria que revisar §1.5 entero.
+    La normalizacion alineo las cajas de SB y BB: el antiguo patron del BB que
+    grababa otra cosa queda reducido a una pareja con -8.0 (`H_0104`).
     """
     manos = AO.cargar()
     s2c = AO.seccion_2c(manos)
-    assert s2c['total_parejas'] == 53, s2c['total_parejas']
-    assert s2c['diferencias']['1.0'] == 44, s2c['diferencias']
+    assert s2c['total_parejas'] == 52, s2c['total_parejas']
+    assert s2c['diferencias'] == {'-8.0': 1, '0.0': 51}, s2c['diferencias']
 
 
 def test_h001_es_el_ejemplo_del_informe():
@@ -398,48 +378,37 @@ def test_h001_es_el_ejemplo_del_informe():
     manos = AO.cargar()
     sec = [(a.get('pos'), a.get('action'), a.get('amount'))
            for a in AO.acciones(manos['H_0001'], 'preflop')]
-    assert sec == [('UTG', 'b', 2.5), ('MP', 'c', 2.5), ('CO', 'f', 0.0),
-                   ('BTN', 'c', 2.5), ('SB', 'c', 2.5), ('BB', 'c', 1.5)], sec
+    assert sec == [('SB', 'p', 0.5), ('BB', 'p', 1.0), ('UTG', 'b', 2.5),
+                   ('MP', 'c', 2.5), ('CO', 'f', 0.0), ('BTN', 'c', 2.5),
+                   ('SB', 'c', 2.5), ('BB', 'c', 2.5)], sec
 
 
 # --- (3) botes ------------------------------------------------------------
 
-def test_el_bote_exacto_cuadra_en_69_de_1258():
-    """69 exactas, 5.5%. La cifra del informe, y fijada contra la función.
+def test_el_bote_exacto_cuadra_en_373_de_1253():
+    """373 exactas, 29.8%. La cifra de la base normalizada.
 
     Un detector que empieza a cuadrar mas puede ser una mejora O puede ser que
-    ha dejado de mirar. Por eso el numero esta fijado con su motivo.
-
-    El nombre de este test decía 89 y el docstring decia 7.1%. Los dos
-    estaban mal: 89 era la cifra con la lectura DELTA, que se corrigio, y
-    69/1258 es 5.5%. La ASERCION siempre fue 69; lo que estaba mal era el
-    texto, que es lo que se lee. Corregido sin cambiar el resultado.
+    ha dejado de mirar. Por eso el numero esta fijado con su motivo: la
+    normalizacion convirtio las cajas en acumulados completos y el bote paso
+    de cuadrar en 69 manos a cuadrar en 373.
     """
     manos = AO.cargar()
     s3 = AO.seccion_3(manos)
-    assert s3['exactas'] == 69, s3['exactas']
-    assert s3['falta'] == 592, s3['falta']
-    assert s3['sobra'] == 597, s3['sobra']
+    assert s3['exactas'] == 373, s3['exactas']
+    assert s3['falta'] == 3, s3['falta']
+    assert s3['sobra'] == 877, s3['sobra']
 
 
 def test_el_rake_no_explica_el_bote():
-    """La regla del mantenedor, contra los datos. Y no cambia nada.
+    """La regla del mantenedor, contra los datos. Y no cuadra mas que sin ella.
 
-    `final_pot` ya descuenta el 5% hasta 2.5BB. Aplicarlo aqui cuadra **29**
-    de 1258; sin rake, **69**.
-
-    Y no es que el rake empeore el cuadre por poco: es que no cambia nada del
-    ajuste. Por minimos cuadrados, R² es 0.6965 sin rake y 0.6920 con rake.
-    Una comision que se descuenta siempre no puede dejar la mitad de las manos
-    con el bote por encima y la otra mitad por debajo, y eso es justo lo que
-    pasa: 34.0% por debajo, 39.5% por encima, 18.0% iguales.
+    `final_pot` ya descuenta el 5% hasta 2.5BB. Aplicarlo aqui cuadra **268**
+    de 1253; sin rake, **373**. Una comision que se descuenta siempre no
+    explica el bote: el ajuste sin rake sigue siendo mejor.
 
     Se deja escrito porque «me dijeron que hay rake» es el tipo de entrada que
     hace cuadrar cualquier cosa y no cuadrar nada.
-
-    Este docstring decia «16 de 1258; sin rake, 189». Las dos cifras eran de la
-    lectura DELTA, que se corrigio en `aportar_por_jugador`. La asercion ya
-    era 29 y 69.
     """
     import collections
     manos = AO.cargar()
@@ -453,67 +422,67 @@ def test_el_rake_no_explica_el_bote():
             con_rake += 1
         if abs(s - pot) < 0.005:
             sin_rake += 1
-    assert sin_rake == 69, sin_rake
-    assert con_rake == 29, con_rake
+    assert sin_rake == 373, sin_rake
+    assert con_rake == 268, con_rake
     assert con_rake < sin_rake, 'el rake empeora el cuadre; si dejara de ' \
         'empeorarlo, la regla del rake tendria que revisarse'
 
 
 def test_aportar_mas_que_el_stack_no_depende_del_rake():
-    """22 manos. Es el invariante mas duro, porque no mira el bote."""
+    """12 manos. Es el invariante mas duro, porque no mira el bote."""
     manos = AO.cargar()
     s3 = AO.seccion_3(manos)
     inv = AO.seccion_3c(manos, s3)
-    assert inv['I4_aporta_mas_que_stack'] == 22, inv['I4_aporta_mas_que_stack']
-    assert inv['I2_bote_no_supera_aportado'] == 592
+    assert inv['I4_aporta_mas_que_stack'] == 12, inv['I4_aporta_mas_que_stack']
+    assert inv['I2_bote_no_supera_aportado'] == 3
     assert inv['I1_bote_no_negativo'] is True
 
 
-def test_h0546_tiene_un_bote_que_no_aparece_en_la_mano():
-    """El caso del encargo, explicado y con las cifras fijadas.
+def test_h0546_ya_no_tiene_un_bote_que_no_aparece():
+    """H_0546 quedo reparada por la normalizacion, y se fija el caso.
 
-    `final_pot = 0.5` con 92.6 aportados. Esa cifra no sale de ninguna
-    combinacion de las acciones, y por eso el informe la llama «un valor que no
-    se puede reconstruir», no «un error de calculo».
+    Antes: `final_pot = 0.5` con 92.6 aportados. Ahora: `final_pot = 102.7`
+    con 105.1 aportados, y las cajas finales de BTN y BB son las del all-in.
+    Se conserva la comprobacion de la lectura TOTAL (ultimo valor de la caja,
+    no suma de acciones).
     """
     manos = AO.cargar()
     h = manos['H_0546']
     detalle, suma = AO.aportar_por_jugador(h, 'TOTAL')
-    assert round(suma, 1) == 92.6, (
-        'H_0546 tiene que dar 92.6. Si da 107.6, la funcion esta SUMANDO los '
-        'importes en vez de tomar el ULTIMO valor de cada caja, que es la '
-        'lectura delta. El error es justo el que denuncia esta auditoria —el '
-        'BB pasa por 1.0, 11.0 y 40.3, que son tres lecturas de la MISMA caja—, '
-        'y este test existe para que no vuelva a colarse sin que nadie lo note.')
-    assert h['final_pot'] == 0.5
+    assert round(suma, 1) == 105.1, (
+        'H_0546 tiene que dar 105.1 con la lectura TOTAL. Si da otra cosa, la '
+        'funcion esta sumando las acciones en vez de tomar el ultimo valor de '
+        'cada caja.')
+    assert h['final_pot'] == 102.7
+    assert detalle['SB']['preflop'] == 0.5, detalle['SB']
     assert detalle['BTN']['preflop'] == 52.3, detalle['BTN']
-    assert detalle['BB']['preflop'] == 40.3, detalle['BB']
+    assert detalle['BB']['preflop'] == 52.3, detalle['BB']
     # el BTN se fue TODO el stack, que es lo que hace el all-in
     stacks = {p.get('pos'): p.get('stack') for p in h.get('players') or []}
     assert stacks['BTN'] == 52.3, stacks['BTN']
 
 
-def test_el_esquema_no_tiene_campo_de_id():
-    """`winner`, `allin` y `btn_player` son irresolubles, y es del ESQUEMA.
+def test_el_esquema_no_tiene_id_pero_los_ids_son_asientos():
+    """`winner`, `allin` y `btn_player` son ids de asiento, y se resuelven.
 
-    No de una mano. Por eso no entra en la lista de «corregir a mano»: es una
-    migracion de las 1258, y el informe lo dice como tal.
+    No hay campo `_id`: la correspondencia es `players[PLAYER_IDS.index(x)]`,
+    y por eso el contrato exige seis asientos. El informe anterior decia que
+    eran irresolubles; era falso, y este test fija la lectura correcta.
     """
+    from motor.multiway import PLAYER_IDS, contrato_orden_ok
     manos = AO.cargar()
-    claves = {k for h in manos.values() for p in h.get('players') or [] for k in p}
+    claves = {k for h in manos.values()
+              for p in h.get('players') or [] for k in p}
     assert '_id' not in claves, claves
     assert 'id' not in claves, claves
-    # y se comprobó que el id NO es el indice en players[]
     for h in manos.values():
-        for x in (h.get('allin') or []):
-            try:
-                i = int(str(x)[1:]) - 1
-            except ValueError:
+        assert contrato_orden_ok(h), h['hand_id']
+        for x in (h.get('winner') or []) + (h.get('allin') or []) + \
+                [h.get('btn_player')]:
+            if x is None:
                 continue
-            if 0 <= i < len(h.get('players') or []):
-                assert h['players'][i].get('stack') not in (0, 0.0), (
-                    'el id %s SI es el indice en players[] (stack 0). Entonces '
-                    'la correspondencia existe y §3.4 esta equivocado.' % x)
+            assert x in PLAYER_IDS, (h['hand_id'], x)
+            assert PLAYER_IDS.index(x) < len(h['players']), (h['hand_id'], x)
 
 
 # --- (4) el informe y el instrumento no divergen --------------------------
@@ -525,8 +494,8 @@ def test_el_json_y_el_informe_cuentan_lo_mismo():
     s1 = AO.seccion_1(manos)
     s3 = AO.seccion_3(manos)
     assert s1['total'] == s3['exactas'] + s3['sobra'] + s3['falta'], (
-        'el reparto de §3 no cubre las 1258 manos')
+        'el reparto de §3 no cubre las 1253 manos')
     assert sum(v for k, v in s1['inventario'].items()
-               if k in ('con_SB', 'sin_SB')) == 1258
+               if k in ('con_SB', 'sin_SB')) == 1253
     assert sum(v for k, v in s1['inventario'].items()
-               if k in ('con_BB', 'sin_BB')) == 1258
+               if k in ('con_BB', 'sin_BB')) == 1253

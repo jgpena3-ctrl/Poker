@@ -125,31 +125,23 @@ def posiciones(hand):
 
 
 def posting_de(hand, pos):
-    """El `b` de una posicion en el preflop, o None. Con su indice.
+    """La posta de una posicion en el preflop, o None. Con su indice.
 
-    ESTA ES LA PREGUNTA DEL ENCARGO: que campo y que secuencia verifican que
-    un jugador publico. La respuesta es: el campo es la accion `b` de esa
-    posicion, y la secuencia es que este en el PREFLOP, antes de cualquier
-    accion voluntaria.
-
-    No hay otro marcador. No hay `blind: true` en ninguna de las 13826 acciones
-    de la base —`learn._preflop_sequence` lo lee, pero el recorder no lo
-    escribe—. Y la posicion sola no prueba nada: el BB aparece dozens de veces
-    como `b` saliendo de una-apuesta, no posteando.
+    La accion `p` es una posta explicita de la base normalizada. En la base
+    anterior la ciega se codificaba como `b`, y por eso se aceptan las dos.
     """
     for i, a in enumerate(acciones(hand, 'preflop')):
-        if a.get('pos') == pos and a.get('action') == 'b':
+        if a.get('pos') == pos and a.get('action') in ('b', 'p'):
             return {'indice': i, 'amount': a.get('amount')}
     return None
 
 
 def es_posting(hand, pos):
-    """True si la `b` de esa posicion es un POSTING y no una apuesta propia.
+    """True si la accion de esa posicion es una POSTA y no una apuesta.
 
-    El criterio es de SECUENCIA, no de importe: un posting ocurre antes de
-    que haya dinero de nadie en el bote. Se cuentan las acciones con importe
-    de las posiciones ya vistas, y si esa suma es 0, la `b` no puede ser una
-    apuesta: no hay nada que apostar.
+    `p` es una posta por definicion. Para la codificacion vieja, el criterio
+    es de SECUENCIA: una `b` ocurre antes de que haya dinero de nadie en el
+    bote. Se cuentan las acciones con importe de las posiciones ya vistas.
     """
     puesto = 0.0
     for a in acciones(hand, 'preflop'):
@@ -157,7 +149,11 @@ def es_posting(hand, pos):
             imp = float(a.get('amount') or 0.0)
         except (TypeError, ValueError):
             imp = 0.0
-        if a.get('action') in ('b', 'r'):
+        if a.get('action') == 'p':
+            if a.get('pos') == pos:
+                return True
+            puesto += imp
+        elif a.get('action') in ('b', 'r'):
             if a.get('pos') == pos and abs(puesto) < 1e-6:
                 return True
             puesto += imp
@@ -343,6 +339,9 @@ def seccion_2(manos):
                 except (TypeError, ValueError):
                     continue
                 act = a.get('action')
+                if act == 'p':
+                    puesto[a.get('pos')] = imp
+                    continue
                 if act not in ('b', 'c', 'r'):
                     continue
                 clave = (calle, act)
@@ -454,7 +453,7 @@ def aportar_por_jugador(hand, modo='TOTAL'):
                 # se va: lo que puso ANTES se queda en el bote. El ultimo valor
                 # suyo sigue valiendo, y por eso NO se toca `ultimo`.
                 continue
-            if act in ('b', 'c', 'r'):
+            if act in ('p', 'b', 'c', 'r'):
                 if modo == 'TOTAL':
                     ultimo[pos] = imp
                 else:
