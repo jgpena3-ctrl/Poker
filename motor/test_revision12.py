@@ -36,6 +36,9 @@ def test_p1_cero_squeezes_falsos_en_las_900():
         raises = limps = callers = 0
         voluntary = False
         for i, (pos, act, amt, blind) in enumerate(seq):
+            if act == 'p':
+                # Una posta no es una decision: no llega al clasificador.
+                continue
             if learn._es_ciega_bb(i, pos, act, amt, blind, voluntary):
                 continue
             cat, _ = learn.classify_first_action(act, amt, raises, limps,

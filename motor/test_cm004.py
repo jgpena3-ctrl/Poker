@@ -236,25 +236,16 @@ def test_el_ancla_protege_el_CONJUNTO_esperado_de_cambios():
 
 
 def test_cada_mano_editada_cambia_una_sola_accion_del_bb():
-    """Cuántas acciones de preflop difieren de la versión previa: 55.
+    """Cuántas acciones de preflop difieren de la versión previa: 143.
 
     El guard sigue siendo el mismo: si el número sube, alguien ha añadido,
-    borrado o reordenado algo. Lo que cambia es el número, y el motivo está
-    medido, no supuesto:
+    borrado o reordenado algo. El salto de 55 a 143 lo produce la adopción de
+    la base normalizada: las ciegas pasan de `b` a `p` y eso cambia una acción
+    en casi todas las manos de la ventana. No son correcciones de CM-004.
 
-    | | acciones | manos |
-    |---|---|---|
-    | CM-004 (`e314f74` → `9b5905a`) | 34 | 27 |
-    | revisión posterior (`9b5905a` → hoy) | **21** | 8 |
-    | **total** | **55** | 35 |
-
-    Las 21 de la revisión posterior son `H_0173[2,3]`, `H_1080[3]`,
-    `H_1089[1..5]`, `H_1099[3,4,5]`, `H_1217[1..7]`, `H_1231[6]`, `H_1239[6]`
-    y `H_1279[8]`. **Ninguna está en el conjunto CM-004**, así que las dos
-    revisiones no se solapan: corrigieron manos distintas.
-
-    Y el número no cuadra con 34+21 porque el guard **excluye** las manos cuya
-    lista de preflop cambia de longitud, y el tramo final tocó algunas."""
+    Las 55 anteriores eran 34 de CM-004 (`e314f74` → `9b5905a`) y 21 de la
+    revisión posterior. El guard **excluye** las manos cuya lista de preflop
+    cambia de longitud, así que el total no es la suma bruta."""
     anteriores = _por_id(_anteriores())
     actual = _actual()
     n_acciones = 0
@@ -267,9 +258,10 @@ def test_cada_mano_editada_cambia_una_sola_accion_del_bb():
         if len(pa) != len(pb):
             continue          # ninguna mano editada cambia la longitud
         n_acciones += sum(1 for x, y in zip(pa, pb) if x != y)
-    assert n_acciones == 55, (
-        'se han cambiado %d acciones de preflop, se esperaban 55.\n\n'
-        'Las 55 son 34 de CM-004 + 21 de la revision posterior.\n'
+    assert n_acciones == 143, (
+        'se han cambiado %d acciones de preflop, se esperaban 143.\n\n'
+        'Las 143 incluyen las 55 de CM-004 y revision manual, mas la\n'
+        'recodificacion de ciegas como `p` de la base adoptada.\n'
         'Si el numero es MENOR, alguien ha revertido una correccion.\n'
         'Si es MAYOR, hay cambios que no estan en el motivo escrito.'
         % n_acciones)
@@ -478,7 +470,7 @@ def test_el_verificador_detecta_una_revertida_que_reaparece(tmp_path, capsys):
 # MEDIDO, de lo que seria: con la regla nueva —que acepta la `p` de
 # `DOCS/CONTRATO_ACCION_P.md`— la base de HOY da 921, los MISMOS de antes, y
 # la copia da 1258. Y 1258 NO es un numero que se pueda declarar aqui.
-CIEGAS_RECONOCIDAS = 921
+CIEGAS_RECONOCIDAS = 1253
 
 
 def test_el_invariante_de_cm004_puede_dispararse():
@@ -491,11 +483,11 @@ def test_el_invariante_de_cm004_puede_dispararse():
         · que ya no hay ninguna `BB b` que pueda violarlo  ->  la regla esta
           APAGADA, y su cero no dice NADA
 
-    Y MEDIDO, la diferencia, con la COPIA NORMALIZADA de la base —que re-codifica
-    las ciegas como `p` —pass— en vez de `b` —bet——:
+    Y MEDIDO, la diferencia, con la codificacion normalizada de la base —que
+    re-codifica las ciegas como `p` —pass— en vez de `b` —bet——:
 
-        la canonica : 921 de 1258 manos con ciega reconocida, y el invariante da 0
-        la copia    :   6 de 1258 manos con ciega reconocida, y el invariante da 0
+        la base adoptada : 1253 de 1253 manos con ciega reconocida, invariante 0
+        la copia antigua  :    6 de 1258 manos con ciega reconocida, invariante 0
 
     O sea que el MISMO CERO, con dos significados opuestos, y nada en la suite
     que los distinga. **Un verde que miente es peor que un rojo**, porque el
@@ -510,9 +502,9 @@ def test_el_invariante_de_cm004_puede_dispararse():
     # motivo es el mismo que en el otro guardian: que el procedimiento de
     # integracion se pueda probar contra un destino temporal.
     #
-    # Y el 921 sigue siendo el control de la base ACTUAL: de modo que contra
+    # Y el 1253 sigue siendo el control de la base ACTUAL: de modo que contra
     # una candidata con otro numero de ciegas este test FALLA, y tiene que
-    # fallar, porque el 921 no es el umbral de la copia.
+    # fallar, porque el 1253 no es el umbral de la copia.
     ruta = os.environ.get('POKER_DB_PATH') or None
     manos = learn.load_hands(path=ruta, reliable_only=False)
     con_ciega = 0

@@ -187,7 +187,7 @@ def test_por_defecto_cubre_toda_la_base():
     """
     manos = LS.cargar()
     _lotes, _mult, resumen = LS.construir(manos, None)
-    assert resumen['manos'] == len(manos) == 1258
+    assert resumen['manos'] == len(manos) == 1253
 
 
 def test_las_manos_fuera_del_rango_auditado_tienen_defectos():
@@ -267,7 +267,7 @@ def test_el_rango_por_defecto_sigue_siendo_toda_la_base():
     """
     manos = LS.cargar()
     _lotes, _mult, resumen = LS.construir(manos, None)
-    assert resumen['manos'] == 1258
+    assert resumen['manos'] == 1253
     assert 'H_1282' in manos
 
 
@@ -322,26 +322,29 @@ def test_cada_tiene_un_tipo_y_todos_los_tipos_existen():
         assert lote.decision, '%s no dice que hay que decidir' % lote.clave
 
 
-def test_sin_allin_es_un_lote_y_no_73_problemas():
+def test_sin_allin_es_un_lote_y_no_71_problemas():
     """El motivo por el que este fichero existe, medido.
 
-    `SIN_ALLIN` da 73 casos y son las manos `H_0001`..`H_0073`, contiguas.
-    Presentarlos como «73 problemas» hace que seplane un trabajo de 73
-    decisiones lo que es UNO de esquema. Este test falla si el lote deja de
-    declarar que es un lote, que es lo que pasaria si alguien lo convirtiera
-    en 73 tareas al añadirle una correccion automatica.
+    `SIN_ALLIN` da 71 casos: el prefijo `H_0001`..`H_0073` menos `H_0028` y
+    `H_0072`, que la adopcion retiro. Presentarlos como «71 problemas» hace
+    que seplane un trabajo de 71 decisiones lo que es UNO de esquema. Este
+    test falla si el lote deja de declarar que es un lote, que es lo que
+    pasaria si alguien lo convirtiera en 71 tareas al añadirle una correccion
+    automatica.
     """
     lote = next(l for l in LS.LOTES if 'SIN_ALLIN' in l.clases)
     assert lote.tipo == LS.LOTE
     manos = LS.cargar()
     hall, _m = AR.auditar(list(manos.values()))
     ids = sorted((h for h, _d in hall['SIN_ALLIN']), key=lambda h: AR.num(h) or 0)
-    assert len(ids) == 73, ids[:5]
+    assert len(ids) == 71, ids[:5]
+    assert set(ids) == {'H_%04d' % i for i in range(1, 74)} - {'H_0028',
+                                                               'H_0072'}, ids
     numeros = [AR.num(h) for h in ids]
-    assert numeros == list(range(1, 74)), (
-        'las manos sin `allin` ya no son H_0001..H_0073. Si el tramo se '
-        'corrigio, este test esta obsoleto y hay que actualizarlo; si cambio '
-        'la forma, el lote ya no es un lote.')
+    assert numeros == [i for i in range(1, 74) if i not in (28, 72)], (
+        'las manos sin `allin` ya no son H_0001..H_0073 menos H_0028 y '
+        'H_0072. Si el tramo se corrigio, este test esta obsoleto y hay que '
+        'actualizarlo; si cambio la forma, el lote ya no es un lote.')
 
 
 def test_el_instrumento_no_se_registra_como_escritor_de_la_base():

@@ -3,11 +3,9 @@
 
 Y el contrato es `DOCS/CONTRATO_ACCION_P.md`, y estas son sus pruebas.
 
-Y son manos **SINTÉTICAS y pequeñas**, y no la base, por una razón que ya se
-ha pagado: la base de hoy no tiene ni una `p`, de modo que un caso tomado de
-ella no probaría nada de la semántica nueva. Y una prueba de contrato que
-solo se puede construir con la base que todavía no es la canónica no es una
-prueba: es una promesa.
+Las pruebas de contrato siguen siendo **sintéticas y pequeñas**: así cada caso
+aísla una regla. La base canónica ya usa `p` (2522 postas), de modo que además
+hay un test que fija que la codificación nueva está adoptada.
 
 Y lo que se prueba, en una línea: **una posta pone dinero, no es una
 decisión, y no sube el nivel.** Y las tres cosas por separado, porque las tres
@@ -190,25 +188,24 @@ def test_una_b_normal_se_clasifica_igual_que_antes():
     assert learn.classify_first_action('f', 0, 0, 0) == ('fold', 'no_raise')
 
 
-def test_la_base_de_hoy_no_se_mueve():
-    """Que el cambio sea PREPARATORIO y no una recalibración.
+def test_la_base_de_hoy_ya_usa_p():
+    """La codificación nueva está adoptada: la base tiene 2522 postas.
 
-    Y el modo de comprobarlo: la base de hoy no tiene ni una `p`, de modo que
-    ningun numero puede moverse. Y eso se comprueba, no se supone.
+    Antes este test exigía cero `p`, porque el cambio era preparatorio. Al
+    adoptar la base normalizada, el cero dejó de ser la propiedad correcta:
+    ahora se fija cuántas hay y en qué calle, para que una recodificación
+    silenciosa se vea.
     """
     manos = learn.load_hands(reliable_only=False)
     assert manos, 'la base tiene que estar'
-    con_p = 0
+    por_calle = collections.Counter()
     for h in manos:
         for calle in ('preflop', 'flop', 'turn', 'river'):
             for a in ((h.get('streets', {}) or {}).get(calle, {}) or {}).get(
                     'actions', []) or []:
                 if a.get('action') == 'p':
-                    con_p += 1
-    assert con_p == 0, (
-        'la base canonica tiene %d acciones `p`, y el cambio que este fichero '
-        'prueba es para la codificacion NUEVA. Si la base ya tiene `p`, este '
-        'test ya no es el control de «nada se mueve».' % con_p)
+                    por_calle[calle] += 1
+    assert dict(por_calle) == {'preflop': 2522}, dict(por_calle)
 
 # --- 5. LOS CASOS QUE FALTABAN, Y QUE SON LOS QUE MAS IMPORTAN -----------
 

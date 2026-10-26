@@ -72,9 +72,9 @@ duplicadas ni cambian las categorías. La ventana fiable sigue en 877.
 - `tools/test_reparar_asientos.py`: 7 tests.
 - `motor/test_auditar_origen.py`: 29 tests. `motor/test_diagnostico_grabador.py`:
   39 tests.
-
-La suite completa no se ha cerrado: el intento agotó 900 s. El umbral
-declarado en `DOCS/ESTADO_DEL_TRABAJO.md` §13 es 20 min en máquina descargada.
+- Suite `motor recorder tests`: **927 passed, 1 skipped, 5 xfailed** en 5 min
+  24 s. Los `tools/test_live.py` y `tools/test_mano6.py` no son suite: piden
+  entrada por teclado o una captura que no está en el repo.
 
 ## 5. Lo que sigue abierto
 
@@ -92,7 +92,12 @@ declarado en `DOCS/ESTADO_DEL_TRABAJO.md` §13 es 20 min en máquina descargada.
    posta, no un ante. Hay que decidir si se recodifica a `c` antes de
    calibrar, y corregir los textos de `tools/auditar_origen.py` que aún hablan
    de `BB b`.
-5. **Actualizar la documentación obsoleta:** `DOCS/PROYECTO.md`,
+5. **Revisar las tres ciegas dobles.** `H_0357`, `H_0475` y `H_0738` tienen una
+   `BB b` después de la `BB p`. `_es_ciega_bb` marca las dos como ciega porque
+   no hay acción voluntaria entre medias, así que el motor se come la segunda
+   acción. Está declarado en `motor/test_ciega_bb.py`, no arreglado: toca
+   decidir si es dato o motor, y si se arregla, regenerar derivados.
+6. **Actualizar la documentación obsoleta:** `DOCS/PROYECTO.md`,
    `DOCS/PLAN_ACCION.md`, `DOCS/ESTADO_DEL_TRABAJO.md` e
    `INDICE_DEFECTOS.md`.
 
