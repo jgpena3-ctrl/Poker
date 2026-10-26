@@ -1,4 +1,9 @@
-# ÍNDICE DE DEFECTOS Y CASOS — BASE DE 1258 REGISTROS
+# ÍNDICE DE DEFECTOS Y CASOS — BASE HISTÓRICA DE 1258 REGISTROS
+
+> ⚠️ **Índice histórico.** Se midió sobre la base de 1258 (`35727961…`). La
+> base canónica es ahora de **1253** líneas (`c3172a14…`, commit `51a6fb9`) y
+> estos recuentos no se han vuelto a medir. El estado operativo está en
+> [`DOCS/HOJA_DE_RUTA_POST_ADOPCION.md`](DOCS/HOJA_DE_RUTA_POST_ADOPCION.md).
 
 **Respuesta corta: no existe ese documento.** El problema de cada grupo está
 repartido por **58 ficheros en `DOCS/`**, y **la mayoría siguen hablando de 1280

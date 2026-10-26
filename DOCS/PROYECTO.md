@@ -1,5 +1,11 @@
 ﻿# Documento de proyecto — Motor de póker
 
+> ⚠️ **Documento histórico.** La base canónica es ahora de **1253** líneas
+> (`c3172a14…`, commit `51a6fb9`) y el estado operativo vive en
+> [`HOJA_DE_RUTA_POST_ADOPCION.md`](HOJA_DE_RUTA_POST_ADOPCION.md). Las cifras
+> de este documento están medidas sobre bases anteriores (1280, 1258) y no se
+> han re-anclado.
+>
 > Estado: `82b4fab` (HEAD = `origin/main`) · 17 commits · suite: **445 passed, 1 skipped**
 > Actualizado: 2026-10-13
 >

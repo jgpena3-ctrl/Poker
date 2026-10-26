@@ -1,5 +1,10 @@
 # Plan de acción — Motor de póker
 
+> ⚠️ **Documento histórico.** El trabajo inmediato está en
+> [`HOJA_DE_RUTA_POST_ADOPCION.md`](HOJA_DE_RUTA_POST_ADOPCION.md): la base de
+> 1253 líneas ya está adoptada y reparada, y lo que queda es re-anclar cifras y
+> unificar resolvedores.
+
 Consolidación de las hojas de ruta `pegar_2.txt` y `pegar_3.txt` sobre `DOCS/PROYECTO.md`.
 Orden por dependencias reales; ninguna medición sobre datos contaminados ni sobre código sin auditar.
 

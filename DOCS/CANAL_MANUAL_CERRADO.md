@@ -1,9 +1,9 @@
 # CANAL MANUAL CERRADO — `hands_db.jsonl`
 
 **Estado:** vigente.
-**Fecha:** 2026-10-24
-**Commit del estado canónico:** `12c7bed`
-**SHA-256:** `7d3c55db7eca0a3f09282eedaf67032da38f511fa1b975e74e2c7b2a9f4ddc64`
+**Fecha:** 2026-10-25
+**Commit del estado canónico:** `51a6fb9`
+**SHA-256:** `c3172a147423d12a652767586dd76c36f24347c9dd503959dbea019e64944a09`
 **Líneas:** 1253
 **Revisión manual:** **terminada**. `H_0001`..`H_1282`, en tres tramos.
 **Saneamiento:** empezado. 3 correcciones; el resto documentado en
@@ -30,6 +30,36 @@ el motor reconoce **1253** ciegas y las categorías de primera decisión son
 El reemplazo retiró cinco manos que no formaban parte de la candidata
 validada: `H_0028`, `H_0072`, `H_0146`, `H_1123` y `H_1188`.
 Los derivados se reconstruyen después de esta adopción desde la nueva fuente.
+
+---
+
+## Reparación del contrato de asientos — 2026-10-25
+
+La normalización compactó `players[]` en 60 manos. Como `winner`, `allin` y
+`btn_player` son **ids de asiento**, esas listas quedaron apuntando a índices
+que ya no existían: 53 manos con 5 jugadores, 7 con 4, 11 `btn_player` y 10
+`winner` fuera de rango. El contrato de seis asientos fallaba en las 60.
+
+`tools/reparar_asientos.py` reconstruye únicamente esos 60 arrays desde la
+referencia de 1258, colocando cada jugador en su asiento antiguo y rellenando
+los huecos. **No escribe la base canónica**: produce una candidata y un
+informe que se adoptan por copia verificada, como la adopción anterior.
+
+| | antes | después |
+|---|---|---|
+| líneas | 1253 | 1253 |
+| manos con menos de 6 asientos | 60 | **0** |
+| `btn_player` fuera de rango | 11 | **0** |
+| `winner` fuera de rango | 10 | **0** |
+| `contrato_orden_ok` con problemas | 60 | **0** |
+| SHA-256 | `7d3c55db7eca0a3f…` | **`c3172a147423d12a…`** |
+
+Los 67 asientos restaurados tienen `pos` vacío: no crean posiciones
+duplicadas. Las doce categorías del motor y la ventana fiable de 877 quedan
+idénticas; los derivados se regeneraron con
+`python tools/reconstruir_derivados.py regen`. El informe completo está en
+`trabajo/reparacion_asientos.json` y la candidata en
+`trabajo/hands_db_reparada.jsonl`.
 
 ---
 

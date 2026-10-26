@@ -1,7 +1,8 @@
 # RANGO VIGENTE — las tres cifras, y por qué son tres
 
 **Estado:** firmado. La ventana de calibración son **877** manos.
-**Fecha:** 2026-10-14
+**Fecha:** 2026-10-14 (actualizado el 2026-10-25 tras la adopción y la
+reparación de asientos)
 **Vigila:** `motor/test_rango_fiable.py` (sin `xfail`: verifica las tres).
 
 ---
@@ -15,9 +16,9 @@ versiones del mismo rango: son **tres cosas distintas**.
 |---:|---|---|
 | **900** | `learn.RELIABLE_HANDS`. Un corte de **líneas**, no de `hand_id` | el tope de la ventana |
 | **877** | lo que produce `load_hands(reliable_only=True)`: 900 − 23 de CM-004 | **la ventana de calibración** |
-| **991** | `H_0001..H_1014`, el rango **auditado** | saber qué hay, no para qué se usa |
+| **988** | `H_0001..H_1014` de la base de 1253, el rango **auditado** | saber qué hay, no para qué se usa |
 
-**La distinción es la que faltaba:** *rango auditado* (991, para saber qué hay)
+**La distinción es la que faltaba:** *rango auditado* (988, para saber qué hay)
 frente a *ventana de calibración* (877, para qué se usa). Un rango auditado
 puede ser más grande que la ventana sin que haya contradicción: son preguntas
 distintas.
@@ -26,7 +27,7 @@ distintas.
 RELIABLE_HANDS ......... 900   corte de líneas
 menos exclusiones ......  -23   las 23 de CM-004
 = VENTANA DE CALIBRACIÓN 877   lo que usan las cifras
-= RANGO AUDITADO ....... 991   H_0001..H_1014, para auditar
+= RANGO AUDITADO ....... 988   H_0001..H_1014, para auditar
 ```
 
 ## 2. Quién autoriza el 877, y por qué
@@ -68,9 +69,14 @@ Esto se descubrió al escribir este documento, y es lo más importante que hay
 aquí.
 
 Las cifras de F7.2 se publicaron con la ventana de 877 sobre el fichero de
-**1280** líneas. El fichero tiene ahora **1258**, y 70 de las líneas de la
-ventana son **distintas**. La ventana sigue teniendo 877 líneas, pero
-**no las mismas manos**.
+**1280** líneas. El fichero tiene ahora **1253** (1258 antes de la adopción y
+la reparación), y 70 de las líneas de la ventana son **distintas**. La ventana
+sigue teniendo 877 líneas, pero **no las mismas manos**.
+
+> La tabla de esta sección se midió sobre las 1258. Tras adoptar la base de
+> 1253 no se ha vuelto a anclar: se conserva como referencia histórica de la
+> discrepancia, no como cifra vigente. El re-anclaje es la tarea 5 de
+> `DOCS/HOJA_DE_RUTA_POST_ADOPCION.md`.
 
 ```
                               PUBLICADO      AHORA      DELTA
@@ -104,9 +110,10 @@ sobre una base que ya no existe.
 cota = 238 + 29 (techo sin evidencia) = 267
 ```
 
-## 5. El rango auditado (991) no es la ventana
+## 5. El rango auditado (988) no es la ventana
 
-`H_0001..H_1014` son **991** manos y son las que se han auditado en
+`H_0001..H_1014` son **988** manos en la base de 1253 (991 antes de retirar
+`H_0028`, `H_0072` y `H_0146`), y son las que se han auditado en
 `HALLZGOS_H0001_H1014.md`. No se usan para calibrar.
 
 Que el rango auditado sea mayor que la ventana **no es una contradicción**:

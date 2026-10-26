@@ -1,5 +1,11 @@
 # ESTADO DEL TRABAJO: lo que está hecho, lo que sigue abierto, y lo que depende de A1
 
+> ⚠️ **Actualización 2026-10-25.** La base canónica es de **1253** líneas
+> (`c3172a14…`, commit `51a6fb9`), ya adoptada y con el contrato de asientos
+> reparado. El estado operativo y el orden de trabajo vigente están en
+> [`HOJA_DE_RUTA_POST_ADOPCION.md`](HOJA_DE_RUTA_POST_ADOPCION.md). Lo que
+> sigue en este documento describe el bloque anterior.
+
 > Y este documento es el **registro** que el bloque pide: qué trabajo está
 > terminado, qué sigue abierto, de quién es, y **qué condición lo
 > desbloquea**.
