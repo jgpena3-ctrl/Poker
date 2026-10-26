@@ -24,10 +24,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'tools'))
 from motor import multiway                                  # noqa: E402
 from motor.multiway import (                                # noqa: E402
     PLAYER_IDS, HU, MULTIWAY, DESCONOCIDO, SIN_DECISION,
-    acciones, clasificar_decision, en_bote_en_instante,
-    folds_hasta, hero_pos, instante_decision, no_puede_actuar,
-    no_puede_actuar_en_instante, posiciones_allin, puede_responder,
-    secuencia, ultima_accion,
+    ContratoAsientosInvalido, acciones, clasificar_decision,
+    en_bote_en_instante, folds_hasta, hero_pos, instante_decision,
+    no_puede_actuar, no_puede_actuar_en_instante, posiciones_allin,
+    posicion_de_id, puede_responder, secuencia, ultima_accion,
 )
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -98,6 +98,27 @@ def test_orden_players_se_verifica_en_la_ventana_fiable():
 def test_id_interno_se_resuelve_a_posicion():
     h = mano(allin=[ID_DE_POS['SB']])
     assert posiciones_allin(h) == {'SB'}
+
+
+def test_posicion_de_id_resuelve_las_seis_butacas():
+    h = mano()
+    for pos, pid in ID_DE_POS.items():
+        assert posicion_de_id(h, pid) == pos
+
+
+def test_posicion_de_id_desconocido_es_none():
+    assert posicion_de_id(mano(), 'p9') is None
+
+
+def test_posicion_de_id_sin_posicion_es_none():
+    h = mano()
+    h['players'][3]['pos'] = ''
+    assert posicion_de_id(h, 'p3') is None
+
+
+def test_posicion_de_id_rechaza_contrato_roto():
+    with pytest.raises(ContratoAsientosInvalido):
+        posicion_de_id(mano(n_players=4), 'hero')
 
 
 def test_mapeo_roto_es_desconocido_no_excepcion():

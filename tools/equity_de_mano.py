@@ -43,7 +43,7 @@ from motor import situation as S                         # noqa: E402
 from motor.asistente_live import (                       # noqa: E402
     RangeState, _preflop_spot, _pf_rival_pos,
     _villain_postflop_actions, situation)
-from motor.multiway import PLAYER_IDS                    # noqa: E402
+from motor.multiway import posicion_de_id                # noqa: E402
 from motor.observations import lead_label              # noqa: E402
 from motor.profile import Profiles                       # noqa: E402
 
@@ -95,12 +95,8 @@ def hero_pos_de(h):
 
 
 def id_a_pos(h, ident):
-    if ident not in PLAYER_IDS:
-        return None
-    i = PLAYER_IDS.index(ident)
-    if i >= len(h.get('players') or []):
-        return None
-    return h['players'][i].get('pos')
+    """Alias historico de `multiway.posicion_de_id`."""
+    return posicion_de_id(h, ident)
 
 
 def se_foldio_antes_de(h, pos, calle):

@@ -38,9 +38,8 @@ import numpy as np                                       # noqa: E402
 
 from motor import learn                                  # noqa: E402
 from motor.hand_evaluator import evaluate_hand
-from motor.multiway import PLAYER_IDS                  # noqa: E402
 from motor import player_ranges as PR                    # noqa: E402
-from motor.multiway import PLAYER_IDS                  # noqa: E402
+from motor.multiway import posicion_de_id              # noqa: E402
 
 DOCS = os.path.join(ROOT, 'DOCS')
 PARTICION_MD = os.path.join(DOCS, 'PARTICION_FASE_D.md')
@@ -71,17 +70,12 @@ def con_cartas(h):
 
 
 def id_a_pos(h, ident):
-    """`_id` de `winner` -> posicion. Por PLAYER_IDS, no por indice.
+    """Alias historico de `multiway.posicion_de_id`.
 
-    `recorder_live` escribe `p['_id']` y `PLAYER_IDS` es
-    `['hero', 'p1' ... 'p5']`: `'hero'` es **la butaca 0**, no una persona.
+    `recorder_live` escribe `p['_id']`: `'hero'` es **la butaca 0**, no una
+    persona. El contrato de asientos lo valida el resolvedor unico.
     """
-    if ident not in PLAYER_IDS:
-        return None
-    i = PLAYER_IDS.index(ident)
-    if i >= len(h.get('players') or []):
-        return None
-    return h['players'][i].get('pos')
+    return posicion_de_id(h, ident)
 
 
 def hero_de(h):

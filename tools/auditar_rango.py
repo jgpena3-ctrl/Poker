@@ -94,6 +94,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
 from motor import learn  # noqa: E402
+from motor.multiway import posicion_de_id  # noqa: E402
 
 DB_REL = 'data/hands_db.jsonl'
 DB_PATH = os.path.join(ROOT, *DB_REL.split('/'))
@@ -453,15 +454,9 @@ def posicion_duplicada(hand):
             for p in sorted({a for a in activos if activos.count(a) > 1})]
 
 
-PID = ('hero', 'p1', 'p2', 'p3', 'p4', 'p5')
-
-
 def pos_de_pid(hand, pid):
-    if pid not in PID:
-        return None
-    jugadores = hand.get('players') or []
-    i = PID.index(pid)
-    return jugadores[i].get('pos') if i < len(jugadores) else None
+    """Alias historico de `multiway.posicion_de_id`."""
+    return posicion_de_id(hand, pid)
 
 
 def winner_foldeo(hand):

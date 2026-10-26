@@ -52,12 +52,15 @@ def aud():
 
 
 def _mano(posiciones, nombres, cartas, winner, showdown=None):
+    players = [
+        {'pos': p, 'name': n, 'cards': c}
+        for p, n, c in zip(posiciones, nombres, cartas)
+    ]
+    players += [{'pos': '', 'name': '', 'cards': ''}
+                for _ in range(6 - len(players))]
     return {
         'hand_id': 'X',
-        'players': [
-            {'pos': p, 'name': n, 'cards': c}
-            for p, n, c in zip(posiciones, nombres, cartas)
-        ],
+        'players': players,
         'winner': winner,
         'showdown': showdown or {},
     }

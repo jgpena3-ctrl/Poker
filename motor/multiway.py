@@ -50,9 +50,22 @@ def contrato_orden_ok(hand):
     return len(hand.get('players') or []) == len(PLAYER_IDS)
 
 
+class ContratoAsientosInvalido(ValueError):
+    """`players[]` no permite mapear un id interno a una posicion."""
+
+
 def posicion_de_id(hand, pid):
-    """Id interno (`p1`...) -> `pos`. None si el mapeo no es valido."""
+    """Id interno (`p1`...) -> `pos`. None si el id o la posicion faltan.
+
+    Un contrato roto NO devuelve None: se rechaza con
+    `ContratoAsientosInvalido`. Devolver None lo confundiria con "esta mano
+    no declara esa posicion" y las auditorias seguirian contando.
+    """
     if not contrato_orden_ok(hand):
+        raise ContratoAsientosInvalido(
+            'contrato de asientos invalido: players[] mide %d, se esperaban %d'
+            % (len(hand.get('players') or []), len(PLAYER_IDS)))
+    if pid not in PLAYER_IDS:
         return None
     return (hand['players'][PLAYER_IDS.index(pid)] or {}).get('pos') or None
 

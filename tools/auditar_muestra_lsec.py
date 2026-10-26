@@ -22,7 +22,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
 from motor import learn                                # noqa: E402
-from motor.multiway import PLAYER_IDS                  # noqa: E402
+from motor.multiway import posicion_de_id              # noqa: E402
 from motor.hand_evaluator import evaluate_hand       # noqa: E402
 
 
@@ -30,19 +30,12 @@ ORDEN_CALLES = ('preflop', 'flop', 'turn', 'river')
 
 
 def id_a_pos(h, ident):
-    """`_id` de `winner` -> posicion, por PLAYER_IDS.
+    """Alias historico de `multiway.posicion_de_id`.
 
-    `recorder_live` escribe `p['_id']` y `PLAYER_IDS` es
-    `['hero', 'p1' ... 'p5']`. `'hero'` es **la butaca 0**: no dice quien
-    es el hero. En 232 de las 877 manos de la ventana el hero real esta en
-    otra butaca.
+    `'hero'` es **la butaca 0**: no dice quien es el hero. En 232 de las
+    877 manos de la ventana el hero real esta en otra butaca.
     """
-    if ident not in PLAYER_IDS:
-        return None
-    i = PLAYER_IDS.index(ident)
-    if i >= len(h.get('players') or []):
-        return None
-    return h['players'][i].get('pos')
+    return posicion_de_id(h, ident)
 
 
 def con_cartas(h):
