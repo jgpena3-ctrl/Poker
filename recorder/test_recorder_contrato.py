@@ -9,6 +9,8 @@ Cubre los defectos que la normalizacion tuvo que reparar a mano:
   - los checks que el autocompletado inventa quedan marcados como inferidos
     y ambiguos.
 """
+import json
+
 import pytest
 
 import recorder.recorder_live as rl
@@ -152,3 +154,25 @@ def test_apuesta_del_board_nuevo_no_queda_en_la_calle_vieja():
     flop_acts = _acts(r.hand['streets']['flop']['actions'])
     assert ('SB', 'b', 2.0) in flop_acts, flop_acts
     assert ('SB', 'b', 2.0) not in pre, pre
+
+
+def test_sesion_de_prueba_guarda_frame_y_resultado_fuera_de_la_mano(tmp_path):
+    output = tmp_path / 'resultados' / 'hands_db.jsonl'
+    captures = tmp_path / 'capturas'
+    r = LiveRecorder(str(output), str(captures), str(tmp_path), ['H_0141'])
+    image = __import__('numpy').zeros((2, 2, 3), dtype='uint8')
+    path = r.save_frame({'pot': 1.5}, image, log=lambda _: None)
+    assert path and (captures / 'index.jsonl').exists()
+    metadata = json.loads((captures / 'index.jsonl').read_text(encoding='utf-8'))
+    assert metadata['seq'] == 1
+    assert metadata['test_targets'] == ['H_0141']
+
+    r.hand_id = 0
+    r._assign_positions = lambda state: dict(POS)
+    state = _state(btn='p1', bets={'p2': 0.5, 'p3': 1.0}, pot=1.5)
+    r.start_hand(state)
+    r._last_log = lambda _: None
+    r.finalize_hand(state)
+    assert output.exists()
+    session_log = tmp_path / 'resultados' / 'registro_sesion.jsonl'
+    assert json.loads(session_log.read_text(encoding='utf-8'))['test_targets'] == ['H_0141']

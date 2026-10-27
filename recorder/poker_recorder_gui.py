@@ -34,6 +34,8 @@ class RecorderGUI:
         self._test_output = os.environ.get('POKER_TEST_OUTPUT', '').strip()
         self._test_capture_dir = os.environ.get(
             'POKER_TEST_CAPTURE_DIR', '').strip()
+        self._test_targets = [value for value in os.environ.get(
+            'POKER_TEST_TARGETS', '').split(',') if value]
         if self._test_session:
             self._test_output = self._test_output or os.path.join(
                 self._test_session, 'resultados', 'hands_db.jsonl')
@@ -48,6 +50,8 @@ class RecorderGUI:
             self._log(f'Modo prueba manual: {self._test_session}')
             self._log(f'  registros: {self._test_output}')
             self._log(f'  capturas:  {self._test_capture_dir}')
+            if self._test_targets:
+                self._log('  objetivos: ' + ', '.join(self._test_targets))
 
     # ---------- UI ----------
 
@@ -305,7 +309,9 @@ class RecorderGUI:
 
         lr = rl_mod.LiveRecorder(
             output_path=self._test_output or None,
-            capture_dir=self._test_capture_dir or None)
+            capture_dir=self._test_capture_dir or None,
+            session_dir=self._test_session or None,
+            test_targets=self._test_targets)
         lr.on_hand_saved = self._mark_cards_dirty
         lr.run(stop_event=self.stop_event, log_func=log_func)
         self.root.after(0, self._on_stopped)
@@ -360,7 +366,9 @@ class RecorderGUI:
         rl_mod.MANUAL_WINNER = None
         self.manual_recorder = rl_mod.LiveRecorder(
             output_path=self._test_output or None,
-            capture_dir=self._test_capture_dir or None)
+            capture_dir=self._test_capture_dir or None,
+            session_dir=self._test_session or None,
+            test_targets=self._test_targets)
         self.manual_recorder.on_hand_saved = self._mark_cards_dirty
         self.end_hand_btn.config(state=tk.DISABLED)
         self.cancel_hand_btn.config(state=tk.DISABLED)

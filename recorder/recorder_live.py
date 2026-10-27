@@ -62,9 +62,14 @@ def _json_safe(value):
 
 
 class LiveRecorder:
-    def __init__(self, output_path=None, capture_dir=None):
+    def __init__(self, output_path=None, capture_dir=None, session_dir=None,
+                 test_targets=None):
         self.output_path = output_path or OUTPUT_PATH
         self.capture_dir = capture_dir
+        # Estos datos viven exclusivamente en el sidecar de la sesión.  No se
+        # mezclan con el contrato de una mano de la base canónica.
+        self.session_dir = session_dir
+        self.test_targets = list(test_targets or [])
         self.capture_index_path = (
             os.path.join(capture_dir, 'index.jsonl') if capture_dir else None)
         self._capture_seq = self._last_capture_seq(self.capture_index_path)
@@ -162,6 +167,7 @@ class LiveRecorder:
                 'manual_inactive': sorted(MANUAL_INACTIVE),
                 'manual_positions': dict(MANUAL_POSITIONS),
                 'manual_winner': MANUAL_WINNER,
+                'test_targets': self.test_targets,
             }
             json_path = os.path.join(hand_dir, stem + '.json')
             with open(json_path, 'w', encoding='utf-8') as f:
@@ -174,6 +180,27 @@ class LiveRecorder:
         except Exception as exc:
             log(f'  [captura] no se pudo guardar: {exc}')
             return None
+
+    def _record_session_result(self, hand):
+        """Añade la relación prueba→resultado fuera del JSONL de manos."""
+        if not self.session_dir:
+            return
+        try:
+            path = os.path.join(self.session_dir, 'resultados',
+                                'registro_sesion.jsonl')
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            record = {
+                'timestamp': datetime.datetime.now().isoformat(),
+                'recorded_hand_id': hand.get('hand_id'),
+                'test_targets': self.test_targets,
+                'output': os.path.relpath(self.output_path, self.session_dir),
+            }
+            with open(path, 'a', encoding='utf-8') as f:
+                f.write(json.dumps(record, ensure_ascii=False) + '\n')
+        except OSError:
+            # El recorder no debe perder una mano porque falle el índice de
+            # conveniencia de una sesión de prueba.
+            pass
 
     # ---------- capture (delegada a capture_live) ----------
 
@@ -1034,8 +1061,12 @@ class LiveRecorder:
         for p in out['players']:
             del p['_id']
 
-        with open(self.output_path, 'a') as f:
+        output_dir = os.path.dirname(os.path.abspath(self.output_path))
+        os.makedirs(output_dir, exist_ok=True)
+        with open(self.output_path, 'a', encoding='utf-8') as f:
             f.write(json.dumps(out) + '\n')
+
+        self._record_session_result(out)
 
         if self.on_hand_finalized is not None:
             try:

@@ -65,6 +65,10 @@ venv/
 # Data
 *.png
 
+# Evidencia reproducible de sesiones manuales del recorder. La estructura y
+# el manifiesto de ejemplo sí viven en pruebas/recorder/.
+pruebas/recorder/sesiones/
+
 # Snapshot de derivados previos a una reconstruccion.
 # Son copias de seguridad locales, no fuentes: se regeneran con
 # `python tools/reconstruir_derivados.py regen`.
