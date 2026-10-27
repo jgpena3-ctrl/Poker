@@ -15,7 +15,7 @@ from collections import Counter
 from datetime import datetime, timezone
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 3
 DEFAULT_PATH = os.path.join(os.path.dirname(__file__), '..', 'data',
                             'decisions.jsonl')
 

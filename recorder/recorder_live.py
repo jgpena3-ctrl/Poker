@@ -70,6 +70,7 @@ class LiveRecorder:
         # mezclan con el contrato de una mano de la base canónica.
         self.session_dir = session_dir
         self.test_targets = list(test_targets or [])
+        self._target_index = 0
         self.capture_index_path = (
             os.path.join(capture_dir, 'index.jsonl') if capture_dir else None)
         self._capture_seq = self._last_capture_seq(self.capture_index_path)
@@ -168,6 +169,7 @@ class LiveRecorder:
                 'manual_positions': dict(MANUAL_POSITIONS),
                 'manual_winner': MANUAL_WINNER,
                 'test_targets': self.test_targets,
+                'target_hand_id': self._current_target,
             }
             json_path = os.path.join(hand_dir, stem + '.json')
             with open(json_path, 'w', encoding='utf-8') as f:
@@ -181,6 +183,12 @@ class LiveRecorder:
             log(f'  [captura] no se pudo guardar: {exc}')
             return None
 
+    @property
+    def _current_target(self):
+        if 0 <= self._target_index < len(self.test_targets):
+            return self.test_targets[self._target_index]
+        return None
+
     def _record_session_result(self, hand):
         """Añade la relación prueba→resultado fuera del JSONL de manos."""
         if not self.session_dir:
@@ -189,12 +197,17 @@ class LiveRecorder:
             path = os.path.join(self.session_dir, 'resultados',
                                 'registro_sesion.jsonl')
             os.makedirs(os.path.dirname(path), exist_ok=True)
+            target_id = self._current_target
             record = {
                 'timestamp': datetime.datetime.now().isoformat(),
                 'recorded_hand_id': hand.get('hand_id'),
+                'target_hand_id': target_id,
                 'test_targets': self.test_targets,
+                'target_index': self._target_index,
                 'output': os.path.relpath(self.output_path, self.session_dir),
             }
+            if target_id is not None:
+                self._target_index += 1
             with open(path, 'a', encoding='utf-8') as f:
                 f.write(json.dumps(record, ensure_ascii=False) + '\n')
         except OSError:

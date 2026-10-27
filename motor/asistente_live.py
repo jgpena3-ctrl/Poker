@@ -32,7 +32,7 @@ from recorder_live import LiveRecorder, POSITION_ORDER
 from .behavior import Oracle, build
 from .cards import card_id
 from .decision import EvTable, OracleResponse, compute_evs
-from .decision_log import DecisionLog
+from .decision_log import DecisionLog, _clean as _safe_json
 from .hierarchy import (ShadowLog, classify_villains, shadow_equity,
                         shadow_record)
 from .learn import load_hands
@@ -675,7 +675,12 @@ class Asistente:
 
     def _log_recommendation(self, state, hero_pid, villain_pid, sit, evs,
                             villain_label, villain_range=None,
-                            to_call=None, effective_stack=None):
+                            to_call=None, effective_stack=None,
+                            # --- reproducibility inputs (all optional, additive) ---
+                            rules_inputs=None, situation_inputs=None,
+                            ev_inputs=None, villain_range_inputs=None,
+                            response_model_inputs=None, motor_settings=None,
+                            runout=None):
         """Persist what was known at recommendation time, never later results."""
         logger = getattr(self, 'decision_log', None)
         if logger is None:
@@ -746,6 +751,28 @@ class Asistente:
 
         is_preflop = bool(getattr(evs, 'preflop', False))
         action_values = getattr(evs, 'ev', None) or {}
+
+        # --- reproducibility block (additive, schema v2) ---
+        reach_vector = None
+        if villain_range is not None:
+            try:
+                weights = villain_range.weights
+                reach_vector = [float(w) for w in weights]
+            except Exception:
+                reach_vector = None
+
+        reproducibility = {
+            'version': 3,
+            'rules_inputs': _safe_json(rules_inputs) if rules_inputs is not None else None,
+            'situation_inputs': _safe_json(situation_inputs) if situation_inputs is not None else None,
+            'ev_inputs': _safe_json(ev_inputs) if ev_inputs is not None else None,
+            'villain_range_inputs': _safe_json(villain_range_inputs) if villain_range_inputs is not None else None,
+            'response_model_inputs': _safe_json(response_model_inputs) if response_model_inputs is not None else None,
+            'motor_settings': _safe_json(motor_settings) if motor_settings is not None else None,
+            'reach_vector': reach_vector,
+            'reach_combo_order': 'HAND_LABELS' if reach_vector is not None else None,
+            'runout': runout,
+        }
         candidates = getattr(evs, 'candidate_actions', None)
         if candidates is None:
             candidates = list(action_values)
@@ -786,6 +813,7 @@ class Asistente:
             'action_values_kind': 'frequency' if is_preflop else 'ev',
             'recommended_action': getattr(evs, 'chosen', None),
             'villain_label': villain_label,
+            'reproducibility': reproducibility,
         }
         try:
             return logger.record_decision(
@@ -1218,9 +1246,41 @@ class Asistente:
                                to_call, ev, action, label)
         sit = Situation(hero_codes=tuple(hero), board_codes=(),
                         street='preflop', position=hero_pos)
+        # Build reproducibility inputs for preflop
+        _preflop_rules_inputs = {
+            'street': 'preflop',
+            'hero_initiator': False,
+            'to_call': to_call,
+            'pot': pot,
+            'stack': effective_stack,
+            'effective_stack': effective_stack,
+            'n_players': 1,
+        }
+        _preflop_situation_inputs = {
+            'hero_codes': list(hero),
+            'board_codes': [],
+            'pot_before_call': pot,
+            'to_call': to_call,
+            'stack_effective': effective_stack,
+            'position': hero_pos,
+            'street': 'preflop',
+        }
+        _preflop_ev_inputs = {
+            'pot': pot,
+            'to_call': to_call,
+            'stack': effective_stack,
+            'runout': False,
+        }
         self._log_recommendation(
             state, hero_pid, villain_pid, sit, evs, label,
-            to_call=to_call, effective_stack=effective_stack)
+            to_call=to_call, effective_stack=effective_stack,
+            rules_inputs=_preflop_rules_inputs,
+            situation_inputs=_preflop_situation_inputs,
+            ev_inputs=_preflop_ev_inputs,
+            villain_range_inputs=None,
+            response_model_inputs=None,
+            motor_settings={'runout': False, 'n_runouts': 0, 'tree': False},
+            runout=False)
         if on_reco is not None:
             on_reco(text, evs, sit, label)
         elif verbose or self.verbose:
@@ -1337,6 +1397,17 @@ class Asistente:
             (street, _hero_bet_facing(street, is_initiator,
                                       _hand_was_raised(self.rec.hand)),
              _texture_class(board)))
+        # Capturar el estado efectivo de OracleResponse para el registro.
+        # Se almacena en una variable temporal porque _postflop_response_inputs
+        # se construye mas adelante (despues de rules.plan).
+        _oracle_response_state = {
+            'pf_p': getattr(resp, 'pf_p', None),
+            'pc_p': getattr(resp, 'pc_p', None),
+            'pr_p': getattr(resp, 'pr_p', None),
+            'alpha': getattr(resp, 'alpha', None),
+            'source': getattr(resp, 'source', None),
+            'sizing': getattr(resp, 'sizing', None),
+        }
         # Reglas postflop (pegar.txt §2-§22): la situación fija los
         # candidatos y sizings; el EV solo se considera sobre ellos (§21).
         n_players = sum(1 for pid in PLAYER_IDS
@@ -1450,10 +1521,97 @@ class Asistente:
                 pass       # el log nunca rompe la recomendación
 
         text = format_insight(sit, evs, villain_label=label, plan=rp)
+        # Build reproducibility inputs for postflop
+        _postflop_rules_inputs = {
+            'street': street,
+            'hero_initiator': is_initiator,
+            'to_call': to_call,
+            'pot': pot,
+            'stack': effective_stack,
+            'effective_stack': effective_stack,
+            'n_players': max(1, n_players),
+            'facing_raise': facing_raise,
+            'hero_bet_flop': hero_bet_flop,
+            'hero_oop': hero_oop,
+            'flop_checked': flop_checked,
+            'villain_bet_flop': villain_bet_flop,
+            'hand_role': hs.role,
+            'range_advantage': range_adv(sit.equity),
+            'nut_advantage': hs.nut_advantage(),
+        }
+        _postflop_situation_inputs = {
+            'hero_codes': list(hero),
+            'board_codes': list(board),
+            'pot_before_call': pot,
+            'to_call': to_call,
+            'stack_effective': effective_stack,
+            'position': hero_pos,
+            'street': street,
+        }
+        _postflop_ev_inputs = {
+            'pot': pot,
+            'to_call': to_call,
+            'stack': stack,
+            'villain_stack': villain_stack,
+            'bet_sizes': list(rp.bet_sizes) if rp.bet_sizes else [],
+            'raise_to': rp.raise_to,
+            'candidates': list(rp.candidates) if rp.candidates else [],
+            'runout': (self.runout if runout is None else runout),
+            'n_runouts': 100,
+            'tree': False,
+        }
+        _postflop_range_inputs = {
+            'profile': perfil,
+            'spot': spot,
+            'action': action,
+            'pos': villain_pos,
+            'villain_pos_for_prior': _pf_rival_pos(self.rec.hand, villain_pos, spot),
+            'blockers': list(hero) + list(board) + list(blockers),
+            'postflop_actions': [
+                [st_v, facing, act, board_str]
+                for st_v, facing, act, board_str in _villain_postflop_actions(
+                    self.rec.hand, villain_pos)
+            ],
+            'range_model_params': {
+                'alpha': 2.0,
+                'flat_prior': 0.15,
+            },
+        }
+        _postflop_response_inputs = {
+            'profile': perfil,
+            'street': street,
+            'facing': _hero_bet_facing(street, is_initiator,
+                                       _hand_was_raised(self.rec.hand)),
+            'texture': _texture_class(board),
+            'fade_n': 20.0,
+            # Estado efectivo de OracleResponse (calculado en __init__).
+            # Necesario para reproducir response_fn sin acceso al Oracle.
+            'pf_p': _oracle_response_state.get('pf_p'),
+            'pc_p': _oracle_response_state.get('pc_p'),
+            'pr_p': _oracle_response_state.get('pr_p'),
+            'alpha': _oracle_response_state.get('alpha'),
+            'source': _oracle_response_state.get('source'),
+            'sizing': _oracle_response_state.get('sizing'),
+        }
+        _postflop_motor_settings = {
+            'runout': (self.runout if runout is None else runout),
+            'n_runouts': 100,
+            'tree': False,
+            'tree_n_street': 60,
+            'tree_n_finals': 6,
+            'tree_frac': 0.5,
+        }
         self._log_recommendation(
             state, hero_pid, villain, sit, evs, label,
             villain_range=rs, to_call=to_call,
-            effective_stack=effective_stack)
+            effective_stack=effective_stack,
+            rules_inputs=_postflop_rules_inputs,
+            situation_inputs=_postflop_situation_inputs,
+            ev_inputs=_postflop_ev_inputs,
+            villain_range_inputs=_postflop_range_inputs,
+            response_model_inputs=_postflop_response_inputs,
+            motor_settings=_postflop_motor_settings,
+            runout=(self.runout if runout is None else runout))
         if on_reco is not None:
             on_reco(text, evs, sit, label)
         elif self.verbose or verbose:

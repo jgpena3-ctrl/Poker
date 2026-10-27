@@ -1,4 +1,25 @@
 {
   "description": "IDs históricos que se van a repetir manualmente con el recorder.",
-  "targets": []
+  "targets": [
+    "H_0357",
+    "H_0359",
+    "H_0385",
+    "H_0401",
+    "H_0424",
+    "H_0450",
+    "H_0461",
+    "H_0465",
+    "H_0471",
+    "H_0475",
+    "H_0504",
+    "H_0508",
+    "H_0519",
+    "H_0525",
+    "H_0529",
+    "H_0545",
+    "H_0549",
+    "H_0556",
+    "H_0557",
+    "H_0620"
+  ]
 }

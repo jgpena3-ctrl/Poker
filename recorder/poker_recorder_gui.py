@@ -6,6 +6,39 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'tools'))
 sys.path.insert(0, os.path.dirname(__file__))
 
 
+def _detalle_objetivo(tid):
+    try:
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        canonical = os.path.join(root, 'data', 'hands_db.jsonl')
+        with open(canonical, encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    h = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if h.get('hand_id') != tid:
+                    continue
+                players = [p.get('name') for p in (h.get('players') or [])]
+                jarduan_cards = ''
+                for p in (h.get('players') or []):
+                    if (p.get('name') or '').lower() == 'jarduan':
+                        jarduan_cards = p.get('cards') or ''
+                return {
+                    'hand_id': tid,
+                    'date': h.get('date'),
+                    'players': players,
+                    'jarduan': any((p or '').lower() == 'jarduan'
+                                   for p in players),
+                    'jarduan_cards': jarduan_cards,
+                }
+    except OSError:
+        return None
+    return None
+
+
 class RecorderGUI:
     PLAYER_LABELS = [
         ('hero', 'Hero'),
@@ -52,6 +85,16 @@ class RecorderGUI:
             self._log(f'  capturas:  {self._test_capture_dir}')
             if self._test_targets:
                 self._log('  objetivos: ' + ', '.join(self._test_targets))
+                for tid in self._test_targets:
+                    info = _detalle_objetivo(tid)
+                    if info:
+                        fecha = (info.get('date') or '-')[:19]
+                        cartas = (('  cartas Jarduan: ' + info.get('jarduan_cards'))
+                                  if info.get('jarduan_cards') else '')
+                        self._log('    %s  %s  %s%s%s' % (
+                            tid, fecha, ', '.join(info.get('players') or []),
+                            '  <-- Jarduan' if info.get('jarduan') else '',
+                            cartas))
 
     # ---------- UI ----------
 

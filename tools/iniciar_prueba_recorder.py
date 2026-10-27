@@ -26,6 +26,41 @@ def _load_targets(path):
     return targets
 
 
+def _canonical_hands():
+    out = {}
+    with open(CANONICAL, encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                h = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            out[h.get('hand_id')] = h
+    return out
+
+
+def _detalle_target(hid, hands):
+    h = hands.get(hid)
+    if not h:
+        return {'hand_id': hid, 'date': None, 'players': [], 'jarduan': False,
+                'jarduan_cards': ''}
+    players = [p.get('name') for p in (h.get('players') or [])]
+    jarduan_cards = ''
+    for p in (h.get('players') or []):
+        if (p.get('name') or '').lower() == 'jarduan':
+            jarduan_cards = p.get('cards') or ''
+    return {
+        'hand_id': hid,
+        'date': h.get('date'),
+        'players': players,
+        'jarduan': any((p or '').lower() == 'jarduan'
+                       for p in players),
+        'jarduan_cards': jarduan_cards,
+    }
+
+
 def _sha256(path):
     digest = hashlib.sha256()
     with open(path, 'rb') as f:
@@ -46,6 +81,18 @@ def main():
     if not targets:
         parser.error('indica al menos un --id o rellena pruebas/recorder/objetivos.json')
 
+    targets = sorted(set(targets))
+
+    hands = _canonical_hands()
+    detalles = [_detalle_target(t, hands) for t in targets]
+    print('Objetivos (%d):' % len(targets))
+    for d in detalles:
+        marca = '  <-- Jarduan' if d['jarduan'] else ''
+        cartas = ('  cartas Jarduan: ' + d['jarduan_cards']) if d['jarduan_cards'] else ''
+        print('  %-8s  %s  %s%s%s' % (d['hand_id'],
+              (d['date'] or '')[:19],
+              ', '.join(d['players']), marca, cartas))
+
     stamp = dt.datetime.now().strftime('%Y%m%dT%H%M%S')
     session = os.path.join(TEST_ROOT, 'sesiones', 'manual_' + stamp)
     os.makedirs(os.path.join(session, 'resultados'))
@@ -55,6 +102,7 @@ def main():
         'created_at': dt.datetime.now().isoformat(),
         'mode': 'manual-recorder-test',
         'targets': targets,
+        'target_details': detalles,
         'canonical_db': os.path.relpath(CANONICAL, ROOT),
         'canonical_sha256': _sha256(CANONICAL),
         'output': os.path.relpath(output, session),

@@ -15,7 +15,7 @@ import sys
 from collections import defaultdict
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 3
 DEFAULT_INPUT = os.path.join(os.path.dirname(__file__), '..', 'data',
                              'decisions.jsonl')
 
@@ -34,6 +34,7 @@ _SNAPSHOT_KEYS = {
     'villain_range', 'villain_range_status', 'equity', 'pot_odds', 'spr',
     'candidate_actions', 'ev_by_action', 'preflop_action_frequencies',
     'action_values_kind', 'recommended_action', 'villain_label',
+    'reproducibility',
 }
 _CARDS_KNOWN_KEYS = {
     'hero', 'board', 'other_hole_cards', 'unknown_opponent_holes',
@@ -147,6 +148,25 @@ def _validate_snapshot(snapshot):
         if normalized is not None and not isinstance(normalized, bool):
             errors.append('invalid_villain_range_normalized')
         weights = range_data.get('combo_weights')
+    repro = snapshot.get('reproducibility')
+    if repro is not None:
+        if not isinstance(repro, dict):
+            errors.append('invalid_reproducibility')
+        else:
+            if repro.get('version') not in (2, 3):
+                errors.append('invalid_reproducibility_version')
+            for key in ('rules_inputs', 'situation_inputs', 'ev_inputs',
+                        'villain_range_inputs', 'response_model_inputs',
+                        'motor_settings'):
+                val = repro.get(key)
+                if val is not None and not isinstance(val, dict):
+                    errors.append(f'invalid_reproducibility_{key}')
+            rv = repro.get('reach_vector')
+            if rv is not None:
+                if not isinstance(rv, list) or any(
+                        not isinstance(v, (int, float))
+                        or isinstance(v, bool) for v in rv):
+                    errors.append('invalid_reproducibility_reach_vector')
         if weights is not None and not isinstance(weights, list):
             errors.append('invalid_villain_range_combo_weights')
         elif isinstance(weights, list):
@@ -167,8 +187,9 @@ def _validate_event(event):
     """Return schema problems for a parsed object; unknown keys are allowed."""
     errors = []
     kind = event.get('event_type')
-    if (type(event.get('schema_version')) is not int
-            or event.get('schema_version') != SCHEMA_VERSION):
+    schema = event.get('schema_version')
+    if (type(schema) is not int
+            or schema not in (1, 2, 3)):
         errors.append('unsupported_or_missing_schema_version')
     if kind not in ('decision', 'resolution'):
         errors.append('unknown_or_missing_event_type')
@@ -600,6 +621,7 @@ def _decision_report(entry, resolution_entry, duplicate_decision,
             'preflop_action_frequencies'),
         'action_values_kind': action_values_kind,
         'recommended_action': recommended,
+        'reproducibility': snapshot.get('reproducibility'),
     }
     return {
         'decision_id': event.get('decision_id'),

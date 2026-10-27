@@ -194,3 +194,110 @@ def test_reader_is_reproducible_and_does_not_change_input(tmp_path):
 
     assert first == second
     assert source.read_bytes() == original
+
+
+def test_schema_v2_reproducibility_fields_are_validated(tmp_path):
+    source = tmp_path / 'repro.jsonl'
+    event = _decision()
+    event['schema_version'] = 3
+    event['known_at_decision']['reproducibility'] = {
+        'version': 3,
+        'rules_inputs': {'street': 'flop', 'n_players': 2},
+        'situation_inputs': {'hero_codes': ['As', 'Kd']},
+        'ev_inputs': {'pot': 12.5, 'runout': True},
+        'villain_range_inputs': {'profile': 'TIBURON'},
+        'response_model_inputs': {'profile': 'TIBURON', 'fade_n': 20.0},
+        'motor_settings': {'runout': True, 'n_runouts': 100},
+        'reach_vector': [0.0, 0.1, 0.2],
+        'reach_combo_order': 'HAND_LABELS',
+        'runout': True,
+    }
+    _write(source, event)
+
+    report = evaluate_file(source)
+
+    assert report['integrity']['valid_events'] == 1
+    assert report['integrity']['malformed_events'] == []
+    assert 'reproducibility' in report['decisions'][0]['information_available']
+    decision_data = report['decisions'][0]['decision_data']
+    assert decision_data['reproducibility']['version'] == 3
+    assert decision_data['reproducibility']['reach_vector'] == [0.0, 0.1, 0.2]
+
+
+def test_schema_v1_records_are_still_accepted(tmp_path):
+    source = tmp_path / 'legacy.jsonl'
+    event = _decision()
+    _write(source, event)
+
+    report = evaluate_file(source)
+
+    assert report['integrity']['valid_events'] == 1
+    assert report['integrity']['malformed_events'] == []
+    assert report['decisions'][0]['integrity']['status'] in ('valid', 'pending')
+
+
+def test_oracle_response_state_reconstructs_behavior(tmp_path):
+    """Reconstruye OracleResponse.__call__ a partir del estado guardado."""
+    import numpy as np
+    from motor.decision import OracleResponse, _response_array
+
+    # Simular un OracleResponse con estado conocido.
+    # Con alpha=0.5, pf_p=0.1, pc_p=0.7, pr_p=0.2:
+    #   profile = [0.1, 0.7, 0.2] clipped to [0.05, 0.90]
+    #   scale = (3 * profile) ^ 0.5
+    #   adjusted = base * scale, normalized
+    pf_p, pc_p, pr_p = 0.1, 0.7, 0.2
+    alpha = 0.5
+    villain_eq = np.array([0.3, 0.5, 0.7])
+    amount = 5.0
+    pot = 12.5
+
+    # Original: usar OracleResponse con alpha > 0
+    class FakeOracle:
+        def p_action(self, *a, **k):
+            return {'actions': {'f': 0.1, 'c': 0.7, 'r': 0.2}, 'n': 10,
+                    'source': 'granular', 'sizing': 0.5}
+
+    original = OracleResponse(FakeOracle(), 'TIBURON', ('flop', 'cbet', 'DRY'),
+                              fade_n=20.0)
+    orig_pf, orig_pc, orig_pr = original(villain_eq, amount, pot)
+
+    # Reconstructed: usar el estado guardado
+    profile = np.clip(np.asarray((pf_p, pc_p, pr_p)), 0.05, 0.90)
+    scale = np.power(3.0 * profile, alpha)
+    pf_e, pc_e, pr_e = _response_array(villain_eq, amount, pot)
+    base = np.column_stack((pf_e, pc_e, pr_e))
+    adjusted = base * scale
+    adjusted /= adjusted.sum(axis=-1, keepdims=True)
+    recon_pf, recon_pc, recon_pr = adjusted[:, 0], adjusted[:, 1], adjusted[:, 2]
+
+    assert np.allclose(orig_pf, recon_pf)
+    assert np.allclose(orig_pc, recon_pc)
+    assert np.allclose(orig_pr, recon_pr)
+
+
+def test_schema_v3_oracle_response_state_is_accepted(tmp_path):
+    source = tmp_path / 'oracle.jsonl'
+    event = _decision()
+    event['schema_version'] = 3
+    event['known_at_decision']['reproducibility'] = {
+        'version': 3,
+        'response_model_inputs': {
+            'profile': 'TIBURON', 'street': 'flop', 'facing': 'cbet',
+            'texture': 'DRY', 'fade_n': 20.0,
+            'pf_p': 0.1, 'pc_p': 0.7, 'pr_p': 0.2,
+            'alpha': 0.5, 'source': 'granular', 'sizing': 0.5,
+        },
+        'reach_vector': [0.0, 0.1],
+        'reach_combo_order': 'HAND_LABELS',
+    }
+    _write(source, event)
+
+    report = evaluate_file(source)
+
+    assert report['integrity']['valid_events'] == 1
+    assert report['integrity']['malformed_events'] == []
+    repro = report['decisions'][0]['decision_data']['reproducibility']
+    assert repro['response_model_inputs']['pf_p'] == 0.1
+    assert repro['response_model_inputs']['alpha'] == 0.5
+    assert repro['response_model_inputs']['source'] == 'granular'
