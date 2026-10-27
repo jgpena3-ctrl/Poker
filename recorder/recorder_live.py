@@ -10,7 +10,7 @@ cambios de calle y guardado en JSONL.
 Usage:  python recorder_live.py
         (o desde poker_recorder_gui.py)
 """
-import json, os, time, datetime
+import hashlib, json, os, time, datetime
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'tools'))
@@ -53,9 +53,21 @@ MANUAL_POSITIONS = {}      # pid -> position override from GUI (e.g. {'hero': 'B
 STATE_ACTIONS = {'retirarse': 'f', 'igualar': 'c', 'subir': 'r', 'apostar': 'b', 'apostar todo': 'b', 'pasar': 'x', 'mostrar cartas': 'c'}
 
 
+def _json_safe(value):
+    """Copia JSON de un estado de frame, sin tipos raros de numpy/PIL."""
+    try:
+        return json.loads(json.dumps(value, default=str))
+    except (TypeError, ValueError):
+        return str(value)
+
+
 class LiveRecorder:
-    def __init__(self):
-        self.output_path = OUTPUT_PATH
+    def __init__(self, output_path=None, capture_dir=None):
+        self.output_path = output_path or OUTPUT_PATH
+        self.capture_dir = capture_dir
+        self.capture_index_path = (
+            os.path.join(capture_dir, 'index.jsonl') if capture_dir else None)
+        self._capture_seq = self._last_capture_seq(self.capture_index_path)
         self.hand_id = None
         self.hand = None
         self.last_state = None
@@ -102,6 +114,66 @@ class LiveRecorder:
     def _ensure_hand_id(self):
         if self.hand_id is None:
             self.hand_id = self._last_hand_id(self.output_path)
+
+    def _last_capture_seq(self, path):
+        if not path or not os.path.exists(path):
+            return 0
+        last = 0
+        try:
+            with open(path, encoding='utf-8') as f:
+                for line in f:
+                    if line.strip():
+                        last = max(last, int(json.loads(line).get('seq') or 0))
+        except Exception:
+            pass
+        return last
+
+    def save_frame(self, state, img_arr, log=print):
+        """Guarda el frame y su estado en la sesion de prueba, en orden.
+
+        Solo actua si `capture_dir` esta configurado. El nombre lleva un
+        secuencial global, el hand_id del recorder y la calle, para que la
+        reproduccion posterior sea determinista aunque se reinicie la GUI.
+        """
+        if not self.capture_dir or img_arr is None:
+            return None
+        try:
+            self._capture_seq += 1
+            hid = f'H_{self.hand_id:04d}' if self.hand_id is not None else 'H_0000'
+            street = ((self.hand or {}).get('current_street') or 'sin_mano')
+            stamp = datetime.datetime.now().strftime('%Y%m%dT%H%M%S')
+            stem = f'{self._capture_seq:04d}_{hid}_{street}_{stamp}'
+            hand_dir = os.path.join(self.capture_dir, hid)
+            os.makedirs(hand_dir, exist_ok=True)
+            img_path = os.path.join(hand_dir, stem + '.png')
+            from PIL import Image
+            Image.fromarray(img_arr).save(img_path)
+            with open(img_path, 'rb') as f:
+                digest = hashlib.sha256(f.read()).hexdigest()
+            meta = {
+                'seq': self._capture_seq,
+                'frame': os.path.relpath(img_path, self.capture_dir),
+                'timestamp': datetime.datetime.now().isoformat(),
+                'hand_id': hid,
+                'street': street,
+                'sha256': digest,
+                'state': _json_safe(state),
+                'manual_cards': dict(MANUAL_CARDS),
+                'manual_inactive': sorted(MANUAL_INACTIVE),
+                'manual_positions': dict(MANUAL_POSITIONS),
+                'manual_winner': MANUAL_WINNER,
+            }
+            json_path = os.path.join(hand_dir, stem + '.json')
+            with open(json_path, 'w', encoding='utf-8') as f:
+                json.dump(meta, f, ensure_ascii=False, indent=1)
+            index_path = self.capture_index_path or os.path.join(
+                self.capture_dir, 'index.jsonl')
+            with open(index_path, 'a', encoding='utf-8') as f:
+                f.write(json.dumps(meta, ensure_ascii=False) + '\n')
+            return img_path
+        except Exception as exc:
+            log(f'  [captura] no se pudo guardar: {exc}')
+            return None
 
     # ---------- capture (delegada a capture_live) ----------
 
@@ -1013,6 +1085,7 @@ class LiveRecorder:
             self.hand['max_pot'] = max(self.hand.get('max_pot', 0), pot)
 
         if self.hand is None and not self._can_start_hand(state, log=log):
+            self.save_frame(state, img_arr, log=log)
             self.last_state = state
             self.last_img = img_arr
             return
@@ -1026,6 +1099,8 @@ class LiveRecorder:
             log(f'H_{self.hand_id:04d}: started')
             for a in self.hand['streets']['preflop']['actions']:
                 log(f'  preflop: {a["pos"]} {a["action"]} {a["amount"]}')
+
+        self.save_frame(state, img_arr, log=log)
 
         if self.hand is not None:
             # Aplicar inactivos manuales del GUI (inmediatamente, cualquier calle)

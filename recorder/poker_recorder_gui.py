@@ -30,9 +30,24 @@ class RecorderGUI:
         self.reader_ready = False
         self._cards_dirty = False
 
+        self._test_session = os.environ.get('POKER_TEST_SESSION', '').strip()
+        self._test_output = os.environ.get('POKER_TEST_OUTPUT', '').strip()
+        self._test_capture_dir = os.environ.get(
+            'POKER_TEST_CAPTURE_DIR', '').strip()
+        if self._test_session:
+            self._test_output = self._test_output or os.path.join(
+                self._test_session, 'resultados', 'hands_db.jsonl')
+            self._test_capture_dir = self._test_capture_dir or os.path.join(
+                self._test_session, 'capturas')
+
         self._build_ui()
         self._preload_names()
         self._poll_queue()
+        if self._test_session:
+            self.root.title('Poker Hand Recorder - PRUEBA MANUAL')
+            self._log(f'Modo prueba manual: {self._test_session}')
+            self._log(f'  registros: {self._test_output}')
+            self._log(f'  capturas:  {self._test_capture_dir}')
 
     # ---------- UI ----------
 
@@ -85,7 +100,8 @@ class RecorderGUI:
         of.pack(fill=tk.X, pady=(0, 10))
 
         ttk.Label(of, text='Output:').pack(side=tk.LEFT, padx=(0, 5))
-        self.output_var = tk.StringVar(value='hands_db.jsonl')
+        self.output_var = tk.StringVar(
+            value=self._test_output or 'hands_db.jsonl')
         ttk.Entry(of, textvariable=self.output_var, width=40).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
         ttk.Button(of, text='Browse', command=self._browse, width=8).pack(side=tk.LEFT)
 
@@ -287,7 +303,9 @@ class RecorderGUI:
         log_func('Readers ready.')
         self.root.after(0, lambda: self._set_status('Waiting for hand...', 'green'))
 
-        lr = rl_mod.LiveRecorder()
+        lr = rl_mod.LiveRecorder(
+            output_path=self._test_output or None,
+            capture_dir=self._test_capture_dir or None)
         lr.on_hand_saved = self._mark_cards_dirty
         lr.run(stop_event=self.stop_event, log_func=log_func)
         self.root.after(0, self._on_stopped)
@@ -340,7 +358,9 @@ class RecorderGUI:
             if pv:
                 rl_mod.MANUAL_POSITIONS[key] = pv
         rl_mod.MANUAL_WINNER = None
-        self.manual_recorder = rl_mod.LiveRecorder()
+        self.manual_recorder = rl_mod.LiveRecorder(
+            output_path=self._test_output or None,
+            capture_dir=self._test_capture_dir or None)
         self.manual_recorder.on_hand_saved = self._mark_cards_dirty
         self.end_hand_btn.config(state=tk.DISABLED)
         self.cancel_hand_btn.config(state=tk.DISABLED)
