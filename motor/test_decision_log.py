@@ -179,7 +179,9 @@ def test_recommendation_step_writes_sidecar_and_deduplicates_repeated_frame(
     assert rec.hand['hand_id'] == event['hand_id']
     assert event['known_at_decision']['street'] == 'preflop'
     assert event['known_at_decision']['cards_known']['hero'] == ['As', 'Ks']
-    assert event['known_at_decision']['actions_before_decision'][0]['action'] == 'r'
+    actions = event['known_at_decision']['actions_before_decision']
+    assert actions[0]['action'] == 'p'
+    assert next(a['action'] for a in actions if a['action'] != 'p') == 'r'
     assert event['known_at_decision']['recommended_action'] == first.chosen
     assert event['known_at_decision']['equity'] is None
     assert event['known_at_decision']['villain_range'] is None
