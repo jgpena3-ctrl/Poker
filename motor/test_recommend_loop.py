@@ -75,6 +75,19 @@ def test_recommend_returns_fields():
     assert rec.stages['budget'] > 0  # holgura sobrante del deadline
 
 
+@pytest.mark.parametrize('to_call', (0.0, 5.0))
+def test_recommendation_stays_within_actions_legal_for_the_spot(to_call):
+    fx = dict(_fixture(), to_call=to_call)
+    rec = recommend(**fx, runout=False)
+    assert rec.rule_plan is not None
+    assert rec.action in rec.rule_plan.candidates
+    if to_call > 0:
+        assert 'check' not in rec.rule_plan.candidates
+        assert rec.action != 'check'
+    else:
+        assert 'call' not in rec.rule_plan.candidates
+
+
 def test_recommend_without_bet_in_front():
     fx = _fixture()
     fx['to_call'] = 0.0

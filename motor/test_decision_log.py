@@ -51,6 +51,46 @@ def test_decision_append_and_later_resolution_are_separate(tmp_path):
     assert events[1]['outcome']['revealed_cards']['UTG'] == 'QhQs'
 
 
+def test_unresolved_decision_survives_reopening_log_and_keeps_unknowns(tmp_path):
+    path = tmp_path / 'decisions.jsonl'
+    snapshot = {
+        'street': 'turn',
+        'hero_position': 'BTN',
+        'equity': None,
+        'villain_range': None,
+        'recommended_action': 'call',
+        'actions_before_decision': [
+            {'street': 'turn', 'pos': 'UTG', 'action': 'b', 'amount': 5.0},
+        ],
+    }
+    first_session = DecisionLog(path)
+    decision_id = first_session.record_decision(
+        snapshot, hand_id='H_RESTART', street='turn',
+        hero_position='BTN', actions_seen_count=1)
+    del first_session  # the append was flushed before the session ended
+
+    resumed_session = DecisionLog(path)
+    assert resumed_session.resolve_hand({
+        'hand_id': 'H_RESTART', 'final_pot': 20.0, 'winner': ['UTG'],
+        'showdown': {'winner1': 'UTG (Villain)'},
+        'players': [{'pos': 'UTG', 'cards': 'AhAd'}],
+        'streets': {'turn': {'actions': [
+            {'pos': 'UTG', 'action': 'b', 'amount': 5.0},
+            {'pos': 'BTN', 'action': 'f', 'amount': 0.0},
+        ]}},
+    }) == 1
+
+    events = _events(path)
+    assert len(events) == 2
+    assert events[0]['decision_id'] == decision_id
+    assert events[0]['known_at_decision'] == snapshot
+    assert events[0]['known_at_decision']['equity'] is None
+    assert events[0]['known_at_decision']['villain_range'] is None
+    assert events[1]['decision_id'] == decision_id
+    assert events[1]['execution']['action']['action'] == 'f'
+    assert events[1]['outcome']['revealed_cards']['UTG'] == 'AhAd'
+
+
 def test_successive_same_street_decisions_have_distinct_ids_and_actions(tmp_path):
     path = tmp_path / 'decisions.jsonl'
     log = DecisionLog(path)
@@ -157,6 +197,8 @@ def test_recommendation_step_writes_sidecar_and_deduplicates_repeated_frame(
     assert len(final_events) == 2
     assert final_events[0]['known_at_decision']['recommended_action'] == first.chosen
     assert final_events[1]['execution']['action']['action'] == 'c'
+    assert (final_events[0]['known_at_decision']['recommended_action']
+            != final_events[1]['execution']['action']['action'])
     assert final_events[1]['outcome']['final_pot'] == 7.0
     assert (tmp_path / 'replayed-hands.jsonl').exists()
 
