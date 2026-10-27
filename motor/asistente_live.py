@@ -32,6 +32,7 @@ from recorder_live import LiveRecorder, POSITION_ORDER
 from .behavior import Oracle, build
 from .cards import card_id
 from .decision import EvTable, OracleResponse, compute_evs
+from .decision_log import DecisionLog
 from .hierarchy import (ShadowLog, classify_villains, shadow_equity,
                         shadow_record)
 from .learn import load_hands
@@ -463,6 +464,8 @@ class Asistente:
 
         # Recorder para registro continuo (guardar manos en hands_db.jsonl)
         self.rec = LiveRecorder()
+        self.decision_log = DecisionLog()
+        self.rec.on_hand_finalized = self.decision_log.resolve_hand
         module = sys.modules.get('recorder_live')
         if module is not None and _is_default_names(module.PLAYER_NAMES):
             module.PLAYER_NAMES = {
@@ -669,6 +672,131 @@ class Asistente:
             if stake > best_stack:
                 best, best_stack = pid, stake
         return best
+
+    def _log_recommendation(self, state, hero_pid, villain_pid, sit, evs,
+                            villain_label, villain_range=None,
+                            to_call=None, effective_stack=None):
+        """Persist what was known at recommendation time, never later results."""
+        logger = getattr(self, 'decision_log', None)
+        if logger is None:
+            return None
+
+        hand = getattr(getattr(self, 'rec', None), 'hand', None) or {}
+        hand_id = hand.get('hand_id')
+        street = getattr(sit, 'street', None)
+        hero_position = getattr(sit, 'position', None)
+        positions = {}
+        stacks = {}
+        bets = {}
+        known_holes = {}
+        for pid in PLAYER_IDS:
+            try:
+                positions[pid] = self._pos_of(pid, state)
+            except Exception:
+                positions[pid] = None
+            stacks[pid] = state.get(f'{pid}_stake')
+            bets[pid] = state.get(f'{pid}_bet')
+            try:
+                cards = self._cards_of_pid(pid, state)
+            except Exception:
+                cards = []
+            if cards:
+                known_holes[pid] = list(cards)
+        active_opponents = [
+            pid for pid in PLAYER_IDS
+            if pid != hero_pid and state.get(f'{pid}_state') == 'activo'
+        ]
+        unknown_opponent_holes = [
+            pid for pid in active_opponents if pid not in known_holes
+        ]
+
+        street_order = ('preflop', 'flop', 'turn', 'river')
+        actions_before = []
+        actions_seen_count = None
+        streets = hand.get('streets') or {}
+        if street in street_order:
+            for observed_street in street_order[:street_order.index(street) + 1]:
+                record = streets.get(observed_street) or {}
+                actions = record.get('actions') or []
+                if observed_street == street:
+                    actions_seen_count = len(actions)
+                actions_before.extend(
+                    {'street': observed_street, **a} for a in actions)
+
+        range_snapshot = None
+        if villain_range is not None:
+            try:
+                from .ranges import HAND_LABELS
+                weights = villain_range.weights
+                range_snapshot = {
+                    'representation': 'combo_probability_by_hand_label',
+                    'normalized': True,
+                    'source': getattr(villain_range, 'source', None) or None,
+                    'position': positions.get(villain_pid),
+                    # RangeState's default confidence is a placeholder, not a
+                    # calibrated confidence supplied by this range builder.
+                    'confidence': None,
+                    'combo_weights': [
+                        [HAND_LABELS[i], float(weight)]
+                        for i, weight in enumerate(weights) if weight > 0
+                    ],
+                }
+            except Exception:
+                range_snapshot = None
+
+        is_preflop = bool(getattr(evs, 'preflop', False))
+        action_values = getattr(evs, 'ev', None) or {}
+        candidates = getattr(evs, 'candidate_actions', None)
+        if candidates is None:
+            candidates = list(action_values)
+        snapshot = {
+            'street': street,
+            'hero_id': hero_pid,
+            'villain_id': villain_pid,
+            'hero_position': hero_position,
+            'villain_position': positions.get(villain_pid),
+            'positions': positions,
+            'stacks': stacks,
+            'bets': bets,
+            'pot': state.get('pot'),
+            'to_call': to_call,
+            'effective_stack': effective_stack,
+            'cards_known': {
+                'hero': list(getattr(sit, 'hero_codes', ()) or ()),
+                'board': list(getattr(sit, 'board_codes', ()) or ()),
+                'other_hole_cards': {
+                    pid: cards for pid, cards in known_holes.items()
+                    if pid != hero_pid
+                },
+                'unknown_opponent_holes': unknown_opponent_holes,
+                'opponent_hole_cards_complete': not unknown_opponent_holes,
+            },
+            'actions_before_decision': actions_before,
+            'actions_seen_count': actions_seen_count,
+            'villain_range': range_snapshot,
+            'villain_range_status': (
+                'not_exposed_preflop' if is_preflop else
+                ('available' if range_snapshot is not None else 'unknown')),
+            'equity': None if is_preflop else getattr(sit, 'equity', None),
+            'pot_odds': getattr(sit, 'pot_odds', None),
+            'spr': getattr(sit, 'spr', None),
+            'candidate_actions': list(candidates) if candidates is not None else None,
+            'ev_by_action': None if is_preflop else action_values,
+            'preflop_action_frequencies': action_values if is_preflop else None,
+            'action_values_kind': 'frequency' if is_preflop else 'ev',
+            'recommended_action': getattr(evs, 'chosen', None),
+            'villain_label': villain_label,
+        }
+        try:
+            return logger.record_decision(
+                snapshot, hand_id=hand_id, street=street,
+                hero_position=hero_position,
+                actions_seen_count=actions_seen_count)
+        except Exception as exc:
+            # A sidecar I/O failure must not suppress a recommendation.
+            print(f'[decision-log] no se pudo guardar la recomendación: {exc}',
+                  file=sys.stderr)
+            return None
 
     def _pos_of(self, pid, state):
         """Posición de un pid (del recorder, o por asiento si no hay mano)."""
@@ -941,13 +1069,31 @@ class Asistente:
             reg['equity_main_note_detail'] = det
 
     def _state_key(self, state):
-        """Firma de la situación para deduplicar recomendaciones (incluye el
-        hand_id para que una MANO NUEVA siempre recomiende de nuevo)."""
-        hid = self.rec.hand.get('hand_id') if self.rec.hand is not None else ''
-        max_bet, _aggr = self._max_bet(state)
-        return (hid, len(_board_codes(state)), (state.get('pot') or 0.0),
-                (state.get(f'{self._hero_pid()}_bet') or 0.0),
-                max_bet)
+        """Firma completa de decisión para ignorar frames repetidos.
+
+        Incluye cartas, apuestas/stacks/estados y acciones observadas para que
+        dos decisiones distintas de una misma mano/calle no colisionen aunque
+        el bote o la apuesta máxima coincidan.
+        """
+        hand = self.rec.hand if self.rec.hand is not None else {}
+        players = tuple(
+            (pid, state.get(f'{pid}_state'), state.get(f'{pid}_stake'),
+             state.get(f'{pid}_bet')) for pid in PLAYER_IDS)
+        actions = []
+        for street, data in (hand.get('streets') or {}).items():
+            for action in (data or {}).get('actions') or []:
+                actions.append((street, action.get('pos'), action.get('action'),
+                                action.get('amount'),
+                                action.get('amount_type')))
+        return (
+            hand.get('hand_id'),
+            hand.get('current_street'),
+            tuple(_board_codes(state)),
+            tuple(self._hero_cards_of(state)),
+            state.get('pot'),
+            players,
+            tuple(actions),
+        )
 
     # ------------------------------------------------------------------
 
@@ -977,7 +1123,9 @@ class Asistente:
         return [c for c in _cards_to_codes(s.get('board', [])) if c][:5]
 
     def _recom_preflop(self, state, hero, hero_pos, hero_bet, pot, to_call,
-                       perfil, name, on_reco, verbose, seed=None):
+                       perfil, name, on_reco, verbose, seed=None,
+                       hero_pid=HERO_PID, villain_pid=None,
+                       effective_stack=None):
         """Recomendación PREFLOP desde las matrices (data/preflop_matrices.json).
 
         Spot por las acciones previas: OR si nadie abrió, ROL si hay limp
@@ -1064,13 +1212,17 @@ class Asistente:
         evs = EvTable(ev=ev, pot=pot, hero_equity=0.0)
         evs.preflop = True
         evs.chosen = action
+        evs.candidate_actions = list(acts) if acts else ['retirar']
         label = f'{perfil} {name}'
         text = _format_preflop(' '.join(hero), hero_pos, label_spot, pot,
                                to_call, ev, action, label)
+        sit = Situation(hero_codes=tuple(hero), board_codes=(),
+                        street='preflop', position=hero_pos)
+        self._log_recommendation(
+            state, hero_pid, villain_pid, sit, evs, label,
+            to_call=to_call, effective_stack=effective_stack)
         if on_reco is not None:
-            on_reco(text, evs, Situation(hero_codes=tuple(hero),
-                                         board_codes=(), street='preflop',
-                                         position=hero_pos), label)
+            on_reco(text, evs, sit, label)
         elif verbose or self.verbose:
             print(text)
         return evs
@@ -1147,7 +1299,10 @@ class Asistente:
         if street == 'preflop':
             return self._recom_preflop(state, hero, hero_pos, hero_bet, pot,
                                        to_call, perfil, name, on_reco,
-                                       verbose, seed=seed)
+                                       verbose, seed=seed,
+                                       hero_pid=hero_pid,
+                                       villain_pid=villain,
+                                       effective_stack=effective_stack)
 
         # Rango inicial del rival según su preflop + blockers de todos los
         # heroes conocidos (no solo el propio: el segundo hero tampoco puede
@@ -1279,6 +1434,7 @@ class Asistente:
 
         evs.spot = rp.spot
         evs.rule_note = rp.note
+        evs.candidate_actions = list(rp.candidates)
         action = rules_select_best(evs, rp)[0]
         evs.chosen = action
 
@@ -1294,6 +1450,10 @@ class Asistente:
                 pass       # el log nunca rompe la recomendación
 
         text = format_insight(sit, evs, villain_label=label, plan=rp)
+        self._log_recommendation(
+            state, hero_pid, villain, sit, evs, label,
+            villain_range=rs, to_call=to_call,
+            effective_stack=effective_stack)
         if on_reco is not None:
             on_reco(text, evs, sit, label)
         elif self.verbose or verbose:

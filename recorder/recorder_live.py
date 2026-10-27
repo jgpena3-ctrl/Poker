@@ -68,6 +68,9 @@ class LiveRecorder:
         self._hand_positions = None
         self._folded_positions = set()
         self.on_hand_saved = None
+        # Sidecar consumers (e.g. the assistant's decision log) receive the
+        # completed in-memory hand without changing the hands DB schema.
+        self.on_hand_finalized = None
         # Ciegas detectadas desde los bets (BB tamaño unidad, SB = 0.5×)
         self._blind_sb = 0.5
         self._blind_bb = 1.0
@@ -1045,6 +1048,13 @@ class LiveRecorder:
 
         with open(self.output_path, 'a') as f:
             f.write(json.dumps(out) + '\n')
+
+        if self.on_hand_finalized is not None:
+            try:
+                self.on_hand_finalized(out)
+            except Exception as e:
+                log = getattr(self, '_last_log', print)
+                log(f'  [decision-log] no se pudo resolver H_{self.hand_id:04d}: {e}')
 
         log = getattr(self, '_last_log', print)
         log(f'  -> Saved H_{self.hand_id:04d}')
