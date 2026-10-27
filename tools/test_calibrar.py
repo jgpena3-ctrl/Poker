@@ -85,9 +85,9 @@ def test_la_muestra_son_los_numeros_del_contrato(cal):
     cuele sin que nadie mire por que se movio.
     """
     c, v = cal.muestra()
-    assert len(c) == 119
+    assert len(c) == 123
     assert len(v) == 41
-    assert len(c) + len(v) == 160
+    assert len(c) + len(v) == 164
 
 
 def test_la_ventana_es_la_declarada(cal):
@@ -114,7 +114,7 @@ def test_el_auditor_independiente_coincide(cal, aud):
     """
     ys = [y for _i, y in sum(cal.muestra(), [])]
     ys_aud, _ids, _c = aud.manos_utilizables()
-    assert len(ys) == len(ys_aud) == 160
+    assert len(ys) == len(ys_aud) == 164
     assert sorted(ys) == sorted(ys_aud)
     # y el reparto de etiquetas, no solo el total
     assert ys.count(1.0) == ys_aud.count(1.0)
@@ -401,20 +401,24 @@ def test_hero_no_es_el_primero_con_cartas(cal):
     assert ok is True and y == 0.0
 
 
-def test_las_siete_manos_con_dos_ganadores_son_repartos(cal, ventana):
-    """Las 7 son repartos, y se demuestra una por una.
+def test_las_ocho_manos_con_dos_ganadores_demostrables_son_repartos(cal, ventana):
+    """8 de las 9 manos con 2+ ganadores son repartos demostrables.
 
-    Antes se excluian 6 por "sin texto de showdown". Se excluian por no
-    leer las cartas: `y = 0,5` era DEMOSTRABLE con el evaluador.
+    La novena (H_0085) declara dos ganadores pero solo uno tiene cartas:
+    no se puede demostrar el reparto y queda fuera de la muestra por el
+    filtro de `con_cartas`. El resto se demuestra uno a uno con el
+    evaluador del motor.
     """
     from motor.multiway import PLAYER_IDS
     multi = []
     for h in ventana:
         gs = {cal.id_a_pos(h, i) for i in (h.get('winner') or [])}
         gs.discard(None)
-        if len(gs) > 1:
+        # solo los repartos demostrables: todos los ganadores deben tener cartas
+        if len(gs) > 1 and all(p in [x.get('pos') for x in cal.con_cartas(h)]
+                              for p in gs):
             multi.append((h, gs))
-    assert len(multi) == 7, 'esperado 7 manos con 2+ ganadores'
+    assert len(multi) == 8, 'esperado 8 manos con 2+ ganadores demostrables'
     for h, gs in multi:
         assert cal.reparto(h, gs) is True, (
             '%s declara dos ganadores que NO hacen la misma mano: %s. '

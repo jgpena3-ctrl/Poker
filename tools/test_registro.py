@@ -635,8 +635,13 @@ def test_el_registro_no_pinea_los_numeros_de_la_cuarentena():
     with _io.open(ruta, encoding='utf-8') as f:
         texto = f.read()
     for numero in ('202', '1056'):
+        # Y la busqueda es por NUMERO ENTERO y no por subcadena: MEDIDO, el
+        # '202' de '2026' es una fecha y no el recuento de la cuarentena. Una
+        # regla por subcadena senala la fecha y acaba siendo una regla que
+        # nadie mira.
+        patron = re.compile(r'(?<!\d)%s(?!\d)' % numero)
         for l in texto.split('\n'):
-            if numero in l:
+            if patron.search(l):
                 # y la linea tiene que ser una medicion, no una expectativa ✓
                 assert ('MEDIDO' in l or 'medido' in l
                         or 'ahora' in l or 'ya no' in l), (

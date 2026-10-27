@@ -108,7 +108,7 @@ EXCEPCIONES = (
 # barrido es un defecto, y una excepcion es un hueco**. Un `.md` con dos
 # ideogramas chinos pegados a un numero no es una decision del autor: es una
 # errata, y se quita.
-SOSPECHOSOS_ABAJO = 11
+SOSPECHOSOS_ABAJO = 12
 
 # La UNICA correccion automatica, y por SECUENCIA DE CARACTERES.
 #

@@ -199,9 +199,11 @@ def _board_en(ar, ins, ventana):
 def test_el_board_se_mira_en_las_dos_representaciones(ar, ins, ventana):
     (a, b, c), ids_b = _board_en(ar, ins, ventana)
     total = a + b + c
-    assert total == 83, 'cortes preflop de poblacion B: %d' % total
-    assert a == 0, 'con board en `comunitarias`: %d' % a
-    assert c >= 75, (
+    assert total == 76, 'cortes preflop de poblacion B: %d' % total
+    assert a == 2, (
+        'con board en `comunitarias`: %d. Son H_0080 y H_0223, las dos que '
+        'la adopcion trajo con board y etiqueta' % a)
+    assert c >= 72, (
         'sin board en NINGUNA parte: %d de %d. Y esa es la afirmacion que '
         'sostiene que la mano no llego a repartirse' % (c, total))
     assert b == 2, (
@@ -213,14 +215,16 @@ def test_el_board_se_mira_en_las_dos_representaciones(ar, ins, ventana):
     assert a + b + c == total
 
 
-def test_el_motivo_real_de_las_83(ar, ins, ventana):
-    """Las tres que tienen board en alguna parte, y que son el resto del
-    problema: no son el mismo problema que las otras 80."""
+def test_el_motivo_real_de_los_76_cortes(ar, ins, ventana):
+    """Las dos que tienen board SOLO en `streets` y ninguna etiqueta: son
+    el resto del problema, y no el mismo que las 72 sin board. Las dos de
+    `comunitarias` —H_0080 y H_0223— si tienen etiqueta, y por eso no
+    entran aqui."""
     (a, b, c), ids_b = _board_en(ar, ins, ventana)
     cal_, val_ = ins.cal.muestra()
     ETIQUETA = dict(cal_ + val_)
     con_y = [i for i in ids_b if i in ETIQUETA]
     assert len(ids_b) == 2, 'las que tienen board en streets: %s' % ids_b
     assert len(con_y) == 0, (
-        'y de esas, con etiqueta: %s. Si una ya lo tiene, el problema de las '
-        '83 no es solo "la mano no llego a board".' % con_y)
+        'y de esas, con etiqueta: %s. Si una ya lo tiene, el problema de los '
+        '76 cortes no es solo "la mano no llego a board".' % con_y)

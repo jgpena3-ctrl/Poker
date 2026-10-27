@@ -125,16 +125,16 @@ def test_los_conteos_de_la_tabla_salen_de_las_filas(ar, ventana):
     """No de un numero escrito al lado. La tabla tiene que ser la cuenta
     de las filas reales, o la tabla y las filas pueden separarse."""
     # Las cifras de aqui son LAS DE `muestra()`, no las que salian de la
-    # replica de filtros. Con la etiqueta leida:
-    #   corte en la ULTIMA: preflop 0, postflop 48 (20 y=1, 28 y=0)
-    #   corte en la PRIMERA: preflop 67 (20 y=1, 47 y=0)
+    # replica de filtros. Con la etiqueta leida sobre la base canonica 1253:
+    #   corte en la ULTIMA: preflop 2 (1 y=1, 1 y=0), postflop 48 (20/28)
+    #   corte en la PRIMERA: preflop 61 (21 y=1, 40 y=0)
     filas = ar.medir_todas_calles(ar._inst(), ventana, 'primera')
     jugadas = [f for f in filas if f['jugada']]
     con_y = [f for f in jugadas if f['y'] is not None]
-    assert len(jugadas) == 378, 'poblacion B jugada: %d' % len(jugadas)
-    assert len(con_y) == 67, 'con etiqueta: %d' % len(con_y)
-    assert sum(1 for f in con_y if f['y'] == 1.0) == 20
-    assert sum(1 for f in con_y if f['y'] == 0.0) == 47
+    assert len(jugadas) == 328, 'poblacion B jugada: %d' % len(jugadas)
+    assert len(con_y) == 61, 'con etiqueta: %d' % len(con_y)
+    assert sum(1 for f in con_y if f['y'] == 1.0) == 21
+    assert sum(1 for f in con_y if f['y'] == 0.0) == 40
     assert all(f['calle'] == 'preflop' for f in con_y), (
         'con el corte en la primera, las que tienen etiqueta son todas '
         # noqa

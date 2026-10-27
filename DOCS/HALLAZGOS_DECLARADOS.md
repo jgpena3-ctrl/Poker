@@ -38,7 +38,7 @@ que el fichero sea el de verdad, que el punto de código sea el de verdad, y
 que el motivo esté escrito. No basta con que el nombre Unicode aparezca en
 algún sitio del documento.
 
-## 1. Los 11 caracteres sospechosos
+## 1. Los 12 caracteres sospechosos
 
 Y el número vive en una constante —`SOSPECHOSOS_ABAJO`, en
 `tools/verificar_caracteres.py`— y un test lo compara con el de aquí, que es
@@ -60,6 +60,7 @@ rangos: `DOCS/LECCIONES_DE_INSTRUMENTACION.md` §19.
 | `motor/test_canal_manual.py` | `CYRILLIC SMALL LETTER TE` | U+0442 | fichero de «no tocar», y la correccion la hace quien lo mantiene |
 | `motor/test_canal_manual.py` | `CYRILLIC SMALL LETTER YA` | U+044F | fichero de «no tocar», y la correccion la hace quien lo mantiene |
 | `motor/test_auditar_rango.py` | `IDEOGRAPHIC COMMA` | U+3001 | fichero de «no tocar», y la correccion la hace quien lo mantiene |
+| `motor/test_learn.py` | `REPLACEMENT CHARACTER` | U+FFFD | preexistente en un fichero que esta fase no toca; se declara y no se corrige |
 
 ### Y por qué los tres árabes no los veía el barrido viejo
 

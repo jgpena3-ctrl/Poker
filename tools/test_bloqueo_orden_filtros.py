@@ -11,16 +11,22 @@ No son el mismo comportamiento, y por eso van por separado:
           esta BLOQUEADA y no vacia.
 
   H_0485  el heroe CALL, hay board, y el showdown es verificable. Este si
-          tiene etiqueta posible, y es el UNICO y=1 de los 78 que no viene
-          por fold. Protege el otro camino: el de showdown, que si necesita
-          las cartas de los demas.
+          tiene etiqueta posible, y protege el otro camino: el de showdown,
+          que si necesita las cartas de los demas.
 
-Y el tercero, que es el que mas cuesta creer:
+  H_0080  el heroe gana (y=1) y su ultima accion es preflop, pero la mano
+          siguio y tiene board y ganador verificable. Es una de las dos
+          preflop con etiqueta.
 
-  0 derrotas entre las 78. La razon es estructural —el corte es la ULTIMA
-  accion del heroe, y para que sea jugada en preflop la mano tiene que
-  terminar ahi—. Si esto cambia, el AUC preflop vuelve a ser una pregunta, y
-  hay que enterarse por un test y no por un error de dos meses.
+  H_0223  el heroe pierde (y=0), tambien con la ultima accion en preflop y
+          la mano continuada. Desmonta la afirmacion estructural de que
+          «entre los cortes preflop no hay derrotas»: no era estructural,
+          era un dato de la base anterior.
+
+Y el conjunto medido sobre la base canonica de 1253: 76 cortes preflop,
+2 con etiqueta (H_0080 y H_0223) y 3 con showdown verificable (H_0080,
+H_0223 y H_0485). Si mañana cambia, el test avisa antes de que nadie mire
+el AUC, y el que lo cambie tiene que mirar POR QUE.
 """
 import collections
 import importlib.util
@@ -118,9 +124,10 @@ def test_h_0485_tiene_board_en_streets_y_no_en_comunitarias(ins, ventana):
     assert not ins.cal.board_completo(h)
 
 
-def test_h_0485_es_el_unico_showdown_verificable(ins, ventana):
+def test_h_0485_es_uno_de_los_showdowns_verificables(ins, ventana):
     """Es el camino del showdown, que SI necesita las cartas de los demas, y
-    es UNO de los 83. Protege que no se confunda con el de fold."""
+    es uno de los 76 cortes preflop. Protege que no se confunda con el de
+    fold."""
     h = ventana['H_0485']
     declarados = {ins.cal.id_a_pos(h, i) for i in (h.get('winner') or [])}
     declarados.discard(None)
@@ -133,9 +140,15 @@ def test_h_0485_es_el_unico_showdown_verificable(ins, ventana):
 
 def test_h_0485_es_el_showdown_verificable_de_la_poblacion(ins, ventana,
                                                             continuaciones):
-    """Medido: de las 83, una sola tiene showdown verificable. Si mañana hay
-    dos, este test avisa antes de que nadie mire el AUC."""
-    n = 0
+    """Medido: de las 76, tres tienen showdown verificable. Si mañana hay
+    una cuarta, este test avisa antes de que nadie mire el AUC.
+
+    Y el conjunto medido sobre la base canonica de 1253 es
+    {H_0080, H_0223, H_0485}: la adopcion trajo dos manos con board y
+    ganador verificable que antes no estaban en la ventana, y por eso el
+    guardia pasa de «exactamente uno» a «exactamente estos tres».
+    """
+    ids = []
     for hid in continuaciones:
         h = ventana[hid]
         declarados = {ins.cal.id_a_pos(h, i) for i in (h.get('winner') or [])}
@@ -148,27 +161,31 @@ def test_h_0485_es_el_showdown_verificable_de_la_poblacion(ins, ventana,
         if llegan and len(ins.cal.con_cartas(h)) >= 2:
             mejores = {p for p, s_ in scores.items() if s_ == mejor}
             if llegan == mejores:
-                n += 1
-                assert hid == 'H_0485', (
-                    'hay un segundo showdown verificable, %s' % hid)
-    assert n == 1, 'medido: exactamente uno'
+                ids.append(hid)
+    assert set(ids) == {'H_0080', 'H_0223', 'H_0485'}, (
+        'los showdowns verificables de la poblacion son %r, y el conjunto '
+        'medido es {H_0080, H_0223, H_0485}' % (ids,))
 
 
 # ================================================= la clase, que es el nudo
-def test_las_83_cortes_preflop_no_tienen_ninguna_etiqueta(ins, ventana,
-                                                           continuaciones):
+def test_los_76_cortes_preflop_solo_dos_tienen_etiqueta(ins, ventana,
+                                                        continuaciones):
     """La afirmacion RETIRADA era "las 78 desbloqueadas son todas
-    victorias". No hay 78: hay 83 cortes y NINGUNA etiqueta.
+    victorias". En la base canonica de 1253 hay 76 cortes y solo DOS con
+    etiqueta, y las dos tienen board y ganador verificable —H_0080 (y=1) y
+    H_0223 (y=0)—: el corte es la ultima accion del heroe, y que sea
+    preflop NO obliga a que la mano termine ahi, porque los demas pueden
+    seguir jugando.
 
     El 78 salia de una replica local del etiquetado, dentro del propio
     test, que contaba como positivas manos que no estan en `muestra()`.
     Este test ya no tiene copia: usa la funcion de la herramienta.
     """
-    assert len(continuaciones) == 83, 'cortes preflop de poblacion B'
+    assert len(continuaciones) == 76, 'cortes preflop de poblacion B'
     con_y = [h for h in continuaciones if h in ventana
              and ventana[h]['hand_id'] in _etiquetas(ins)]
-    assert con_y == [], (
-        'HAY %d cortes preflop con etiqueta: %s. Si esto ya no es cero, la '
+    assert set(con_y) == {'H_0080', 'H_0223'}, (
+        'HAY %d cortes preflop con etiqueta: %s. Si el conjunto cambia, la '
         'poblacion preflop cambio de verdad, y hay que mirar POR QUE antes '
         'de cambiar ningun numero' % (len(con_y), con_y[:6]))
 
@@ -180,6 +197,7 @@ def test_el_motivo_de_no_tener_etiqueta_es_que_la_mano_no_tiene_board(
     ganador verificable."""
     sin_board = 0
     con_board_sin_y = 0
+    con_board_con_y = []
     for hid in continuaciones:
         h = ventana[hid]
         riv = ((h.get('comunitarias') or {}).get('river') or [])
@@ -187,15 +205,21 @@ def test_el_motivo_de_no_tener_etiqueta_es_que_la_mano_no_tiene_board(
             sin_board += 1
         elif hid not in _etiquetas(ins):
             con_board_sin_y += 1
-    assert sin_board + con_board_sin_y == len(continuaciones)
-    assert sin_board >= 75, (
+        else:
+            con_board_con_y.append(hid)
+    assert (sin_board + con_board_sin_y + len(con_board_con_y)
+            == len(continuaciones))
+    assert sin_board == 74, (
         'casi todas las manos jugadas en preflop terminan ahi: %d de %d sin '
         'board' % (sin_board, len(continuaciones)))
-    # y de las que SI tienen board, cuántas tienen etiqueta: muy pocas, y
-    # ese es el resto del problema
-    assert con_board_sin_y <= 8, (
-        'y las que tienen board y no etiqueta son %d. Si(suben mucho, hay '
+    # y de las que SI tienen board, cuántas tienen etiqueta: dos —H_0080 y
+    # H_0223—, y el resto del problema es que el corte en la primera trae
+    # mas manos con board.
+    assert con_board_sin_y == 0, (
+        'y las que tienen board y no etiqueta son %d. Si suben mucho, hay '
         'otra causa y hay que medirla' % con_board_sin_y)
+    assert set(con_board_con_y) == {'H_0080', 'H_0223'}, (
+        'las que tienen board y etiqueta son %r' % (con_board_con_y,))
 
 
 def test_el_corte_en_la_primera_si_tiene_etiqueta(ins, ventana):
@@ -210,9 +234,9 @@ def test_el_corte_en_la_primera_si_tiene_etiqueta(ins, ventana):
     filas = ar.medir_todas_calles(ins, ventana, 'primera')
     pre = [f for f in filas if f['jugada'] and f['calle'] == 'preflop'
            and f['y'] is not None]
-    assert len(pre) == 67, 'preflop con etiqueta, corte en la primera: %d' % len(pre)
-    assert sum(1 for f in pre if f['y'] == 1.0) == 20
-    assert sum(1 for f in pre if f['y'] == 0.0) == 47, (
+    assert len(pre) == 61, 'preflop con etiqueta, corte en la primera: %d' % len(pre)
+    assert sum(1 for f in pre if f['y'] == 1.0) == 21
+    assert sum(1 for f in pre if f['y'] == 0.0) == 40, (
         'y con las dos clases, que es lo que hace que el corte en la primera '
         'traiga algo que el actual no trae')
 

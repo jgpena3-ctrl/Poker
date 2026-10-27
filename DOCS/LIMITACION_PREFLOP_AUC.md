@@ -486,4 +486,4 @@ El script **no escribe nada**.
 
 Y hay un test que fija el hecho, para que si algún día la base cambia
 alguien mire **por qué** antes de quitarlo:
-`tools/test_fold_no_es_poblacion.py::test_en_la_poblacion_real_no_entra_ninguna_mano_preflop`.
+`tools/test_fold_no_es_poblacion.py::test_en_la_poblacion_real_solo_entra_la_preflop_verificable`.

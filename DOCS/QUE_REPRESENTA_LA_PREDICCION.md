@@ -21,13 +21,13 @@ rival puede ser posterior, y mirarla sería mirar al futuro.
 
 | | |
 |---|---:|
-| cortes con la misma calle en A y en B | 638 |
-| **cortes con calle distinta** | **235** |
-| — de esos, con board de tamaño distinto | **232** |
-| — de esos, con número de rivales distinto | **141** |
+| cortes con la misma calle en A y en B | 633 |
+| **cortes con calle distinta** | **233** |
+| — de esos, con board de tamaño distinto | **230** |
+| — de esos, con número de rivales distinto | **142** |
 
 **Por eso A y B no son un recorte del mismo conjunto: son evaluaciones
-distintas.** De 235 cortes, 232 miran un tablero de otro tamaño y 141
+distintas.** De 233 cortes, 230 miran un tablero de otro tamaño y 142
 contestan a otro conjunto de rivales. El ejemplo más claro:
 
 | | corte en la **última** | corte en la **primera** |
@@ -109,7 +109,7 @@ nuevo y no es lo que R2 pide. Se deja medido y escrito, que es lo que hace
 falta para poder decidir.
 
 > **Y esto NO es lo mismo que el otro board que se ha medido.** El de la
-> población preflop son 2 manos de las 83; este son 5 de las 877 y son
+> población preflop son 2 manos de las 76; este son 5 de las 877 y son
 > postflop. No son el mismo problema y no se mezclan.
 
 ## 3. La predicción NO es un número por mano
@@ -122,14 +122,14 @@ rival**, más `dispersion` (máx − mín) y `mediana`.
 
 | rivales vivos en la calle del corte | manos |
 |---:|---:|
-| 0 | 140 |
-| 1 | 318 |
-| 2 | 262 |
-| 3 | 111 |
-| 4 | 35 |
-| 5 | 7 |
+| 0 | 139 |
+| 1 | 331 |
+| 2 | 264 |
+| 3 | 102 |
+| 4 | 27 |
+| 5 | 3 |
 
-**415 de 877 tienen más de un rival.** Es decir: para casi la mitad de las
+**396 de 877 tienen más de un rival.** Es decir: para casi la mitad de las
 manos, «la predicción» no es un número, es una lista, y **reducirla a uno es
 una decisión de quien mide**.
 
@@ -145,8 +145,8 @@ La `mediana` la usan seis herramientas (`auditar_auc`, `auditar_matrix`,
 está escrito es si esa es la elección correcta para el AUC, ni por qué.
 
 **Esto es lo que hay que decidir antes de B**, y no es un detalle de
-implementación: cambiar el corte cambia el conjunto de rivales (141 de los
-235 cortes que cambian de calle), así que la elección de reducir a un número
+implementación: cambiar el corte cambia el conjunto de rivales (142 de los
+233 cortes que cambian de calle), así que la elección de reducir a un número
 deja de ser neutra.
 
 ## 4. Qué reducción se usa, y cuánto importa

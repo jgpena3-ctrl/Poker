@@ -69,46 +69,31 @@ Esto se descubrió al escribir este documento, y es lo más importante que hay
 aquí.
 
 Las cifras de F7.2 se publicaron con la ventana de 877 sobre el fichero de
-**1280** líneas. El fichero tiene ahora **1253** (1258 antes de la adopción y
-la reparación), y 70 de las líneas de la ventana son **distintas**. La ventana
-sigue teniendo 877 líneas, pero **no las mismas manos**.
+**1280** líneas. El fichero tiene ahora **1253**. La ventana sigue teniendo
+877 líneas, pero no las mismas manos; por eso la tabla cruzada se re-ancló
+aquí contra la base canónica actual (SHA
+`c3172a147423d12a652767586dd76c36f24347c9dd503959dbea019e64944a09`).
 
-> La tabla de esta sección se midió sobre las 1258. Tras adoptar la base de
-> 1253 no se ha vuelto a anclar: se conserva como referencia histórica de la
-> discrepancia, no como cifra vigente. El re-anclaje es la tarea 5 de
-> `DOCS/HOJA_DE_RUTA_POST_ADOPCION.md`.
-
-```
-                              PUBLICADO      AHORA      DELTA
-puntos de decisión                656        672        +16
-denominador de política           507        519        +12
-MULTIWAY (no fold)                226        238        +12
-MULTIWAY %                      44,6 %      45,9 %     +1,3
-cota de desconocidos              255        267        +12
-```
-
-**El porcentaje se mueve.** No es un redondeo: es otra muestra.
-
-Esto no es culpa del cambio manual, es su **consecuencia**, y es exactamente
-lo que pasa cuando se edita el fichero del que salen las cifras sin
-recalcular. Lo que estaba mal no es el número: es que el número se publicó
-sobre una base que ya no existe.
-
-### La tabla cruzada, sobre la ventana vigente
+### Tabla cruzada re-anclada, sobre la ventana vigente (2026-10-26)
 
 | clase | fold | no fold | total | **de política** |
 |---|---:|---:|---:|---:|
-| HU | 39 | **281** | 320 | **281** |
-| MULTIWAY | 36 | **238** | 274 | **238** |
-| DESCONOCIDO | 9 | 43 | 52 | 0 |
-| sin ningún rival al que responder | 9 | 17 | 26 | 0 |
-| **TOTAL** | **93** | **579** | **672** | **519** |
+| HU | 43 | **301** | 344 | **301** |
+| MULTIWAY | 32 | **211** | 243 | **211** |
+| DESCONOCIDO | 9 | 42 | 51 | 0 |
+| sin ningún rival al que responder | 10 | 16 | 26 | 0 |
+| **TOTAL** | **94** | **570** | **664** | **512** |
 
 ```
-519 + 43 + 17 = 579 no-fold  ->  + 93 folds  =  672 puntos
-519 = 281 HU + 238 MULTIWAY
-cota = 238 + 29 (techo sin evidencia) = 267
+512 = 301 HU + 211 MULTIWAY
+570 no-fold = 512 + 42 + 16  ->  + 94 folds  =  664 puntos
+cota = 211 + 24 (techo sin evidencia) = 235
+MULTIWAY % = 211 / 512 = 41,2 %
 ```
+
+**Referencia histórica (base anterior, 1258 líneas):** 672 puntos · 519 de
+política · 238 MULTIWAY · 45,9 % · cota 267. La diferencia es otra muestra,
+no un redondeo: el fichero cambió 27 manos respecto a la ventana.
 
 ## 5. El rango auditado (988) no es la ventana
 

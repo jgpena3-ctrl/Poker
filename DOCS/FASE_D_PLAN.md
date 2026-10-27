@@ -309,11 +309,12 @@ python tools/equity_preflop.py --comprobar     # el enumerador, aparte
 
 Si los jugadores que `winner` declara ganadores hacen **la misma mano en el
 board**, es un reparto, y el reparto es un hecho comprobable. Medido sobre
-las 7 manos con dos ganadores en la ventana:
+las 9 manos con dos ganadores en la ventana (re-anclado 2026-10-26; 8 de
+ellas tienen todos los ganadores con cartas y son demostrables):
 
 | | |
 |---|---:|
-| **empates demostrados** con el evaluador | **7 de 7** |
+| **empates demostrados** con el evaluador | **8 de 8** |
 
 Ejemplo, `H_0798`: board `5d Qh 6s 2h 4s`, `BB` con `TsQs` y `SB` con
 `ThQc`. **Score idéntico: 675194.** Las dos hacen pareja de queens con
@@ -328,9 +329,8 @@ ganador.
 > el reparto.** La pregunta de `revision_2` llevaba tres bloques siendo la
 > correcta y yo la había cerrado sin mirar las cartas.
 
-Como comprobación de que el instrumento sirve: cuenta **147** manos con dos
-ganadores distintos en la base entera, que es exactamente lo que declara
-`learn.py` (`winner con 2+ en la base entera: 179 -> 147`).
+Como comprobación de que el instrumento sirve: cuenta **17** manos con dos
+ganadores distintos en la base entera tras la revisión manual.
 
 #### Y un defecto que sale de mirar
 
@@ -346,13 +346,13 @@ mire aparte.
 
 | manos de la ventana de 877 | |
 |---:|---|
-| 580 | board incompleto (no hay showdown) |
-| 134 | menos de 2 jugadores con cartas |
-| 1 | sin ganador |
+| 579 | board incompleto (no hay showdown) |
+| 132 | menos de 2 jugadores con cartas |
+| 0 | sin ganador |
 | 1 | el ganador no tiene cartas |
-| **160** | **utilizables (18,3 %)** |
+| **164** | **utilizables (18,7 %)** |
 
-**Reparto 70/30 sobre las 160 utilizables:** **119 de calibración y 41 de
+**Reparto 70/30 sobre las 164 utilizables:** **123 de calibración y 41 de
 validación**, disjuntas por construcción (§2.2). La lista exacta está
 versionada en [`PARTICION_FASE_D.md`](PARTICION_FASE_D.md).
 
@@ -364,8 +364,8 @@ tres definiciones ya corregidas:
 
 | | |
 |---|---|
-| reparto | el hero **gana 20 de 160**, **reparte 3** y pierde 137 |
-| Brier de un predictor **constante** `p = 0,124` | **0,1111** |
+| reparto | el hero **gana 21 de 164**, **reparte 3** y pierde 140 |
+| Brier de un predictor **constante** `p = 0,137` | **0,1138** |
 
 > Las cuentas anteriores decían 21 victorias y 0,1165. Cambiaron al poder
 > usar las 7 manos que son repartos, y H_0798 pasó de `y = 1,0` a

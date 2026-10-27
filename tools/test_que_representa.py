@@ -99,17 +99,17 @@ def test_a_y_b_no_son_un_recorte(eqm, ventana, doc):
         if len(eqm.candidatos(h, hero, calle_a)) != len(
                 eqm.candidatos(h, hero, calle_b)):
             rival_difiere += 1
-    assert (mismo, cambia) == (638, 235), (
+    assert (mismo, cambia) == (633, 233), (
         'el reparto de cortes que cambian de calle es (%d, %d) y el '
-        'documento dice (638, 235)' % (mismo, cambia))
-    assert board_difiere == 232, (
-        'los que ademas cambian de board son %d, y el documento dice 232. Si '
+        'documento dice (633, 233)' % (mismo, cambia))
+    assert board_difiere == 230, (
+        'los que ademas cambian de board son %d, y el documento dice 230. Si '
         'ha cambiado, hay que reescribir el documento' % board_difiere)
-    assert rival_difiere == 141, (
+    assert rival_difiere == 142, (
         'los que ademas cambian de numero de rivales son %d, y el documento '
-        'dice 141' % rival_difiere)
-    assert '| **cortes con calle distinta** | **235** |' in doc
-    assert '**232**' in doc and '**141**' in doc
+        'dice 142' % rival_difiere)
+    assert '| **cortes con calle distinta** | **233** |' in doc
+    assert '**230**' in doc and '**142**' in doc
 
 
 def test_el_corte_es_la_ultima_accion_que_acepta_cinco_acciones(eqm, ventana):
@@ -192,12 +192,12 @@ def test_la_prediccion_no_es_un_numero_por_mano(eqm, ventana, doc):
             continue
         n[len(eqm.candidatos(h, hero, calle))] += 1
     mas_de_uno = sum(v for k, v in n.items() if k > 1)
-    assert mas_de_uno == 415, (
+    assert mas_de_uno == 396, (
         'ahora las manos con mas de un rival en el corte son %d, y el '
-        'documento dice 415' % mas_de_uno)
-    assert n[0] == 140 and n[1] == 318, (
-        'el reparto de rivales es %r y el documento dice 0->140, 1->318' % n)
-    assert '415 de 877' in doc
+        'documento dice 396' % mas_de_uno)
+    assert n[0] == 139 and n[1] == 331, (
+        'el reparto de rivales es %r y el documento dice 0->139, 1->331' % n)
+    assert '396 de 877' in doc
 
 
 def test_equity_de_mano_devuelve_una_por_rival_y_el_dilemma_esta_escrito(doc):

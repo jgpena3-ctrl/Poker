@@ -142,24 +142,31 @@ def _destino_temporal(alta):
 
 
 def test_el_flujo_completo_pasa_contra_el_fixture_suave():
-    """El camino de exito, con las 1258 manos y los dos guardianes.
+    """El camino de exito, con las 1253 manos y los dos guardianes.
 
     Y el umbral es el del FIXTURE, medido por el propio fixture, y no el de la
-    copia real: porque el 921 es el control de la base de HOY, y el fixture
+    copia real: porque el 1253 es el control de la base de HOY, y el fixture
     suave recodifica las ciegas SIN cambiar cuantas manos tienen ciega, de
     modo que el numero coincide.
+
+    Y el `tocadas > 0` sigue PENDIENTE y no se relaja: la base canonica ya
+    trae las ciegas como `p`, de modo que `recodificar()` no encuentra ninguna
+    `b` del BB que convertir y el fixture suave se queda en un no-op. Eso no
+    es una expectativa obsoleta sino un contrato de fixture que hay que
+    rediseñar, y mientras no se rediseñe el test sigue fallando a proposito.
     """
     alta, candidata, informe = _candidata(FIX.DUREZA_SUAVE)
     try:
-        assert informe['manos'] == 1258, informe
+        assert informe['manos'] == 1253, informe
         # Y el numero de manos revisadas NO se fija ✓: es un dato de A1 que
         # se mueve —MEDIDO, 1055 al empezar este bloque, y mas ahora—, y un
         # test que lo fijara passaria a fallar por un dato que no es un
         # defecto ✓.
         assert informe['revisadas_disponibles'] > 0, informe
         assert informe['tocadas'] > 0, informe
-        # Y el umbral sale de aqui, y no de una constante.
-        assert informe['ciegas_reconocidas'] == 921, informe
+        # Y el umbral sale de aqui, y no de una constante: la relacion que se
+        # afirma es que el fixture suave NO cambia cuantas manos tienen ciega.
+        assert informe['ciegas_reconocidas'] == informe['manos'], informe
 
         # Y las 203 PENDIENTES quedan intactas, que es lo que significa
         # «recodificar solo las revisadas». Y el numero de manos que quedan
@@ -213,25 +220,31 @@ def test_el_flujo_completo_pasa_contra_el_fixture_suave():
 def test_el_flujo_completo_pasa_contra_el_fixture_duro():
     """El mismo flujo, contra la copia que se parece a la REAL.
 
-    Y el motivo de que este test exista: el fixture suave reconoce 921
-    ciegas, y la copia real reconoce 1258. De modo que el procedimiento solo
+    Y el motivo de que este test exista: el fixture suave reconoce 1253
+    ciegas, y la copia real reconoce 1253. De modo que el procedimiento solo
     se ha probado contra una candidata que se parece a la base de HOY, y no
     contra una que se parece a la que va a entrar.
 
-    Y el fixture duro, MEDIDO: 1258 ciegas, 0 errores, 0 violaciones, y las
+    Y el fixture duro, MEDIDO: 1253 ciegas, 0 errores, 0 violaciones, y las
     doce categorias de control —que es lo que hace que el cambio de
     codificacion sea neutro—.
+
+    Y el `tocadas` y el `dejadas` se re-anclan a la base canonica de 1253: de
+    las 1253 manos, 33 conservan una `b` de BB que el fixture convierte y
+    1220 ya vienen con la ciega como `p`, de modo que el fixture no las toca.
+    La relacion que importa —TODAS las manos con ciega reconocida— se afirma
+    aparte y sigue valiendo.
     """
     alta, candidata, informe = _candidata(FIX.DUREZA_DURA)
     try:
-        assert informe['manos'] == 1258, informe
+        assert informe['manos'] == 1253, informe
         # Y el numero que importa: TODAS las manos con ciega reconocida.
         # Y el numero de ciegas del DURO no se fija ✓, porque es el de la
         # COPIA y el de la copia es de A1 ✓. Y lo que se afirma es la
         # RELACION ✓: todas las manos tienen ciega reconocida ✓.
         assert informe['ciegas_reconocidas'] == informe['manos'], informe
-        assert informe['tocadas'] == 1258, informe
-        assert informe['dejadas'] == 0, informe
+        assert informe['tocadas'] == 33, informe
+        assert informe['dejadas'] == 1220, informe
 
         destino = _destino_temporal(alta)
         antes = io.open(destino, 'rb').read()
@@ -255,12 +268,19 @@ def test_los_dos_fixtures_tienen_umbrales_distintos():
     control no distinguiria una candidata de la otra, y el parametro no
     estaria haciendo nada. Y un parametro que no puede cambiar el resultado
     no es un parametro.
+
+    Y ESTE TEST SIGUE PENDIENTE, y no por un pin: la base canonica ya trae
+    las ciegas como `p`, de modo que el fixture suave no recodifica nada y
+    los dos fixtures miden 1253. La invariante —dos umbrales distintos— ya
+    no se puede cumplir sin rediseñar el fixture suave, y ese rediseño no
+    cabe en una re-anclada de cifras. Se deja fallando para no convertir un
+    contrato roto en una prueba que siempre pasa.
     """
     alta_s, _c_s, inf_s = _candidata(FIX.DUREZA_SUAVE)
     try:
         alta_d, _c_d, inf_d = _candidata(FIX.DUREZA_DURA)
         try:
-            assert inf_s['ciegas_reconocidas'] == 921, inf_s
+            assert inf_s['ciegas_reconocidas'] == inf_s['manos'], inf_s
             # Y el numero de ciegas del DURO no se fija ✓, porque es el de la
             # copia y el de la copia es de A1 ✓. Y lo que se afirma es la
             # RELACION ✓: todas las manos tienen ciega reconocida ✓.
@@ -497,7 +517,7 @@ def test_el_control_de_categorias_bloquea_y_no_se_puede_hacer_informativo():
     comodidad». Y aqui no hay ninguna bandera que lo haga, y el test
     comprueba las dos cosas: que bloquea, y que no hay bandera.
     """
-    alta, candidata, _informe = _candidata(FIX.DUREZA_SUAVE)
+    alta, candidata, informe = _candidata(FIX.DUREZA_SUAVE)
     try:
         # una candidata cuyas categorias NO son las de control: se
         # comprueba con una que cambia la codificacion de una decision
@@ -518,7 +538,8 @@ def test_el_control_de_categorias_bloquea_y_no_se_puede_hacer_informativo():
             f.writelines(lineas)
 
         destino = _destino_temporal(alta)
-        r = _correr(destino, candidata, '--ciegas-esperadas', '921',
+        r = _correr(destino, candidata,
+                    '--ciegas-esperadas', str(informe['ciegas_reconocidas']),
                     '--control-categorias', _control(alta))
         assert r.returncode == 1, (
             'con las categorias cambiadas, el script tiene que FALLAR, y ha '
@@ -607,7 +628,8 @@ def test_el_control_declarado_bloquea_de_verdad():
         destino = _destino_temporal(alta)
         antes = io.open(destino, 'rb').read()
 
-        r = _correr(destino, candidata, '--ciegas-esperadas', '921',
+        r = _correr(destino, candidata,
+                    '--ciegas-esperadas', str(informe['ciegas_reconocidas']),
                     '--control-categorias', _control(alta))
         assert r.returncode == 1, (
             'con el control declarado y una diferencia de categorias, el '
@@ -673,7 +695,8 @@ def test_una_diferencia_semantica_no_bloquea_la_integridad():
             f.writelines(lineas)
 
         destino = _destino_temporal(alta)
-        r = _correr(destino, candidata, '--ciegas-esperadas', '921',
+        r = _correr(destino, candidata,
+                    '--ciegas-esperadas', str(informe['ciegas_reconocidas']),
                     '--control-categorias', _control(alta))
         assert r.returncode == 0, (
             'un cambio de bote es informacion y no un fallo de integridad, '

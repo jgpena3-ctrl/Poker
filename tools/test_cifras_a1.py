@@ -16,9 +16,8 @@ Y la regla que sale, y que este fichero vigila ✓:
 Y hay una lista corta de numeros que SI son estables ✓, y son los de la base
 CANONICA, que esta congelada ✓:
 
-  · 1258 — las lineas de la base canonica ✓;
-  · 877  — la ventana fiable de la base de HOY ✓;
-  · 921  — el control de regresion de la base de HOY ✓.
+  · 1253 — las lineas de la base canonica ✓;
+  · 877  — la ventana fiable de la base de HOY ✓.
 
 Y lo que NO se puede es el **conteo de manos resueltas por A1** ✓, que es de
 A1 ✓ y se mueve ✓. Y la comprobacion es dinamica ✓: se mide el conteo en el
@@ -37,8 +36,10 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, 'tools'))
 
 # Y los numeros de la base CANONICA, que estan congelados ✓ y se pueden
-# nombrar ✓.
-ESTABLES = (1258, 877, 921)
+# nombrar ✓. Y se re-anclan a la adopcion de 1253: el 1258 y el 921 eran los
+# de la base anterior, y el 1253 es a la vez el tamano canonico y el control
+# de ciegas que el motor reconoce hoy (DOCS/CANAL_MANUAL_CERRADO.md).
+ESTABLES = (1253, 877)
 
 
 def _conteo_de_cuarentena(ruta=None):

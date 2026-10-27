@@ -3628,7 +3628,7 @@ CARPETAS_DEL_INVENTARIO = ('tools', 'motor', 'recorder')
 # fichero de esa taille es una tabla que nadie mantiene, y una tabla que nadie
 # mantiene es decoracion.
 
-TESTS_POR_CARPETA = {'motor': 884, 'recorder': 4, 'tools': 605}
+TESTS_POR_CARPETA = {'motor': 889, 'recorder': 4, 'tools': 616}
 
 
 # Y los FICHEROS, que son OTRA medida. MEDIDO, y sin ellos el guardia
@@ -3641,7 +3641,7 @@ TESTS_POR_CARPETA = {'motor': 884, 'recorder': 4, 'tools': 605}
 # es cierto. Y «hoy» no es una propiedad. O sea que el guardia no baja,
 # pero FALLA si algun dia hay tests abajo: es el unico caso en el que
 # bajaria, y bajarlo sin querer seria decir «el repo entero» sin serlo.
-FICHEROS_POR_CARPETA = {'motor': 72, 'recorder': 4, 'tools': 128}
+FICHEROS_POR_CARPETA = {'motor': 72, 'recorder': 4, 'tools': 131}
 # Y LA MAGNITUD QUE MIDE ESTE GUARDIA, que es lo que R2 pregunta, y que hay
 # que responder por la magnitud y no solo por el numero.
 #
@@ -3673,7 +3673,7 @@ FICHEROS_POR_CARPETA = {'motor': 72, 'recorder': 4, 'tools': 128}
 # cambia ese numero. Lo que NO se puede tapar sin ejecutar pytest es el numero
 # de CASOS de cada una, y eso queda declarado como punto ciego y no como
 # garantia.
-PARAMETRIZADOS_ABAJO = 18
+PARAMETRIZADOS_ABAJO = 21
 
 def _tests_de(directorio):
     """Cuantos `def test_` hay en los `.py` de `directorio`, y cuantos ficheros.

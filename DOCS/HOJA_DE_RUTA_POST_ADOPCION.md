@@ -78,20 +78,24 @@ duplicadas ni cambian las categorías. La ventana fiable sigue en 877.
 
 ## 5. Lo que sigue abierto
 
-1. **Unificar el resolvedor de ids.** `tools/auditar_rango.py::pos_de_pid` y
-   `tools/calibrar.py::id_a_pos` deben usar `multiway.posicion_de_id` y
-   rechazar la mano si el contrato no se cumple. Añadir test de regresión.
-2. **Re-anclar la Fase D** (`DOCS/FASE_D_PLAN.md`) con el SHA y las ventanas
-   nuevas, y solo entonces calibrar. La tabla de `DOCS/RANGO_VIGENTE.md` §4
-   sigue medida sobre la base de 1258.
+1. **Unificar el resolvedor de ids.** HECHO en `0738503`: `tools/auditar_rango.py::pos_de_pid`,
+   `tools/calibrar.py::id_a_pos`, `tools/auditar_muestra_lsec.py::id_a_pos` y
+   `tools/equity_de_mano.py::id_a_pos` usan `multiway.posicion_de_id`, que rechaza
+   el contrato roto con `ContratoAsientosInvalido`; test de regresión en
+   `tools/test_resolvedor_asientos.py`. Pendiente solo el relleno de butacas en
+   los fixtures de `motor/test_auditar_rango.py` (hecho en esta continuacion).
+2. **Re-anclar la Fase D** (`DOCS/FASE_D_PLAN.md`) — HECHO 2026-10-26:
+   ventana sigue en 877; muestra 164 utilizables (123 calibración, 41 validación);
+   F7.2 re-anclado a 664 puntos, 512 de política, 211 MULTIWAY (41,2 %),
+   cota 235. `DOCS/RANGO_VIGENTE.md` §4 actualizado. La calibración sigue
+   bloqueada.
 3. **Arreglar H4** (limp corto contado como subida) y re-derivar sus cifras.
    Su condición ya se cumple: las cifras están re-derivadas contra la base
    adoptada.
-4. **Revisar la codificación `p` en las auditorías.** 45 manos tienen una `p`
-   en posición distinta de SB/BB con importe 1.0: es un limp codificado como
-   posta, no un ante. Hay que decidir si se recodifica a `c` antes de
-   calibrar, y corregir los textos de `tools/auditar_origen.py` que aún hablan
-   de `BB b`.
+4. **Revisar la codificación `p` en las auditorías.** DECIDIDO en
+   `DOCS/ACCION_P_HALLAZGOS.md`: NO se recodifica a `c`; las 49 acciones son
+   postas de entrada y el motor ya las salta. Solo queda corregir los textos de
+   auditorias/hoja de ruta que las describan como limps o antes.
 5. **Revisar las tres ciegas dobles.** `H_0357`, `H_0475` y `H_0738` tienen una
    `BB b` después de la `BB p`. `_es_ciega_bb` marca las dos como ciega porque
    no hay acción voluntaria entre medias, así que el motor se come la segunda
@@ -102,6 +106,18 @@ duplicadas ni cambian las categorías. La ventana fiable sigue en 877.
    `INDICE_DEFECTOS.md`.
 
 ## 6. Comandos
+
+Suite de referencia (excluye las dos pruebas que piden teclado o captura):
+
+```powershell
+python -m pytest motor recorder tools --ignore=tools/test_live.py --ignore=tools/test_mano6.py -q
+```
+
+Estado tras la auditoría de pins del 2026-10-26: **1556 aprobadas, 9 fallidas,
+2 omitidas, 5 xfailed**. Los 9 fallos están clasificados en
+`DOCS/AUDITORIA_PINES_2026-10-26.md` §4: seis son el análisis publicado del
+AUC y tres son los fixtures de copia sintética. Ninguno es una regresión del
+motor.
 
 ```powershell
 python tools/reparar_asientos.py

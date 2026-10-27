@@ -99,38 +99,47 @@ def test_la_etiqueta_viene_de_una_sola_fuente(ar):
 
 # ======================================= 2. las cifras, de la muestra
 def test_las_cifras_de_la_herramienta_son_las_de_la_muestra(ar, ventana):
-    """Preflop 0, postflop 48 con 20 y=1 y 28 y=0. Si alguien vuelve a contar
-    filtros en vez de leer etiquetas, esto se mueve."""
+    """Poblacion B jugada 212; con etiqueta 50 —48 postflop y 2 preflop—.
+    Si alguien vuelve a contar filtros en vez de leer etiquetas, esto se
+    mueve.
+
+    Y las 2 preflop son H_0080 y H_0223: la base canonica les da board y
+    ganador, y su corte es la ultima accion del heroe en preflop aunque la
+    mano siga. No son un recalculado: `test_resto_de_muestra_nunca_inventa_
+    una_etiqueta`, mas arriba, sigue comprobando fila a fila que `y` es el
+    de `muestra()`.
+    """
     inst = ar._inst()
     filas = ar.medir_todas_calles(inst, ventana, 'ultima')
     jug = [f for f in filas if f['jugada']]
     con = [f for f in jug if f['y'] is not None]
     pre = [f for f in con if f['calle'] == 'preflop']
     post = [f for f in con if f['calle'] != 'preflop']
-    assert len(jug) == 223, 'poblacion B jugada: %d' % len(jug)
-    assert len(con) == 48, 'con etiqueta: %d' % len(con)
-    assert len(pre) == 0, (
-        'preflop con etiqueta: %d. Si esto NO es cero, la etiqueta se esta '
-        'calculando otra vez' % len(pre))
+    assert len(jug) == 212, 'poblacion B jugada: %d' % len(jug)
+    assert len(con) == 50, 'con etiqueta: %d' % len(con)
+    assert set(f['id'] for f in pre) == {'H_0080', 'H_0223'}, (
+        'preflop con etiqueta: %r. Son las dos que la adopcion trajo con '
+        'board y winner' % [f['id'] for f in pre])
     assert len(post) == 48
     assert sum(1 for f in post if f['y'] == 1.0) == 20
     assert sum(1 for f in post if f['y'] == 0.0) == 28
 
 
 def test_el_corte_en_la_primera_si_tiene_las_dos_clases(ar, ventana):
-    """La hipótesis, medida: 67, con 20 positivas y 47 negativas. Y la
-    razon de que haya etiqueta NO es un filtro: es que la mano continua."""
+    """La hipótesis, medida sobre la base canonica: 61, con 21 positivas y
+    40 negativas. Y la razon de que haya etiqueta NO es un filtro: es que
+    la mano continua."""
     inst = ar._inst()
     filas = ar.medir_todas_calles(inst, ventana, 'primera')
     jug = [f for f in filas if f['jugada']]
     con = [f for f in jug if f['y'] is not None]
     pre = [f for f in con if f['calle'] == 'preflop']
-    assert len(con) == 67, 'con etiqueta: %d' % len(con)
-    assert len(pre) == 67, (
+    assert len(con) == 61, 'con etiqueta: %d' % len(con)
+    assert len(pre) == 61, (
         'y las %d son preflop: con el corte en la primera la MANO CONTINUA, '
         'y ahi si hay board y winner' % len(pre))
-    assert sum(1 for f in pre if f['y'] == 1.0) == 20
-    assert sum(1 for f in pre if f['y'] == 0.0) == 47
+    assert sum(1 for f in pre if f['y'] == 1.0) == 21
+    assert sum(1 for f in pre if f['y'] == 0.0) == 40
 
 
 # ================= la comprobacion cruzada que R2 pide, sobre TODAS las filas
@@ -149,7 +158,7 @@ def test_la_tabla_y_las_filas_no_pueden_ser_cosas_distintas(ar, ventana):
     assert not desacuerdos, (
         '%d filas cuyo y no coincide con resto_de_muestra: %r'
         % (len(desacuerdos), desacuerdos[:6]))
-    assert len(filas) == 873, 'y se comprueban todas, no una ventana'
+    assert len(filas) == 866, 'y se comprueban todas, no una ventana'
 
 
 def test_el_guardia_de_tipos_sigue_puesto(ar, ventana):

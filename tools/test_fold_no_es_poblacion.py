@@ -129,14 +129,15 @@ def test_la_constante_explica_el_por_que(ins):
 
 
 # ------------------------------------------------- y el dato que lo dispara
-def test_en_la_poblacion_real_no_entra_ninguna_mano_preflop(ins):
-    """El dato que justifica todo esto. Si un dia el preflop de la
-    poblacion B tuviera manos, este test habria que reescribirlo, y el que
-    lo reescriba tendria que mirar POR QUE antes.
+def test_en_la_poblacion_real_solo_entra_la_preflop_verificable(ins):
+    """El dato que justifica todo esto. En la base canonica de 1253 SI
+    entra una: H_0080, y=1. Su corte es la ultima accion del heroe en
+    preflop, pero la mano siguio y tiene board y ganador, de modo que la
+    etiqueta es legitima. El guardia pasa de «ninguna» a «exactamente esa».
 
-    Medido: 23 cortes preflop en validacion, los 23 con el heroe foldendo;
-    75 en calibracion, los 75 tambien; y de las 81 manos jugables de la
-    ventana de 877, ninguna tiene etiqueta.
+    Medido: 24 cortes preflop en validacion, todos con el heroe foldeando,
+    mas H_0080; 25 cortes en `sp` (14 no_raise, 9 facing_open, 2
+    facing_3bet), y 24 descartes por fold.
     """
     from motor import learn, player_ranges
     ventana = learn.load_hands(reliable_only=True)
@@ -149,9 +150,10 @@ def test_en_la_poblacion_real_no_entra_ninguna_mano_preflop(ins):
 
     trabajo, _e, sin_rango, sp = ins.seleccionar_manos(dict(val_), por_id,
                                                        model)
-    assert trabajo == [], (
+    assert [t['id'] for t in trabajo] == ['H_0080'], (
         'si esto falla, el preflop de la poblacion B ha cambiado de verdad: '
-        'mirar los descartes antes de tocar nada')
-    assert sum(sp.values()) == 23, 'los 23 cortes siguen estando ahi'
-    assert sin_rango[ins.CLAVE_FOLD] == 23
+        'mirar los descartes antes de tocar nada. Y el unico que entra es '
+        'H_0080: %r' % ([t.get('id') for t in trabajo],))
+    assert sum(sp.values()) == 25, 'los 25 cortes siguen estando ahi'
+    assert sin_rango[ins.CLAVE_FOLD] == 24
     assert isinstance(val_, list) and val_, 'la muestra de validacion existe'

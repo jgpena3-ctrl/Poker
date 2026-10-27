@@ -55,9 +55,9 @@ CONTROL_VIOLACIONES = 0
 # canonica. MEDIDO, y es el valor contra el que se compara una candidata que
 # SOLO cambia la codificacion.
 CONTROL_CATEGORIAS = {
-    '3bet': 95, '4bet': 2, 'bb_check': 340, 'call_3bet': 17,
-    'call_limp': 315, 'call_open': 603, 'fold': 2146, 'fold_vs_3bet': 142,
-    'fold_vs_open': 1501, 'limp': 571, 'open': 595, 'rol': 254, 'squeeze': 33,
+    '3bet': 86, 'bb_check': 348, 'call_3bet': 15,
+    'call_limp': 322, 'call_open': 594, 'fold': 2211, 'fold_vs_3bet': 139,
+    'fold_vs_open': 1471, 'limp': 564, 'open': 587, 'rol': 275, 'squeeze': 25,
 }
 
 

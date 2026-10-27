@@ -25,6 +25,12 @@ def mano(preflop=(), flop=(), turn=(), river=(), activos=('UTG', 'BB'),
     for pos in activos:
         jugadores.append({'active': True, 'pos': pos, 'name': pos,
                          'stack': 100.0, 'cards': ''})
+    # El contrato de asientos exige seis butacas (motor.multiway.PLAYER_IDS).
+    # Los tests antiguos construian solo las activas y ahora el resolvedor
+    # rechaza el contrato roto; se rellena con butacas inactivas vacias, como
+    # hace tools/test_calibrar._mano, sin cambiar los indices de las activas.
+    jugadores += [{'active': False, 'pos': '', 'name': '', 'stack': 0.0,
+                   'cards': ''} for _ in range(6 - len(jugadores))]
     if players:
         jugadores = players
     h = {
