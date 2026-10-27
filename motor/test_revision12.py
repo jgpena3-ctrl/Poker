@@ -148,8 +148,8 @@ def test_p3_ciega_bb_siempre_es_la_ciega_no_el_bet_actual():
     """El BB igualo una subida: la ciega sigue siendo 1.0, no 2.5."""
     pytest.importorskip('cv2')
     bb = _bb(_reconstruct_preflop(_estado(2.5)))
-    ciegas = [x for x in bb if x[2] is True]
-    assert ciegas == [('b', 1.0, True)], ciegas
+    ciegas = [x for x in bb if x[0] == 'p']
+    assert ciegas == [('p', 1.0, None)], ciegas
     assert ('c', 2.5, None) in bb, bb
 
 
@@ -157,8 +157,8 @@ def test_p3_bb_sube_sobre_la_ciega_no_se_confunde():
     """BB sube a 6.0: la ciega es 1.0 y el raise es una accion aparte."""
     pytest.importorskip('cv2')
     bb = _bb(_reconstruct_preflop(_estado(6.0)))
-    ciegas = [x for x in bb if x[2] is True]
-    assert ciegas == [('b', 1.0, True)], ciegas
+    ciegas = [x for x in bb if x[0] == 'p']
+    assert ciegas == [('p', 1.0, None)], ciegas
     assert ('r', 6.0, None) in bb, bb
 
 
@@ -167,7 +167,7 @@ def test_p3_bb_solo_ciega_no_emite_accion_voluntaria():
     pytest.importorskip('cv2')
     acts = _reconstruct_preflop(_estado(1.0))
     assert [(a['action'], a['amount']) for a in acts if a['pos'] == 'BB'] \
-        == [('b', 1.0)]
+        == [('p', 1.0)]
 
 
 def test_p3_el_bb_no_pierde_su_accion_voluntaria():
@@ -175,5 +175,5 @@ def test_p3_el_bb_no_pierde_su_accion_voluntaria():
     pytest.importorskip('cv2')
     acts = _reconstruct_preflop(_estado(2.5))
     bb = [(a['action'], a['amount']) for a in acts if a['pos'] == 'BB']
-    assert ('b', 1.0) in bb, 'la ciega del BB debe registrarse'
+    assert ('p', 1.0) in bb, 'la posta del BB debe registrarse'
     assert ('c', 2.5) in bb, 'el call voluntario del BB se ha perdido: %s' % (bb,)
