@@ -307,6 +307,128 @@ class LiveRecorder:
         return [(f'{c["rank"]}{c["suit"]}' if c and c.get('rank') and c.get('suit') else '')
                 for c in cards[:5]]
 
+    def _street_rank(self, street):
+        return {'preflop': 0, 'flop': 1, 'turn': 2, 'river': 3}.get(street, 0)
+
+    def _target_street(self, state):
+        visible = self._visible_coms(state)
+        if visible >= 5:
+            return 'river'
+        if visible >= 4:
+            return 'turn'
+        if visible >= 3:
+            return 'flop'
+        return 'preflop'
+
+    def _create_street_board(self, street, state):
+        cards = self._get_com_list(state)
+        visible = [c for c in cards if c]
+        if street == 'flop':
+            self.hand['comunitarias']['flop'] = visible[:3]
+            self.hand['streets']['flop']['board'] = visible[:3]
+        elif street == 'turn':
+            self.hand['comunitarias']['turn'] = [visible[3]] if len(visible) > 3 else []
+            self.hand['streets']['turn']['board'] = [visible[3]] if len(visible) > 3 else []
+        elif street == 'river':
+            self.hand['comunitarias']['river'] = [visible[4]] if len(visible) > 4 else []
+            self.hand['streets']['river']['board'] = [visible[4]] if len(visible) > 4 else []
+
+    def _infer_street_actions(self, street, prev_state, cur_state, log):
+        if self.hand is None or prev_state is None:
+            return {}
+        pid_map = self._get_pid_map(cur_state)
+        contributions = {}
+        fold_candidates = []
+        for pid in PLAYER_IDS:
+            pos = pid_map.get(pid)
+            if not pos or pid in self._inactive_players:
+                continue
+            prev_stake = prev_state.get(f'{pid}_stake')
+            cur_stake = cur_state.get(f'{pid}_stake')
+            if prev_stake is None:
+                continue
+            prev_bet = prev_state.get(f'{pid}_bet') or 0
+            total_level = round(prev_bet + max(0.0, (prev_stake or 0) - (cur_stake or 0)), 2)
+            turn_level = round(cur_state.get(f'{pid}_bet') or 0, 2)
+            level = round(max(0.0, total_level - turn_level), 2)
+            if level > 0.05:
+                contributions[pos] = max(contributions.get(pos, 0.0), level)
+            elif (cur_stake is not None and prev_stake is not None
+                  and cur_state.get(f'{pid}_state') in ('retirarse', 'ausente')):
+                fold_candidates.append(pos)
+        if not contributions:
+            return {}
+        max_level = max(contributions.values())
+        actions = []
+        for pos in self._get_street_order(None, street):
+            if pos in contributions:
+                level = contributions[pos]
+                atype = 'b' if level >= max_level - 0.05 else 'c'
+                actions.append({'pos': pos, 'action': atype, 'amount': round(level, 2),
+                                'amount_type': 'observed', 'inferred': True,
+                                'ambiguous': True})
+            elif pos in fold_candidates:
+                actions.append({'pos': pos, 'action': 'f', 'amount': 0.0,
+                                'amount_type': 'observed', 'inferred': True,
+                                'ambiguous': True})
+        self.hand['streets'][street]['actions'] = actions
+        for action in actions:
+            if action['action'] in ('b', 'r'):
+                self._ambiguous_action_keys.add(
+                    (street, action['pos'], round(action['amount'], 2)))
+        self._add_ambiguity(
+            'street_inferred_from_stack_delta', street,
+            contributions=contributions,
+            note='Calle no capturada: acciones inferidas desde la diferencia de stacks.')
+        return contributions
+
+    def _make_synthetic_state(self, prev_state, cur_state, contributions, street):
+        synth = dict(cur_state)
+        pid_map = self._get_pid_map(cur_state)
+        for pid in PLAYER_IDS:
+            pos = pid_map.get(pid)
+            level = contributions.get(pos, 0.0) if pos else 0.0
+            prev_stake = (prev_state or {}).get(f'{pid}_stake')
+            if prev_stake is not None:
+                synth[f'{pid}_stake'] = round(max(0.0, (prev_stake or 0) - level), 2)
+            synth[f'{pid}_bet'] = None
+        if len(contributions) > 1:
+            matched = sum(sorted(contributions.values())[1:])
+        else:
+            matched = 0.0
+        prev_pot = (prev_state or {}).get('pot') or 0
+        synth['pot'] = round(prev_pot + matched + max(contributions.values(), default=0.0), 2)
+        return synth
+
+    def _handle_street_jump(self, target, state, log):
+        if self.hand is None:
+            return
+        cur = self.hand['current_street']
+        streets = ['preflop', 'flop', 'turn', 'river']
+        ci = streets.index(cur)
+        ti = streets.index(target)
+        intermediates = streets[ci + 1:ti]
+        if not intermediates:
+            return
+        prev_state = self.last_state
+        log(f'  [salto de calle] {cur} -> {target}: infiriendo {", ".join(intermediates)}')
+        for index, street in enumerate(intermediates):
+            self._create_street_board(street, state)
+            if index == 0:
+                self._finalize_street(cur, prev_state, confirm_all_check=False)
+                contrib = self._infer_street_actions(street, prev_state, state, log)
+                synth = self._make_synthetic_state(prev_state, state, contrib, street)
+                self._completed_streets.add(cur)
+                prev_state = synth
+            else:
+                self._finalize_street(intermediates[index - 1], prev_state, confirm_all_check=False)
+                self._add_ambiguity('street_not_captured', street,
+                                    note='Calle intermedia no capturada.')
+                self.hand['streets'][street]['actions'] = []
+                self._completed_streets.add(intermediates[index - 1])
+            self.hand['current_street'] = street
+            self.last_state = prev_state
+
     def _visible_coms(self, state):
         return sum(1 for c in self._get_com_list(state) if c)
 
@@ -1186,6 +1308,41 @@ class LiveRecorder:
         else:
             actions[:] = checks + ordered
 
+        # Inferir calls perdidos: si hubo apuesta y un jugador sigue vivo en una
+        # calle posterior (o en el showdown) pero no tiene acción registrada en
+        # esta, se sobreentiende que igualó; se marca como inferido/ambiguo.
+        later_alive = False
+        for st in ('flop', 'turn', 'river'):
+            if st == street_name:
+                continue
+            if self.hand['streets'].get(st, {}).get('actions'):
+                later_alive = True
+        if non_checks and later_alive:
+            run_max = self._get_max_bet(street_name)
+            if run_max and run_max > 0:
+                existing_pos = {a['pos'] for a in actions}
+                pid_map = self._get_pid_map()
+                for pos in self._get_street_order(None, street_name):
+                    if pos in existing_pos:
+                        continue
+                    pid = pid_map.get(pos)
+                    if not pid or pid in self._inactive_players:
+                        continue
+                    if pos in self._folded_positions:
+                        continue
+                    if pos in self._allin_players if False else False:
+                        continue
+                    if pid in self._allin_players:
+                        continue
+                    actions.append({'pos': pos, 'action': 'c', 'amount': round(run_max, 2),
+                                    'amount_type': 'observed', 'inferred': True,
+                                    'ambiguous': True})
+                    existing_pos.add(pos)
+                    self._add_ambiguity(
+                        'missing_call_inferred', street_name, pos=pos,
+                        amount=round(run_max, 2),
+                        note='Jugador vivo en calle posterior sin acción registrada; se infiere call.')
+
     def _add_implied_checks(self, street_name, state, confirm_all_check=False):
         """Detecta checks por lógica de juego en calles posflop.
 
@@ -1459,6 +1616,10 @@ class LiveRecorder:
             # 0. Detectar jugadores inactivos antes de procesar acciones
             self._detect_inactive(state)
 
+            if self.hand is not None:
+                target = self._target_street(state)
+                if self._street_rank(target) > self._street_rank(self.hand['current_street']) + 1:
+                    self._handle_street_jump(target, state, log)
             cur = self.hand['current_street']
             ns = self.detect_street_change(state)
             new_street_has_bets = bool(ns and self._new_street_bets_visible(state))
