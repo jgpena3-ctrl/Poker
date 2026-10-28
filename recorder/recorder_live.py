@@ -1176,28 +1176,144 @@ class LiveRecorder:
             return 'river'
         return None
 
+    def _infer_missing_street_actions(self, street, prev_state, cur_state,
+                                      pos_map):
+        """Reconstruye acciones no capturadas de una calle a partir del stack.
+
+        Sirve tanto si se perdió una calle entera (no hay ninguna captura)
+        como si solo se perdió una parte. El primer frame de la calle nueva
+        ya trae descontado lo comprometido en la calle anterior, pero la
+        casilla de apuesta de esa calle puede estar vacía. El nivel absoluto
+        se obtiene con:
+
+            nivel = apuesta_previa + caída_de_stack - apuesta_calle_nueva
+
+        Las acciones quedan en la calle anterior y marcadas como inferidas y
+        ambiguas, porque el orden exacto bet/call no se observó.
+        """
+        inferred = {}
+        if self.hand is None or prev_state is None or cur_state is None:
+            return inferred
+        actions = self.hand['streets'][street].setdefault('actions', [])
+        contributions = self._street_contributions(street)
+        street_order = self._get_street_order(None, street)
+        pending = {}
+        dimmed_levels = {}
+
+        for pos in street_order:
+            pid = pos_map.get(pos)
+            if not pid or pid in self._inactive_players:
+                continue
+            if pos in self._folded_positions:
+                continue
+            prev_stake = prev_state.get(f'{pid}_stake')
+            prev_bet = prev_state.get(f'{pid}_bet') or 0.0
+            cur_stake = cur_state.get(f'{pid}_stake')
+            cur_bet = cur_state.get(f'{pid}_bet') or 0.0
+            cur_st = cur_state.get(f'{pid}_state')
+            dimmed = cur_st in ('retirarse', 'ausente', 'inactivo',
+                                'sin jugador', 'fuera')
+            if prev_stake is None and not prev_bet:
+                continue
+            if cur_stake is None and not dimmed:
+                # All-in: se comprometió todo el stack restante.
+                level = (prev_stake or 0.0) + prev_bet - cur_bet
+            else:
+                level = (prev_bet
+                         + max(0.0, (prev_stake or 0.0) - (cur_stake or 0.0))
+                         - cur_bet)
+            level = round(max(0.0, level), 2)
+            existing = contributions.get(pos, 0.0)
+            if level > existing + 0.05:
+                pending[pos] = level
+                if dimmed:
+                    dimmed_levels[pos] = level
+
+        if not pending:
+            return inferred
+
+        existing_max = max(contributions.values(), default=0.0)
+        overall_max = max([existing_max] + list(pending.values()))
+        max_pending = [p for p in street_order
+                       if p in pending and pending[p] >= overall_max - 0.05]
+        bettor = None
+        if existing_max < overall_max - 0.05 and max_pending:
+            bettor = max_pending[0]
+
+        def already_has(pos, kind, amount=None):
+            for action in actions:
+                if action.get('pos') != pos or action.get('action') != kind:
+                    continue
+                if (amount is None
+                        or abs(float(action.get('amount') or 0.0) - amount) < 0.05):
+                    return True
+            return False
+
+        for pos in street_order:
+            if pos not in pending:
+                continue
+            level = pending[pos]
+            if pos == bettor:
+                atype = 'b' if existing_max <= 0.05 else 'r'
+            else:
+                atype = 'c'
+            if not already_has(pos, atype, level):
+                actions.append({
+                    'pos': pos, 'action': atype, 'amount': round(level, 2),
+                    'amount_type': 'observed', 'inferred': True,
+                    'ambiguous': True})
+            inferred[pos] = level
+            self._add_ambiguity(
+                'street_actions_inferred_from_stack_delta', street, pos=pos,
+                amount=round(level, 2), action=atype,
+                note='Acciones de la calle no capturadas; se infirieron desde '
+                     'la diferencia de stacks.')
+
+        # Un jugador dimmed que no completó el nivel máximo foldó en esta
+        # calle; si lo completó, el fold pertenece a la calle nueva.
+        for pos, level in dimmed_levels.items():
+            if level + 0.05 >= overall_max:
+                continue
+            if not already_has(pos, 'f'):
+                actions.append({
+                    'pos': pos, 'action': 'f', 'amount': 0.0,
+                    'amount_type': 'observed', 'inferred': True,
+                    'ambiguous': True})
+                self._folded_positions.add(pos)
+
+        return inferred
+
     def _settle_pending_bets(self, street, prev_state, cur_state):
         """Cierra en la calle anterior los calls/folds que ocurrieron en el
         frame de transición.
 
         Cuando la captura salta de calle, el primer frame de la calle nueva
         puede mostrar ya el stack descontado por:
+          - lo apostado en una calle de la que no hubo capturas,
           - el call que completaba la apuesta de la calle anterior, y
           - la apuesta propia de la calle nueva.
 
         Si no se separan, ambos importes se suman y la calle nueva recibe un
-        bet inflado. Aquí se registra la parte del call en la calle anterior y
-        se devuelve cuánto hay que descontar del delta de la calle nueva.
+        bet inflado. Aquí se registra en la calle anterior todo lo que se pueda
+        reconstruir y se devuelve cuánto descontar del delta de la nueva.
         """
         carryover = {}
         if self.hand is None or prev_state is None or cur_state is None:
             return carryover
+        pos_map = self._get_pos_map(prev_state)
+        actions = self.hand['streets'][street].setdefault('actions', [])
+
+        inferred = self._infer_missing_street_actions(
+            street, prev_state, cur_state, pos_map)
+        contributions = self._street_contributions(street)
         max_level = self._get_max_bet(street)
         if max_level is None or max_level <= 0:
             return carryover
-        contributions = self._street_contributions(street)
-        pos_map = self._get_pos_map(prev_state)
-        actions = self.hand['streets'][street].setdefault('actions', [])
+
+        for pos, level in inferred.items():
+            pid = pos_map.get(pos)
+            prev_bet = (prev_state.get(f'{pid}_bet') or 0.0) if pid else 0.0
+            carryover[pos] = round(max(0.0, level - prev_bet), 2)
 
         def already_has(pos, kind, amount=None):
             for action in actions:
@@ -1208,6 +1324,10 @@ class LiveRecorder:
             return False
 
         for pos in self._get_street_order(None, street):
+            if pos in inferred:
+                # Ya se reconstruyó su acción desde el stack; no volver a
+                # inventarle un call al nivel máximo.
+                continue
             pid = pos_map.get(pos)
             if not pid or pid in self._inactive_players:
                 continue

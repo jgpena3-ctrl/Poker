@@ -442,3 +442,59 @@ def test_fold_en_calle_nueva_no_se_adelanta_a_la_anterior():
     r.detect_actions(turn)
     turn_acts = _acts(r.hand['streets']['turn']['actions'])
     assert ('BTN', 'f', 0.0) in turn_acts, turn_acts
+
+
+def test_calle_sin_capturas_se_reconstruye_y_no_infla_la_siguiente():
+    r = _preflop_recorder()
+    r.hand['current_street'] = 'flop'
+    r.street_has_bet = True
+    r._street_pot = 1.5
+    # No hay ninguna acción de flop capturada.
+    flop = _state(btn='p1', stakes={'p4': 100.0, 'p1': 100.0}, pot=1.5)
+    turn = _state(btn='p1', bets={'p4': 28.0, 'p1': 28.0},
+                  stakes={'p4': 55.0, 'p1': 55.0}, pot=91.5,
+                  community=[{'rank': 'A', 'suit': 'h'},
+                             {'rank': 'K', 'suit': 'd'},
+                             {'rank': '2', 'suit': 'c'},
+                             {'rank': '9', 'suit': 's'}])
+    r.last_state = flop
+    r.change_street('turn', turn, carryover=True)
+
+    flop_acts = _acts(r.hand['streets']['flop']['actions'])
+    assert ('UTG', 'b', 17.0) in flop_acts, flop_acts
+    assert ('BTN', 'c', 17.0) in flop_acts, flop_acts
+
+    r.detect_actions(turn)
+    turn_acts = _acts(r.hand['streets']['turn']['actions'])
+    assert ('UTG', 'b', 28.0) in turn_acts, turn_acts
+    assert ('BTN', 'c', 28.0) in turn_acts, turn_acts
+    assert not any(amt == 45.0 for _pos, _act, amt in turn_acts), turn_acts
+
+
+def test_calle_parcialmente_capturada_no_duplica_la_apuesta():
+    r = _preflop_recorder()
+    r.hand['current_street'] = 'flop'
+    r.street_has_bet = True
+    r._street_pot = 1.5
+    r.hand['streets']['flop']['actions'] = [
+        {'pos': 'UTG', 'action': 'b', 'amount': 17.0,
+         'amount_type': 'observed'}]
+    flop = _state(btn='p1', bets={'p4': 17.0},
+                  stakes={'p4': 83.0, 'p1': 100.0}, pot=18.5)
+    turn = _state(btn='p1', bets={'p4': 28.0, 'p1': 28.0},
+                  stakes={'p4': 55.0, 'p1': 55.0}, pot=91.5,
+                  community=[{'rank': 'A', 'suit': 'h'},
+                             {'rank': 'K', 'suit': 'd'},
+                             {'rank': '2', 'suit': 'c'},
+                             {'rank': '9', 'suit': 's'}])
+    r.last_state = flop
+    r.change_street('turn', turn, carryover=True)
+
+    flop_acts = _acts(r.hand['streets']['flop']['actions'])
+    assert flop_acts.count(('UTG', 'b', 17.0)) == 1, flop_acts
+    assert ('BTN', 'c', 17.0) in flop_acts, flop_acts
+
+    r.detect_actions(turn)
+    turn_acts = _acts(r.hand['streets']['turn']['actions'])
+    assert ('UTG', 'b', 28.0) in turn_acts, turn_acts
+    assert ('BTN', 'c', 28.0) in turn_acts, turn_acts
