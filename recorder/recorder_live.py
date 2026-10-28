@@ -91,6 +91,8 @@ class LiveRecorder:
         self._award_display_pids = set()
         self._award_display_events = {}
         self._just_changed_street = False
+        self._carryover_calls = {}
+        self._adjusted_last_state = None
         self._hand_positions = None
         self._folded_positions = set()
         self.on_hand_saved = None
@@ -750,6 +752,8 @@ class LiveRecorder:
         self._award_display_pids = set()
         self._award_display_events = {}
         self._just_changed_street = False
+        self._carryover_calls = {}
+        self._adjusted_last_state = None
         for pid in PLAYER_IDS:
             self._initial_stakes[pid] = state.get(f'{pid}_stake')
 
@@ -970,11 +974,11 @@ class LiveRecorder:
             if pid in self._allin_players:
                 continue
 
-            prev_stake = self.last_state.get(f'{pid}_stake')
+            prev_stake = (self._adjusted_last_state or self.last_state).get(f'{pid}_stake')
             cur_stake = state.get(f'{pid}_stake')
             cur_st = state.get(f'{pid}_state')
             prev_bet = (0.0 if self._just_changed_street else
-                        (self.last_state.get(f'{pid}_bet') or 0))
+                        ((self._adjusted_last_state or self.last_state).get(f'{pid}_bet') or 0))
             raw_cur_bet = state.get(f'{pid}_bet')
             cur_bet = raw_cur_bet or 0
 
@@ -987,6 +991,7 @@ class LiveRecorder:
                 amt = round((prev_stake or 0) + prev_bet, 2)
                 if amt <= 0:
                     continue
+                self._allin_players.add(pid)
                 if not has_bet:
                     atype = 'b'
                 elif amt <= run_max + 0.15:
@@ -996,7 +1001,6 @@ class LiveRecorder:
                 if not self._dup(street, pos_name, amt):
                     actions.append((street, pos_name, atype, round(amt, 2)))
                     self._inferred_action_keys.add((street, pos_name, round(amt, 2)))
-                    self._allin_players.add(pid)
                     if atype in ('b', 'r'):
                         has_bet = True
                         run_max = max(run_max, amt)
@@ -1080,6 +1084,8 @@ class LiveRecorder:
         # Público actualizado de la ronda para los siguientes frames
         self.street_has_bet = has_bet
         self._just_changed_street = False
+        self._adjusted_last_state = None
+        self._carryover_calls = {}
         if street != 'preflop' or run_max > getattr(self, '_preflop_current_bet', 0.0):
             self._preflop_current_bet = run_max
 
@@ -1170,32 +1176,159 @@ class LiveRecorder:
             return 'river'
         return None
 
-    def change_street(self, new_street, state):
+    def _settle_pending_bets(self, street, prev_state, cur_state):
+        """Cierra en la calle anterior los calls/folds que ocurrieron en el
+        frame de transición.
+
+        Cuando la captura salta de calle, el primer frame de la calle nueva
+        puede mostrar ya el stack descontado por:
+          - el call que completaba la apuesta de la calle anterior, y
+          - la apuesta propia de la calle nueva.
+
+        Si no se separan, ambos importes se suman y la calle nueva recibe un
+        bet inflado. Aquí se registra la parte del call en la calle anterior y
+        se devuelve cuánto hay que descontar del delta de la calle nueva.
+        """
+        carryover = {}
+        if self.hand is None or prev_state is None or cur_state is None:
+            return carryover
+        max_level = self._get_max_bet(street)
+        if max_level is None or max_level <= 0:
+            return carryover
+        contributions = self._street_contributions(street)
+        pos_map = self._get_pos_map(prev_state)
+        actions = self.hand['streets'][street].setdefault('actions', [])
+
+        def already_has(pos, kind, amount=None):
+            for action in actions:
+                if action.get('pos') != pos or action.get('action') != kind:
+                    continue
+                if amount is None or abs(float(action.get('amount') or 0.0) - amount) < 0.05:
+                    return True
+            return False
+
+        for pos in self._get_street_order(None, street):
+            pid = pos_map.get(pos)
+            if not pid or pid in self._inactive_players:
+                continue
+            if pos in self._folded_positions or pid in self._allin_players:
+                continue
+            # Si ni siquiera estaba en la mano al cerrar la calle, no hay
+            # nada que completar.
+            if prev_state.get(f'{pid}_stake') is None and not prev_state.get(f'{pid}_bet'):
+                continue
+            already = contributions.get(pos, 0.0)
+            pending = round(max_level - already, 2)
+            if pending <= 0.05:
+                continue
+
+            cur_stake = cur_state.get(f'{pid}_stake')
+            cur_st = cur_state.get(f'{pid}_state')
+            dimmed = cur_st in ('retirarse', 'ausente', 'inactivo',
+                                'sin jugador', 'fuera')
+            prev_stake = prev_state.get(f'{pid}_stake')
+            drop = round((prev_stake or 0) - (cur_stake or 0), 2) \
+                if cur_stake is not None else None
+
+            if dimmed:
+                if drop is not None and drop + 0.05 >= pending:
+                    # Completó la apuesta de la calle anterior y el fold es de
+                    # la calle nueva: se registra el call aquí y se deja que
+                    # `_detect_deltas` registre el fold en su calle.
+                    if not already_has(pos, 'c', max_level):
+                        self.hand['streets'][street]['actions'].append({
+                            'pos': pos, 'action': 'c',
+                            'amount': round(max_level, 2),
+                            'amount_type': 'observed', 'inferred': True,
+                            'ambiguous': True})
+                    carryover[pos] = pending
+                    self._add_ambiguity(
+                        'pending_call_before_fold', street, pos=pos,
+                        amount=round(max_level, 2),
+                        note='Completó la calle anterior; el fold pertenece a '
+                             'la calle siguiente.')
+                else:
+                    # Fold en la calle anterior: no llegó a igualar.
+                    if not already_has(pos, 'f'):
+                        self.hand['streets'][street]['actions'].append({
+                            'pos': pos, 'action': 'f', 'amount': 0.0,
+                            'amount_type': 'observed', 'inferred': True,
+                            'ambiguous': True})
+                        self._folded_positions.add(pos)
+                continue
+
+            if cur_stake is not None and drop + 0.05 < pending:
+                # No hay evidencia de que completara la apuesta: mejor no
+                # inventar un call.
+                continue
+
+            if not already_has(pos, 'c', max_level):
+                self.hand['streets'][street]['actions'].append({
+                    'pos': pos, 'action': 'c', 'amount': round(max_level, 2),
+                    'amount_type': 'observed', 'inferred': True,
+                    'ambiguous': True})
+            carryover[pos] = pending
+            self._add_ambiguity(
+                'pending_call_settled_on_previous_street', street, pos=pos,
+                amount=round(max_level, 2),
+                note='Call completado en el frame de cambio de calle; se '
+                     'contabiliza en la calle anterior.')
+
+        return carryover
+
+    def change_street(self, new_street, state, carryover=False):
+        prev_street = self.hand['current_street']
+        prev_state = self.last_state or state
         cards = self._get_com_list(state)
         visible = [c for c in cards if c]
+        self.hand.setdefault('comunitarias', {})
         if new_street == 'flop':
             self.hand['comunitarias']['flop'] = visible[:3]
             self.hand['streets']['flop']['board'] = visible[:3]
         elif new_street == 'turn':
-            self.hand['comunitarias']['turn'] = [visible[3]]
-            self.hand['streets']['turn']['board'] = [visible[3]]
+            card = visible[3] if len(visible) > 3 else ''
+            self.hand['comunitarias']['turn'] = [card] if card else []
+            self.hand['streets']['turn']['board'] = [card] if card else []
         elif new_street == 'river':
-            self.hand['comunitarias']['river'] = [visible[4]]
-            self.hand['streets']['river']['board'] = [visible[4]]
-        # Confirmación de "todos fallaron chequeo": si el pot quedó igual que
-        # al empezar la calle, nadie apostó → todos los que siguen activos
-        # hicieron check en la calle que termina.
-        now_pot = state.get('pot') or 0
-        confirm_all_check = (street := self.hand['current_street']) != 'preflop' \
-            and abs(now_pot - (self._street_pot or 0)) < 0.15
-        self._finalize_street(street, state, confirm_all_check=confirm_all_check)
-        self._completed_streets.add(street)
+            card = visible[4] if len(visible) > 4 else ''
+            self.hand['comunitarias']['river'] = [card] if card else []
+            self.hand['streets']['river']['board'] = [card] if card else []
+
+        pending = self._settle_pending_bets(prev_street, prev_state, state)
+        if carryover and pending:
+            # El primer frame de la calle nueva ya incluye el call pendiente;
+            # se descuenta para no sumarlo a la apuesta nueva.
+            adjusted = dict(prev_state)
+            pos_map = self._get_pos_map(prev_state)
+            for pos, amount in pending.items():
+                pid = pos_map.get(pos)
+                if not pid:
+                    continue
+                stake = adjusted.get(f'{pid}_stake')
+                if stake is not None:
+                    adjusted[f'{pid}_stake'] = round(max(0.0, stake - amount), 2)
+            self._adjusted_last_state = adjusted
+            self._carryover_calls = pending
+
+        # Confirmación de "todos fallaron chequeo": se mide con el último
+        # frame de la calle anterior, no con el frame que ya pertenece a la
+        # calle nueva.
+        now_pot = prev_state.get('pot') or 0
+        confirm_all_check = prev_street != 'preflop' \
+            and abs(now_pot - (getattr(self, '_street_pot', 0) or 0)) < 0.15
+        self._finalize_street(prev_street, prev_state,
+                              confirm_all_check=confirm_all_check)
+        self._completed_streets.add(prev_street)
         self._street_pot = now_pot
         self.hand['current_street'] = new_street
         self.street_has_bet = False
         self._just_changed_street = True
 
     def _finalize_street(self, street_name, state=None, confirm_all_check=False):
+        if street_name in self._completed_streets:
+            # Ya cerrada: no volver a inferir ni reordenar acciones. Evita que
+            # un frame posterior reescriba folds/calls de una calle pasada.
+            return
         # Add implied checks first (modifies the list in place via re-assign)
         if state is not None:
             self._add_implied_checks(street_name, state, confirm_all_check=confirm_all_check)
@@ -1307,41 +1440,6 @@ class LiveRecorder:
             actions[:] = head + ordered + checks
         else:
             actions[:] = checks + ordered
-
-        # Inferir calls perdidos: si hubo apuesta y un jugador sigue vivo en una
-        # calle posterior (o en el showdown) pero no tiene acción registrada en
-        # esta, se sobreentiende que igualó; se marca como inferido/ambiguo.
-        later_alive = False
-        for st in ('flop', 'turn', 'river'):
-            if st == street_name:
-                continue
-            if self.hand['streets'].get(st, {}).get('actions'):
-                later_alive = True
-        if non_checks and later_alive:
-            run_max = self._get_max_bet(street_name)
-            if run_max and run_max > 0:
-                existing_pos = {a['pos'] for a in actions}
-                pid_map = self._get_pid_map()
-                for pos in self._get_street_order(None, street_name):
-                    if pos in existing_pos:
-                        continue
-                    pid = pid_map.get(pos)
-                    if not pid or pid in self._inactive_players:
-                        continue
-                    if pos in self._folded_positions:
-                        continue
-                    if pos in self._allin_players if False else False:
-                        continue
-                    if pid in self._allin_players:
-                        continue
-                    actions.append({'pos': pos, 'action': 'c', 'amount': round(run_max, 2),
-                                    'amount_type': 'observed', 'inferred': True,
-                                    'ambiguous': True})
-                    existing_pos.add(pos)
-                    self._add_ambiguity(
-                        'missing_call_inferred', street_name, pos=pos,
-                        amount=round(run_max, 2),
-                        note='Jugador vivo en calle posterior sin acción registrada; se infiere call.')
 
     def _add_implied_checks(self, street_name, state, confirm_all_check=False):
         """Detecta checks por lógica de juego en calles posflop.
@@ -1626,7 +1724,7 @@ class LiveRecorder:
 
             if ns and new_street_has_bets:
                 log(f'  >> {ns}')
-                self.change_street(ns, state)
+                self.change_street(ns, state, carryover=True)
                 if not self._is_effectively_over(state):
                     actions = self.detect_actions(state)
                     for a in actions:

@@ -43,7 +43,7 @@ def _state(btn='p1', bets=None, stakes=None, states=None,
 
 def _preflop_recorder():
     r = LiveRecorder()
-    r.hand = {'hand_id': 'X', 'streets': {
+    r.hand = {'hand_id': 'X', 'comunitarias': {}, 'streets': {
         s: {'actions': [], 'board': []}
         for s in ('preflop', 'flop', 'turn', 'river')}}
     r._hand_positions = dict(POS)
@@ -143,7 +143,7 @@ def test_apuesta_del_board_nuevo_no_queda_en_la_calle_vieja():
     r.process_frame(limp, None, log=lambda *a, **k: None)
 
     flop = _state(btn='p1', bets={'p2': 2.0},
-                  stakes={'p2': 97.5, 'p3': 99.0, 'p4': 97.5},
+                  stakes={'p2': 96.0, 'p3': 99.0, 'p4': 97.5},
                   pot=5.5,
                   community=[{'rank': '2', 'suit': 'h'},
                              {'rank': '7', 'suit': 'd'},
@@ -343,3 +343,102 @@ def test_fold_lee_bote_no_inflado_pero_guarda_el_inflado_calculado(tmp_path):
     assert saved['recorder_audit']['pot_read'] == 24.23
     assert saved['recorder_audit']['pot_resolution'] == 'read_noninflated_to_inflated'
     assert saved['recorder_audit']['ambiguous'] is False
+
+
+def test_call_pendiente_en_cambio_de_calle_no_se_suma_al_bet_nuevo():
+    r = _preflop_recorder()
+    r.hand['current_street'] = 'flop'
+    r.street_has_bet = True
+    r._street_pot = 1.5
+    r.hand['streets']['flop']['actions'] = [
+        {'pos': 'UTG', 'action': 'b', 'amount': 17.0,
+         'amount_type': 'observed'}]
+
+    flop = _state(btn='p1', bets={'p4': 17.0},
+                  stakes={'p1': 100.0, 'p4': 83.0}, pot=18.5)
+    turn = _state(btn='p1', bets={'p1': 28.0},
+                  stakes={'p1': 55.0, 'p4': 83.0}, pot=63.5,
+                  community=[{'rank': 'A', 'suit': 'h'},
+                             {'rank': 'K', 'suit': 'd'},
+                             {'rank': '2', 'suit': 'c'},
+                             {'rank': '9', 'suit': 's'}])
+    r.last_state = flop
+    r.change_street('turn', turn, carryover=True)
+
+    flop_acts = _acts(r.hand['streets']['flop']['actions'])
+    assert ('BTN', 'c', 17.0) in flop_acts, flop_acts
+    assert not any(pos == 'BTN' and act == 'f'
+                   for pos, act, _amt in flop_acts)
+
+    r.detect_actions(turn)
+    turn_acts = _acts(r.hand['streets']['turn']['actions'])
+    assert ('BTN', 'b', 28.0) in turn_acts, turn_acts
+    assert not any(pos == 'BTN' and amt == 45.0
+                   for pos, _act, amt in turn_acts)
+
+
+def test_cierre_de_calle_no_inventa_calls_a_quien_foldeara_despues():
+    r = _preflop_recorder()
+    r.hand['current_street'] = 'flop'
+    r.hand['streets']['flop']['actions'] = [
+        {'pos': 'UTG', 'action': 'b', 'amount': 17.0,
+         'amount_type': 'observed'},
+        {'pos': 'BTN', 'action': 'c', 'amount': 17.0,
+         'amount_type': 'observed'}]
+    r.hand['streets']['turn']['actions'] = [
+        {'pos': 'BTN', 'action': 'b', 'amount': 28.0,
+         'amount_type': 'observed'},
+        {'pos': 'MP', 'action': 'f', 'amount': 0.0,
+         'amount_type': 'observed'}]
+    r._folded_positions.add('MP')
+
+    r._finalize_street('flop', _state(btn='p1', pot=18.5))
+    flop_pos = [a['pos'] for a in r.hand['streets']['flop']['actions']]
+    assert 'MP' not in flop_pos, flop_pos
+    assert not any(a['pos'] == 'MP' for a in r.hand['streets']['flop']['actions'])
+
+
+def test_fold_en_cambio_de_calle_se_registra_en_la_calle_anterior():
+    r = _preflop_recorder()
+    r.hand['current_street'] = 'flop'
+    r.hand['streets']['flop']['actions'] = [
+        {'pos': 'UTG', 'action': 'b', 'amount': 17.0,
+         'amount_type': 'observed'}]
+
+    flop = _state(btn='p1', bets={'p4': 17.0},
+                  stakes={'p4': 83.0}, pot=18.5)
+    turn = _state(btn='p1', stakes={'p4': 83.0}, pot=18.5,
+                  states={'p5': 'retirarse'})
+    r.last_state = flop
+    r.change_street('turn', turn, carryover=True)
+
+    flop_acts = _acts(r.hand['streets']['flop']['actions'])
+    assert ('MP', 'f', 0.0) in flop_acts, flop_acts
+    assert 'MP' in r._folded_positions
+    assert not any(a['pos'] == 'MP'
+                   for a in r.hand['streets']['turn']['actions'])
+
+
+def test_fold_en_calle_nueva_no_se_adelanta_a_la_anterior():
+    r = _preflop_recorder()
+    r.hand['current_street'] = 'flop'
+    r.hand['streets']['flop']['actions'] = [
+        {'pos': 'UTG', 'action': 'b', 'amount': 17.0,
+         'amount_type': 'observed'}]
+
+    flop = _state(btn='p1', bets={'p4': 17.0},
+                  stakes={'p4': 83.0, 'p1': 100.0}, pot=18.5)
+    turn = _state(btn='p1', stakes={'p4': 83.0, 'p1': 83.0}, pot=35.5,
+                  states={'p1': 'retirarse'})
+    r.last_state = flop
+    r.change_street('turn', turn, carryover=True)
+
+    flop_acts = _acts(r.hand['streets']['flop']['actions'])
+    assert ('BTN', 'c', 17.0) in flop_acts, flop_acts
+    assert not any(pos == 'BTN' and act == 'f'
+                   for pos, act, _amt in flop_acts)
+    assert 'BTN' not in r._folded_positions
+
+    r.detect_actions(turn)
+    turn_acts = _acts(r.hand['streets']['turn']['actions'])
+    assert ('BTN', 'f', 0.0) in turn_acts, turn_acts
