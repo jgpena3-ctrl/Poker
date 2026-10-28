@@ -432,7 +432,10 @@ class RecorderGUI:
                 self._log(f'  {sname:>8} [{board}]')
                 for a in s['actions']:
                     amt_s = f'{a["amount"]:.1f}' if isinstance(a['amount'], float) else str(a['amount'])
-                    self._log(f'           {a["pos"]:>3} {a["action"]} {amt_s}')
+                    flags = ''.join(' [' + name + ']'
+                                    for name in ('inferred', 'ambiguous')
+                                    if a.get(name))
+                    self._log(f'           {a["pos"]:>3} {a["action"]} {amt_s}{flags}')
         com = h.get('comunitarias', {})
         for st in ['flop', 'turn', 'river']:
             if com.get(st):
@@ -443,6 +446,15 @@ class RecorderGUI:
             self._log(f'  final_pot={fp}')
         if sw:
             self._log(f'  showdown={sw}')
+        try:
+            audit = self.manual_recorder._pot_breakdown(final=False)
+            pot_read = ((self.manual_recorder.last_state or {}).get('pot'))
+            self._log('  pot_live calculado=%s leido=%s rake_completado=%s' % (
+                audit['pot_live_calculated'], pot_read, audit['rake']))
+            for issue in self.manual_recorder._hand_ambiguities:
+                self._log('  [AMBIGUO] %s' % issue.get('code'))
+        except Exception:
+            pass
 
     def _manual_capture(self):
         if self.manual_recorder is None:

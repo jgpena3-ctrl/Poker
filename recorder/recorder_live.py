@@ -83,6 +83,14 @@ class LiveRecorder:
         self._allin_players = set()
         self._stake_history = {}
         self._initial_stakes = {}
+        self._hand_ambiguities = []
+        self._completed_streets = set()
+        self._returned_by_pos = {}
+        self._inferred_action_keys = set()
+        self._ambiguous_action_keys = set()
+        self._award_display_pids = set()
+        self._award_display_events = {}
+        self._just_changed_street = False
         self._hand_positions = None
         self._folded_positions = set()
         self.on_hand_saved = None
@@ -302,6 +310,129 @@ class LiveRecorder:
     def _visible_coms(self, state):
         return sum(1 for c in self._get_com_list(state) if c)
 
+    def _add_ambiguity(self, code, street=None, **detail):
+        """Registra una duda auditable una sola vez por firma."""
+        if self.hand is None:
+            return
+        row = {'code': code}
+        if street:
+            row['street'] = street
+        row.update(_json_safe(detail))
+        identity = (row.get('code'), row.get('street'), row.get('pos'))
+        for i, old in enumerate(self._hand_ambiguities):
+            if (old.get('code'), old.get('street'), old.get('pos')) == identity:
+                self._hand_ambiguities[i] = row
+                return
+        self._hand_ambiguities.append(row)
+
+    def _street_contributions(self, street):
+        """Aporte absoluto por posición en una calle; nunca suma niveles."""
+        contributions = {}
+        actions = (((self.hand or {}).get('streets') or {}).get(street) or {}).get('actions') or []
+        for action in actions:
+            pos = action.get('pos')
+            if not pos or action.get('action') not in ('p', 'b', 'c', 'r'):
+                continue
+            try:
+                amount = max(0.0, float(action.get('amount') or 0.0))
+            except (TypeError, ValueError):
+                continue
+            contributions[pos] = max(contributions.get(pos, 0.0), amount)
+        for (returned_street, pos), returned in (self._returned_by_pos or {}).items():
+            if returned_street == street and pos in contributions:
+                contributions[pos] = max(0.0, contributions[pos] - returned)
+        return contributions
+
+    @staticmethod
+    def _matched_and_uncalled(contributions):
+        values = sorted(contributions.values(), reverse=True)
+        gross = sum(values)
+        uncalled = max(0.0, values[0] - (values[1] if len(values) > 1 else 0.0)) if values else 0.0
+        return gross - uncalled, uncalled, gross
+
+    def _pot_breakdown(self, final=False, fold_win=False):
+        """Calcula bote y comisión desde las acciones absolutas.
+
+        Se cobra rake únicamente sobre aportes igualados. En una calle en
+        curso no se considera visible hasta que cierra; al finalizar sí se
+        incorpora la calle final, salvo que la mano acabara preflop.
+        """
+        gross_total = matched_total = rake_basis = 0.0
+        streets = ('preflop', 'flop', 'turn', 'river')
+        has_postflop = any(
+            (((self.hand or {}).get('streets') or {}).get(s) or {}).get('board')
+            for s in ('flop', 'turn', 'river')) or any(
+                ((self.hand or {}).get('comunitarias') or {}).get(s)
+                for s in ('flop', 'turn', 'river'))
+        board_data = (self.hand or {}).get('comunitarias') or {}
+        for street in streets:
+            contrib = self._street_contributions(street)
+            matched, _uncalled, gross = self._matched_and_uncalled(contrib)
+            matched_total += matched
+            gross_total += gross
+            completed = street in self._completed_streets
+            if street == 'preflop' and has_postflop:
+                completed = True
+            elif street == 'flop' and (board_data.get('turn') or board_data.get('river')):
+                completed = True
+            elif street == 'turn' and board_data.get('river'):
+                completed = True
+            is_final_street = final and street == (self.hand or {}).get('current_street')
+            if completed or is_final_street:
+                if street != 'preflop' or has_postflop:
+                    rake_basis += matched
+        rake = min(0.05 * rake_basis, 2.5 * float(self._blind_bb or 1.0))
+        # La modalidad fold conserva el excedente no igualado en el bote
+        # registrado; en showdown los excedentes se devuelven.
+        pot_inflated = (gross_total if fold_win else matched_total) - rake
+        pot_not_inflated = matched_total - rake
+        return {
+            'gross_contributions': round(gross_total, 2),
+            'matched_contributions': round(matched_total, 2),
+            'uncalled': round(max(0.0, gross_total - matched_total), 2),
+            'rake_basis': round(rake_basis, 2),
+            'rake': round(rake, 2),
+            'pot_calculated': round(max(0.0, pot_inflated), 2),
+            'pot_calculated_noninflated': round(max(0.0, pot_not_inflated), 2),
+            'pot_live_calculated': round(max(0.0, gross_total - rake), 2),
+        }
+
+    def _audit_live_pot(self, state):
+        if self.hand is None:
+            return
+        reading = state.get('pot')
+        if reading is None:
+            reading = state.get('pot_wide')
+        if reading is None:
+            return
+        breakdown = self._pot_breakdown(final=False)
+        expected = breakdown['pot_live_calculated']
+        raw_difference = abs(float(reading) - expected)
+        difference = round(raw_difference, 2)
+        if raw_difference > self._ambiguity_tolerance():
+            self._add_ambiguity(
+                'pot_read_vs_contributions', self.hand.get('current_street'),
+                pot_read=round(float(reading), 2),
+                contributions=breakdown['gross_contributions'],
+                completed_street_rake=breakdown['rake'],
+                pot_expected=expected, difference=difference)
+
+        pos_map = self._get_pos_map(state)
+        current_contrib = self._street_contributions(self.hand['current_street'])
+        for pos, pid in pos_map.items():
+            if pid in self._award_display_pids:
+                continue
+            bet = state.get(f'{pid}_bet')
+            if bet is None:
+                continue
+            recorded = current_contrib.get(pos, 0.0)
+            if abs(float(bet or 0.0) - recorded) > self._ambiguity_tolerance():
+                self._add_ambiguity(
+                    'bet_read_vs_recorded', self.hand.get('current_street'),
+                    pos=pos, bet_read=round(float(bet or 0.0), 2),
+                    amount_recorded=round(recorded, 2),
+                    difference=round(abs(float(bet or 0.0) - recorded), 2))
+
     # ---------- posición (desde BTN en sentido horario, saltando inactivos) ----------
 
     def _assign_positions(self, state):
@@ -383,6 +514,35 @@ class LiveRecorder:
             return False
         return True
 
+    def _award_overlay_candidates(self, state):
+        """Seats with a rising stack and a nonzero bet-box value this frame."""
+        if self.hand is None or self.last_state is None:
+            return {}
+        out = {}
+        for pid in PLAYER_IDS:
+            before = self.last_state.get(f'{pid}_stake')
+            after = state.get(f'{pid}_stake')
+            bet = state.get(f'{pid}_bet')
+            if (before is not None and after is not None and bet is not None
+                    and after > before + 0.05 and float(bet or 0) > 0):
+                out[pid] = {'before': before, 'after': after, 'bet': bet}
+        return out
+
+    def _without_award_bet_overlay(self, state, candidates):
+        """No reutiliza el premio visible como apuesta de la mano siguiente."""
+        if not candidates:
+            return state
+        clean = dict(state)
+        positions = self._assign_positions(state)
+        for pid, values in candidates.items():
+            pos = positions.get(pid)
+            expected_blind = (self._blind_sb if pos == 'SB' else
+                              self._blind_bb if pos == 'BB' else None)
+            bet = values['bet']
+            if expected_blind is None or not self._near(bet, expected_blind, tol=0.05):
+                clean[f'{pid}_bet'] = None
+        return clean
+
     def _is_hand_over(self, state):
         if self.hand is None:
             return False
@@ -460,6 +620,14 @@ class LiveRecorder:
         self._initial_stakes = {}
         self._river_stable_count = 0
         self._last_state_sig = None
+        self._hand_ambiguities = []
+        self._completed_streets = set()
+        self._returned_by_pos = {}
+        self._inferred_action_keys = set()
+        self._ambiguous_action_keys = set()
+        self._award_display_pids = set()
+        self._award_display_events = {}
+        self._just_changed_street = False
         for pid in PLAYER_IDS:
             self._initial_stakes[pid] = state.get(f'{pid}_stake')
 
@@ -594,32 +762,25 @@ class LiveRecorder:
         self.street_has_bet = True
         self._preflop_current_bet = max_bet
 
-    def _add_action(self, street, pos, action, amount, amount_type=None):
+    def _add_action(self, street, pos, action, amount, amount_type='observed',
+                    inferred=False, ambiguous=False):
         """Añade una acción a la calle con su semántica de importe explícita.
 
-        amount_type (obligatorio, no hay default):
-            'observed' : nivel absoluto / contribución total observada.
-            'delta'    : incremento producido por esta acción.
-
-        Contrato (F3, revision_1): si se suma una ciega pendiente, el resultado
-        pasa a ser un nivel, así que la etiqueta se corrige a 'observed' en vez
-        de dejar 'amount_type' mintiendo sobre un número convertido.
+        `amount` siempre es el nivel absoluto comprometido en la calle. Si la
+        lectura se reconstruyó desde el stack, `inferred` lo declara; nunca se
+        persiste un incremento como si fuera el total.
         """
         if self.hand is None:
             return
-        if amount_type not in ('observed', 'delta'):
+        if amount_type != 'observed':
             raise ValueError(
-                f'_add_action: amount_type obligatorio '
-                f"(observed|delta), recibido {amount_type!r}")
-        # Si hay ciega pendiente para esta posición, sumarla al monto
-        # (un fold NO arrastra su ciega: el monto del fold es 0.0)
-        if pos in self._blinds_by_pos and action != 'f':
-            amount += self._blinds_by_pos.pop(pos)
-            # delta + ciega = nivel, no delta: la etiqueta debe decirlo.
-            amount_type = 'observed'
+                f'_add_action: los importes deben ser absolutos '
+                f"(observed), recibido {amount_type!r}")
         self.hand['streets'][street]['actions'].append({
             'pos': pos, 'action': action, 'amount': round(amount, 2),
             'amount_type': amount_type,
+            **({'inferred': True} if inferred else {}),
+            **({'ambiguous': True} if ambiguous else {}),
         })
         if action == 'f':
             self._folded_positions.add(pos)
@@ -666,6 +827,9 @@ class LiveRecorder:
         pos_map = self._get_pos_map(state)
         actions = []
         street_actions = self.hand['streets'][street].setdefault('actions', [])
+        self._inferred_action_keys = set()
+        self._ambiguous_action_keys = set()
+        self._award_display_pids = set()
 
         old_pot = self.last_state.get('pot') or 0
         new_pot = state.get('pot') or 0
@@ -687,8 +851,10 @@ class LiveRecorder:
             prev_stake = self.last_state.get(f'{pid}_stake')
             cur_stake = state.get(f'{pid}_stake')
             cur_st = state.get(f'{pid}_state')
-            prev_bet = self.last_state.get(f'{pid}_bet') or 0
-            cur_bet = state.get(f'{pid}_bet') or 0
+            prev_bet = (0.0 if self._just_changed_street else
+                        (self.last_state.get(f'{pid}_bet') or 0))
+            raw_cur_bet = state.get(f'{pid}_bet')
+            cur_bet = raw_cur_bet or 0
 
             was_active = prev_stake is not None
             dimmed = cur_st in ('retirarse', 'ausente', 'inactivo', 'sin jugador', 'fuera')
@@ -707,6 +873,7 @@ class LiveRecorder:
                     atype = 'r'
                 if not self._dup(street, pos_name, amt):
                     actions.append((street, pos_name, atype, round(amt, 2)))
+                    self._inferred_action_keys.add((street, pos_name, round(amt, 2)))
                     self._allin_players.add(pid)
                     if atype in ('b', 'r'):
                         has_bet = True
@@ -723,11 +890,45 @@ class LiveRecorder:
                     self._folded_positions.add(pos_name)
                 continue
 
+            # El saldo subió: es un premio o una devolución, no una apuesta.
+            # En particular, el premio suele aparecer en la casilla de bet.
+            if (prev_stake is not None and cur_stake is not None
+                    and cur_stake > prev_stake + 0.05):
+                self._award_display_pids.add(pid)
+                self._award_display_events[pid] = {
+                    'street': street, 'pos': pos_name,
+                    'stack_before': round(float(prev_stake), 2),
+                    'stack_after': round(float(cur_stake), 2),
+                    'bet_display_ignored': round(float(cur_bet or 0.0), 2),
+                }
+                returned = cur_stake - prev_stake
+                if prev_bet > 0 and cur_bet < prev_bet:
+                    self._returned_by_pos[(street, pos_name)] = round(
+                        self._returned_by_pos.get((street, pos_name), 0.0)
+                        + min(returned, prev_bet - cur_bet), 2)
+                continue
+
             # ---- Dinero comprometido: el stake bajó (bet / call / raise) ----
             if cur_stake is not None:
                 delta = round((prev_stake or 0) - cur_stake, 2)
                 if delta > 0.05:
-                    amt = self._round_bet(delta, run_max)
+                    stack_level = round(prev_bet + delta, 2)
+                    bet_matches_stack = (raw_cur_bet is not None and
+                                         abs(float(raw_cur_bet) - stack_level)
+                                         <= self._ambiguity_tolerance())
+                    if bet_matches_stack:
+                        amt = round(cur_bet, 2)
+                    else:
+                        amt = stack_level
+                        self._inferred_action_keys.add((street, pos_name, amt))
+                        if raw_cur_bet is not None and abs(
+                                float(raw_cur_bet) - stack_level) > self._ambiguity_tolerance():
+                            self._add_ambiguity(
+                                'bet_vs_stack_disagreement', street, pos=pos_name,
+                                bet_read=round(float(raw_cur_bet), 2),
+                                bet_before=prev_bet, stack_delta=delta,
+                                absolute_from_stack=stack_level,
+                                difference=round(abs(float(raw_cur_bet) - stack_level), 2))
                     if amt <= 0:
                         continue
                     if not has_bet:
@@ -742,14 +943,30 @@ class LiveRecorder:
                             has_bet = True
                             run_max = max(run_max, amt)
 
+        inferred = [a for a in actions
+                    if (a[0], a[1], round(a[3], 2)) in self._inferred_action_keys]
+        inferred_types = {a[2] for a in inferred}
+        if len(inferred) >= 2 and 'b' in inferred_types and 'c' in inferred_types:
+            keys = {(a[0], a[1], round(a[3], 2)) for a in inferred}
+            self._ambiguous_action_keys.update(keys)
+            self._add_ambiguity(
+                'bet_call_order_inferred', street,
+                positions=[a[1] for a in inferred],
+                actions=[a[2] for a in inferred],
+                note='La secuencia bet/call se infirió de stacks; no se observó el orden.')
+
         # Público actualizado de la ronda para los siguientes frames
         self.street_has_bet = has_bet
+        self._just_changed_street = False
         if street != 'preflop' or run_max > getattr(self, '_preflop_current_bet', 0.0):
             self._preflop_current_bet = run_max
 
         return actions
 
-    def _dup(self, street, pos_name, amt, tol=0.3):
+    def _ambiguity_tolerance(self):
+        return 0.2 * float(self._blind_bb or 1.0)
+
+    def _dup(self, street, pos_name, amt, tol=0.05):
         """True si ya existe una acción (pos, ~amount) en la calle."""
         return any(a['pos'] == pos_name and abs(a['amount'] - amt) < tol
                    for a in self.hand['streets'][street]['actions'])
@@ -768,7 +985,11 @@ class LiveRecorder:
         street = self.hand['current_street']
         actions = self._detect_deltas(state)
         for s, pos, a, amt in actions:
-            self._add_action(s, pos, a, amt, 'delta')
+            key = (s, pos, round(amt, 2))
+            self._add_action(
+                s, pos, a, amt, 'observed',
+                inferred=key in self._inferred_action_keys,
+                ambiguous=key in self._ambiguous_action_keys)
         # Checks por lógica de juego (posflop): rellenar checks de los que
         # hablan antes que una apuesta, o todos si no hay apuesta.
         self._add_implied_checks(street, state)
@@ -846,9 +1067,11 @@ class LiveRecorder:
         confirm_all_check = (street := self.hand['current_street']) != 'preflop' \
             and abs(now_pot - (self._street_pot or 0)) < 0.15
         self._finalize_street(street, state, confirm_all_check=confirm_all_check)
+        self._completed_streets.add(street)
         self._street_pot = now_pot
         self.hand['current_street'] = new_street
         self.street_has_bet = False
+        self._just_changed_street = True
 
     def _finalize_street(self, street_name, state=None, confirm_all_check=False):
         # Add implied checks first (modifies the list in place via re-assign)
@@ -876,7 +1099,14 @@ class LiveRecorder:
         merged = []
         for a in actions:
             if merged and merged[-1]['pos'] == a['pos'] and a['action'] in ('c', 'b'):
-                merged[-1]['amount'] = round(merged[-1]['amount'] + a['amount'], 2)
+                # Importes absolutos: una actualización de la misma acción
+                # sustituye el nivel, nunca se suma como si fuera un delta.
+                merged[-1]['amount'] = max(merged[-1]['amount'], a['amount'])
+                if a['action'] in ('b', 'r'):
+                    merged[-1]['action'] = a['action']
+                for flag in ('inferred', 'ambiguous'):
+                    if a.get(flag):
+                        merged[-1][flag] = True
             else:
                 merged.append(dict(a))
         actions[:] = merged
@@ -1031,11 +1261,40 @@ class LiveRecorder:
 
     def finalize_hand(self, state):
         self._finalize_street(self.hand['current_street'], state)
-        pot = state.get('pot')
-        if pot and pot > 0:
-            self.hand['final_pot'] = pot
-        else:
-            self.hand['final_pot'] = self.hand.get('max_pot', 0)
+        live_players = [p for p in self.hand['players']
+                        if p.get('active') and p.get('pos')
+                        and p.get('pos') not in self._folded_positions
+                        and p['_id'] not in self._inactive_players
+                        and (not state or state.get(f'{p["_id"]}_state')
+                             not in ('retirarse', 'ausente'))]
+        fold_win = len(live_players) <= 1
+        breakdown = self._pot_breakdown(final=True, fold_win=fold_win)
+        pot_read = (state.get('pot') if state else None)
+        if pot_read is None and state:
+            pot_read = state.get('pot_wide')
+        calculated = breakdown['pot_calculated']
+        noninflated = breakdown['pot_calculated_noninflated']
+        resolution = 'calculated'
+        if pot_read is not None:
+            pot_read = round(float(pot_read), 2)
+            tol = self._ambiguity_tolerance()
+            if (fold_win and abs(pot_read - noninflated) <= tol
+                    and abs(pot_read - calculated) > 0.005):
+                # La pantalla muestra el bote igualado; el formato histórico
+                # de una victoria por fold conserva además la última apuesta
+                # no igualada (sin cobrar rake sobre ese excedente).
+                resolution = 'read_noninflated_to_inflated'
+            elif abs(pot_read - calculated) <= tol:
+                resolution = 'read_confirms_calculated'
+            else:
+                resolution = 'ambiguous_read_mismatch'
+                self._add_ambiguity(
+                    'pot_read_vs_calculated', self.hand.get('current_street'),
+                    pot_read=pot_read, pot_calculated=calculated,
+                    pot_calculated_noninflated=noninflated,
+                    fold_win=fold_win,
+                    difference=round(abs(pot_read - calculated), 2))
+        self.hand['final_pot'] = calculated
 
         if MANUAL_WINNER is not None:
             self.hand['winner'] = MANUAL_WINNER
@@ -1060,6 +1319,34 @@ class LiveRecorder:
             else:
                 self.hand['winner'] = []
 
+        ambiguous_actions = [
+            {'street': street,
+             'pos': action.get('pos'),
+             'action': action.get('action'),
+             'amount': action.get('amount'),
+             'inferred': bool(action.get('inferred'))}
+            for street, data in (self.hand.get('streets') or {}).items()
+            for action in (data or {}).get('actions') or []
+            if action.get('ambiguous')]
+        self.hand['recorder_audit'] = {
+            'ambiguous': bool(self._hand_ambiguities or ambiguous_actions),
+            'ambiguities': list(self._hand_ambiguities),
+            'ambiguous_actions': ambiguous_actions,
+            'pot_read': pot_read,
+            'pot_calculated': calculated,
+            'pot_calculated_noninflated': noninflated,
+            'pot_resolution': resolution,
+            'gross_contributions': breakdown['gross_contributions'],
+            'matched_contributions': breakdown['matched_contributions'],
+            'uncalled': breakdown['uncalled'],
+            'rake_basis': breakdown['rake_basis'],
+            'rake': breakdown['rake'],
+            'big_blind': round(float(self._blind_bb or 1.0), 2),
+            'rake_cap': round(2.5 * float(self._blind_bb or 1.0), 2),
+            'ambiguity_tolerance': round(self._ambiguity_tolerance(), 2),
+            'fold_win': fold_win,
+            'award_display_ignored': list(self._award_display_events.values()),
+        }
         out = {k: v for k, v in self.hand.items()
                if k not in ('current_street', 'max_pot')}
         # INC-002: `p['active']` significa "estaba sentado al empezar la
@@ -1090,6 +1377,11 @@ class LiveRecorder:
 
         log = getattr(self, '_last_log', print)
         log(f'  -> Saved H_{self.hand_id:04d}')
+        if out['recorder_audit']['ambiguous']:
+            log('  [AMBIGUO] ' + ', '.join(
+                x.get('code', '?') for x in out['recorder_audit']['ambiguities']))
+        log('  [bote] calculado=%s leido=%s rake=%s' % (
+            calculated, pot_read, breakdown['rake']))
         if self.on_hand_saved is not None:
             self.on_hand_saved()
         self.hand = None
@@ -1134,10 +1426,20 @@ class LiveRecorder:
             self.last_img = img_arr
             return
 
+        award_candidates = self._award_overlay_candidates(state)
         if self._is_new_hand(state):
             if self.hand is not None:
                 log(f'H_{self.hand_id:04d}: replaced by new hand')
+                for pid, values in award_candidates.items():
+                    self._award_display_events[pid] = {
+                        'street': self.hand.get('current_street'),
+                        'pos': self._get_pid_map(state).get(pid),
+                        'stack_before': round(float(values['before']), 2),
+                        'stack_after': round(float(values['after']), 2),
+                        'bet_display_ignored': round(float(values['bet']), 2),
+                    }
                 self.finalize_hand(self.last_state)
+            state = self._without_award_bet_overlay(state, award_candidates)
             self._assign_cards_by_name(state)
             self.start_hand(state)
             log(f'H_{self.hand_id:04d}: started')
@@ -1192,10 +1494,14 @@ class LiveRecorder:
                     else:
                         log('  (all-in: no actions)')
 
-            # 4. Check hand over (finalizar con el último frame de la mano vieja)
-            if self._is_hand_over(state):
+            hand_over = self._is_hand_over(state)
+            if not hand_over:
+                self._audit_live_pot(state)
+            # 4. Conservar el frame de pago para distinguir el premio mostrado
+            # sobre la casilla de apuestas.
+            if hand_over:
                 log(f'H_{self.hand_id:04d}: ended')
-                self.finalize_hand(self.last_state or state)
+                self.finalize_hand(state)
 
         if self.hand is not None:
             cur = self.hand['current_street']

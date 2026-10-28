@@ -201,7 +201,12 @@ def test_recommendation_step_writes_sidecar_and_deduplicates_repeated_frame(
     assert final_events[1]['execution']['action']['action'] == 'c'
     assert (final_events[0]['known_at_decision']['recommended_action']
             != final_events[1]['execution']['action']['action'])
-    assert final_events[1]['outcome']['final_pot'] == 7.0
+    # The recorder now stores its absolute-contribution calculation; the OCR
+    # pot remains separately auditable when it disagrees.
+    assert final_events[1]['outcome']['final_pot'] == 5.0
+    saved = json.loads((tmp_path / 'replayed-hands.jsonl').read_text().splitlines()[0])
+    assert saved['recorder_audit']['pot_read'] == 7.0
+    assert saved['recorder_audit']['ambiguous'] is True
     assert (tmp_path / 'replayed-hands.jsonl').exists()
 
 

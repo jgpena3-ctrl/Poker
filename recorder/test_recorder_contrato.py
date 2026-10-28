@@ -176,3 +176,170 @@ def test_sesion_de_prueba_guarda_frame_y_resultado_fuera_de_la_mano(tmp_path):
     assert output.exists()
     session_log = tmp_path / 'resultados' / 'registro_sesion.jsonl'
     assert json.loads(session_log.read_text(encoding='utf-8'))['test_targets'] == ['H_0141']
+
+
+def test_apuestas_de_varios_frames_se_guardan_como_importes_absolutos():
+    r, _ = _started()
+    first = _state(
+        bets={'p2': 0.5, 'p3': 1.0, 'p4': 2.0},
+        stakes={'p2': 99.5, 'p3': 99.0, 'p4': 98.0}, pot=3.5)
+    r.process_frame(first, None, log=lambda *a, **k: None)
+    second = _state(
+        bets={'p2': 0.5, 'p3': 1.0, 'p4': 4.0},
+        stakes={'p2': 99.5, 'p3': 99.0, 'p4': 96.0}, pot=5.5)
+    r.process_frame(second, None, log=lambda *a, **k: None)
+    actions = [a for a in r.hand['streets']['preflop']['actions']
+               if a['pos'] == 'UTG']
+    assert [a['amount'] for a in actions] == [2.0, 4.0]
+    assert all(a.get('amount_type') == 'observed' for a in actions)
+
+
+def test_stack_deductions_with_inferred_bet_call_mark_order_ambiguous():
+    r = _preflop_recorder()
+    r.hand['current_street'] = 'flop'
+    r.last_state = _state(bets={}, stakes={})
+    r.street_has_bet = False
+    state = _state(
+        bets={'p4': None, 'hero': None},
+        stakes={'p4': 97.0, 'hero': 97.0})
+    got = r.detect_actions(state)
+    assert [(x[1], x[2], x[3]) for x in got] == [
+        ('UTG', 'b', 3.0), ('CO', 'c', 3.0)]
+    acts = r.hand['streets']['flop']['actions']
+    inferred_bets = [a for a in acts if a['action'] in ('b', 'c', 'r')]
+    assert all(a.get('inferred') and a.get('ambiguous')
+               for a in inferred_bets)
+    assert any(a['code'] == 'bet_call_order_inferred'
+               for a in r._hand_ambiguities)
+
+
+def test_bet_overlay_con_premio_no_se_registra_como_apuesta():
+    r, _ = _started()
+    r.last_state = _state(stakes={'p1': 100.0}, bets={})
+    state = _state(stakes={'p1': 150.0}, bets={'p1': 150.0})
+    assert r._detect_deltas(state) == []
+    assert 'p1' in r._award_display_pids
+    assert not any(a['pos'] == 'BTN' and a['action'] in ('b', 'c', 'r')
+                   for a in r.hand['streets']['preflop']['actions'])
+
+
+def test_premio_en_la_casilla_no_se_reutiliza_como_apuesta_de_mano_nueva():
+    r, _ = _started()
+    r._assign_positions = lambda _state: {'p1': 'UTG'}
+    r.last_state = _state(stakes={'p1': 100.0}, bets={})
+    payout_frame = _state(stakes={'p1': 150.0}, bets={'p1': 50.0})
+    candidates = r._award_overlay_candidates(payout_frame)
+    clean = r._without_award_bet_overlay(payout_frame, candidates)
+    assert candidates['p1']['after'] == 150.0
+    assert clean['p1_bet'] is None
+
+
+def test_comision_solo_aplica_a_importes_igualados_y_calle_completada():
+    r = _preflop_recorder()
+    r.hand['current_street'] = 'preflop'
+    r.hand['streets']['preflop']['actions'] = [
+        {'pos': 'SB', 'action': 'p', 'amount': 0.5},
+        {'pos': 'BB', 'action': 'p', 'amount': 1.0},
+        {'pos': 'UTG', 'action': 'r', 'amount': 2.0},
+        {'pos': 'BTN', 'action': 'c', 'amount': 2.0},
+    ]
+    # Sin flop no hay comisión, aunque existan aportes igualados.
+    preflop_only = r._pot_breakdown(final=True, fold_win=True)
+    assert preflop_only['rake'] == 0.0
+    assert preflop_only['pot_calculated'] == 5.5
+
+    r.hand['current_street'] = 'flop'
+    r.hand['streets']['flop']['actions'] = [
+        {'pos': 'UTG', 'action': 'b', 'amount': 10.0},
+        {'pos': 'BTN', 'action': 'c', 'amount': 10.0},
+    ]
+    r.hand['streets']['flop']['board'] = ['Ah', 'Kd', '2c']
+    rake = r._pot_breakdown(final=True, fold_win=False)
+    assert rake['rake_basis'] == 25.5
+    assert rake['rake'] == 1.28
+    assert rake['pot_calculated'] == 24.23
+
+
+def test_raise_fold_conserva_excedente_en_bote_y_calcula_rake_sobre_igualado():
+    r = _preflop_recorder()
+    r.hand['current_street'] = 'flop'
+    r.hand['streets']['flop']['actions'] = [
+        {'pos': 'UTG', 'action': 'b', 'amount': 10.0},
+        {'pos': 'BTN', 'action': 'r', 'amount': 30.0},
+        {'pos': 'UTG', 'action': 'f', 'amount': 0.0},
+    ]
+    r.hand['streets']['flop']['board'] = ['Ah', 'Kd', '2c']
+    result = r._pot_breakdown(final=True, fold_win=True)
+    assert result['gross_contributions'] == 40.0
+    assert result['matched_contributions'] == 20.0
+    assert result['uncalled'] == 20.0
+    assert result['rake'] == 1.0
+    assert result['pot_calculated'] == 39.0
+    assert result['pot_calculated_noninflated'] == 19.0
+
+
+def test_diferencia_de_bote_mayor_a_dos_decimas_se_marca_ambigua():
+    r = _preflop_recorder()
+    r.hand['current_street'] = 'flop'
+    r.hand['streets']['flop']['actions'] = [
+        {'pos': 'UTG', 'action': 'b', 'amount': 5.0},
+        {'pos': 'BTN', 'action': 'c', 'amount': 5.0},
+    ]
+    r._audit_live_pot(_state(pot=20.0))
+    assert any(a['code'] == 'pot_read_vs_contributions'
+               for a in r._hand_ambiguities)
+
+
+def test_diferencia_apuesta_vs_stack_se_marca_y_prefiere_nivel_del_stack():
+    r, _ = _started()
+    r.last_state = _state(bets={'p4': 0.0}, stakes={'p4': 100.0})
+    state = _state(bets={'p4': 3.5}, stakes={'p4': 97.0})
+    got = r._detect_deltas(state)
+    assert ('preflop', 'UTG', 'r', 3.0) in got
+    assert any(a['code'] == 'bet_vs_stack_disagreement'
+               and a['difference'] == 0.5 for a in r._hand_ambiguities)
+
+
+def test_comision_tiene_tope_de_dos_y_medio_bb():
+    r = _preflop_recorder()
+    r.hand['current_street'] = 'flop'
+    r.hand['streets']['flop']['board'] = ['Ah', 'Kd', '2c']
+    r.hand['streets']['flop']['actions'] = [
+        {'pos': 'UTG', 'action': 'b', 'amount': 100.0},
+        {'pos': 'BTN', 'action': 'c', 'amount': 100.0},
+    ]
+    result = r._pot_breakdown(final=True, fold_win=False)
+    assert result['rake_basis'] == 200.0
+    assert result['rake'] == 2.5
+
+
+def test_fold_lee_bote_no_inflado_pero_guarda_el_inflado_calculado(tmp_path):
+    r = LiveRecorder(output_path=str(tmp_path / 'hands.jsonl'))
+    r.hand_id = 0
+    r._assign_positions = lambda _state: dict(POS)
+    state = _state(btn='p1', stakes={p: 100.0 for p in PLAYER_IDS}, pot=24.23,
+                   community=[{'rank': 'A', 'suit': 'h'},
+                              {'rank': 'K', 'suit': 'd'},
+                              {'rank': '2', 'suit': 'c'}])
+    r.start_hand(state)
+    r.hand['current_street'] = 'flop'
+    r.hand['comunitarias']['flop'] = ['Ah', 'Kd', '2c']
+    r.hand['streets']['flop']['board'] = ['Ah', 'Kd', '2c']
+    r.hand['streets']['preflop']['actions'] = [
+        {'pos': 'SB', 'action': 'p', 'amount': 0.5},
+        {'pos': 'BB', 'action': 'p', 'amount': 1.0},
+        {'pos': 'UTG', 'action': 'r', 'amount': 2.0},
+        {'pos': 'BTN', 'action': 'c', 'amount': 2.0},
+    ]
+    r.hand['streets']['flop']['actions'] = [
+        {'pos': 'UTG', 'action': 'b', 'amount': 10.0},
+        {'pos': 'BTN', 'action': 'r', 'amount': 30.0},
+        {'pos': 'UTG', 'action': 'f', 'amount': 0.0},
+    ]
+    r._folded_positions.update({'UTG', 'SB', 'BB', 'CO', 'MP'})
+    r.finalize_hand(state)
+    saved = json.loads((tmp_path / 'hands.jsonl').read_text(encoding='utf-8'))
+    assert saved['final_pot'] == 44.23
+    assert saved['recorder_audit']['pot_read'] == 24.23
+    assert saved['recorder_audit']['pot_resolution'] == 'read_noninflated_to_inflated'
+    assert saved['recorder_audit']['ambiguous'] is False
