@@ -103,9 +103,9 @@ class LiveRecorder:
         self._blind_sb = 0.5
         self._blind_bb = 1.0
         self._blinds_by_pos = {}
-        # Conteo de frames sin cambios en river (detección de check general)
         self._river_stable_count = 0
         self._last_state_sig = None
+        self._awaiting_new_hand = False
 
     def _last_hand_id(self, path):
         """Lee el último hand_id del archivo de salida para continuar la numeración."""
@@ -613,6 +613,12 @@ class LiveRecorder:
         if btn is None or btn not in SCREEN_SEATS:
             log(f'  [can_start] FAIL: btn={btn}')
             return False
+        if state.get(f'{btn}_state') in ('sin jugador', 'fuera'):
+            log(f'  [can_start] FAIL: btn={btn} sin asiento')
+            return False
+        if state.get(f'{btn}_stake') is None:
+            log(f'  [can_start] FAIL: btn={btn} sin stack visible')
+            return False
         stakes = [state.get(f'{p}_stake') for p in PLAYER_IDS]
         vis = sum(1 for s in stakes if s is not None)
         if vis < 2:
@@ -620,6 +626,41 @@ class LiveRecorder:
             return False
         log(f'  [can_start] OK btn={btn} vis={vis}')
         return True
+
+    def _pot_is_new_hand(self, state):
+        """True si el bote visible corresponde a un reparto nuevo.
+
+        Al terminar una mano el importe puede quedar congelado en pantalla.
+        Arrancar en ese frame crea una mano fantasma (H_1323), por eso un
+        bote superior a las ciegas no se acepta como nueva mano.
+        """
+        pot = state.get('pot')
+        if pot is None:
+            return True
+        try:
+            limit = float(self._blind_sb) + float(self._blind_bb) + \
+                self._ambiguity_tolerance()
+            return float(pot) <= limit
+        except (TypeError, ValueError):
+            return False
+
+    def _is_new_deal(self, state):
+        """Confirma un reparto nuevo tras haber guardado la mano anterior.
+
+        No basta con que haya botón y stacks: hay que ver la mesa limpia y el
+        bote reiniciado, o un cambio de botón. Así no se reutiliza el board y
+        el bote de la mano que acaba de terminar.
+        """
+        if self._visible_coms(state) > 0:
+            return False
+        if not self._pot_is_new_hand(state):
+            return False
+        prev_btn = self.last_state.get('btn') if self.last_state else None
+        curr_btn = state.get('btn')
+        if prev_btn is not None and curr_btn is not None and curr_btn != prev_btn:
+            return True
+        pot = state.get('pot')
+        return pot is None or abs(float(pot or 0.0)) < 0.01
 
     def _is_new_hand(self, state):
         if self.hand is None:
@@ -629,6 +670,8 @@ class LiveRecorder:
         if prev_btn is None or curr_btn is None or prev_btn == curr_btn:
             return False
         if self._visible_coms(state) >= 2:
+            return False
+        if not self._pot_is_new_hand(state):
             return False
         # Confirmar nueva mano por la presencia de ciegas (bet ≈ 0.5 / 1),
         # ya que los labels de estado (SB/BB) ya no se muestran.
@@ -699,6 +742,7 @@ class LiveRecorder:
         # Cada mano parte de cero: los inactivos solo son los marcados por el
         # usuario (MANUAL_INACTIVE), que el proceso_frames vuelve a aplicar.
         self._inactive_players = set()
+        self._awaiting_new_hand = False
         self.hand_id += 1
         btn_player = state.get('btn')
         btn_idx = SCREEN_SEATS.index(btn_player) if btn_player else -1
@@ -724,13 +768,16 @@ class LiveRecorder:
             'showdown': {},
         }
 
+        seated = set(self._get_seated(state))
         for pid in PLAYER_IDS:
-            stake = state.get(f'{pid}_stake')
-            bet = state.get(f'{pid}_bet')
+            stake = state.get(f'{pid}_stake') if pid in seated else None
+            bet = state.get(f'{pid}_bet') if pid in seated else None
             stack = (stake + bet) if (stake is not None and bet is not None) else stake
             cards = MANUAL_CARDS.get(pid) or self._cards_str(state, pid)
             hand['players'].append({
-                'active': bool(positions.get(pid)) and pid not in MANUAL_INACTIVE,
+                'active': (bool(positions.get(pid))
+                           and pid not in MANUAL_INACTIVE
+                           and stack is not None),
                 'name': PLAYER_NAMES.get(pid, pid),
                 'pos': positions.get(pid, ''),
                 'stack': stack,
@@ -843,13 +890,20 @@ class LiveRecorder:
                 bids[pos_name] = state.get(f'{pid}_bet')
 
         max_bet = self._blind_bb
+        sb_pid = pos_map.get('SB')
+        bb_pid = pos_map.get('BB')
         sb_bet = bids.get('SB')
         bb_bet = bids.get('BB')
+        sb_stake_known = f'{sb_pid}_stake' in state if sb_pid else False
+        bb_stake_known = f'{bb_pid}_stake' in state if bb_pid else False
+        sb_stake = state.get(f'{sb_pid}_stake') if sb_pid else None
+        bb_stake = state.get(f'{bb_pid}_stake') if bb_pid else None
 
-        if pos_map.get('SB') is not None and sb_bet is not None and sb_bet > 0:
+        if sb_pid is not None and sb_bet is not None and sb_bet > 0 \
+                and (not sb_stake_known or sb_stake is not None):
             self._add_action('preflop', 'SB', 'p',
                              round(self._blind_sb, 2), 'observed')
-        if pos_map.get('BB') is not None:
+        if bb_pid is not None and (not bb_stake_known or bb_stake is not None):
             self._add_action('preflop', 'BB', 'p',
                              round(self._blind_bb, 2), 'observed')
 
@@ -875,6 +929,12 @@ class LiveRecorder:
                     continue
 
             amt = round(bet, 2)
+            if amt < max_bet - 0.05:
+                self._add_ambiguity(
+                    'preflop_bet_below_live_bet', 'preflop', pos=pos_name,
+                    bet_read=amt, live_bet=round(max_bet, 2),
+                    note='Casilla por debajo de la apuesta viva; no se registra.')
+                continue
             if amt > max_bet + 0.15:
                 self._add_action('preflop', pos_name, 'r', amt, 'observed')
                 max_bet = amt
@@ -983,11 +1043,19 @@ class LiveRecorder:
             cur_bet = raw_cur_bet or 0
 
             was_active = prev_stake is not None
-            dimmed = cur_st in ('retirarse', 'ausente', 'inactivo', 'sin jugador', 'fuera')
+            strong_fold = cur_st in ('retirarse', 'ausente')
+            soft_fold = cur_st == 'inactivo'
+            seat_gone = cur_st in ('sin jugador', 'fuera')
+            dimmed = strong_fold or soft_fold or seat_gone
+            already_acted = any(a['pos'] == pos_name for a in street_actions)
+            already_folded = any(a['pos'] == pos_name and a['action'] == 'f'
+                                 for a in street_actions)
 
             # ---- All-in: el stake pasó de x a None (jugador activo, sin fold) ----
-            # Se detecta primero porque el all-in deja el stack en None.
-            if was_active and cur_stake is None and not dimmed:
+            allin_label = cur_st in ('apostar todo', 'all in', 'all-in', 'allin')
+            if (was_active and cur_stake is None and not dimmed
+                    and (allin_label
+                         or (raw_cur_bet is not None and raw_cur_bet > 0))):
                 amt = round((prev_stake or 0) + prev_bet, 2)
                 if amt <= 0:
                     continue
@@ -1007,13 +1075,13 @@ class LiveRecorder:
                 continue
 
             # ---- Fold: estaba en la mano y ahora difuminado/inactivo ----
-            # (conserva el stake visible pero la casilla se apaga, como los
-            # 'inactivo' de antes)
-            if was_active and dimmed:
-                if not hand_ending and not any(a['pos'] == pos_name and a['action'] == 'f'
-                                               for a in street_actions):
+            if was_active and (strong_fold or soft_fold):
+                weak_fold = soft_fold and (already_acted or cur_bet > 0)
+                if not hand_ending and not weak_fold and not already_folded:
                     actions.append((street, pos_name, 'f', 0.0))
                     self._folded_positions.add(pos_name)
+                continue
+            if was_active and seat_gone:
                 continue
 
             # El saldo subió: es un premio o una devolución, no una apuesta.
@@ -1121,21 +1189,24 @@ class LiveRecorder:
         # Checks por lógica de juego (posflop): rellenar checks de los que
         # hablan antes que una apuesta, o todos si no hay apuesta.
         self._add_implied_checks(street, state)
-        # Detección de check general en river (sin cambios entre pantallazos)
-        self._detect_river_check(state, street)
+        self._detect_stable_checks(state, street)
         return actions
 
-    def _detect_river_check(self, state, street_name):
-        """En river no hay cambios de calle: si dos pantallazos consecutivos no
-        muestran ningún cambio de stack/bet, todos los jugadores activos
-        hicieron check. Se registran los checks que falten."""
-        if self.hand is None or street_name != 'river':
+    def _detect_stable_checks(self, state, street_name):
+        """Registra checks cuando dos frames consecutivos no cambian.
+
+        Aplica a flop/turn/river. Se marca `inferred`/`ambiguous` igual que
+        cualquier check reconstruido. No se usa con all-in porque allí ya no
+        hay decisiones posibles.
+        """
+        if self.hand is None or street_name == 'preflop':
             return
         if self.last_state is None:
             return
+        if self._betting_closed_by_allin(state):
+            return
         cur_sig = self._state_sig(state)
         if not self._river_stable_count:
-            # primer pantallazo: guardamos la firma
             self._river_stable_count = 1
             self._last_state_sig = cur_sig
             return
@@ -1146,8 +1217,7 @@ class LiveRecorder:
             self._last_state_sig = cur_sig
         if self._river_stable_count < 2:
             return
-        # Dos pantallazos idénticos: nadie apostó → checks implícitos
-        self._add_implied_checks('river', state)
+        self._add_implied_checks(street_name, state, confirm_all_check=True)
 
     def _state_sig(self, state):
         """Firma del estado de stacks/bets para detectar ausencia de cambios."""
@@ -1443,6 +1513,8 @@ class LiveRecorder:
         self.hand['current_street'] = new_street
         self.street_has_bet = False
         self._just_changed_street = True
+        self._river_stable_count = 1
+        self._last_state_sig = self._state_sig(state)
 
     def _finalize_street(self, street_name, state=None, confirm_all_check=False):
         if street_name in self._completed_streets:
@@ -1473,7 +1545,7 @@ class LiveRecorder:
         # Merge consecutive same-position actions
         merged = []
         for a in actions:
-            if merged and merged[-1]['pos'] == a['pos'] and a['action'] in ('c', 'b'):
+            if merged and merged[-1]['pos'] == a['pos'] and a['action'] in ('c', 'b', 'r'):
                 # Importes absolutos: una actualización de la misma acción
                 # sustituye el nivel, nunca se suma como si fuera un delta.
                 merged[-1]['amount'] = max(merged[-1]['amount'], a['amount'])
@@ -1561,6 +1633,32 @@ class LiveRecorder:
         else:
             actions[:] = checks + ordered
 
+    def _betting_closed_by_allin(self, state=None):
+        """True si un all-in deja como máximo un jugador con stack.
+
+        En ese escenario no hay más decisiones de apuesta: el jugador con
+        fichas no debe recibir un check inventado en cada calle siguiente.
+        """
+        if self.hand is None or not self._allin_players:
+            return False
+        in_hand = []
+        for p in self.hand.get('players') or []:
+            pid = p.get('_id')
+            pos = p.get('pos')
+            if not p.get('active') or not pos:
+                continue
+            if pid in self._inactive_players or pos in self._folded_positions:
+                continue
+            if pid in self._allin_players:
+                in_hand.append(pid)
+                continue
+            st = (state or {}).get(f'{pid}_state')
+            if st in ('retirarse', 'ausente', 'inactivo', 'sin jugador', 'fuera'):
+                continue
+            in_hand.append(pid)
+        non_allin = [pid for pid in in_hand if pid not in self._allin_players]
+        return len(non_allin) <= 1
+
     def _add_implied_checks(self, street_name, state, confirm_all_check=False):
         """Detecta checks por lógica de juego en calles posflop.
 
@@ -1570,10 +1668,13 @@ class LiveRecorder:
           habló → check.
         - Sin apuesta: aquí NO se puede afirmar que todos hayan hablado solo
           por falta de botón; los jugadores pueden estar todavía decidiendo.
-          Solo se marca "todos check" cuando hay confirmación (double-frame en
-          river o pot sin cambios al pasar de calle) vía confirm_all_check.
-        Se salta preflop (las ciegas abren la ronda)."""
+          Solo se marca "todos check" cuando hay confirmación (double-frame o
+          pot sin cambios al pasar de calle) vía confirm_all_check.
+        Se salta preflop (las ciegas abren la ronda) y las calles sin acción
+        posible por all-in."""
         if street_name == 'preflop':
+            return
+        if self._betting_closed_by_allin(state):
             return
         existing = self.hand['streets'][street_name].setdefault('actions', [])
         existing_pos = {a['pos'] for a in existing}
@@ -1634,14 +1735,73 @@ class LiveRecorder:
 
     # ---------- finalizar mano ----------
 
+    def _survivors(self, state):
+        """Jugadores que siguen en la mano al cerrarla.
+
+        Incluye a los all-in aunque la UI los muestre atenuados: no pueden
+        foldear. Excluye folds ya registrados y estados de salida.
+        """
+        out = []
+        state = state or {}
+        for p in self.hand.get('players') or []:
+            pid = p.get('_id')
+            pos = p.get('pos')
+            if not p.get('active') or not pos:
+                continue
+            if pid in self._inactive_players or pos in self._folded_positions:
+                continue
+            if pid in self._allin_players:
+                out.append(p)
+                continue
+            st = state.get(f'{pid}_state')
+            if st in ('retirarse', 'ausente', 'inactivo', 'sin jugador', 'fuera'):
+                continue
+            out.append(p)
+        return out
+
+    def _complete_missing_folds(self, state):
+        """Registra los folds que la UI ya muestra pero no llegaron a acción.
+
+        Cuando la mano termina por fold con un único superviviente, todos los
+        demás jugadores que estaban en la mano debían haber foldeado. Si el
+        frame final ya no los muestra activos pero el fold no se registró, se
+        añade como inferido/ambiguo para no guardar una victoria por fold con
+        jugadores "vivos".
+        """
+        survivors = self._survivors(state)
+        if len(survivors) != 1:
+            return
+        survivor_ids = {p.get('_id') for p in survivors}
+        street = self.hand.get('current_street') or 'preflop'
+        actions = self.hand['streets'][street].setdefault('actions', [])
+        for p in self.hand.get('players') or []:
+            pid = p.get('_id')
+            pos = p.get('pos')
+            if not p.get('active') or not pos:
+                continue
+            if pid in survivor_ids or pid in self._inactive_players:
+                continue
+            if pid in self._allin_players or pos in self._folded_positions:
+                continue
+            if any(a.get('pos') == pos and a.get('action') == 'f'
+                   for s in self.hand['streets'].values()
+                   for a in (s.get('actions') or [])):
+                self._folded_positions.add(pos)
+                continue
+            actions.append({
+                'pos': pos, 'action': 'f', 'amount': 0.0,
+                'amount_type': 'observed', 'inferred': True,
+                'ambiguous': True})
+            self._folded_positions.add(pos)
+            self._add_ambiguity(
+                'fold_missing_at_close', street, pos=pos,
+                note='La mano terminó por fold y el jugador ya no estaba '
+                     'activo, pero su fold no se había registrado.')
+
     def finalize_hand(self, state):
+        self._complete_missing_folds(state)
         self._finalize_street(self.hand['current_street'], state)
-        live_players = [p for p in self.hand['players']
-                        if p.get('active') and p.get('pos')
-                        and p.get('pos') not in self._folded_positions
-                        and p['_id'] not in self._inactive_players
-                        and (not state or state.get(f'{p["_id"]}_state')
-                             not in ('retirarse', 'ausente'))]
+        live_players = self._survivors(state)
         fold_win = len(live_players) <= 1
         breakdown = self._pot_breakdown(final=True, fold_win=fold_win)
         pot_read = (state.get('pot') if state else None)
@@ -1682,14 +1842,10 @@ class LiveRecorder:
             # Ganador automático: solo un superviviente claro (los demás
             # foldearon). En showdown multiway no se puede determinar el
             # ganador sin evaluar manos → se deja vacío (el GUI lo ajusta).
-            all_still_in = [p for p in self.hand['players']
-                            if p['active'] and p['_id'] not in self._inactive_players
-                            and p['pos'] not in self._folded_positions
-                            and state.get(f'{p["_id"]}_state') not in ('retirarse', 'ausente', 'inactivo')]
-            if len(all_still_in) == 1:
-                self.hand['winner'] = [all_still_in[0]['_id']]
+            if len(live_players) == 1:
+                self.hand['winner'] = [live_players[0]['_id']]
                 self.hand['showdown'] = {
-                    'winner1': f'{all_still_in[0]["pos"]} ({all_still_in[0]["name"]})'
+                    'winner1': f'{live_players[0]["pos"]} ({live_players[0]["name"]})'
                 }
             else:
                 self.hand['winner'] = []
@@ -1761,6 +1917,9 @@ class LiveRecorder:
             self.on_hand_saved()
         self.hand = None
         self.street_has_bet = False
+        self._awaiting_new_hand = True
+        self._river_stable_count = 0
+        self._last_state_sig = None
 
     def _is_effectively_over(self, state):
         """True si hay all-in y solo 1 jugador no-allin puede actuar (o ninguno)."""
@@ -1795,11 +1954,17 @@ class LiveRecorder:
         if pot is not None and self.hand is not None:
             self.hand['max_pot'] = max(self.hand.get('max_pot', 0), pot)
 
-        if self.hand is None and not self._can_start_hand(state, log=log):
-            self.save_frame(state, img_arr, log=log)
-            self.last_state = state
-            self.last_img = img_arr
-            return
+        if self.hand is None:
+            if not self._can_start_hand(state, log=log):
+                self.save_frame(state, img_arr, log=log)
+                self.last_state = state
+                self.last_img = img_arr
+                return
+            if self._awaiting_new_hand and not self._is_new_deal(state):
+                self.save_frame(state, img_arr, log=log)
+                self.last_state = state
+                self.last_img = img_arr
+                return
 
         award_candidates = self._award_overlay_candidates(state)
         if self._is_new_hand(state):

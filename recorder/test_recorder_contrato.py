@@ -471,6 +471,128 @@ def test_calle_sin_capturas_se_reconstruye_y_no_infla_la_siguiente():
     assert not any(amt == 45.0 for _pos, _act, amt in turn_acts), turn_acts
 
 
+def _live_started(path):
+    r = LiveRecorder(output_path=str(path))
+    r.hand_id = 0
+    r._assign_positions = lambda state: dict(POS)
+    st = _state(btn='p1', bets={'p2': 0.5, 'p3': 1.0}, pot=1.5)
+    r.start_hand(st)
+    return r
+
+
+def test_no_arranca_mano_fantasma_mientras_queda_el_board_anterior(tmp_path):
+    r = _live_started(tmp_path / 'hands.jsonl')
+    flop = _state(bets={}, pot=1.5, community=[
+        {'rank': '4', 'suit': 'h'}, {'rank': '6', 'suit': 's'},
+        {'rank': '8', 'suit': 'd'}])
+    r.process_frame(flop, None, log=lambda *a, **k: None)
+    r.finalize_hand(flop)
+    assert r.hand is None
+
+    r.process_frame(flop, None, log=lambda *a, **k: None)
+    assert r.hand is None
+
+    new = _state(btn='p2', bets={'p1': 0.5, 'p2': 1.0}, pot=1.5)
+    r.process_frame(new, None, log=lambda *a, **k: None)
+    assert r.hand is not None
+    assert r.hand['hand_id'] == 'H_0002'
+    assert r.hand['comunitarias']['flop'] == []
+
+
+def test_checks_de_flop_se_registran_sin_esperar_al_turn(tmp_path):
+    r = _live_started(tmp_path / 'hands.jsonl')
+    flop = _state(bets={}, pot=1.5, community=[
+        {'rank': 'A', 'suit': 'h'}, {'rank': 'K', 'suit': 'd'},
+        {'rank': '2', 'suit': 'c'}])
+    r.process_frame(flop, None, log=lambda *a, **k: None)
+    r.process_frame(flop, None, log=lambda *a, **k: None)
+
+    checks = {a['pos'] for a in r.hand['streets']['flop']['actions']
+              if a['action'] == 'x'}
+    assert checks == set(POS.values())
+
+
+def test_allin_no_inventa_checks_al_que_todavia_tiene_stack(tmp_path):
+    r = _live_started(tmp_path / 'hands.jsonl')
+    for pos in ('UTG', 'MP', 'CO', 'BTN'):
+        r._folded_positions.add(pos)
+    r._allin_players.add('p2')
+    flop = _state(bets={}, pot=1.5, states={'p2': 'apostar todo'},
+                  community=[{'rank': 'A', 'suit': 'h'},
+                             {'rank': 'K', 'suit': 'd'},
+                             {'rank': '2', 'suit': 'c'}])
+    r.process_frame(flop, None, log=lambda *a, **k: None)
+    r.process_frame(flop, None, log=lambda *a, **k: None)
+
+    flop_actions = r.hand['streets']['flop']['actions']
+    assert not any(a['action'] == 'x' for a in flop_actions), flop_actions
+
+
+def test_victoria_por_fold_completa_los_folds_que_faltaban(tmp_path):
+    out = tmp_path / 'hands.jsonl'
+    r = _live_started(out)
+    final = _state(bets={}, pot=1.5, states={
+        'p1': 'retirarse', 'p2': 'retirarse', 'p4': 'retirarse',
+        'p5': 'inactivo', 'hero': 'retirarse'})
+    r.finalize_hand(final)
+    saved = json.loads(out.read_text(encoding='utf-8'))
+    assert saved['winner'] == ['p3']
+    assert saved['recorder_audit']['fold_win'] is True
+    folds = {a['pos'] for a in saved['streets']['preflop']['actions']
+             if a['action'] == 'f'}
+    assert folds == {'SB', 'UTG', 'MP', 'CO', 'BTN'}
+
+
+def test_preflop_no_registra_call_por_debajo_de_la_apuesta_viva():
+    r = _preflop_recorder()
+    st = _state(bets={'p2': 1.0, 'p3': 1.0, 'p4': 2.5, 'p1': 2.5},
+                stakes={'p2': 99.5, 'p3': 99.0, 'p4': 97.5, 'p1': 97.5})
+    r._reconstruct_preflop(st)
+    acts = _acts(r.hand['streets']['preflop']['actions'])
+    assert ('SB', 'c', 1.0) not in acts, acts
+    assert any(a['code'] == 'preflop_bet_below_live_bet'
+               for a in r._hand_ambiguities)
+
+
+def test_inactivo_despues_de_apostar_no_es_fold():
+    r = _preflop_recorder()
+    r.hand['current_street'] = 'river'
+    r.last_state = _state(bets={'p4': 10.4}, stakes={'p4': 89.6}, pot=12.0)
+    dimmed = _state(bets={'p4': 10.4}, stakes={'p4': 89.6}, pot=12.0,
+                    states={'p4': 'inactivo'})
+    dimmed_actions = r._detect_deltas(dimmed)
+    assert not any(a[2] == 'f' for a in dimmed_actions)
+
+    folded = _state(bets={'p4': 10.4}, stakes={'p4': 89.6}, pot=12.0,
+                    states={'p4': 'retirarse'})
+    folded_actions = r._detect_deltas(folded)
+    assert ('river', 'UTG', 'f', 0.0) in folded_actions
+
+
+def test_stack_none_sin_etiqueta_no_se_convierte_en_allin():
+    r = _preflop_recorder()
+    r.hand['current_street'] = 'preflop'
+    r.last_state = _state(stakes={'p4': 100.0}, bets={'p4': 0.0})
+    missing = _state(stakes={'p4': None}, bets={'p4': None})
+    r._detect_deltas(missing)
+    assert 'p4' not in r._allin_players
+
+    zero_bet = _state(stakes={'p4': None}, bets={'p4': 0.0})
+    r._detect_deltas(zero_bet)
+    assert 'p4' not in r._allin_players
+
+    allin = _state(stakes={'p4': None}, bets={'p4': None},
+                   states={'p4': 'apostar todo'})
+    r._detect_deltas(allin)
+    assert 'p4' in r._allin_players
+
+
+def test_no_arranca_si_el_boton_no_tiene_stack_visible():
+    st = _state(btn='p1')
+    st['p1_stake'] = None
+    assert LiveRecorder()._can_start_hand(st, log=lambda *a, **k: None) is False
+
+
 def test_calle_parcialmente_capturada_no_duplica_la_apuesta():
     r = _preflop_recorder()
     r.hand['current_street'] = 'flop'

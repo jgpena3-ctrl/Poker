@@ -390,3 +390,21 @@ def test_live_recorder_finalizes_sidecar_without_sharing_hands_file(tmp_path):
     assert events[1]['decision_id'] == decision_id
     assert events[1]['execution']['action']['action'] == 'c'
     assert events[1]['outcome']['winner_ids'] == ['hero']
+
+
+def test_cancelar_mano_cierra_decisiones_huerfanas(tmp_path):
+    path = tmp_path / 'decisions.jsonl'
+    log = DecisionLog(path)
+    decision_id = log.record_decision(
+        {'street': 'preflop', 'hero_position': 'BTN'},
+        hand_id='H_CANCEL', street='preflop', hero_position='BTN',
+        actions_seen_count=0)
+
+    assert log.discard_hand('H_CANCEL') == 1
+    events = _events(path)
+    assert events[1]['event_type'] == 'resolution'
+    assert events[1]['decision_id'] == decision_id
+    assert events[1]['hand_id'] == 'H_CANCEL'
+    assert events[1]['execution']['status'] == 'not_observed'
+    assert events[1]['outcome']['status'] == 'canceled'
+    assert log.discard_hand('H_CANCEL') == 0

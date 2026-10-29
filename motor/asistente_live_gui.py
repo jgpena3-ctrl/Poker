@@ -561,6 +561,8 @@ class AsistenteLiveGUI:
         self._sync_to_recorder()
         if self.asis is not None:
             self.asis.rec = rl_mod.LiveRecorder()
+            self.asis.rec.on_hand_finalized = \
+                self.asis.decision_log.resolve_hand
         self.end_hand_btn.config(state=tk.DISABLED)
         self.cancel_hand_btn.config(state=tk.DISABLED)
 
@@ -571,9 +573,12 @@ class AsistenteLiveGUI:
         hid = rec.hand.get('hand_id', '???')
         self._log('')
         self._log(f'--- Cancelando {hid} ---')
+        try:
+            self.asis.decision_log.discard_hand(hid)
+        except Exception as exc:
+            self._log(f'  [decision-log] no se pudieron cancelar: {exc}')
         rec.hand = None
         rec.street_has_bet = False
-        rec.hand_id -= 1
         self.end_hand_btn.config(state=tk.DISABLED)
         self.cancel_hand_btn.config(state=tk.DISABLED)
         self.winner_var.set('')

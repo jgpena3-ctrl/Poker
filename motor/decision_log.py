@@ -192,3 +192,22 @@ class DecisionLog:
                 self._pending.pop(hand_id, None)
             written += 1
         return written
+
+    def discard_hand(self, hand_id, reason='canceled'):
+        """Cierra como canceladas las decisiones de una mano no guardada.
+
+        Evita dejar decisiones huérfanas (H_1328): la mano nunca llegará a
+        `resolve_hand`, así que se emite un evento de cierre explícito.
+        """
+        pending = list(self._pending.pop(hand_id, []))
+        for item in pending:
+            self._append({
+                'schema_version': SCHEMA_VERSION,
+                'event_type': 'resolution',
+                'decision_id': item['decision_id'],
+                'hand_id': hand_id,
+                'recorded_at': _utc_now(),
+                'execution': {'status': 'not_observed', 'action': None},
+                'outcome': {'status': 'canceled', 'reason': reason},
+            })
+        return len(pending)
