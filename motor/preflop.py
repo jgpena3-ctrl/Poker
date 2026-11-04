@@ -84,9 +84,128 @@ def table_key(action, pos, vs=''):
     return f'{action}_{pos}_vs_{vs}' if vs else f'{action}_{pos}'
 
 
+#: Alias históricos del fichero. En 6-max ``HJ`` es el asiento que el motor
+#: llama ``MP``; la única tabla afectada es ``4B_UTG_vs_HJ``. Se declara aquí
+#: para que el alias sea explícito y auditable, no un fallback silencioso.
+TABLE_ALIASES = {
+    ('4B', 'UTG', 'MP'): '4B_UTG_vs_HJ',
+}
+
+_PREFLOP_ORDER = ('UTG', 'MP', 'CO', 'BTN', 'SB', 'BB')
+_ENGINE_PAIR_ACTIONS = ('3B', 'Call_OR', '4B', 'Call_3B', '5B',
+                        'Call_4B', 'Call_5B')
+#: Raises que deben haber ocurrido antes de la decisión. Como en una ronda
+#: preflop cada asiento actúa una sola vez, el héroe necesita al menos este
+#: número de asientos anteriores; si no, el spot es imposible.
+_MIN_PRIOR_RAISERS = {
+    '3B': 1, 'Call_OR': 1,
+    '4B': 2, 'Call_3B': 2,
+    '5B': 3, 'Call_4B': 3,
+    'Call_5B': 4,
+}
+
+
+def lookup_table(action, pos, vs=''):
+    """(tabla, clave_usada, estado) para una consulta EXACTA.
+
+    estado ∈ {'exact', 'alias', 'missing'}. No aplica el fallback "misma
+    acción + misma posición, otro rival" del asistente: ese fallback es una
+    decisión distinta y se audita por separado.
+    """
+    tables = load_tables()
+    key = table_key(action, pos, vs)
+    if key in tables:
+        return tables[key], key, 'exact'
+    alias = TABLE_ALIASES.get((action, pos, vs))
+    if alias and alias in tables:
+        return tables[alias], alias, 'alias'
+    return None, None, 'missing'
+
+
+def classify_missing_table(action, pos, vs=''):
+    """Clasifica una ausencia exacta según el contrato preflop.
+
+    No decide qué frecuencia usar; solo dice POR QUÉ no hay tabla. Las
+    ausencias intencionales y las imposibles por orden de acción no son
+    huecos de cobertura; los huecos reales sí.
+    """
+    if action == 'OR' and pos == 'BB' and not vs:
+        return 'intentional_check_option'
+    if action == 'ROL' and pos == 'UTG' and not vs:
+        return 'intentional_no_prior_limp'
+    if pos in _PREFLOP_ORDER:
+        hero_index = _PREFLOP_ORDER.index(pos)
+        required = _MIN_PRIOR_RAISERS.get(action)
+        if required is not None and hero_index < required:
+            return 'impossible_action_order'
+        if vs and vs in _PREFLOP_ORDER:
+            vs_index = _PREFLOP_ORDER.index(vs)
+            # El último raiser de n subidas no puede estar en los primeros
+            # n-1 asientos: harían falta n raisers distintos antes de él.
+            if vs_index >= hero_index:
+                return 'impossible_action_order'
+            if required is not None and vs_index < required - 1:
+                return 'impossible_action_order'
+    if action in ('OR', 'ROL', '3B', 'Call_OR', '4B', 'Call_3B',
+                  '5B', 'Call_4B', 'Call_5B'):
+        return 'coverage_gap'
+    return 'unclassified'
+
+
+def audit_engine_coverage():
+    """Inventario de las claves que el motor preflop puede consultar.
+
+    Devuelve listas separadas: ``exact``, ``alias`` y las tres clases de
+    ausencia. Es puramente informativo: no genera tablas ni toca frecuencias.
+    """
+    checks = []
+    for pos in _PREFLOP_ORDER:
+        checks.append(('OR', pos, ''))
+        checks.append(('ROL', pos, ''))
+        for vs in _PREFLOP_ORDER:
+            if vs == pos:
+                continue
+            for action in _ENGINE_PAIR_ACTIONS:
+                checks.append((action, pos, vs))
+
+    out = {
+        'exact': [],
+        'alias': [],
+        'intentional_missing': [],
+        'impossible_missing': [],
+        'coverage_gap': [],
+        'unclassified_missing': [],
+    }
+    for action, pos, vs in checks:
+        _table, source, status = lookup_table(action, pos, vs)
+        if status == 'exact':
+            out['exact'].append(source)
+        elif status == 'alias':
+            out['alias'].append({
+                'key': table_key(action, pos, vs),
+                'source': source,
+            })
+        else:
+            reason = classify_missing_table(action, pos, vs)
+            missing = table_key(action, pos, vs)
+            if reason.startswith('intentional_'):
+                out['intentional_missing'].append({
+                    'key': missing, 'reason': reason})
+            elif reason == 'impossible_action_order':
+                out['impossible_missing'].append({
+                    'key': missing, 'reason': reason})
+            elif reason == 'coverage_gap':
+                out['coverage_gap'].append({
+                    'key': missing, 'reason': reason})
+            else:
+                out['unclassified_missing'].append({
+                    'key': missing, 'reason': reason})
+    return out
+
+
 def has_table(action, pos, vs='') -> bool:
     """True si existe una tabla válida para (action, pos, vs)."""
-    return table_key(action, pos, vs) in load_tables()
+    return lookup_table(action, pos, vs)[0] is not None
 
 
 def prob(action, pos, vs=''):
@@ -103,7 +222,7 @@ def prob(action, pos, vs=''):
     Quien necesite un valor numérico debe llamar a
     `prob_or_fallback()` y registrar de dónde salió el valor.
     """
-    t = load_tables().get(table_key(action, pos, vs))
+    t, _source, _status = lookup_table(action, pos, vs)
     return None if t is None else t['probs']
 
 

@@ -18,6 +18,7 @@ Uso:  python -m motor.asistente_live [--poll 0.5] [--hero-nombre Jarduan]
 """
 import os
 import random
+import secrets
 import sys
 import time
 
@@ -40,12 +41,13 @@ from .observations import _texture_class, lead_label
 from .panel import format_insight
 from .player_ranges import ProfileRangeModel
 from .postflop_ranges import PostflopRangeModel
-from .preflop import load_tables
+from .preflop import (classify_missing_table, load_tables, lookup_table,
+                      table_key)
 from .profile import PEZ, Profiles, TIBURON, STACK_FISH_BB
 from .ranges import COMBO0, COMBO1, RangeState
 from .rules import plan as rules_plan
 from .rules import select_best as rules_select_best
-from .rules import POLITICA_MULTIWAY
+from .rules import MULTIWAY_SOPORTADO, POLITICA_MULTIWAY
 from .situation import Situation, situation
 from .hand_state import classify as hand_classify
 from .hand_state import range_advantage as range_adv
@@ -339,24 +341,29 @@ def _combo_index(hero_codes):
     return int(hits[0]) if len(hits) else None
 
 
-def _pf_table_probs(base, hero_pos='', vs_pos=''):
-    """Vector P(A|H) (1326,) de la matriz `base` más específica disponible:
-    `BASE_{hero}_vs_{vs}` → `BASE_{hero}` → None.
+def _pf_table_lookup(base, hero_pos='', vs_pos=''):
+    """(vector, clave_usada, estado) de la matriz más específica disponible.
 
-    No se usa ninguna tabla de otra posición (ni el residuo por `action`);
-    si no existe la tabla exacta para la posición del hero, devuelve None
-    para no inventar frecuencias ajenas a las tablas (preflop_matrices.json).
+    Orden: exacta (o alias declarado) → misma acción y posición con OTRO
+    rival → ausente. El fallback por posición se conserva por compatibilidad,
+    pero ahora devuelve su clave de origen y se registra como
+    ``fallback_other_vs``: nunca vuelve a ser indistinguible de una tabla
+    exacta.
     """
-    tables = load_tables()
-    if hero_pos and vs_pos:
-        t = tables.get(f'{base}_{hero_pos}_vs_{vs_pos}')
-        if t is not None:
-            return t['probs']
     if hero_pos:
-        for t in tables.values():
-            if t['action'] == base and t['pos'] == hero_pos:
-                return t['probs']
-    return None
+        table, source, status = lookup_table(base, hero_pos, vs_pos)
+        if table is not None:
+            return table['probs'], source, status
+        for key, candidate in sorted(load_tables().items()):
+            if candidate['action'] == base and candidate['pos'] == hero_pos:
+                return candidate['probs'], key, 'fallback_other_vs'
+    return None, None, 'missing'
+
+
+def _pf_table_probs(base, hero_pos='', vs_pos=''):
+    """Vector P(A|H) (1326,) de la matriz más específica disponible, o None."""
+    probs, _source, _status = _pf_table_lookup(base, hero_pos, vs_pos)
+    return probs
 
 
 def _pf_freq(base, hero_pos, vs_pos, hand_idx):
@@ -394,6 +401,57 @@ def _pf_evs(f_raise, f_call):
     if total > 1.0:
         fr, fc = fr / total, fc / total
     return {'retirar': 1.0 - fr - fc, 'igualar': fc, 'subir': fr}
+
+
+def _pf_table_audit(queries):
+    """Audita las consultas de tabla de un spot preflop.
+
+    Cada entrada dice qué clave se pidió, de dónde salió el vector y, si no
+    había tabla exacta, por qué. Una ausencia no se convierte en un fold
+    estratégico invisible: queda registrada con su clase.
+    """
+    audit = []
+    for base, pos, vs in queries:
+        _probs, source, status = _pf_table_lookup(base, pos, vs)
+        item = {
+            'key': table_key(base, pos, vs),
+            'action': base,
+            'position': pos,
+            'vs': vs,
+            'source': source,
+            'status': status,
+        }
+        if status in ('missing', 'fallback_other_vs'):
+            item['classification'] = classify_missing_table(base, pos, vs)
+        if status == 'missing':
+            item['reason'] = item['classification']
+        elif status == 'fallback_other_vs':
+            item['reason'] = 'fallback_to_other_vs'
+        audit.append(item)
+    return audit
+
+
+def _sample_preflop_action(ev, seed=None):
+    """Sorteo ponderado reproducible: devuelve (acción, metadatos).
+
+    La estrategia sigue siendo probabilística: se muestrea la distribución
+    de frecuencias, no su argmax. La semilla se genera y se registra cuando
+    el llamador no la aporta, de modo que una decisión histórica puede
+    repetirse sin volver determinista el motor.
+    """
+    if seed is None:
+        seed = secrets.randbits(64)
+    rng = random.Random(seed)
+    acts = [a for a, value in ev.items() if value > 0.0]
+    action = rng.choices(acts, weights=[ev[a] for a in acts])[0] \
+        if acts else 'retirar'
+    return action, {
+        'mechanism': 'weighted_choice_with_replacement',
+        'rng': 'random.Random',
+        'seed': seed,
+        'distribution': {name: float(value) for name, value in ev.items()},
+        'candidates': list(acts),
+    }
 
 
 def _format_preflop(hero, hero_pos, label_spot, pot, to_call, ev, action,
@@ -714,6 +772,8 @@ class Asistente:
             pid for pid in PLAYER_IDS
             if pid != hero_pid and state.get(f'{pid}_state') == 'activo'
         ]
+        n_players = max(1, 1 + len(active_opponents))
+        multiway = n_players > 2
         unknown_opponent_holes = [
             pid for pid in active_opponents if pid not in known_holes
         ]
@@ -816,6 +876,14 @@ class Asistente:
             'action_values_kind': 'frequency' if is_preflop else 'ev',
             'recommended_action': getattr(evs, 'chosen', None),
             'villain_label': villain_label,
+            'n_players': n_players,
+            'multiway': multiway,
+            'multiway_soportado': (not multiway) or MULTIWAY_SOPORTADO,
+            'multiway_policy': POLITICA_MULTIWAY,
+            'preflop_table_audit': _safe_json(
+                getattr(evs, 'preflop_table_audit', None)),
+            'preflop_sampling': _safe_json(
+                getattr(evs, 'preflop_sampling', None)),
             'reproducibility': reproducibility,
         }
         try:
@@ -1289,8 +1357,10 @@ class Asistente:
             elif a.get('action') == 'c' and not raise_seen:
                 limp = True
 
+        table_queries = []
         if n_raises == 0 and limp:
             # Limp delante → tabla ROL de la posición (el fold es el residuo)
+            table_queries = [('ROL', hero_pos, '')]
             f_rol = _pf_freq('ROL', hero_pos, '', hand_idx) or 0.0
             if hero_pos == 'BB':
                 ev = {'pasar': f_rol, 'subir': max(0.0, 1.0 - f_rol)}
@@ -1300,6 +1370,7 @@ class Asistente:
                       'retirar': max(0.0, 1.0 - f_rol)}
                 label_spot = f'vs limp (over-limp {f_rol:.0%}, fold resto)'
         elif n_raises == 0:
+            table_queries = [('OR', hero_pos, '')]
             f_open = _pf_freq('OR', hero_pos, '', hand_idx)
             if f_open is None:
                 # No hay tabla OR para la posición (p.ej. BB: nadie abrió y la
@@ -1314,21 +1385,28 @@ class Asistente:
                 ev = {'retirar': max(0.0, 1.0 - f_open), 'subir': f_open}
             label_spot = 'apertura (sin raise previo)'
         elif n_raises == 1:
+            table_queries = [('3B', hero_pos, vs_pos),
+                             ('Call_OR', hero_pos, vs_pos)]
             f_r = _pf_freq('3B', hero_pos, vs_pos, hand_idx) or 0.0
             f_c = _pf_freq('Call_OR', hero_pos, vs_pos, hand_idx) or 0.0
             ev = _pf_evs(f_r, f_c)
             label_spot = f'vs apertura {vs_pos} ({vs_amount:.1f})'
         elif n_raises == 2:
+            table_queries = [('4B', hero_pos, vs_pos),
+                             ('Call_3B', hero_pos, vs_pos)]
             f_r = _pf_freq('4B', hero_pos, vs_pos, hand_idx) or 0.0
             f_c = _pf_freq('Call_3B', hero_pos, vs_pos, hand_idx) or 0.0
             ev = _pf_evs(f_r, f_c)
             label_spot = f'vs 3-bet {vs_pos} ({vs_amount:.1f})'
         elif n_raises == 3:
+            table_queries = [('5B', hero_pos, vs_pos),
+                             ('Call_4B', hero_pos, vs_pos)]
             f_r = _pf_freq('5B', hero_pos, vs_pos, hand_idx) or 0.0
             f_c = _pf_freq('Call_4B', hero_pos, vs_pos, hand_idx) or 0.0
             ev = _pf_evs(f_r, f_c)
             label_spot = f'vs 4-bet {vs_pos} ({vs_amount:.1f})'
         elif n_raises == 4:
+            table_queries = [('Call_5B', hero_pos, vs_pos)]
             f_c = _pf_freq('Call_5B', hero_pos, vs_pos, hand_idx) or 0.0
             ev = {'igualar': f_c, 'retirar': max(0.0, 1.0 - f_c)}
             label_spot = f'vs 5-bet {vs_pos} ({vs_amount:.1f})'
@@ -1338,21 +1416,35 @@ class Asistente:
 
         # Sorteo ponderado por las frecuencias de la matriz (incluye el fold
         # implícito del residuo): la recomendación sigue la distribución del
-        # spot, no el argmax seco. `seed` fijo → determinista (tests).
-        rng = random.Random(seed) if seed is not None else random
-        acts = [a for a, v in ev.items() if v > 0.0]
-        action = rng.choices(acts, weights=[ev[a] for a in acts])[0] \
-            if acts else 'retirar'
+        # spot, no el argmax seco. La semilla se registra para poder repetir
+        # la decisión sin convertir la estrategia en determinista.
+        action, sampling = _sample_preflop_action(ev, seed)
+        table_audit = _pf_table_audit(table_queries)
+        problematic = [
+            item for item in table_audit
+            if item['status'] == 'fallback_other_vs'
+            or item.get('classification') in ('coverage_gap', 'unclassified')
+        ]
+        if problematic:
+            detail = ', '.join(
+                f"{item['key']}={item['status']}"
+                + (f"/{item['reason']}" if item.get('reason') else '')
+                for item in problematic)
+            label_spot += f'  [⚠ cobertura preflop: {detail}]'
 
         evs = EvTable(ev=ev, pot=pot, hero_equity=0.0)
         evs.preflop = True
         evs.chosen = action
-        evs.candidate_actions = list(acts) if acts else ['retirar']
+        evs.candidate_actions = sampling['candidates'] or ['retirar']
+        evs.preflop_sampling = sampling
+        evs.preflop_table_audit = table_audit
         label = f'{perfil} {name}'
         text = _format_preflop(' '.join(hero), hero_pos, label_spot, pot,
                                to_call, ev, action, label)
         sit = Situation(hero_codes=tuple(hero), board_codes=(),
                         street='preflop', position=hero_pos)
+        n_players = sum(1 for pid in PLAYER_IDS
+                        if state.get(f'{pid}_state') == 'activo')
         # Build reproducibility inputs for preflop
         _preflop_rules_inputs = {
             'street': 'preflop',
@@ -1361,7 +1453,7 @@ class Asistente:
             'pot': pot,
             'stack': effective_stack,
             'effective_stack': effective_stack,
-            'n_players': 1,
+            'n_players': max(1, n_players),
         }
         _preflop_situation_inputs = {
             'hero_codes': list(hero),

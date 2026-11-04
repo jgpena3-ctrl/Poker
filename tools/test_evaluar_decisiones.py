@@ -276,6 +276,89 @@ def test_oracle_response_state_reconstructs_behavior(tmp_path):
     assert np.allclose(orig_pr, recon_pr)
 
 
+def test_preflop_sin_villain_range_no_revienta_y_se_declara(tmp_path):
+    """El bug medido: `weights` se usaba sin asignarse en preflop."""
+    source = tmp_path / 'preflop.jsonl'
+    event = _decision()
+    known = event['known_at_decision']
+    known.update({
+        'street': 'preflop',
+        'villain_range': None,
+        'villain_range_status': 'not_exposed_preflop',
+        'equity': None,
+        'board_cards': [],
+        'preflop_action_frequencies': {'retirar': 0.5, 'subir': 0.5},
+        'ev_by_action': None,
+        'action_values_kind': 'frequency',
+        'n_players': 2,
+        'multiway': False,
+        'multiway_soportado': True,
+        'preflop_sampling': {
+            'mechanism': 'weighted_choice_with_replacement',
+            'rng': 'random.Random',
+            'seed': 123,
+        },
+        'preflop_table_audit': [
+            {'key': 'OR_BTN', 'status': 'exact', 'source': 'OR_BTN'},
+        ],
+        'reproducibility': {
+            'version': 3,
+            'rules_inputs': {'street': 'preflop', 'n_players': 2},
+            'ev_inputs': {'to_call': 1.0},
+            'reach_vector': None,
+        },
+    })
+    known['cards_known'] = {'hero': ['As', 'Kd'], 'board': []}
+    _write(source, event)
+
+    report = evaluate_file(source)
+
+    assert report['integrity']['malformed_events'] == []
+    decision = report['decisions'][0]
+    assert decision['integrity']['status'] == 'pending'
+    assert 'preflop_villain_range_not_exposed' in decision['limitations']
+    assert decision['decision_data']['preflop_sampling']['seed'] == 123
+
+
+def test_resolucion_cancelada_no_cuenta_como_resultado(tmp_path):
+    source = tmp_path / 'canceled.jsonl'
+    resolution = _resolution(action=None)
+    resolution['execution'] = {'status': 'not_observed', 'action': None}
+    resolution['outcome'] = {'status': 'canceled', 'reason': 'mano cancelada'}
+    _write(source, _decision(), resolution)
+
+    report = evaluate_file(source)
+
+    assert report['integrity']['malformed_events'] == []
+    assert report['integrity']['canceled_decisions'] == 1
+    assert report['concordance']['denominator'] == 0
+    assert report['concordance']['excluded_by_reason'] == {
+        'decision_canceled': 1,
+    }
+    assert report['decisions'][0]['observed_result']['status'] == 'canceled'
+
+
+def test_multiway_y_version_se_reportan(tmp_path):
+    source = tmp_path / 'multiway.jsonl'
+    event = _decision()
+    event['known_at_decision'].update({
+        'n_players': 4,
+        'multiway': True,
+        'multiway_soportado': False,
+        'multiway_policy': 'F7.2.b/hu-contra-un-rival',
+    })
+    _write(source, event, _resolution())
+
+    report = evaluate_file(source)
+
+    assert report['scope']['multiway'] == 1
+    assert report['scope']['heads_up'] == 0
+    assert report['integrity']['motor_version_missing'] == 0
+    assert report['decisions'][0]['decision_data']['n_players'] == 4
+    assert report['decisions'][0]['decision_data']['multiway'] is True
+    assert report['decisions'][0]['decision_data']['multiway_soportado'] is False
+
+
 def test_schema_v3_oracle_response_state_is_accepted(tmp_path):
     source = tmp_path / 'oracle.jsonl'
     event = _decision()

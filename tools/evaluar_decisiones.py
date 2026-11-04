@@ -34,7 +34,8 @@ _SNAPSHOT_KEYS = {
     'villain_range', 'villain_range_status', 'equity', 'pot_odds', 'spr',
     'candidate_actions', 'ev_by_action', 'preflop_action_frequencies',
     'action_values_kind', 'recommended_action', 'villain_label',
-    'reproducibility',
+    'n_players', 'multiway', 'multiway_soportado', 'multiway_policy',
+    'preflop_table_audit', 'preflop_sampling', 'reproducibility',
 }
 _CARDS_KNOWN_KEYS = {
     'hero', 'board', 'other_hole_cards', 'unknown_opponent_holes',
@@ -143,11 +144,20 @@ def _validate_snapshot(snapshot):
                 not _number_or_none(value) for value in values.values()):
             errors.append(f'invalid_known_at_decision_{key}_value')
     range_data = snapshot.get('villain_range')
+    weights = None
     if isinstance(range_data, dict):
         normalized = range_data.get('normalized')
         if normalized is not None and not isinstance(normalized, bool):
             errors.append('invalid_villain_range_normalized')
         weights = range_data.get('combo_weights')
+    if weights is not None and not isinstance(weights, list):
+        errors.append('invalid_villain_range_combo_weights')
+    elif isinstance(weights, list):
+        if any(not isinstance(row, list) or len(row) != 2
+               or not isinstance(row[0], str)
+               or not _number_or_none(row[1]) for row in weights):
+            errors.append('invalid_villain_range_combo_weight_entry')
+
     repro = snapshot.get('reproducibility')
     if repro is not None:
         if not isinstance(repro, dict):
@@ -167,13 +177,28 @@ def _validate_snapshot(snapshot):
                         not isinstance(v, (int, float))
                         or isinstance(v, bool) for v in rv):
                     errors.append('invalid_reproducibility_reach_vector')
-        if weights is not None and not isinstance(weights, list):
-            errors.append('invalid_villain_range_combo_weights')
-        elif isinstance(weights, list):
-            if any(not isinstance(row, list) or len(row) != 2
-                   or not isinstance(row[0], str)
-                   or not _number_or_none(row[1]) for row in weights):
-                errors.append('invalid_villain_range_combo_weight_entry')
+
+    n_players = snapshot.get('n_players')
+    if (n_players is not None
+            and (not isinstance(n_players, int) or isinstance(n_players, bool)
+                 or n_players < 1)):
+        errors.append('invalid_n_players')
+    for key in ('multiway', 'multiway_soportado'):
+        value = snapshot.get(key)
+        if value is not None and not isinstance(value, bool):
+            errors.append(f'invalid_{key}')
+    policy = snapshot.get('multiway_policy')
+    if policy is not None and not _nonempty_string(policy):
+        errors.append('invalid_multiway_policy')
+    audit = snapshot.get('preflop_table_audit')
+    if audit is not None:
+        if not isinstance(audit, list):
+            errors.append('invalid_preflop_table_audit')
+        elif any(not isinstance(item, dict) for item in audit):
+            errors.append('invalid_preflop_table_audit_entry')
+    sampling = snapshot.get('preflop_sampling')
+    if sampling is not None and not isinstance(sampling, dict):
+        errors.append('invalid_preflop_sampling')
     recommended = snapshot.get('recommended_action')
     if recommended is not None and not _nonempty_string(recommended):
         errors.append('invalid_recommended_action')
@@ -243,9 +268,9 @@ def _validate_event(event):
         outcome = event.get('outcome')
         if not isinstance(outcome, dict):
             errors.append('missing_or_invalid_outcome')
-        elif outcome.get('status') != 'recorded':
+        elif outcome.get('status') not in ('recorded', 'canceled'):
             errors.append('invalid_resolution_outcome_status')
-        else:
+        elif outcome.get('status') == 'recorded':
             if ('final_pot' in outcome
                     and not _number_or_none(outcome['final_pot'])):
                 errors.append('invalid_outcome_final_pot')
@@ -350,14 +375,15 @@ def _action_code(recommended):
         'fold': 'f', 'retirar': 'f',
         'check': 'x', 'pasar': 'x',
         'call': 'c', 'igualar': 'c',
-        'raise': 'r',
+        'raise': 'r', 'subir': 'r',
     }
     action = recommended.strip().lower()
     if action in aliases:
         return aliases[action]
     if re.fullmatch(r'bet_\d+', action):
         return 'b'
-    # `subir` and `all_in` may encode either a bet or raise in the recorder.
+    # `all_in` may encode either a bet or raise in the recorder. `subir` is
+    # always the engine's raise label, including preflop.
     return None
 
 
@@ -427,8 +453,9 @@ def _calculation_report(event):
         blockers.append('villain_range_unknown')
     # These settings affect which actions/EVs are produced but are not in the
     # current decision snapshot.
-    blockers.extend(('active_player_count_not_recorded',
-                     'runout_and_sampling_settings_not_recorded',
+    if not _field_present(snapshot, 'n_players'):
+        blockers.append('active_player_count_not_recorded')
+    blockers.extend(('runout_and_sampling_settings_not_recorded',
                      'response_model_state_not_recorded'))
     return {
         'status': 'not_attempted',
@@ -463,6 +490,14 @@ def _result_report(resolution_entry):
         }
     outcome = resolution_entry['event'].get('outcome')
     outcome = outcome if isinstance(outcome, dict) else {}
+    if outcome.get('status') == 'canceled':
+        return {
+            'status': 'canceled',
+            'available_fields': [],
+            'empty_fields': [],
+            'missing_fields': [],
+            'values': {'reason': _safe_value(outcome.get('reason'))},
+        }
     names = ('final_pot', 'winner_ids', 'showdown', 'revealed_cards')
     present = [name for name in names if _field_present(outcome, name)]
     empty = [name for name in present
@@ -503,6 +538,11 @@ def _decision_report(entry, resolution_entry, duplicate_decision,
         action = execution.get('action')
         if isinstance(action, dict):
             observed = action.get('action')
+    outcome_status = None
+    if resolution_entry is not None:
+        outcome = resolution_entry['event'].get('outcome')
+        if isinstance(outcome, dict):
+            outcome_status = outcome.get('status')
 
     if duplicate_decision:
         comparison = {'status': 'excluded', 'reason': 'duplicate_decision_id'}
@@ -514,6 +554,8 @@ def _decision_report(entry, resolution_entry, duplicate_decision,
         comparison = {'status': 'excluded', 'reason': 'hand_id_mismatch'}
     elif resolution_entry is None:
         comparison = {'status': 'excluded', 'reason': 'decision_pending'}
+    elif outcome_status == 'canceled':
+        comparison = {'status': 'excluded', 'reason': 'decision_canceled'}
     elif not _nonempty_string(recommended):
         comparison = {'status': 'excluded',
                       'reason': 'recommended_action_missing'}
@@ -621,6 +663,12 @@ def _decision_report(entry, resolution_entry, duplicate_decision,
             'preflop_action_frequencies'),
         'action_values_kind': action_values_kind,
         'recommended_action': recommended,
+        'n_players': snapshot.get('n_players'),
+        'multiway': snapshot.get('multiway'),
+        'multiway_soportado': snapshot.get('multiway_soportado'),
+        'multiway_policy': snapshot.get('multiway_policy'),
+        'preflop_table_audit': snapshot.get('preflop_table_audit'),
+        'preflop_sampling': snapshot.get('preflop_sampling'),
         'reproducibility': snapshot.get('reproducibility'),
     }
     return {
@@ -710,6 +758,24 @@ def evaluate_events(entries, malformed, blank_lines=0, physical_lines=0,
     # Invalid recognized events with a line are already included above when
     # they have a decision_id. Keep their line details in the global list.
     valid_events = sum(1 for entry in entries if not entry['errors'])
+    multiway_counts = {'heads_up': 0, 'multiway': 0, 'unknown': 0}
+    for decision in decision_reports:
+        data = decision.get('decision_data') or {}
+        n_players = data.get('n_players')
+        flag = data.get('multiway')
+        if flag is True or (isinstance(n_players, int) and n_players > 2):
+            multiway_counts['multiway'] += 1
+        elif flag is False or (isinstance(n_players, int) and n_players == 2):
+            multiway_counts['heads_up'] += 1
+        else:
+            multiway_counts['unknown'] += 1
+    version_missing = sum(
+        1 for decision in decision_reports
+        if not _nonempty_string((decision.get('decision_data') or {})
+                                .get('motor_version')))
+    canceled = sum(
+        1 for decision in decision_reports
+        if (decision.get('observed_result') or {}).get('status') == 'canceled')
     report = {
         'report_schema_version': 1,
         'input_path': os.path.abspath(input_path) if input_path else None,
@@ -736,7 +802,16 @@ def evaluate_events(entries, malformed, blank_lines=0, physical_lines=0,
             'linked_decisions': sum(
                 1 for decision_id, group in decisions.items()
                 if len(group) == 1 and len(resolutions.get(decision_id, [])) == 1),
+            'motor_version_missing': version_missing,
+            'canceled_decisions': canceled,
             'input_error': input_error,
+        },
+        'scope': {
+            'heads_up': multiway_counts['heads_up'],
+            'multiway': multiway_counts['multiway'],
+            'unknown': multiway_counts['unknown'],
+            'note': ('multiway usa la marca explícita n_players/multiway; '
+                     'los registros antiguos sin ese campo quedan en unknown'),
         },
         'concordance': {
             'scope': ('acción normalizada únicamente; no compara sizing, '

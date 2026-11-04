@@ -14,6 +14,8 @@ import uuid
 from collections import Counter
 from datetime import datetime, timezone
 
+from .version import motor_version
+
 
 SCHEMA_VERSION = 3
 DEFAULT_PATH = os.path.join(os.path.dirname(__file__), '..', 'data',
@@ -116,7 +118,7 @@ class DecisionLog:
             'decision_id': decision_id,
             'hand_id': hand_id,
             'recorded_at': _utc_now(),
-            'motor_version': os.environ.get('POKER_MOTOR_VERSION') or None,
+            'motor_version': motor_version(),
             'known_at_decision': snapshot,
             'execution': {'status': 'pending', 'action': None},
             'outcome': {'status': 'pending'},

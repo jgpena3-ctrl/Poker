@@ -91,6 +91,23 @@ def test_unresolved_decision_survives_reopening_log_and_keeps_unknowns(tmp_path)
     assert events[1]['outcome']['revealed_cards']['UTG'] == 'AhAd'
 
 
+def test_resolucion_de_otra_mano_no_cierra_decisiones_ajenas(tmp_path):
+    path = tmp_path / 'decisions.jsonl'
+    log = DecisionLog(path)
+    decision_id = log.record_decision(
+        {'street': 'flop', 'recommended_action': 'call'},
+        hand_id='H_OWN', street='flop', hero_position='BTN')
+
+    assert log.resolve_hand({
+        'hand_id': 'H_OTHER', 'final_pot': 10.0, 'winner': ['BTN'],
+        'streets': {'flop': {'actions': []}},
+    }) == 0
+    assert [e['event_type'] for e in _events(path)] == ['decision']
+    assert log.discard_hand('H_OWN') == 1
+    events = _events(path)
+    assert [e['decision_id'] for e in events] == [decision_id, decision_id]
+
+
 def test_successive_same_street_decisions_have_distinct_ids_and_actions(tmp_path):
     path = tmp_path / 'decisions.jsonl'
     log = DecisionLog(path)
@@ -186,6 +203,10 @@ def test_recommendation_step_writes_sidecar_and_deduplicates_repeated_frame(
     assert event['known_at_decision']['equity'] is None
     assert event['known_at_decision']['villain_range'] is None
     assert event['known_at_decision']['cards_known']['unknown_opponent_holes']
+    assert event['known_at_decision']['n_players'] == 2
+    assert event['known_at_decision']['multiway'] is False
+    assert event['known_at_decision']['preflop_sampling']['seed'] is not None
+    assert event['known_at_decision']['preflop_table_audit']
 
     # Replay the player's observed call and finalize the hand through the real
     # recorder hook. The decision-time row remains unchanged.
@@ -295,6 +316,9 @@ def test_postflop_replay_persists_available_range_equity_candidates_and_evs(
     assert known['ev_by_action']
     assert known['action_values_kind'] == 'ev'
     assert known['recommended_action'] == result.chosen
+    assert known['n_players'] == 2
+    assert known['multiway'] is False
+    assert known['multiway_soportado'] is True
 
     # Later in the same hand/street, a call followed by a raise creates a
     # distinct decision; subsequent identical frames remain deduplicated.
@@ -390,6 +414,19 @@ def test_live_recorder_finalizes_sidecar_without_sharing_hands_file(tmp_path):
     assert events[1]['decision_id'] == decision_id
     assert events[1]['execution']['action']['action'] == 'c'
     assert events[1]['outcome']['winner_ids'] == ['hero']
+
+
+def test_la_decision_registra_version_sin_depender_del_entorno(
+        tmp_path, monkeypatch):
+    monkeypatch.delenv('POKER_MOTOR_VERSION', raising=False)
+    path = tmp_path / 'decisions.jsonl'
+    log = DecisionLog(path)
+    log.record_decision({'recommended_action': 'fold'}, hand_id='H_VERSION')
+
+    event = _events(path)[0]
+    assert isinstance(event['motor_version'], str)
+    assert event['motor_version'].strip()
+    assert event['motor_version'] != 'None'
 
 
 def test_cancelar_mano_cierra_decisiones_huerfanas(tmp_path):
