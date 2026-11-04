@@ -27,6 +27,9 @@ PLAYER_NAMES = {
 
 OUTPUT_PATH = os.path.join(os.path.dirname(__file__), '..', 'data', 'hands_db.jsonl')
 POLL_INTERVAL = 0.0
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEFAULT_AMBIGUITY_CAPTURE_DIR = os.path.join(
+    REPO_ROOT, 'pruebas', 'recorder', 'sesiones', 'ambiguedades', 'capturas')
 
 SCREEN_SEATS = ['hero', 'p1', 'p2', 'p3', 'p4', 'p5']
 POSITION_ORDER = ['BTN', 'SB', 'BB', 'CO', 'MP', 'UTG']
@@ -34,6 +37,22 @@ PLAYER_IDS = ['hero', 'p1', 'p2', 'p3', 'p4', 'p5']
 NULL_STATES = {'retirarse', 'ausente', 'inactivo', 'sin jugador', 'fuera'}
 MANUAL_CARDS = {}    # pid -> card_str override from GUI
 MANUAL_WINNER = None  # None = auto-detect, or list of pids e.g. ['p2', 'p3']
+
+# ---------- comision (rake) configurable -----------------------------------
+# Mesa actual: 3% con tope de 0.3 BB. Se puede alternar desde la GUI con la
+# palomita "Comision 3% / 0.3 BB"; si esta desactivada se usa el esquema
+# anterior (5% / 2.5 BB).
+RAKE_RATE = 0.03
+RAKE_CAP_BB = 0.3
+RAKE_RATE_ALT = 0.05
+RAKE_CAP_BB_ALT = 2.5
+USE_NEW_RAKE = True
+
+
+def _rake_params():
+    if USE_NEW_RAKE:
+        return RAKE_RATE, RAKE_CAP_BB
+    return RAKE_RATE_ALT, RAKE_CAP_BB_ALT
 MANUAL_INACTIVE = set()    # set of pids marked inactive from GUI
 
 
@@ -63,9 +82,15 @@ def _json_safe(value):
 
 class LiveRecorder:
     def __init__(self, output_path=None, capture_dir=None, session_dir=None,
-                 test_targets=None):
+                 test_targets=None, ambiguity_capture_dir=None):
         self.output_path = output_path or OUTPUT_PATH
         self.capture_dir = capture_dir
+        # Las capturas de ambigüedad se guardan incluso fuera del modo de
+        # captura completa, para no perder la evidencia del frame problemático.
+        self.ambiguity_capture_dir = (
+            ambiguity_capture_dir
+            or (os.path.join(capture_dir, 'ambiguedades') if capture_dir else None)
+            or DEFAULT_AMBIGUITY_CAPTURE_DIR)
         # Estos datos viven exclusivamente en el sidecar de la sesión.  No se
         # mezclan con el contrato de una mano de la base canónica.
         self.session_dir = session_dir
@@ -74,6 +99,12 @@ class LiveRecorder:
         self.capture_index_path = (
             os.path.join(capture_dir, 'index.jsonl') if capture_dir else None)
         self._capture_seq = self._last_capture_seq(self.capture_index_path)
+        self.ambiguity_index_path = os.path.join(
+            self.ambiguity_capture_dir, 'index.jsonl')
+        self._ambiguity_capture_seq = self._last_capture_seq(
+            self.ambiguity_index_path)
+        self._ambiguity_frame_state = None
+        self._ambiguity_frame_img = None
         self.hand_id = None
         self.hand = None
         self.last_state = None
@@ -191,6 +222,65 @@ class LiveRecorder:
             return img_path
         except Exception as exc:
             log(f'  [captura] no se pudo guardar: {exc}')
+            return None
+
+    def _save_ambiguity_evidence(self, row):
+        """Guarda la imagen y el estado asociados a una ambigüedad.
+
+        A diferencia de `save_frame`, esto está siempre activo: solo escribe
+        cuando aparece una ambigüedad nueva y hay imagen disponible.
+        """
+        image = self._ambiguity_frame_img
+        state = self._ambiguity_frame_state
+        if image is None and self.last_img is not None:
+            image = self.last_img
+            state = self.last_state
+        if image is None or state is None:
+            return None
+        try:
+            self._ambiguity_capture_seq += 1
+            hand = self.hand or {}
+            hand_id = hand.get('hand_id') or (
+                f'H_{self.hand_id:04d}' if self.hand_id is not None else 'H_0000')
+            street = row.get('street') or hand.get('current_street') or 'sin_calle'
+            code = ''.join(c if c.isalnum() else '_' for c in
+                           str(row.get('code') or 'ambiguity'))
+            stamp = datetime.datetime.now().strftime('%Y%m%dT%H%M%S_%f')
+            stem = f'{self._ambiguity_capture_seq:05d}_{hand_id}_{street}_{code}_{stamp}'
+            hand_dir = os.path.join(self.ambiguity_capture_dir, hand_id)
+            os.makedirs(hand_dir, exist_ok=True)
+            img_path = os.path.join(hand_dir, stem + '.png')
+            from PIL import Image
+            Image.fromarray(image).save(img_path)
+            with open(img_path, 'rb') as f:
+                digest = hashlib.sha256(f.read()).hexdigest()
+            meta = {
+                'seq': self._ambiguity_capture_seq,
+                'hand_id': hand_id,
+                'street': street,
+                'code': row.get('code'),
+                'timestamp': datetime.datetime.now().isoformat(),
+                'frame': os.path.relpath(img_path, self.ambiguity_capture_dir),
+                'sha256': digest,
+                'details': _json_safe({k: v for k, v in row.items()
+                                       if k not in ('capture', 'capture_sha256')}),
+                'state': _json_safe(state),
+                'manual_cards': dict(MANUAL_CARDS),
+                'manual_inactive': sorted(MANUAL_INACTIVE),
+                'manual_positions': dict(MANUAL_POSITIONS),
+                'manual_winner': MANUAL_WINNER,
+            }
+            json_path = os.path.join(hand_dir, stem + '.json')
+            with open(json_path, 'w', encoding='utf-8') as f:
+                json.dump(meta, f, ensure_ascii=False, indent=1)
+            with open(self.ambiguity_index_path, 'a', encoding='utf-8') as f:
+                f.write(json.dumps(meta, ensure_ascii=False) + '\n')
+            row['capture'] = os.path.relpath(img_path, REPO_ROOT)
+            row['capture_sha256'] = digest
+            return img_path
+        except Exception as exc:
+            log = getattr(self, '_last_log', print)
+            log(f'  [captura-ambiguedad] no se pudo guardar: {exc}')
             return None
 
     @property
@@ -445,8 +535,16 @@ class LiveRecorder:
         identity = (row.get('code'), row.get('street'), row.get('pos'))
         for i, old in enumerate(self._hand_ambiguities):
             if (old.get('code'), old.get('street'), old.get('pos')) == identity:
+                # Si ya existe evidencia, conservar el primer frame causal y no
+                # generar copias cada vez que el mismo aviso se actualice.
+                if old.get('capture'):
+                    row['capture'] = old['capture']
+                    row['capture_sha256'] = old.get('capture_sha256')
                 self._hand_ambiguities[i] = row
+                if not row.get('capture'):
+                    self._save_ambiguity_evidence(row)
                 return
+        self._save_ambiguity_evidence(row)
         self._hand_ambiguities.append(row)
 
     def _street_contributions(self, street):
@@ -505,7 +603,8 @@ class LiveRecorder:
             if completed or is_final_street:
                 if street != 'preflop' or has_postflop:
                     rake_basis += matched
-        rake = min(0.05 * rake_basis, 2.5 * float(self._blind_bb or 1.0))
+        _rate, _cap_bb = _rake_params()
+        rake = min(_rate * rake_basis, _cap_bb * float(self._blind_bb or 1.0))
         # La modalidad fold conserva el excedente no igualado en el bote
         # registrado; en showdown los excedentes se devuelven.
         pot_inflated = (gross_total if fold_win else matched_total) - rake
@@ -516,9 +615,9 @@ class LiveRecorder:
             'uncalled': round(max(0.0, gross_total - matched_total), 2),
             'rake_basis': round(rake_basis, 2),
             'rake': round(rake, 2),
-            'pot_calculated': round(max(0.0, pot_inflated), 2),
-            'pot_calculated_noninflated': round(max(0.0, pot_not_inflated), 2),
-            'pot_live_calculated': round(max(0.0, gross_total - rake), 2),
+            'pot_calculated': round(max(0.0, pot_inflated), 1),
+            'pot_calculated_noninflated': round(max(0.0, pot_not_inflated), 1),
+            'pot_live_calculated': round(max(0.0, gross_total - rake), 1),
         }
 
     def _audit_live_pot(self, state):
@@ -533,7 +632,11 @@ class LiveRecorder:
         expected = breakdown['pot_live_calculated']
         raw_difference = abs(float(reading) - expected)
         difference = round(raw_difference, 2)
-        if raw_difference > self._ambiguity_tolerance():
+        # Las diferencias pequeñas (ruido de OCR en el bote o en las apuestas)
+        # no son ambigüedades reales: solo se marca cuando supera medio BB o
+        # el 5% del bote leído, lo que sea mayor.
+        tol = max(0.5, 0.05 * float(reading or 0))
+        if raw_difference > tol:
             self._add_ambiguity(
                 'pot_read_vs_contributions', self.hand.get('current_street'),
                 pot_read=round(float(reading), 2),
@@ -913,7 +1016,9 @@ class LiveRecorder:
                 continue
             st = state.get(f'{pid}_state')
 
-            if st in ('retirarse', 'ausente', 'inactivo'):
+            if st in ('retirarse', 'ausente') or (
+                    st == 'inactivo' and self._fold_context_valid(
+                        pos_name, 'preflop', state)):
                 self._add_action('preflop', pos_name, 'f', 0.0, 'observed')
                 continue
 
@@ -970,6 +1075,109 @@ class LiveRecorder:
         })
         if action == 'f':
             self._folded_positions.add(pos)
+
+    def _fold_context_valid(self, pos, street, state, pending_actions=None):
+        """Valida que el fold sea una acción posible en la secuencia de la calle.
+
+        Si hay jugadores que aún deben responder a una apuesta, solo puede
+        foldear el primero de ellos tras el último agresor. Si la apuesta ya se
+        igualó, solo puede foldear el siguiente jugador que no haya actuado.
+        El último jugador que queda nunca puede foldear. Así, después de
+        `UTG b; CO f`, no se acepta otro `UTG f`.
+        """
+        if self.hand is None or not pos:
+            return False
+        actions = list((self.hand.get('streets', {}).get(street) or {}).get(
+            'actions') or [])
+        for item in pending_actions or ():
+            if isinstance(item, dict):
+                if item.get('street', street) == street:
+                    actions.append(item)
+            elif len(item) >= 4 and item[0] == street:
+                actions.append({'pos': item[1], 'action': item[2],
+                                'amount': item[3]})
+
+        folded = set(self._folded_positions)
+        folded.update(a.get('pos') for a in actions
+                      if a.get('action') == 'f')
+
+        # Las posiciones iniciales son fijas durante la mano; el fallback a
+        # la asignación geométrica sirve para los fixtures y manos antiguas.
+        pos_map = self._get_pos_map(state)
+        players = {p.get('pos'): p for p in (self.hand.get('players') or [])
+                   if p.get('active') and p.get('pos')}
+        if not players:
+            players = {p: {'_id': pid, 'pos': p, 'active': True}
+                       for p, pid in pos_map.items()}
+        for other, player in players.items():
+            if other == pos:
+                continue
+            pid = player.get('_id')
+            if state.get(f'{pid}_state') in ('retirarse', 'ausente'):
+                folded.add(other)
+        if pos in folded:
+            return False
+        live = [p for p in players
+                if p not in folded
+                and players[p].get('_id') not in self._inactive_players]
+        if pos not in live or len(live) <= 1:
+            return False
+
+        order = self._get_street_order(state, street)
+        eligible = [p for p in order if p in live
+                    and pos_map.get(p) not in self._allin_players]
+        if pos not in eligible:
+            return False
+
+        # Niveles comprometidos: primero el historial de acciones; los bets
+        # de los dos últimos frames cubren una acción cuyo OCR aún no se anexó.
+        levels = {p: 0.0 for p in players}
+        for a in actions:
+            if a.get('action') in ('p', 'b', 'c', 'r'):
+                ap = a.get('pos')
+                if ap in levels:
+                    levels[ap] = max(levels[ap], float(a.get('amount') or 0.0))
+        prev_state = {} if self._just_changed_street else (self.last_state or {})
+        for p, pid in pos_map.items():
+            if p not in levels:
+                continue
+            for snapshot in (prev_state, state or {}):
+                bet = snapshot.get(f'{pid}_bet')
+                if bet is not None:
+                    levels[p] = max(levels[p], float(bet or 0.0))
+        max_level = max(levels.values(), default=0.0)
+        aggressors = [a.get('pos') for a in actions
+                      if a.get('action') in ('b', 'r')
+                      and float(a.get('amount') or 0.0) >= max_level - 0.05]
+        if not aggressors and street == 'preflop':
+            aggressors = [a.get('pos') for a in actions
+                          if a.get('action') == 'p'
+                          and float(a.get('amount') or 0.0) >= max_level - 0.05]
+        aggressor = aggressors[-1] if aggressors else None
+        owing = [p for p in eligible
+                 if levels.get(p, 0.0) < max_level - 0.05]
+        if owing:
+            if aggressor not in order:
+                leaders = [p for p in order
+                           if p in eligible
+                           and levels.get(p, 0.0) >= max_level - 0.05]
+                aggressor = leaders[-1] if leaders else None
+            if aggressor not in order:
+                return False
+            start = (order.index(aggressor) + 1) % len(order)
+            for i in range(len(order)):
+                candidate = order[(start + i) % len(order)]
+                if candidate in owing:
+                    return candidate == pos
+            return False
+
+        # No one debe fichas: solo es válido el fold del siguiente jugador
+        # que aún no actuó (incluida la opción de la BB preflop).
+        acted = {a.get('pos') for a in actions
+                 if a.get('action') in ('x', 'c', 'b', 'r', 'f')}
+        next_actor = next((p for p in order
+                           if p in eligible and p not in acted), None)
+        return next_actor == pos
 
     # ---------- detección de acciones ----------
 
@@ -1047,7 +1255,6 @@ class LiveRecorder:
             soft_fold = cur_st == 'inactivo'
             seat_gone = cur_st in ('sin jugador', 'fuera')
             dimmed = strong_fold or soft_fold or seat_gone
-            already_acted = any(a['pos'] == pos_name for a in street_actions)
             already_folded = any(a['pos'] == pos_name and a['action'] == 'f'
                                  for a in street_actions)
 
@@ -1076,8 +1283,9 @@ class LiveRecorder:
 
             # ---- Fold: estaba en la mano y ahora difuminado/inactivo ----
             if was_active and (strong_fold or soft_fold):
-                weak_fold = soft_fold and (already_acted or cur_bet > 0)
-                if not hand_ending and not weak_fold and not already_folded:
+                if (not hand_ending and not already_folded
+                        and self._fold_context_valid(
+                            pos_name, street, state, pending_actions=actions)):
                     actions.append((street, pos_name, 'f', 0.0))
                     self._folded_positions.add(pos_name)
                 continue
@@ -1100,6 +1308,18 @@ class LiveRecorder:
                     self._returned_by_pos[(street, pos_name)] = round(
                         self._returned_by_pos.get((street, pos_name), 0.0)
                         + min(returned, prev_bet - cur_bet), 2)
+                continue
+
+            # Si la mano ya terminó (un solo superviviente), no registrar más
+            # acciones: lo que parezca una apuesta es el premio mostrado.
+            live_now = [p for p in PLAYER_IDS
+                        if p not in self._inactive_players
+                        and p not in self._folded_positions
+                        and p != pid
+                        and state.get(f'{p}_stake') is not None
+                        and state.get(f'{p}_state') not in NULL_STATES]
+            if len(live_now) == 0 and pid not in self._folded_positions:
+                # El jugador actual es el único que queda: la mano terminó.
                 continue
 
             # ---- Dinero comprometido: el stake bajó (bet / call / raise) ----
@@ -1344,7 +1564,9 @@ class LiveRecorder:
         for pos, level in dimmed_levels.items():
             if level + 0.05 >= overall_max:
                 continue
-            if not already_has(pos, 'f'):
+            if (not already_has(pos, 'f')
+                    and self._fold_context_valid(
+                        pos, street, cur_state, pending_actions=actions)):
                 actions.append({
                     'pos': pos, 'action': 'f', 'amount': 0.0,
                     'amount_type': 'observed', 'inferred': True,
@@ -1439,7 +1661,10 @@ class LiveRecorder:
                              'la calle siguiente.')
                 else:
                     # Fold en la calle anterior: no llegó a igualar.
-                    if not already_has(pos, 'f'):
+                    if (not already_has(pos, 'f')
+                            and self._fold_context_valid(
+                                pos, street, cur_state,
+                                pending_actions=actions)):
                         self.hand['streets'][street]['actions'].append({
                             'pos': pos, 'action': 'f', 'amount': 0.0,
                             'amount_type': 'observed', 'inferred': True,
@@ -1526,6 +1751,31 @@ class LiveRecorder:
             self._add_implied_checks(street_name, state, confirm_all_check=confirm_all_check)
 
         actions = self.hand['streets'][street_name].setdefault('actions', [])
+        # Calles alcanzadas (con tablero) pero sin acciones registradas: todos
+        # los jugadores que seguían en la mano checkearon. Se añaden los checks
+        # para no dejar la calle en blanco (defecto visto en H_1283).
+        board = (self.hand['streets'][street_name].get('board') or [])
+        skipped = any(a.get('code') == 'street_not_captured'
+                      and a.get('street') == street_name
+                      for a in (self._hand_ambiguities or []))
+        if (not actions and board and street_name != 'preflop'
+                and not skipped and not self._betting_closed_by_allin(state)):
+            pos_map = self._get_pos_map(state) if state else {}
+            folded = set(self._folded_positions)
+            for p in (self.hand.get('players') or []):
+                pid = p.get('_id')
+                pos = p.get('pos')
+                if not p.get('active') or not pos:
+                    continue
+                if pid in self._inactive_players or pos in folded:
+                    continue
+                if pid in self._allin_players:
+                    continue
+                if state is not None and state.get(f'{pid}_state') in (
+                        'retirarse', 'ausente', 'sin jugador', 'fuera'):
+                    continue
+                actions.append({'pos': pos, 'action': 'x', 'amount': 0.0,
+                                'inferred': True, 'ambiguous': False})
         if not actions:
             return
 
@@ -1545,7 +1795,13 @@ class LiveRecorder:
         # Merge consecutive same-position actions
         merged = []
         for a in actions:
-            if merged and merged[-1]['pos'] == a['pos'] and a['action'] in ('c', 'b', 'r'):
+            # Un check (x) seguido de bet/call/raise es un check-raise o una
+            # segunda ronda: NO se fusionan, porque el check es una acción
+            # distinta que debe conservarse (defecto visto en H_1300).
+            prev_is_check = merged and merged[-1].get('action') == 'x'
+            if (merged and merged[-1]['pos'] == a['pos']
+                    and a['action'] in ('c', 'b', 'r')
+                    and not prev_is_check):
                 # Importes absolutos: una actualización de la misma acción
                 # sustituye el nivel, nunca se suma como si fuera un delta.
                 merged[-1]['amount'] = max(merged[-1]['amount'], a['amount'])
@@ -1677,9 +1933,18 @@ class LiveRecorder:
         if self._betting_closed_by_allin(state):
             return
         existing = self.hand['streets'][street_name].setdefault('actions', [])
-        existing_pos = {a['pos'] for a in existing}
         pos_map = self._get_pos_map(state)
         ORDER = self._get_street_order(None, street_name)
+
+        prior_streets = ('preflop', 'flop', 'turn', 'river')
+        prior_folded = set()
+        for prior in prior_streets:
+            if prior == street_name:
+                break
+            for action in ((self.hand.get('streets') or {}).get(prior) or {}).get(
+                    'actions') or []:
+                if action.get('action') == 'f':
+                    prior_folded.add(action.get('pos'))
 
         def in_hand(pos):
             pid = pos_map.get(pos)
@@ -1687,11 +1952,15 @@ class LiveRecorder:
                 return False
             if pid in self._inactive_players:
                 return False
-            if pos in self._folded_positions:
+            if pos in prior_folded:
                 return False
             if pid in self._allin_players:
                 return False
-            if state.get(f'{pid}_stake') is None:
+            player = next((p for p in self.hand.get('players') or []
+                           if p.get('_id') == pid), None)
+            if player is not None and not player.get('active'):
+                return False
+            if state.get(f'{pid}_state') in ('sin jugador', 'fuera'):
                 return False
             return True
 
@@ -1720,16 +1989,41 @@ class LiveRecorder:
             keep = set(leading)
             existing[:] = [a for a in existing if not (a['action'] == 'x' and a['pos'] not in keep)]
 
-        existing_pos = {a['pos'] for a in existing}
+        # Solo las acciones ocurridas antes del primer apostador impiden
+        # inferir un check previo. Una acción posterior (p.ej. fold/call ante
+        # esa apuesta) no borra el check que necesariamente precedió al bet.
+        if first_idx is not None:
+            first_bet_action_idx = next((i for i, a in enumerate(existing)
+                                         if a.get('action') in ('b', 'r')
+                                         and a.get('pos') in ORDER
+                                         and ORDER.index(a.get('pos')) == first_idx),
+                                        len(existing))
+            before_bet = existing[:first_bet_action_idx]
+        else:
+            before_bet = existing
+        acted_before_bet = {a.get('pos') for a in before_bet}
+        existing_checks = {a.get('pos') for a in existing
+                           if a.get('action') == 'x'}
+        folded_this_street = {a.get('pos') for a in existing
+                              if a.get('action') == 'f'}
         checks = []
         for pos in ORDER:
             if pos not in leading:
                 continue
-            if pos in existing_pos:
+            if pos in acted_before_bet or pos in existing_checks:
+                continue
+            # Si foldeó antes del apostador (o en una calle sin apuesta), no
+            # se le inventa un check. Si su fold fue después, el check previo
+            # puede ser justamente lo que falta reconstruir.
+            if pos in folded_this_street and first_idx is None:
                 continue
             if in_hand(pos):
+                # Los checks que se deducen por posición (antes del apostador,
+                # o todos cuando el pot está estable) son la única reconstrucción
+                # válida: no son ambiguos, aunque se hayan inferido. Solo se marcan
+                # como ambiguos las acciones cuyo orden o tipo no se pudo observar.
                 checks.append({'pos': pos, 'action': 'x', 'amount': 0.0,
-                               'inferred': True, 'ambiguous': True})
+                               'inferred': True, 'ambiguous': False})
         if checks and street_name != 'preflop':
             existing[0:0] = checks
 
@@ -1754,7 +2048,11 @@ class LiveRecorder:
                 out.append(p)
                 continue
             st = state.get(f'{pid}_state')
-            if st in ('retirarse', 'ausente', 'inactivo', 'sin jugador', 'fuera'):
+            if (st in ('retirarse', 'ausente', 'sin jugador', 'fuera')
+                    or (st == 'inactivo'
+                        and self._fold_context_valid(
+                            pos, self.hand.get('current_street') or 'preflop',
+                            state))):
                 continue
             out.append(p)
         return out
@@ -1769,9 +2067,39 @@ class LiveRecorder:
         jugadores "vivos".
         """
         survivors = self._survivors(state)
-        if len(survivors) != 1:
+        # Si hay un ganador manual único, la mano es victoria por fold aunque
+        # el OCR aún muestre a alguien "activo": se completan los folds de
+        # todos los demás.
+        if MANUAL_WINNER and len(MANUAL_WINNER) == 1:
+            survivor_ids = {MANUAL_WINNER[0]}
+        elif len(survivors) == 1:
+            survivor_ids = {p.get('_id') for p in survivors}
+        else:
+            # Más de un superviviente según el OCR. Si en las acciones ya
+            # foldearon todos menos uno, es una victoria por fold cuyo último
+            # fold no se registró (el que deja un solo jugador en pie).
+            folded = set()
+            for s in (self.hand.get('streets') or {}).values():
+                for a in (s.get('actions') or []):
+                    if a.get('action') == 'f' and a.get('pos'):
+                        folded.add(a.get('pos'))
+            still_in = [p for p in (self.hand.get('players') or [])
+                        if p.get('active') and p.get('pos')
+                        and p.get('pos') not in folded
+                        and p.get('_id') not in self._inactive_players
+                        and p.get('_id') not in self._allin_players]
+            # all-in players are still in
+            allin_in = [p for p in (self.hand.get('players') or [])
+                        if p.get('active') and p.get('pos')
+                        and p.get('_id') in self._allin_players
+                        and p.get('pos') not in folded]
+            if len(still_in) + len(allin_in) == 1:
+                survivor = (still_in + allin_in)[0]
+                survivor_ids = {survivor.get('_id')}
+            else:
+                return
+        if not survivor_ids:
             return
-        survivor_ids = {p.get('_id') for p in survivors}
         street = self.hand.get('current_street') or 'preflop'
         actions = self.hand['streets'][street].setdefault('actions', [])
         for p in self.hand.get('players') or []:
@@ -1799,6 +2127,10 @@ class LiveRecorder:
                      'activo, pero su fold no se había registrado.')
 
     def finalize_hand(self, state):
+        if self._ambiguity_frame_state is None:
+            self._ambiguity_frame_state = state or self.last_state
+        if self._ambiguity_frame_img is None:
+            self._ambiguity_frame_img = self.last_img
         self._complete_missing_folds(state)
         self._finalize_street(self.hand['current_street'], state)
         live_players = self._survivors(state)
@@ -1811,7 +2143,7 @@ class LiveRecorder:
         noninflated = breakdown['pot_calculated_noninflated']
         resolution = 'calculated'
         if pot_read is not None:
-            pot_read = round(float(pot_read), 2)
+            pot_read = round(float(pot_read), 1)
             tol = self._ambiguity_tolerance()
             if (fold_win and abs(pot_read - noninflated) <= tol
                     and abs(pot_read - calculated) > 0.005):
@@ -1829,9 +2161,15 @@ class LiveRecorder:
                     pot_calculated_noninflated=noninflated,
                     fold_win=fold_win,
                     difference=round(abs(pot_read - calculated), 2))
-        self.hand['final_pot'] = calculated
+        self.hand['final_pot'] = round(calculated, 1)
 
-        if MANUAL_WINNER is not None:
+        if fold_win and len(live_players) == 1:
+            # Victoria por fold: el ganador es el único superviviente. El
+            # apartado `showdown` queda vacío porque no hubo enfrentamiento de
+            # manos: el bote se ganó por abandono de los demás.
+            self.hand['winner'] = [live_players[0]['_id']]
+            self.hand['showdown'] = {}
+        elif MANUAL_WINNER is not None:
             self.hand['winner'] = MANUAL_WINNER
             non_folded = [p for p in self.hand['players'] if p['_id'] in MANUAL_WINNER]
             if len(non_folded) == 1:
@@ -1873,7 +2211,7 @@ class LiveRecorder:
             'rake_basis': breakdown['rake_basis'],
             'rake': breakdown['rake'],
             'big_blind': round(float(self._blind_bb or 1.0), 2),
-            'rake_cap': round(2.5 * float(self._blind_bb or 1.0), 2),
+            'rake_cap': round(_rake_params()[1] * float(self._blind_bb or 1.0), 2),
             'ambiguity_tolerance': round(self._ambiguity_tolerance(), 2),
             'fold_win': fold_win,
             'award_display_ignored': list(self._award_display_events.values()),
@@ -1950,6 +2288,10 @@ class LiveRecorder:
     # ---------- procesar un frame (usado por run y por captura manual) ----------
 
     def process_frame(self, state, img_arr, log=print):
+        # Mantener el frame causal disponible para `_add_ambiguity`, que puede
+        # ejecutarse más adelante en esta misma pasada del recorder.
+        self._ambiguity_frame_state = state
+        self._ambiguity_frame_img = img_arr
         pot = state.get('pot')
         if pot is not None and self.hand is not None:
             self.hand['max_pot'] = max(self.hand.get('max_pot', 0), pot)
@@ -1978,7 +2320,13 @@ class LiveRecorder:
                         'stack_after': round(float(values['after']), 2),
                         'bet_display_ignored': round(float(values['bet']), 2),
                     }
+                current_evidence = (self._ambiguity_frame_state,
+                                    self._ambiguity_frame_img)
+                self._ambiguity_frame_state = self.last_state
+                self._ambiguity_frame_img = self.last_img
                 self.finalize_hand(self.last_state)
+                self._ambiguity_frame_state, self._ambiguity_frame_img = \
+                    current_evidence
             state = self._without_award_bet_overlay(state, award_candidates)
             self._assign_cards_by_name(state)
             self.start_hand(state)

@@ -357,6 +357,12 @@ class HandEditor:
         self.sstatus = ttk.Label(bf, text='')
         self.sstatus.pack(side=tk.RIGHT, padx=4)
 
+        # Anotaciones del recorder (ambigüedades, premios ignorados, etc.)
+        anf = ttk.LabelFrame(rc, text='Anotaciones del recorder', padding=2)
+        anf.pack(fill=tk.X, pady=(4,0))
+        self.anot = tk.Text(anf, height=4, font=('Consolas',8), wrap=tk.WORD, state=tk.DISABLED)
+        self.anot.pack(fill=tk.X)
+
     # ===== LOGIC =====
 
     def _showall(self):
@@ -480,6 +486,36 @@ class HandEditor:
             t.delete(*t.get_children())
             for a in sd.get('actions',[]):
                 t.insert('', tk.END, values=(a.get('pos',''), a.get('action',''), a.get('amount','')))
+
+        # Anotaciones del recorder
+        self.anot.config(state=tk.NORMAL)
+        self.anot.delete('1.0', tk.END)
+        audit = h.get('recorder_audit', {}) or {}
+        lines = []
+        if audit.get('ambiguous'):
+            lines.append('AMBIGUO: ' + ', '.join(
+                a.get('code', '?') for a in audit.get('ambiguities', [])))
+        for a in audit.get('ambiguities', []):
+            if a.get('capture'):
+                lines.append('  captura de evidencia (%s): %s' % (
+                    a.get('code', '?'), a['capture']))
+        for a in audit.get('ambiguous_actions', []):
+            lines.append('  accion ambigua: %s %s %s (inferred=%s)' % (
+                a.get('street'), a.get('pos'), a.get('action'), a.get('inferred')))
+        for ev in audit.get('award_display_ignored', []) or []:
+            lines.append('  premio ignorado: %s stack %s->%s bet %s' % (
+                ev.get('pos'), ev.get('stack_before'), ev.get('stack_after'),
+                ev.get('bet_display_ignored')))
+        if audit.get('fold_win'):
+            lines.append('Victoria por fold (fold_win=True)')
+        if audit.get('pot_resolution'):
+            lines.append('pot_resolution: %s (leido=%s calculado=%s)' % (
+                audit.get('pot_resolution'), audit.get('pot_read'),
+                audit.get('pot_calculated')))
+        if not lines:
+            lines.append('(sin anotaciones)')
+        self.anot.insert('1.0', '\n'.join(lines))
+        self.anot.config(state=tk.DISABLED)
 
     def _mod(self, m=True):
         if m: self.sstatus.config(text='★ Modificado', foreground='red')

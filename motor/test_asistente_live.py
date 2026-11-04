@@ -349,18 +349,28 @@ class _DummyReader:
         self.sm = _DummySM(label)
 
 
-def _live_state(pot=3.0, hero='activo'):
+def _live_state(pot=3.0, hero='activo', hero_bet=0.5, p2_bet=1.0):
     return {
         'pot': pot,
         'hero_state': hero,
         'hero_stake': 96.5,
-        'hero_bet': 0.5,
+        'hero_bet': hero_bet,
         'p1_state': 'inactivo', 'p1_stake': None, 'p1_bet': 0.0,
-        'p2_state': 'activo', 'p2_stake': 40.0, 'p2_bet': 1.0,
+        'p2_state': 'activo', 'p2_stake': 40.0, 'p2_bet': p2_bet,
         'p3_state': 'inactivo', 'p3_stake': None, 'p3_bet': 0.0,
         'p4_state': 'inactivo', 'p4_stake': None, 'p4_bet': 0.0,
         'p5_state': 'inactivo', 'p5_stake': None, 'p5_bet': 0.0,
     }
+
+
+def _con_mano(asis, hero_pos='BTN', street='preflop', actions=None,
+              positions=None):
+    asis.rec.hand = {
+        'hand_id': 'H_TEST', 'current_street': street,
+        'streets': {street: {'actions': list(actions or [])}},
+    }
+    asis.rec._hand_positions = positions or {'hero': hero_pos,
+                                             'p2': 'BB'}
 
 
 def test_hero_act_con_boton_reconocido(asis):
@@ -368,20 +378,61 @@ def test_hero_act_con_boton_reconocido(asis):
     assert asis._hero_act(_live_state(), None) is True
 
 
-def test_hero_act_fallback_logico(asis):
+def test_hero_act_fallback_reconstruye_turno(asis):
+    """Sin OCR de botones, el turno sale de las acciones grabadas."""
     asis.reader = _DummyReader(None)      # botón NO reconocido
-    assert asis._hero_act(_live_state(pot=3.0), None) is True
+    _con_mano(asis, 'BTN', 'preflop', [
+        {'pos': 'SB', 'action': 'p', 'amount': 0.5},
+        {'pos': 'BB', 'action': 'p', 'amount': 1.0},
+    ])
+    assert asis._hero_act(_live_state(), None) is True
 
 
-def test_hero_act_false_sin_pot(asis):
+def test_hero_act_false_si_ya_actuo(asis):
+    """Hero ya hizo check y el rival aún no habla: no le toca."""
     asis.reader = _DummyReader(None)
-    assert asis._hero_act(_live_state(pot=0.0), None) is False
+    _con_mano(asis, 'BTN', 'flop', [
+        {'pos': 'BB', 'action': 'x', 'amount': 0.0},
+        {'pos': 'BTN', 'action': 'x', 'amount': 0.0},
+    ])
+    state = _live_state(hero_bet=0.0, p2_bet=0.0)
+    assert asis._hero_act(state, None) is False
+
+
+def test_hero_act_true_tras_apuesta_del_rival(asis):
+    """Hero checkeó y el rival apostó: vuelve a ser su turno."""
+    asis.reader = _DummyReader(None)
+    _con_mano(asis, 'BB', 'flop', [
+        {'pos': 'BB', 'action': 'x', 'amount': 0.0},
+        {'pos': 'BTN', 'action': 'b', 'amount': 5.0},
+    ], positions={'hero': 'BB', 'p2': 'BTN'})
+    state = _live_state(hero_bet=0.0, p2_bet=5.0)
+    assert asis._hero_act(state, None) is True
+
+
+def test_hero_act_false_mientras_habla_el_rival(asis):
+    """Hero checkeó y el rival todavía no actuó: no le toca."""
+    asis.reader = _DummyReader(None)
+    _con_mano(asis, 'BB', 'flop', [
+        {'pos': 'BB', 'action': 'x', 'amount': 0.0},
+    ], positions={'hero': 'BB', 'p2': 'BTN'})
+    state = _live_state(hero_bet=0.0, p2_bet=0.0)
+    assert asis._hero_act(state, None) is False
 
 
 def test_hero_act_false_si_fold(asis):
     asis.reader = _DummyReader('igualar')
-    assert asis._hero_act(_live_state(pot=3.0, hero='inactivo'),
-                          None) is False
+    assert asis._hero_act(_live_state(hero='inactivo'), None) is False
+
+
+def test_hero_act_false_si_fold_registrado(asis):
+    """El OCR aún lo ve 'activo', pero la mano grabada ya tiene su fold."""
+    asis.reader = _DummyReader(None)
+    _con_mano(asis, 'BTN', 'preflop', [
+        {'pos': 'BTN', 'action': 'f', 'amount': 0.0},
+        {'pos': 'BB', 'action': 'p', 'amount': 1.0},
+    ])
+    assert asis._hero_act(_live_state(), None) is False
 
 
 def test_state_key_incluye_hand_id(asis):
@@ -394,6 +445,38 @@ def test_state_key_incluye_hand_id(asis):
     assert k1 != k2        # mano nueva → siempre reinforma
     asis.rec = SimpleNamespace(hand={'hand_id': 'H_42'})
     assert asis._state_key(st) == k2
+
+
+def _step_fixture(asis, reco):
+    """asis mínima para ejercitar `step` sin modelos ni pantalla."""
+    asis.rec = SimpleNamespace(hand=None,
+                               process_frame=lambda *a, **k: None)
+    asis._observe_stacks = lambda state: None
+    asis._state_key = lambda state: 'K'
+    asis._no_reco_reason = lambda state: 'motivo'
+    asis.recomendacion = lambda *a, **k: reco
+    asis.recomendaciones = lambda *a, **k: reco
+    asis.last_reco_key = None
+    asis.last_reco_reason = None
+    asis._last_reco_log = None
+    asis.last_state = None
+    asis.last_img = None
+
+
+def test_step_no_marca_estado_si_no_hay_recomendacion(asis):
+    """Un None transitorio no debe bloquear el reintento del mismo estado."""
+    _step_fixture(asis, None)
+    asis.step(_live_state(), None, None, log=lambda _m: None,
+              require_turn=False)
+    assert asis.last_reco_key is None
+    assert asis.last_reco_reason == 'motivo'
+
+
+def test_step_marca_estado_cuando_hay_recomendacion(asis):
+    _step_fixture(asis, object())
+    asis.step(_live_state(), None, None, log=lambda _m: None,
+              require_turn=False)
+    assert asis.last_reco_key == 'K'
 
 
 # ---------------------------------------------------------------------------

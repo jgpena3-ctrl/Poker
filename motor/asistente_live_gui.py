@@ -71,6 +71,12 @@ class AsistenteLiveGUI:
         ttk.Checkbutton(top, text='Ventana siempre al frente',
                         variable=self.topmost_var,
                         command=self._toggle_topmost).pack(side=tk.LEFT)
+
+        # Palomita de comision: activa = 3% / 0.3 BB; inactiva = 5% / 2.5 BB.
+        self.rake_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(top, text='Comision 3% / 0.3 BB',
+                        variable=self.rake_var,
+                        command=self._toggle_rake).pack(side=tk.LEFT, padx=(10, 0))
         self.root.attributes('-topmost', True)
 
         # -- Players (nombres, posición, cartas manuales) --
@@ -208,6 +214,10 @@ class AsistenteLiveGUI:
 
     def _toggle_topmost(self):
         self.root.attributes('-topmost', bool(self.topmost_var.get()))
+
+    def _toggle_rake(self):
+        import recorder_live as rl_mod
+        rl_mod.USE_NEW_RAKE = bool(self.rake_var.get())
 
     def _on_mode_change(self):
         if self.mode_var.get() == 'auto':
@@ -448,8 +458,9 @@ class AsistenteLiveGUI:
                              on_reco=on_reco, require_turn=False,
                              force_reco=True)
         if res is None:
-            self._log('  (sin recomendación: faltan cartas del hero o rival '
-                      'activo)')
+            motivo = getattr(self.asis, 'last_reco_reason', None) \
+                or 'faltan cartas del hero o rival activo'
+            self._log(f'  (sin recomendación: {motivo})')
         rec = self.asis.rec
         if rec.hand:
             if before_id != rec.hand_id:
@@ -472,7 +483,9 @@ class AsistenteLiveGUI:
                           state.get(f'{p["_id"]}_stake') is not None and
                           state.get(f'{p["_id"]}_state')
                           not in ('retirarse', 'ausente', 'inactivo')]
-            if non_folded:
+            if len(non_folded) == 1:
+                self.winner_var.set(non_folded[0]['_id'])
+            elif non_folded:
                 self.winner_var.set(','.join(p['_id']
                                              for p in non_folded))
             self.end_hand_btn.config(state=tk.NORMAL)
@@ -561,6 +574,8 @@ class AsistenteLiveGUI:
         self._sync_to_recorder()
         if self.asis is not None:
             self.asis.rec = rl_mod.LiveRecorder()
+            # El recorder nuevo nace sin consumidor del decision log: sin
+            # esto no se escriben los eventos `resolution` de las manos.
             self.asis.rec.on_hand_finalized = \
                 self.asis.decision_log.resolve_hand
         self.end_hand_btn.config(state=tk.DISABLED)

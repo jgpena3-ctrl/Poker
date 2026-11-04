@@ -441,3 +441,12 @@ dice. Hay dos tests que lo comprueban simulando justo esos dos fallos.
   mirado las 1258 líneas y que lo que queda está en la lista: el saneamiento
   ya corrigió 2 y **`DOCS/SANEAMIENTO.md`** deja el resto con id, calle,
   índice y acción exacta. Lo no declarado sigue sin mirar.
+
+## Addendum — revisión focal de H_1292 (2026-10-29)
+
+Se corrigió en el árbol de trabajo un fold falso de UTG causado por un frame
+aislado con la estrella oscurecida. El antes/después, el alcance de la
+corrección y la validación contextual añadida al recorder están en
+[`DOCS/DEFECTO_H1292.md`](DEFECTO_H1292.md). La corrección no declara revisadas
+las demás manos del bloque añadido después de H_1282; por eso el manifiesto de
+la base canónica no se amplía en este cambio focal.

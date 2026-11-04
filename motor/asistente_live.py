@@ -263,6 +263,7 @@ def _villain_postflop_actions(hand, villain_pos):
 
 
 _POSTFLOP_ORDER = POSITION_ORDER[1:] + POSITION_ORDER[:1]  # SB,BB,CO,MP,UTG,BTN
+_PREFLOP_ORDER = ['UTG', 'MP', 'CO', 'BTN', 'SB', 'BB']
 
 
 def _is_hero_pos(pos, hero_pos):
@@ -474,6 +475,8 @@ class Asistente:
             }
 
         self.last_reco_key = None
+        self.last_reco_reason = None
+        self._last_reco_log = None
         self.last_state = None
         self.last_img = None
         self.runout = True
@@ -833,13 +836,124 @@ class Asistente:
         positions = self.rec._assign_positions(state)
         return positions.get(pid)
 
+    def _recorded_folds(self):
+        """Posiciones con un fold ya registrado en la mano en curso.
+
+        Es la fuente de verdad frente al OCR del asiento: tras el fold la
+        estrella tarda en apagarse y el asistente seguía recomendando calles
+        posteriores como si el hero siguiera en la mano."""
+        hand = getattr(self.rec, 'hand', None)
+        if not hand:
+            return set()
+        folds = set()
+        for data in (hand.get('streets') or {}).values():
+            for action in (data or {}).get('actions') or []:
+                if action.get('action') == 'f' and action.get('pos'):
+                    folds.add(action['pos'])
+        return folds
+
+    def _pos_map(self, state):
+        """pid -> posición de mesa en la mano en curso (None si no se sabe)."""
+        out = {}
+        for pid in PLAYER_IDS:
+            try:
+                out[pid] = self._pos_of(pid, state)
+            except Exception:
+                out[pid] = None
+        return out
+
+    def _hero_folded(self, state, hero_pid=None):
+        """True si el hero ya se retiró según la mano que se está grabando."""
+        hero_pid = hero_pid or self._hero_pid()
+        pos = self._pos_map(state).get(hero_pid)
+        return bool(pos) and pos in self._recorded_folds()
+
+    def _next_to_act(self, state, hero_pid=None):
+        """True si a `hero_pid` le toca actuar ahora, según la mano grabada.
+
+        Fallback cuando el OCR no reconoce los botones. A diferencia del
+        antiguo "hero activo + rival activo + bote > 0" (cierto en cualquier
+        frame de la mano), exige una decisión abierta: o el hero debe fichas,
+        o es el primero de la calle que aún no ha actuado.
+        """
+        hero_pid = hero_pid or self._hero_pid()
+        hand = getattr(self.rec, 'hand', None)
+        if not hand:
+            return False
+        street = hand.get('current_street') or 'preflop'
+        actions = ((hand.get('streets') or {}).get(street)
+                   or {}).get('actions') or []
+        pos_of = self._pos_map(state)
+        hero_pos = pos_of.get(hero_pid)
+        if not hero_pos:
+            return False
+        folds = self._recorded_folds()
+        if hero_pos in folds:
+            return False
+        hero_stake = state.get(f'{hero_pid}_stake')
+        if hero_stake is not None and hero_stake <= 0.01:
+            return False        # all-in: no queda decisión por tomar
+
+        present = []
+        for pid in PLAYER_IDS:
+            pos = pos_of.get(pid)
+            if not pos or pos in folds:
+                continue
+            if state.get(f'{pid}_state') != 'activo':
+                continue
+            present.append(pos)
+        order = _PREFLOP_ORDER if street == 'preflop' else _POSTFLOP_ORDER
+        seq = [pos for pos in order if pos in present]
+        if hero_pos not in seq:
+            return False        # el hero no está en juego en esta mano
+        if len(seq) <= 1:
+            return False        # el hero es el único que queda: mano cerrada
+
+        bets = {}
+        for pid, pos in pos_of.items():
+            if pos in seq:
+                bets[pos] = state.get(f'{pid}_bet') or 0.0
+        max_bet = max(bets.values(), default=0.0)
+        to_call = max_bet - bets.get(hero_pos, 0.0)
+
+        if to_call > 0.01:
+            # El hero debe fichas: tiene una decisión pendiente en esta ronda.
+            # No se exige que sea el siguiente estricto porque el registro de
+            # acciones puede venir incompleto (folds/calls sin detectar).
+            return True
+
+        if max_bet <= 0.01:
+            # Sin apuesta: actúa el primero que aún no lo ha hecho.
+            acted = {a.get('pos') for a in actions
+                     if a.get('action') in ('x', 'c', 'f', 'b', 'r')}
+            nxt = next((pos for pos in seq if pos not in acted), None)
+            return nxt == hero_pos
+
+        # Todos han igualado. Preflop la BB conserva su opción si hubo acción.
+        if street == 'preflop':
+            bb_acted = any(
+                a.get('pos') == 'BB'
+                and a.get('action') in ('x', 'c', 'f', 'b', 'r')
+                for a in actions)
+            if 'BB' in seq and not bb_acted:
+                return hero_pos == 'BB'
+        return False
+
+    def _hero_maybe_to_act(self, state):
+        """Fallback sin OCR de botones (ver `_next_to_act`)."""
+        if state.get(f'{self._hero_pid()}_state') != 'activo':
+            return False
+        return self._next_to_act(state)
+
     def _hero_act(self, state, pil):
         """True si es el turno del hero.
 
-        Primero intenta el botón de acción visible (StateMatcher); si el botón
-        no se reconoce (o es None), cae a un fallback LÓGICO: hero activo +
-        rival activo + bote > 0 (spot vivo)."""
+        Primero el botón de acción visible (StateMatcher); si no se reconoce
+        (o es None), el turno se reconstruye desde la mano grabada
+        (`_next_to_act`), no desde "hay un spot vivo"."""
         if state.get(f'{self._hero_pid()}_state') != 'activo':
+            return False
+        if self._hero_folded(state):
             return False
         try:
             label = self.reader.sm.read(pil, self._hero_pid())
@@ -847,19 +961,13 @@ class Asistente:
             label = None
         if label in HERO_ACTION_LABELS:
             return True
-        return self._hero_maybe_to_act(state)
-
-    def _hero_maybe_to_act(self, state):
-        """Fallback sin OCR de botones: hay un spot vivo pendiente."""
-        if state.get(f'{self._hero_pid()}_state') != 'activo':
-            return False
-        if self._villain_id(state) is None:
-            return False
-        return (state.get('pot') or 0.0) > 0
+        return self._next_to_act(state)
 
     def _pid_act(self, pid, state, pil):
         """True si a ESE asiento le toca actuar ahora."""
         if state.get(f'{pid}_state') != 'activo':
+            return False
+        if self._hero_folded(state, pid):
             return False
         try:
             label = self.reader.sm.read(pil, pid)
@@ -867,8 +975,7 @@ class Asistente:
             label = None
         if label in HERO_ACTION_LABELS:
             return True
-        return self._villain_id(state, hero_pid=pid) is not None \
-            and (state.get('pot') or 0.0) > 0
+        return self._next_to_act(state, pid)
 
     def _alguna_hero_act(self, state, pil):
         """True si algún hero conocido y activo tiene decisión abierta.
@@ -1307,6 +1414,7 @@ class Asistente:
         """
         heroes = self._heroes_conocidos(state)
         if not heroes:
+            self.last_reco_reason = 'sin héroes activos con cartas'
             return []
         board = _board_codes(state) or self._board_fallback()
         known_pids = [pid for pid, _cards in heroes]
@@ -1317,6 +1425,8 @@ class Asistente:
 
         out = []
         for hero_pid, hero in heroes:
+            if self._hero_folded(state, hero_pid):
+                continue
             villano = self._villain_id(state, hero_pid=hero_pid,
                                        known_pids=known_pids)
             if villano is None:
@@ -1327,6 +1437,8 @@ class Asistente:
                 verbose=verbose, on_reco=on_reco, runout=runout, seed=seed)
             if evs is not None:
                 out.append((hero_pid, evs))
+        if not out and self.last_reco_reason is None:
+            self.last_reco_reason = 'sin rival activo'
         return out
 
     def _recomendacion_para(self, state, hero_pid, hero, board, villain,
@@ -1636,19 +1748,24 @@ class Asistente:
         `on_reco(texto, evs, sit, label)` se invoca con el panel formateado;
         si no, se imprime en consola (según `verbose`). `seed` fijo →
         determinista el sorteo preflop (tests)."""
+        hero_pid = self._hero_pid()
+        if self._hero_folded(state, hero_pid):
+            self.last_reco_reason = 'el héroe ya se retiró'
+            return None
         hero = self._hero_cards_fallback()
         if len(hero) < 2:
             hero = self._hero_cards_of(state)
         if len(hero) < 2:
+            self.last_reco_reason = 'faltan cartas del héroe'
             return None
         board = _board_codes(state)
         if not board:
             board = self._board_fallback()
-        hero_pid = self._hero_pid()
         conocidos = [p for p, _ in self._heroes_conocidos(state)]
         villanos = self._villain_id(state, hero_pid=hero_pid,
                                     known_pids=conocidos)
         if villanos is None:
+            self.last_reco_reason = 'sin rival activo'
             return None
         others = self._otros_heroes(state, hero_pid, board)
         return self._recomendacion_para(
@@ -1671,15 +1788,31 @@ class Asistente:
 
     # ------------------------------------------------------------------
 
+    def _no_reco_reason(self, state):
+        """Motivo legible de por qué este frame no produce recomendación."""
+        hero_pid = self._hero_pid()
+        if self._hero_folded(state, hero_pid):
+            return 'el héroe ya se retiró'
+        hero = self._hero_cards_fallback() or self._hero_cards_of(state)
+        if len(hero) < 2:
+            return 'faltan cartas del héroe'
+        conocidos = [p for p, _ in self._heroes_conocidos(state)]
+        if self._villain_id(state, hero_pid=hero_pid,
+                            known_pids=conocidos) is None:
+            return 'sin rival activo'
+        return 'sin candidatos'
+
     def step(self, state, img_arr, pil, log=print, on_reco=None,
              require_turn=True, force_reco=False, runout=None,
              all_heroes=False):
         """Procesa UN fotograma: registro continuo + recomendación (si toca a
         hero y la situación cambió). Lo usan `run()` y la GUI.
 
-        require_turn=True  → solo recomienda si `_hero_act` (botón o fallback
-                            lógico). require_turn=False (manual) → recomienda
-                            en cada frame si cambió la situación.
+        require_turn=True  → solo recomienda si `_hero_act` (botón visible o
+                            turno reconstruido desde la mano grabada).
+                            require_turn=False (manual) → recomienda en cada
+                            frame si cambió la situación (salvo que el héroe
+                            ya se haya retirado).
 force_reco=True    → ignora el dedupe (un clic manual = una reconsulta).
         runout             → True: EV a showdown con sorteo de runout en ramas
                              pasivas (modo manual, ~1-2 s); None: usa self.runout.
@@ -1701,6 +1834,7 @@ force_reco=True    → ignora el dedupe (un clic manual = una reconsulta).
             else:
                 turn = self._hero_act(state, pil) if require_turn else True
             res = None
+            self.last_reco_reason = None
             if turn:
                 key = self._state_key(state)
                 if force_reco or key != self.last_reco_key:
@@ -1711,16 +1845,37 @@ force_reco=True    → ignora el dedupe (un clic manual = una reconsulta).
                         else:
                             res = self.recomendacion(state, verbose=False,
                                                      on_reco=on_reco)
-                        self.last_reco_key = key
+                        if res:
+                            self.last_reco_key = key
+                            self._last_reco_log = None
+                        else:
+                            # No marcar el estado como "ya recomendado": si el
+                            # fallo fue transitorio (cartas sin leer, rival no
+                            # detectado) el siguiente frame debe reintentarlo.
+                            self.last_reco_key = None
+                            if self.last_reco_reason is None:
+                                self.last_reco_reason = self._no_reco_reason(state)
+                            msg = ('  [rec] sin recomendación: '
+                                   + self.last_reco_reason)
+                            # No repetir el mismo aviso en cada frame.
+                            if msg != getattr(self, '_last_reco_log', None):
+                                self._last_reco_log = msg
+                                log(msg)
                     except Exception as e:
+                        self.last_reco_key = None
+                        self.last_reco_reason = f'error: {e}'
                         log(f'  [rec] error: {e}')
             else:
                 self.last_reco_key = None   # hero ya actuó: nueva vez
+                self.last_reco_reason = (
+                    'el héroe ya se retiró' if self._hero_folded(state)
+                    else 'no es el turno del héroe')
 
             self.last_state = state
             self.last_img = img_arr
             return res
         except Exception as e:
+            self.last_reco_reason = f'error: {e}'
             log(f'  [capture] error: {e}')
             return None
 
