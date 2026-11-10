@@ -108,7 +108,14 @@ def _dependientes_del_arbol():
 # la REGLA DE ELECCION —que tabla elige cada lector—, y esa no se protege con
 # un diff sino con un test COMPORTAMENTAL: `motor/test_lectura_matrices.py`
 # fija, caso por caso, que tabla elige cada uno de los tres lectores.
-MODIFICACIONES_DECLARADAS = {}
+MODIFICACIONES_DECLARADAS = {
+    'motor/test_asistente_live.py': (
+        'modificado en 44acddb para cubrir el turno reconstruido desde la '
+        'mano (`_hero_act`), el reintento tras un None transitorio y la '
+        'congelacion de las cartas al inicio de la mano. No cambia la regla '
+        'de eleccion de tablas: el fichero sigue usando el fixture de '
+        'recomendacion preflop, y por eso el guardia lo protege.'),
+}
 DEPENDENCIAS_NUEVAS_DECLARADAS = {
     'motor/test_lectura_matrices.py': (
         'fichero NUEVO de tests del CONTRATO DE LECTURA, y el unico que '

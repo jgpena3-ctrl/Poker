@@ -95,7 +95,7 @@ ejemplo ni la corrupción.
 
 | fichero | línea | qué es |
 |---|---|---|
-| `motor/asistente_live.py` | 1365 | una línea a la columna 0 dentro de un docstring a la columna 8 |
+| `motor/asistente_live.py` | 1908 | una línea a la columna 0 dentro de un docstring a la columna 8 |
 
 MEDIDO: es un desfase real, y no un falso positivo. El guardián lo comprueba
 contra el AST, y la línea pertenece al docstring.

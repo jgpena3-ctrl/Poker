@@ -4,7 +4,13 @@ from types import SimpleNamespace
 
 from motor.asistente_live import Asistente
 from motor.decision_log import DecisionLog
-from recorder.recorder_live import LiveRecorder
+
+# El asistente importa `recorder_live` desde `recorder/` y lo usa como modulo
+# de produccion. Importar aqui `recorder.recorder_live` crea una SEGUNDA
+# instancia del modulo con su propio `PLAYER_NAMES`: los scripts de playback
+# de `tools/` mutan esa copia al recolectarse y el test cambiaba de resultado
+# segun el orden de la suite. Se usa la misma instancia que produccion.
+from recorder_live import LiveRecorder
 
 
 def _events(path):

@@ -3628,7 +3628,7 @@ CARPETAS_DEL_INVENTARIO = ('tools', 'motor', 'recorder')
 # fichero de esa taille es una tabla que nadie mantiene, y una tabla que nadie
 # mantiene es decoracion.
 
-TESTS_POR_CARPETA = {'motor': 889, 'recorder': 4, 'tools': 616}
+TESTS_POR_CARPETA = {'motor': 918, 'recorder': 47, 'tools': 635}
 
 
 # Y los FICHEROS, que son OTRA medida. MEDIDO, y sin ellos el guardia
@@ -3641,21 +3641,23 @@ TESTS_POR_CARPETA = {'motor': 889, 'recorder': 4, 'tools': 616}
 # es cierto. Y «hoy» no es una propiedad. O sea que el guardia no baja,
 # pero FALLA si algun dia hay tests abajo: es el unico caso en el que
 # bajaria, y bajarlo sin querer seria decir «el repo entero» sin serlo.
-FICHEROS_POR_CARPETA = {'motor': 72, 'recorder': 4, 'tools': 131}
+FICHEROS_POR_CARPETA = {'motor': 77, 'recorder': 5, 'tools': 147}
 # Y LA MAGNITUD QUE MIDE ESTE GUARDIA, que es lo que R2 pregunta, y que hay
 # que responder por la magnitud y no solo por el numero.
 #
-# MEDIDO, y las TRES magnitudes no son la misma:
+# MEDIDO, y las magnitudes no son la misma:
 #
-#     definiciones test_* a cualquier profundidad : 1300
+#     definiciones test_* a cualquier profundidad : 1600
 #     definiciones test_* ANIDADAS                : 0
-#     tests que pytest RECOGE                       : 1350
+#     tests que pytest RECOGE                      : no se fija aqui
 #
-#     funciones con parametrize                   : 17
+#     funciones con parametrize                   : 22
 #     clases que heredan de unittest.TestCase      : 0
 #
-# O sea que pytest ejecuta 50 mas de los que hay definidos, y la diferencia
-# sale de las 17 funciones parametrizadas.
+# El recuento de `collect-only` no se fija aqui a proposito: importa los
+# modulos y tarda, que es justo lo que este guardia evita. Lo que si se fija
+# es el numero de funciones parametrizadas, que es la parte medible sin
+# ejecutar pytest.
 #
 # Y ESTE GUARDIA MIDE DEFINICIONES, y por que no lo que pytest recoge:
 # MEDIDO, `collect-only` tarda cuarenta segundos e importa los modulos. Un
@@ -3664,7 +3666,7 @@ FICHEROS_POR_CARPETA = {'motor': 72, 'recorder': 4, 'tools': 131}
 #
 # Y EL PUNTO CIEGO, DICHO:
 #
-#     si a una de esas 17 funciones se le quita UN CASO de su parametrize,
+#     si a una de esas 22 funciones se le quita UN CASO de su parametrize,
 #     pytest recoge uno menos y este guardia NO se entera, porque la funcion
 #     sigue estando.
 #
@@ -3673,7 +3675,7 @@ FICHEROS_POR_CARPETA = {'motor': 72, 'recorder': 4, 'tools': 131}
 # cambia ese numero. Lo que NO se puede tapar sin ejecutar pytest es el numero
 # de CASOS de cada una, y eso queda declarado como punto ciego y no como
 # garantia.
-PARAMETRIZADOS_ABAJO = 21
+PARAMETRIZADOS_ABAJO = 22
 
 def _tests_de(directorio):
     """Cuantos `def test_` hay en los `.py` de `directorio`, y cuantos ficheros.
@@ -3793,22 +3795,23 @@ def _parametrizados(directorio):
 
     Y no es un adorno: es la segunda medida, y sale de lo medido.
 
-    MEDIDO, y las TRES magnitudes que no son la misma:
+    MEDIDO, y las magnitudes que no son la misma:
 
-        definiciones `test_*` a cualquier profundidad : 1300
+        definiciones `test_*` a cualquier profundidad : 1600
         definiciones `test_*` ANIDADAS                : 0
-        tests que pytest RECOGE                       : 1350
+        tests que pytest RECOGE                       : no se fija aqui
 
-    O sea que pytest ejecuta 50 mas de los que hay definidos, y R2 tiene razon
-    en que son magnitudes distintas. La diferencia sale de aqui:
+    El recuento de `collect-only` no se fija aqui a proposito: importa los
+    modulos y tarda, que es justo lo que este guardia evita. Lo que si se fija
+    es el numero de funciones parametrizadas:
 
-        funciones con `@parametrize`                  : 17
+        funciones con `@parametrize`                  : 22
         clases que heredan de `unittest.TestCase`      : 0
 
     De modo que el guardia mide DEFINICIONES, y eso tiene un punto ciego
     concreto que conviene decir en voz alta:
 
-        si a una de esas 17 funciones se le quita UN CASO de su `@parametrize`,
+        si a una de esas 22 funciones se le quita UN CASO de su `@parametrize`,
         pytest recoge uno menos y el guardia NO se entera, porque la funcion
         sigue estando.
 
@@ -3841,7 +3844,7 @@ def _parametrizados(directorio):
            `parametrize`
         2. y el receptor termina en `pytest.mark`
 
-    Y la segunda no es la propuesta de R2, que basta con la primera: MEDIDO, las 17
+    Y la segunda no es la propuesta de R2, que basta con la primera: MEDIDO, las 22
     llamadas de este repo salen TODAS de `pytest.mark.parametrize`, de modo que
     anadirla no cambia el numero de hoy y quita una ambiguedad que no se paga
     hasta que aparezca el caso. Que es el mismo argumento del limite derivado
@@ -3871,7 +3874,7 @@ def _parametrizados(directorio):
             # «hoy no pasa», no «no puede pasar».
             #
             # Y por que importa: un `continue` que se traga un fichero
-            # convierte el recuento en una DECLARACION —«hay 17 funciones
+            # convierte el recuento en una DECLARACION —«hay 22 funciones
             # parametrizadas»— y si se tragara un fichero, la declaracion
             # seria falsa y nadie lo veria. Que es lo contrario de lo que hace
             # `_tests_de`, que PARA y nombra el fichero.
@@ -3946,7 +3949,7 @@ def _es_parametrize_de_pytest(decorador, modulos=frozenset(), marcas=frozenset()
         `from pytest import mark` + `@mark.parametrize`    NO lo cuenta (fallo)
 
     Y los dos ultimos son los que R2 senalo, y el arreglo no cuesta nada
-    hoy: MEDIDO, las 17 llamadas del repo salen TODAS de
+    hoy: MEDIDO, las 22 llamadas del repo salen TODAS de
     `pytest.mark.parametrize`, de modo que reconocer los alias no cambia el
     numero de hoy y quita una clase de fallo silencioso que no se paga hasta
     que aparezca el caso.
@@ -4537,7 +4540,7 @@ def test_los_alias_de_pytest_se_reconocen():
     Y R2 lo senalo como una cuestion de contrato, no como un defecto: «reconoce
     la forma canonica, no todas las formas validas». Y hay dos salidas:
     restringir el contrato a la forma canonica, o reconocer los alias. La
-    segunda es la que se ha tomado, porque MEDIDO las 17 llamadas del repo
+    segunda es la que se ha tomado, porque MEDIDO las 22 llamadas del repo
     salen todas de la forma canonica —de modo que reconocer los alias NO
     cambia el numero de hoy— y quita una clase de fallo silencioso.
 
@@ -4859,7 +4862,7 @@ def test_un_fichero_ilegible_hace_fallar_las_dos_cuentas():
 
     Y el motivo de que el mensaje nombre el fichero, y no solo de que lance: un
     `continue` que se traga un fichero convierte el recuento en una
-    DECLARACION —«hay 17 funciones parametrizadas»— y si se tragara uno, la
+    DECLARACION —«hay 22 funciones parametrizadas»— y si se tragara uno, la
     declaracion seria falsa y nadie lo veria. Un fallo con nombre se ve;
     un recuento sin fichero se come.
     """
@@ -4982,8 +4985,8 @@ def test_el_docstring_descuadrado_declarado_esta_donde_dice():
 # ============================ 29. LOS ACUMULADORES DEL REPO, REVISADOS
 #
 # Y esto es el punto abierto que dejo abierto el bloque anterior, y que R2
-# senalo: las 46 asignaciones `d[clave] = <lista o dict>` del repo eran
-# «candidatos pendientes de revision individual», y yo habia escrito que eran
+# senalo: las 46 asignaciones `d[clave] = <lista o dict>` que habia entonces
+# eran «candidatos pendientes de revision individual», y yo habia escrito que eran
 # «acumuladores de propiedades». Y eso era una AFIRMACION sin medir.
 #
 # Y este bloque mide, y declara, y vigila.
@@ -5068,12 +5071,12 @@ def _asignaciones_que_sobrescriben():
     return todas, en_bucle
 
 
-# Los 8 sitios donde la clave puede REPETIRSE, y por que cada uno esta bien.
+# Los 14 sitios donde la clave puede REPETIRSE, y por que cada uno esta bien.
 #
-# Y MEDIDO, el barrido: 46 asignaciones `d[clave] = <lista o dict>` en el
-# repo, de las que 38 estan FUERA de todo bucle —y ahi la clave se asigna una
+# Y MEDIDO, el barrido: 113 asignaciones `d[clave] = <lista o dict>` en el
+# repo, de las que 99 estan FUERA de todo bucle —y ahi la clave se asigna una
 # sola vez por construccion, de modo que sobrescribir no puede perder nada— y
-# 8 dentro. Y esas 8 son las unicas que hay que mirar.
+# 14 dentro. Y esas 14 son las unicas que hay que mirar.
 #
 # Y el formato es (fichero, clave) -> porque. Y el PORQUE es lo que hace que
 # esto sea una DECLARACION y no una lista: un test no puede juzgar un texto,
@@ -5106,6 +5109,18 @@ ACUMULADORES_REPETIBLES = {
     ('tools/reconstruir_derivados.py', 'hashes[name]'):
         'la clave es un NOMBRE de fichero, y la lista de nombres es una '
         'CONSTANTE con 7 nombres distintos',
+    ('recorder/recorder_live.py', "self.hand['streets'][street]['actions']"):
+        'la clave es la CALLE y el bucle recorre calles intermedias '
+        'DISTINTAS; la asignacion vacia una calle no capturada, no acumula '
+        'sobre la misma clave',
+    ('recorder/recorder_live.py', 'out[pid]'):
+        'la clave es el PID del asiento, y el bucle recorre PLAYER_IDS, que '
+        'no tiene repetidos',
+    ('recorder/recorder_live.py', 'self._award_display_events[pid]'):
+        'la clave es el PID: en un sitio el bucle recorre asientos unicos y '
+        'en el otro un diccionario de candidatos con claves unicas; la '
+        'asignacion sustituye la evidencia anterior del mismo asiento, que '
+        'es lo que se quiere conservar',
 }
 
 # Y el total, que es una cifra y por lo tanto vive en una constante.
@@ -5114,7 +5129,7 @@ ACUMULADORES_REPETIBLES = {
 # pierde nada al sobrescribir —cada indice se escribe una vez—. De modo que la
 # forma es mas ANCHA que el defecto, y por eso el numero se declara: cada
 # sitio nuevo es una decision, y el total es el que se vigila.
-ASIGNACIONES_QUE_SOBRESCRIBEN = 48
+ASIGNACIONES_QUE_SOBRESCRIBEN = 113
 
 
 # Los ficheros que estan fuera de las tres carpetas del inventario, y el
@@ -5239,18 +5254,18 @@ def test_los_ficheros_declarados_existen_y_estan_vigilados():
 
 
 def test_las_asignaciones_que_sobrescriben_estan_revisadas():
-    """Que las 46 asignaciones del repo estan REVISADAS, y no supuestas.
+    """Que las 113 asignaciones del repo estan REVISADAS, y no supuestas.
 
     Y el cierre de un punto que el bloque anterior dejo ABIERTO, y que R2
     senalo: yo habia escrito que las 46 eran «acumuladores de propiedades», y
-    eso era una afirmacion sin medir. MEDIDO: 46 en total, 38 fuera de todo
-    bucle, y 8 dentro.
+    eso era una afirmacion sin medir. MEDIDO: 113 en total, 99 fuera de todo
+    bucle, y 14 dentro.
 
-    Y las 38 de fuera se descartan por una razon MECANICA y no por opinion:
+    Y las 99 de fuera se descartan por una razon MECANICA y no por opinion:
     sin bucle que las envuelva, la asignacion se ejecuta una vez por llamada,
     y su clave se asigna una sola vez. Sobrescribir no puede perder nada.
 
-    Y las 8 de dentro SI pueden tener la clave repetida, de modo que cada una
+    Y las 14 de dentro SI pueden tener la clave repetida, de modo que cada una
     lleva escrito POR QUE esta bien. Y el motivo es PROSA leida por una
     persona, y un test no puede juzgarla: lo que el test puede es comprobar
     que NO FALTA ninguna, y que ninguno es un marcador de posicion.

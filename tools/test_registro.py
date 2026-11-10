@@ -671,8 +671,16 @@ def test_el_hallazgo_de_a1_esta_declarado_sin_arreglarlo():
     assert 'IDENTIFICADOR' in fuente[i:i + 320], (
         'y la declaracion tiene que decir POR QUE no se pierde nada')
 
-    # (b) y el total es una DECISION declarada ✓
-    assert 'ASIGNACIONES_QUE_SOBRESCRIBEN = 48' in fuente
+    # (b) y el total es una DECISION declarada, en UN SOLO sitio ✓
+    #
+    # Antes esta comprobacion repetia la cifra (48) y el guardián principal
+    # también. Dos copias de la misma medicion se desincronizan: la de aqui
+    # se quedo en 48 mientras la medicion real era 113. Se consume la
+    # constante del guardián, que es la que se compara con el barrido.
+    sys.path.insert(0, _os.path.join(raiz, 'tools'))
+    import test_ejecutar_pytest as _guard
+    assert isinstance(_guard.ASIGNACIONES_QUE_SOBRESCRIBEN, int)
+    assert _guard.ASIGNACIONES_QUE_SOBRESCRIBEN > 0
 
     # (c) y A2 NO ha tocado el fichero de A1 ✓
     r = _sp.run(['git', 'diff', '22a08b8', '--', 'tools/cuarentena.py'],
