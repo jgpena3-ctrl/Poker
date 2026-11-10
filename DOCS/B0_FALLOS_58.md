@@ -1,5 +1,12 @@
 # Anexo A — Los 58 fallos originales de B0
 
+> **Actualización B1 (2026-11-10).** De los 53 fallos que quedaron tras B0,
+> `motor/test_rango_fiable.py::test_las_cifras_publicadas_coinciden_con_la_ventana_vigente`
+> pasa al añadir a `DOCS/CONTRATO_F72A.md` la nota que separa las métricas
+> actuales de las históricas. Quedan **52** fallos. No se reancló ningún pin de
+> base, manifiesto o derivado: la reproducción de B1 no fue exacta. El detalle
+> está en [`B1_CHECKPOINT_2026-11-10.md`](B1_CHECKPOINT_2026-11-10.md).
+
 Clasificación individual medida sobre la línea base `8594ed5`. Los cinco marcados como corregidos se arreglaron en B0; el resto queda para B1.
 
 | # | Fallo | Clase | Causa / estado |

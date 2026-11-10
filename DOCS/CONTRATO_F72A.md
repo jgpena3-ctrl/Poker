@@ -11,6 +11,16 @@ importa `motor/multiway.py::metrica_politica()`. El instrumento vive en el
 motor y el script y los tests lo importan: una copia en cada sitio es
 exactamente como vuelve un bug.
 
+> **Actualización B1 (2026-11-10), solo lectura.** Sobre la base actual de
+> 1344 líneas (`3f0e7e5e…`, commit `8594ed5`) y la misma ventana de 877 manos,
+> `python tools/auditar_solapamiento_multiway.py` mide **649** puntos de
+> decisión, **506** de política (**296** HU + **210** MULTIWAY), **41,5 %** y
+> cota **234**. Las cifras **512 / 301 / 211 / 41,2 % / 235** que aparecen en
+> el cuerpo son **históricas** de la base de 1253 líneas (`51a6fb9`) y no
+> describen la base actual. No se cambia la política, ni la firma, ni
+> `MULTIWAY_SOPORTADO` (sigue en `False`). La diferencia es de datos y queda
+> pendiente de la revisión de procedencia de B1.
+>
 > **Recalculadas el 2026-10-25** sobre la base adoptada y reparada de 1253
 > líneas (`c3172a14…`, commit `51a6fb9`). El denominador pasa de 521 a **512**
 > y MULTIWAY de 239 a **211**; el porcentaje baja de **45,9 %** a **41,2 %**.

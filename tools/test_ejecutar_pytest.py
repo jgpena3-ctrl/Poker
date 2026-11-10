@@ -3641,7 +3641,7 @@ TESTS_POR_CARPETA = {'motor': 918, 'recorder': 47, 'tools': 635}
 # es cierto. Y «hoy» no es una propiedad. O sea que el guardia no baja,
 # pero FALLA si algun dia hay tests abajo: es el unico caso en el que
 # bajaria, y bajarlo sin querer seria decir «el repo entero» sin serlo.
-FICHEROS_POR_CARPETA = {'motor': 77, 'recorder': 5, 'tools': 147}
+FICHEROS_POR_CARPETA = {'motor': 77, 'recorder': 5, 'tools': 148}
 # Y LA MAGNITUD QUE MIDE ESTE GUARDIA, que es lo que R2 pregunta, y que hay
 # que responder por la magnitud y no solo por el numero.
 #

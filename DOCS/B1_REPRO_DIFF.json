@@ -1,0 +1,8237 @@
+{
+  "base": {
+    "commit": "c1c1370",
+    "lines": 1345,
+    "sha256": "797c85e1408962eb2d6c01aa5bbc3de49502618a2c28305b359a317b9c52f332"
+  },
+  "target": {
+    "commit": "8594ed5",
+    "lines": 1344,
+    "sha256": "3f0e7e5ea0d5c2d06aa9b8629817984ab9b4bccf057371823fde60370818262e"
+  },
+  "removed_hands": [
+    "H_1323"
+  ],
+  "added_hands": [],
+  "modified_count": 144,
+  "first900_modified": [
+    "H_0018",
+    "H_0029",
+    "H_0038",
+    "H_0050",
+    "H_0055",
+    "H_0058",
+    "H_0059",
+    "H_0060",
+    "H_0061",
+    "H_0063",
+    "H_0064",
+    "H_0065",
+    "H_0071",
+    "H_0117",
+    "H_0118",
+    "H_0125",
+    "H_0133",
+    "H_0134",
+    "H_0137",
+    "H_0138",
+    "H_0147",
+    "H_0148",
+    "H_0171",
+    "H_0172",
+    "H_0174",
+    "H_0179",
+    "H_0201",
+    "H_0203",
+    "H_0211",
+    "H_0213",
+    "H_0224",
+    "H_0241",
+    "H_0257",
+    "H_0259",
+    "H_0261",
+    "H_0268",
+    "H_0271",
+    "H_0281",
+    "H_0282",
+    "H_0301",
+    "H_0312",
+    "H_0322",
+    "H_0323",
+    "H_0325",
+    "H_0326",
+    "H_0327",
+    "H_0331",
+    "H_0337",
+    "H_0677",
+    "H_0713"
+  ],
+  "first900_modified_count": 50,
+  "first900_modified_excluded": [
+    "H_0147"
+  ],
+  "first900_modified_reliable": [
+    "H_0018",
+    "H_0029",
+    "H_0038",
+    "H_0050",
+    "H_0055",
+    "H_0058",
+    "H_0059",
+    "H_0060",
+    "H_0061",
+    "H_0063",
+    "H_0064",
+    "H_0065",
+    "H_0071",
+    "H_0117",
+    "H_0118",
+    "H_0125",
+    "H_0133",
+    "H_0134",
+    "H_0137",
+    "H_0138",
+    "H_0148",
+    "H_0171",
+    "H_0172",
+    "H_0174",
+    "H_0179",
+    "H_0201",
+    "H_0203",
+    "H_0211",
+    "H_0213",
+    "H_0224",
+    "H_0241",
+    "H_0257",
+    "H_0259",
+    "H_0261",
+    "H_0268",
+    "H_0271",
+    "H_0281",
+    "H_0282",
+    "H_0301",
+    "H_0312",
+    "H_0322",
+    "H_0323",
+    "H_0325",
+    "H_0326",
+    "H_0327",
+    "H_0331",
+    "H_0337",
+    "H_0677",
+    "H_0713"
+  ],
+  "semantic_action_changed": [
+    "H_1143",
+    "H_1303",
+    "H_1314",
+    "H_1328",
+    "H_1330",
+    "H_1333",
+    "H_1336",
+    "H_1337",
+    "H_1338",
+    "H_1340",
+    "H_1341",
+    "H_1342",
+    "H_1343",
+    "H_1344",
+    "H_1345",
+    "H_1346",
+    "H_1348",
+    "H_1349",
+    "H_1350",
+    "H_1351",
+    "H_1353",
+    "H_1354",
+    "H_1355",
+    "H_1356",
+    "H_1361",
+    "H_1363",
+    "H_1365",
+    "H_1366",
+    "H_1368",
+    "H_1369"
+  ],
+  "semantic_action_changed_count": 30,
+  "notes": [
+    "c1c1370 -> 8594ed5: 144 hands modified. No semantic action changes inside first 900 (window).",
+    "Many semantic action changes outside window are not produced by any of the 11 scripts.",
+    "H_1336/H_1343 etc block corregir_resultados_20261104 on c1c1370 because base still shows folds."
+  ],
+  "modified_hands": [
+    {
+      "hand_id": "H_0018",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0029",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0038",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0050",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0055",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0058",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "players",
+        "showdown",
+        "winner"
+      ],
+      "diff_count": 3,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0059",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "players"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0060",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "players"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0061",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "players"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0063",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "players"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0064",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "players"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0065",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0071",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0117",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0118",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0125",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0133",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0134",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0137",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0138",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0147",
+      "first900": true,
+      "excluded_cm004": true,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0148",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0171",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0172",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0174",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0179",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0201",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0203",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0211",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0213",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0224",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0241",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0257",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0259",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0261",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0268",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0271",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0281",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0282",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0301",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0312",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0322",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0323",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0325",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0326",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0327",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0331",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0337",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0677",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0713",
+      "first900": true,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_0968",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1069",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "showdown"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1143",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": true,
+      "changed_fields": [
+        "streets"
+      ],
+      "diff_count": 2,
+      "action_diff": {
+        "before": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "r",
+            3.0,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "c",
+            3.0,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "x",
+            0.0,
+            false
+          ],
+          [
+            "flop",
+            "SB",
+            "x",
+            0.0,
+            false
+          ],
+          [
+            "flop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "CO",
+            "b",
+            3.3,
+            false
+          ],
+          [
+            "flop",
+            "SB",
+            "c",
+            3.3,
+            false
+          ],
+          [
+            "turn",
+            "SB",
+            "x",
+            0.0,
+            false
+          ],
+          [
+            "turn",
+            "CO",
+            "x",
+            0.0,
+            false
+          ],
+          [
+            "river",
+            "SB",
+            "b",
+            4.2,
+            false
+          ],
+          [
+            "river",
+            "CO",
+            "r",
+            15.5,
+            false
+          ],
+          [
+            "river",
+            "SB",
+            "f",
+            0.0,
+            false
+          ]
+        ],
+        "after": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "r",
+            3.0,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "c",
+            3.0,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "flop",
+            "SB",
+            "x",
+            0.0,
+            false
+          ],
+          [
+            "flop",
+            "CO",
+            "b",
+            3.3,
+            false
+          ],
+          [
+            "flop",
+            "SB",
+            "c",
+            3.3,
+            false
+          ],
+          [
+            "turn",
+            "SB",
+            "x",
+            0.0,
+            false
+          ],
+          [
+            "turn",
+            "CO",
+            "x",
+            0.0,
+            false
+          ],
+          [
+            "river",
+            "SB",
+            "b",
+            4.2,
+            false
+          ],
+          [
+            "river",
+            "CO",
+            "r",
+            15.5,
+            false
+          ],
+          [
+            "river",
+            "SB",
+            "f",
+            0.0,
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "hand_id": "H_1283",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1284",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1285",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1286",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1287",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1288",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1289",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1290",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1291",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1292",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1293",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1294",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1295",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit",
+        "streets"
+      ],
+      "diff_count": 4,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1296",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1297",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1298",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1299",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1300",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit",
+        "showdown"
+      ],
+      "diff_count": 2,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1301",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1302",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1303",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": true,
+      "changed_fields": [
+        "final_pot",
+        "recorder_audit",
+        "streets"
+      ],
+      "diff_count": 10,
+      "action_diff": {
+        "before": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "MP",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "c",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "r",
+            2.0,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "c",
+            2.0,
+            true
+          ],
+          [
+            "preflop",
+            "CO",
+            "c",
+            2.0,
+            true
+          ],
+          [
+            "flop",
+            "SB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "CO",
+            "b",
+            4.4,
+            false
+          ],
+          [
+            "flop",
+            "SB",
+            "c",
+            4.4,
+            false
+          ],
+          [
+            "flop",
+            "BB",
+            "c",
+            4.4,
+            true
+          ],
+          [
+            "turn",
+            "SB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "CO",
+            "b",
+            6.2,
+            false
+          ],
+          [
+            "turn",
+            "SB",
+            "c",
+            3.9,
+            true
+          ],
+          [
+            "turn",
+            "BB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "turn",
+            "CO",
+            "r",
+            6.2,
+            true
+          ]
+        ],
+        "after": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "MP",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "c",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "r",
+            2.0,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "c",
+            2.0,
+            true
+          ],
+          [
+            "preflop",
+            "CO",
+            "c",
+            2.0,
+            true
+          ],
+          [
+            "flop",
+            "SB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "CO",
+            "b",
+            4.4,
+            false
+          ],
+          [
+            "flop",
+            "SB",
+            "c",
+            4.4,
+            false
+          ],
+          [
+            "flop",
+            "BB",
+            "c",
+            4.4,
+            true
+          ],
+          [
+            "turn",
+            "SB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "CO",
+            "b",
+            6.2,
+            false
+          ],
+          [
+            "turn",
+            "SB",
+            "c",
+            3.9,
+            true
+          ],
+          [
+            "turn",
+            "BB",
+            "f",
+            0.0,
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "hand_id": "H_1304",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1305",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit",
+        "streets"
+      ],
+      "diff_count": 2,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1306",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1307",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1308",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1309",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1310",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit",
+        "streets"
+      ],
+      "diff_count": 4,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1311",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1312",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit",
+        "streets"
+      ],
+      "diff_count": 2,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1313",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1314",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": true,
+      "changed_fields": [
+        "recorder_audit",
+        "streets"
+      ],
+      "diff_count": 7,
+      "action_diff": {
+        "before": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "MP",
+            "r",
+            2.5,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "c",
+            2.5,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "c",
+            2.5,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "c",
+            2.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "r",
+            150.8,
+            true
+          ],
+          [
+            "preflop",
+            "MP",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ]
+        ],
+        "after": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "MP",
+            "r",
+            2.5,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "c",
+            2.5,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "c",
+            2.5,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "c",
+            2.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "r",
+            150.8,
+            true
+          ],
+          [
+            "preflop",
+            "MP",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "f",
+            0.0,
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "hand_id": "H_1315",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1316",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1317",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1318",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1319",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1320",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1321",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1322",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1324",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "final_pot",
+        "recorder_audit",
+        "showdown"
+      ],
+      "diff_count": 8,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1325",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit",
+        "streets"
+      ],
+      "diff_count": 3,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1326",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1327",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit"
+      ],
+      "diff_count": 12,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1328",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": true,
+      "changed_fields": [
+        "final_pot",
+        "recorder_audit",
+        "streets"
+      ],
+      "diff_count": 13,
+      "action_diff": {
+        "before": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "MP",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "c",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "preflop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "BB",
+            "b",
+            1.4,
+            false
+          ],
+          [
+            "flop",
+            "CO",
+            "r",
+            2.8,
+            false
+          ],
+          [
+            "flop",
+            "SB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "flop",
+            "BB",
+            "c",
+            2.8,
+            true
+          ],
+          [
+            "turn",
+            "CO",
+            "f",
+            0.0,
+            true
+          ]
+        ],
+        "after": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "MP",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "c",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "preflop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "BB",
+            "b",
+            1.4,
+            false
+          ],
+          [
+            "flop",
+            "CO",
+            "r",
+            2.8,
+            false
+          ],
+          [
+            "flop",
+            "SB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "flop",
+            "BB",
+            "c",
+            2.8,
+            true
+          ],
+          [
+            "turn",
+            "BB",
+            "x",
+            0.0,
+            false
+          ],
+          [
+            "turn",
+            "CO",
+            "x",
+            0.0,
+            false
+          ],
+          [
+            "river",
+            "BB",
+            "x",
+            0.0,
+            false
+          ],
+          [
+            "river",
+            "CO",
+            "b",
+            3.0,
+            false
+          ],
+          [
+            "river",
+            "BB",
+            "r",
+            11.0,
+            false
+          ],
+          [
+            "river",
+            "CO",
+            "f",
+            0.0,
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "hand_id": "H_1329",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "final_pot",
+        "recorder_audit",
+        "streets"
+      ],
+      "diff_count": 10,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1330",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": true,
+      "changed_fields": [
+        "final_pot",
+        "recorder_audit",
+        "streets"
+      ],
+      "diff_count": 11,
+      "action_diff": {
+        "before": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "UTG",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "preflop",
+            "CO",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "preflop",
+            "BTN",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "preflop",
+            "SB",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "preflop",
+            "BB",
+            "r",
+            3.5,
+            true
+          ],
+          [
+            "flop",
+            "CO",
+            "b",
+            33.3,
+            true
+          ],
+          [
+            "flop",
+            "SB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "flop",
+            "BB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "flop",
+            "UTG",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "MP",
+            "f",
+            0.0,
+            true
+          ]
+        ],
+        "after": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "UTG",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "preflop",
+            "MP",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "preflop",
+            "CO",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "preflop",
+            "BTN",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "preflop",
+            "SB",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "preflop",
+            "BB",
+            "x",
+            0.0,
+            false
+          ],
+          [
+            "flop",
+            "SB",
+            "x",
+            0.0,
+            false
+          ],
+          [
+            "flop",
+            "BB",
+            "b",
+            2.5,
+            false
+          ],
+          [
+            "flop",
+            "UTG",
+            "c",
+            2.5,
+            false
+          ],
+          [
+            "flop",
+            "CO",
+            "r",
+            33.3,
+            true
+          ],
+          [
+            "flop",
+            "SB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "flop",
+            "BB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "flop",
+            "UTG",
+            "f",
+            0.0,
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "hand_id": "H_1331",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "final_pot",
+        "recorder_audit",
+        "streets"
+      ],
+      "diff_count": 10,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1332",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "final_pot",
+        "recorder_audit",
+        "streets"
+      ],
+      "diff_count": 12,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1333",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": true,
+      "changed_fields": [
+        "final_pot",
+        "recorder_audit",
+        "showdown",
+        "streets"
+      ],
+      "diff_count": 21,
+      "action_diff": {
+        "before": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "UTG",
+            "c",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "MP",
+            "c",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "c",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "SB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "BB",
+            "b",
+            1.9,
+            false
+          ],
+          [
+            "flop",
+            "UTG",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "flop",
+            "MP",
+            "c",
+            1.9,
+            false
+          ],
+          [
+            "flop",
+            "SB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "turn",
+            "BB",
+            "b",
+            5.6,
+            false
+          ],
+          [
+            "turn",
+            "MP",
+            "c",
+            5.6,
+            true
+          ],
+          [
+            "river",
+            "BB",
+            "b",
+            4.5,
+            false
+          ],
+          [
+            "river",
+            "MP",
+            "r",
+            10.0,
+            false
+          ],
+          [
+            "river",
+            "BB",
+            "c",
+            10.0,
+            true
+          ],
+          [
+            "river",
+            "MP",
+            "f",
+            0.0,
+            true
+          ]
+        ],
+        "after": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "UTG",
+            "c",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "MP",
+            "c",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "c",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "SB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "BB",
+            "b",
+            1.9,
+            false
+          ],
+          [
+            "flop",
+            "UTG",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "flop",
+            "MP",
+            "c",
+            1.9,
+            false
+          ],
+          [
+            "flop",
+            "SB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "turn",
+            "BB",
+            "b",
+            5.6,
+            false
+          ],
+          [
+            "turn",
+            "MP",
+            "c",
+            5.6,
+            true
+          ],
+          [
+            "river",
+            "BB",
+            "b",
+            4.5,
+            false
+          ],
+          [
+            "river",
+            "MP",
+            "r",
+            10.0,
+            false
+          ],
+          [
+            "river",
+            "BB",
+            "c",
+            10.0,
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "hand_id": "H_1334",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "final_pot",
+        "recorder_audit",
+        "streets"
+      ],
+      "diff_count": 13,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1335",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "final_pot",
+        "recorder_audit",
+        "streets"
+      ],
+      "diff_count": 10,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1336",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": true,
+      "changed_fields": [
+        "final_pot",
+        "players",
+        "recorder_audit",
+        "showdown",
+        "streets"
+      ],
+      "diff_count": 21,
+      "action_diff": {
+        "before": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "UTG",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "MP",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "preflop",
+            "CO",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "preflop",
+            "SB",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "preflop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "SB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "MP",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "BTN",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "SB",
+            "b",
+            1.5,
+            false
+          ],
+          [
+            "turn",
+            "BB",
+            "c",
+            1.5,
+            true
+          ],
+          [
+            "turn",
+            "MP",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "turn",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "river",
+            "SB",
+            "b",
+            1.5,
+            false
+          ],
+          [
+            "river",
+            "BB",
+            "r",
+            5.0,
+            false
+          ],
+          [
+            "river",
+            "SB",
+            "f",
+            0.0,
+            true
+          ]
+        ],
+        "after": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "UTG",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "MP",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "preflop",
+            "CO",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "preflop",
+            "SB",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "preflop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "SB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "MP",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "BTN",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "SB",
+            "b",
+            1.5,
+            false
+          ],
+          [
+            "turn",
+            "BB",
+            "c",
+            1.5,
+            true
+          ],
+          [
+            "turn",
+            "MP",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "turn",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "river",
+            "SB",
+            "b",
+            1.5,
+            false
+          ],
+          [
+            "river",
+            "BB",
+            "r",
+            5.0,
+            false
+          ],
+          [
+            "river",
+            "SB",
+            "c",
+            5.0,
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "hand_id": "H_1337",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": true,
+      "changed_fields": [
+        "final_pot",
+        "players",
+        "recorder_audit",
+        "showdown",
+        "streets",
+        "winner"
+      ],
+      "diff_count": 16,
+      "action_diff": {
+        "before": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "UTG",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "MP",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "preflop",
+            "SB",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "preflop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "SB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "BTN",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "SB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "BTN",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "river",
+            "SB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "river",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "river",
+            "BTN",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "river",
+            "SB",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "river",
+            "BB",
+            "f",
+            0.0,
+            true
+          ]
+        ],
+        "after": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "UTG",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "MP",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "preflop",
+            "SB",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "preflop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "SB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "BTN",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "SB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "BTN",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "river",
+            "SB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "river",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "river",
+            "BTN",
+            "x",
+            0.0,
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "hand_id": "H_1338",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": true,
+      "changed_fields": [
+        "final_pot",
+        "players",
+        "recorder_audit",
+        "streets"
+      ],
+      "diff_count": 14,
+      "action_diff": {
+        "before": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "MP",
+            "r",
+            2.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "c",
+            2.0,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "r",
+            10.0,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "preflop",
+            "MP",
+            "c",
+            10.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "r",
+            33.8,
+            true
+          ],
+          [
+            "preflop",
+            "SB",
+            "c",
+            33.8,
+            true
+          ],
+          [
+            "river",
+            "UTG",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "river",
+            "MP",
+            "f",
+            0.0,
+            true
+          ]
+        ],
+        "after": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "UTG",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "MP",
+            "r",
+            2.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "c",
+            2.0,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "r",
+            10.0,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "preflop",
+            "MP",
+            "c",
+            10.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "r",
+            33.8,
+            true
+          ],
+          [
+            "preflop",
+            "SB",
+            "c",
+            33.8,
+            true
+          ],
+          [
+            "preflop",
+            "MP",
+            "f",
+            0.0,
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "hand_id": "H_1339",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "final_pot",
+        "recorder_audit"
+      ],
+      "diff_count": 9,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1340",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": true,
+      "changed_fields": [
+        "final_pot",
+        "recorder_audit",
+        "streets"
+      ],
+      "diff_count": 12,
+      "action_diff": {
+        "before": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "MP",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "preflop",
+            "SB",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "preflop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "SB",
+            "b",
+            1.0,
+            true
+          ],
+          [
+            "flop",
+            "BB",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "flop",
+            "BTN",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "turn",
+            "SB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "BB",
+            "b",
+            1.0,
+            false
+          ],
+          [
+            "turn",
+            "BTN",
+            "c",
+            1.0,
+            false
+          ],
+          [
+            "turn",
+            "SB",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "river",
+            "SB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "river",
+            "BB",
+            "b",
+            6.4,
+            false
+          ],
+          [
+            "river",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "river",
+            "SB",
+            "f",
+            0.0,
+            true
+          ]
+        ],
+        "after": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "MP",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "preflop",
+            "SB",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "preflop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "SB",
+            "x",
+            0.0,
+            false
+          ],
+          [
+            "flop",
+            "BB",
+            "b",
+            1.0,
+            true
+          ],
+          [
+            "flop",
+            "BTN",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "flop",
+            "SB",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "turn",
+            "SB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "BB",
+            "b",
+            1.0,
+            false
+          ],
+          [
+            "turn",
+            "BTN",
+            "c",
+            1.0,
+            false
+          ],
+          [
+            "turn",
+            "SB",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "river",
+            "SB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "river",
+            "BB",
+            "b",
+            6.4,
+            false
+          ],
+          [
+            "river",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "river",
+            "SB",
+            "f",
+            0.0,
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "hand_id": "H_1341",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": true,
+      "changed_fields": [
+        "final_pot",
+        "players",
+        "recorder_audit",
+        "streets"
+      ],
+      "diff_count": 13,
+      "action_diff": {
+        "before": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "MP",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "preflop",
+            "CO",
+            "c",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "r",
+            5.0,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "c",
+            5.0,
+            true
+          ],
+          [
+            "flop",
+            "CO",
+            "b",
+            37.8,
+            true
+          ],
+          [
+            "turn",
+            "BTN",
+            "b",
+            37.8,
+            true
+          ]
+        ],
+        "after": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "MP",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "preflop",
+            "CO",
+            "c",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "r",
+            5.0,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "c",
+            5.0,
+            true
+          ],
+          [
+            "flop",
+            "CO",
+            "b",
+            37.8,
+            true
+          ],
+          [
+            "flop",
+            "BTN",
+            "c",
+            37.8,
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "hand_id": "H_1342",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": true,
+      "changed_fields": [
+        "players",
+        "recorder_audit",
+        "showdown",
+        "streets"
+      ],
+      "diff_count": 10,
+      "action_diff": {
+        "before": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "MP",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "c",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "SB",
+            "b",
+            1.0,
+            true
+          ],
+          [
+            "flop",
+            "BB",
+            "c",
+            1.0,
+            false
+          ],
+          [
+            "turn",
+            "SB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "BB",
+            "b",
+            1.0,
+            true
+          ],
+          [
+            "river",
+            "SB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "river",
+            "BB",
+            "x",
+            0.0,
+            true
+          ]
+        ],
+        "after": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "MP",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "c",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "SB",
+            "x",
+            0.0,
+            false
+          ],
+          [
+            "flop",
+            "BB",
+            "b",
+            1.0,
+            false
+          ],
+          [
+            "flop",
+            "SB",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "turn",
+            "SB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "BB",
+            "x",
+            0.0,
+            false
+          ],
+          [
+            "river",
+            "SB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "river",
+            "BB",
+            "x",
+            0.0,
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "hand_id": "H_1343",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": true,
+      "changed_fields": [
+        "players",
+        "recorder_audit",
+        "showdown",
+        "streets"
+      ],
+      "diff_count": 10,
+      "action_diff": {
+        "before": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "UTG",
+            "r",
+            3.0,
+            false
+          ],
+          [
+            "preflop",
+            "MP",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "r",
+            49.5,
+            false
+          ],
+          [
+            "preflop",
+            "UTG",
+            "r",
+            69.9,
+            true
+          ],
+          [
+            "preflop",
+            "BB",
+            "c",
+            69.9,
+            true
+          ],
+          [
+            "river",
+            "BB",
+            "f",
+            0.0,
+            true
+          ]
+        ],
+        "after": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "UTG",
+            "r",
+            3.0,
+            false
+          ],
+          [
+            "preflop",
+            "MP",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "r",
+            49.5,
+            false
+          ],
+          [
+            "preflop",
+            "UTG",
+            "r",
+            69.9,
+            true
+          ],
+          [
+            "preflop",
+            "BB",
+            "c",
+            69.9,
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "hand_id": "H_1344",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": true,
+      "changed_fields": [
+        "recorder_audit",
+        "showdown",
+        "streets"
+      ],
+      "diff_count": 9,
+      "action_diff": {
+        "before": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "UTG",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "preflop",
+            "MP",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "preflop",
+            "CO",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "preflop",
+            "BTN",
+            "r",
+            3.0,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "c",
+            3.0,
+            true
+          ],
+          [
+            "flop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "BTN",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "BTN",
+            "b",
+            2.1,
+            false
+          ],
+          [
+            "turn",
+            "BB",
+            "c",
+            2.1,
+            true
+          ],
+          [
+            "river",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "river",
+            "BTN",
+            "b",
+            5.2,
+            false
+          ],
+          [
+            "river",
+            "BB",
+            "c",
+            5.2,
+            true
+          ],
+          [
+            "river",
+            "BB",
+            "f",
+            0.0,
+            true
+          ]
+        ],
+        "after": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "UTG",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "preflop",
+            "MP",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "preflop",
+            "CO",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "preflop",
+            "BTN",
+            "r",
+            3.0,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "c",
+            3.0,
+            true
+          ],
+          [
+            "flop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "BTN",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "BTN",
+            "b",
+            2.1,
+            false
+          ],
+          [
+            "turn",
+            "BB",
+            "c",
+            2.1,
+            true
+          ],
+          [
+            "river",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "river",
+            "BTN",
+            "b",
+            5.2,
+            false
+          ],
+          [
+            "river",
+            "BB",
+            "c",
+            5.2,
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "hand_id": "H_1345",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": true,
+      "changed_fields": [
+        "final_pot",
+        "players",
+        "recorder_audit",
+        "showdown",
+        "streets"
+      ],
+      "diff_count": 19,
+      "action_diff": {
+        "before": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "UTG",
+            "r",
+            2.5,
+            false
+          ],
+          [
+            "preflop",
+            "MP",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "c",
+            2.5,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "c",
+            2.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "flop",
+            "SB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "UTG",
+            "b",
+            6.2,
+            false
+          ],
+          [
+            "flop",
+            "CO",
+            "c",
+            6.2,
+            true
+          ],
+          [
+            "flop",
+            "SB",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "UTG",
+            "b",
+            10.3,
+            false
+          ],
+          [
+            "turn",
+            "CO",
+            "r",
+            20.6,
+            false
+          ],
+          [
+            "turn",
+            "UTG",
+            "r",
+            28.6,
+            true
+          ],
+          [
+            "river",
+            "UTG",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "river",
+            "CO",
+            "b",
+            18.0,
+            false
+          ],
+          [
+            "river",
+            "UTG",
+            "f",
+            0.0,
+            true
+          ]
+        ],
+        "after": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "UTG",
+            "r",
+            2.5,
+            false
+          ],
+          [
+            "preflop",
+            "MP",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "c",
+            2.5,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "c",
+            2.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "flop",
+            "SB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "UTG",
+            "b",
+            6.2,
+            false
+          ],
+          [
+            "flop",
+            "CO",
+            "c",
+            6.2,
+            true
+          ],
+          [
+            "flop",
+            "SB",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "UTG",
+            "b",
+            10.3,
+            false
+          ],
+          [
+            "turn",
+            "CO",
+            "r",
+            20.6,
+            false
+          ],
+          [
+            "turn",
+            "UTG",
+            "c",
+            20.6,
+            false
+          ],
+          [
+            "river",
+            "UTG",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "river",
+            "CO",
+            "b",
+            18.0,
+            false
+          ],
+          [
+            "river",
+            "UTG",
+            "c",
+            18.0,
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "hand_id": "H_1346",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": true,
+      "changed_fields": [
+        "final_pot",
+        "recorder_audit",
+        "streets"
+      ],
+      "diff_count": 6,
+      "action_diff": {
+        "before": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "UTG",
+            "c",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "MP",
+            "c",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "c",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "c",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "SB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "CO",
+            "b",
+            1.0,
+            false
+          ],
+          [
+            "flop",
+            "SB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "flop",
+            "BB",
+            "c",
+            1.0,
+            false
+          ],
+          [
+            "flop",
+            "UTG",
+            "r",
+            9.9,
+            false
+          ],
+          [
+            "flop",
+            "MP",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "flop",
+            "CO",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "flop",
+            "BB",
+            "f",
+            0.0,
+            false
+          ]
+        ],
+        "after": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "UTG",
+            "c",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "MP",
+            "c",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "c",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "c",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "SB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "UTG",
+            "x",
+            0.0,
+            false
+          ],
+          [
+            "flop",
+            "MP",
+            "x",
+            0.0,
+            false
+          ],
+          [
+            "flop",
+            "CO",
+            "b",
+            1.0,
+            false
+          ],
+          [
+            "flop",
+            "SB",
+            "c",
+            1.0,
+            false
+          ],
+          [
+            "flop",
+            "BB",
+            "c",
+            1.0,
+            false
+          ],
+          [
+            "flop",
+            "UTG",
+            "r",
+            9.9,
+            false
+          ],
+          [
+            "flop",
+            "MP",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "flop",
+            "CO",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "flop",
+            "SB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "flop",
+            "BB",
+            "f",
+            0.0,
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "hand_id": "H_1347",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "final_pot",
+        "recorder_audit"
+      ],
+      "diff_count": 7,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1348",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": true,
+      "changed_fields": [
+        "players",
+        "recorder_audit",
+        "showdown",
+        "streets"
+      ],
+      "diff_count": 12,
+      "action_diff": {
+        "before": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "UTG",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "preflop",
+            "MP",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "preflop",
+            "CO",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "preflop",
+            "BTN",
+            "r",
+            2.5,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "c",
+            2.5,
+            true
+          ],
+          [
+            "flop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "BTN",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "BTN",
+            "b",
+            1.8,
+            false
+          ],
+          [
+            "turn",
+            "BB",
+            "r",
+            6.2,
+            true
+          ],
+          [
+            "turn",
+            "BTN",
+            "c",
+            6.2,
+            true
+          ],
+          [
+            "river",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "river",
+            "BTN",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "river",
+            "BTN",
+            "f",
+            0.0,
+            true
+          ]
+        ],
+        "after": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "UTG",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "preflop",
+            "MP",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "preflop",
+            "CO",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "preflop",
+            "BTN",
+            "r",
+            2.5,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "c",
+            2.5,
+            true
+          ],
+          [
+            "flop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "BTN",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "BB",
+            "x",
+            0.0,
+            false
+          ],
+          [
+            "turn",
+            "BTN",
+            "b",
+            1.8,
+            false
+          ],
+          [
+            "turn",
+            "BB",
+            "c",
+            1.8,
+            false
+          ],
+          [
+            "river",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "river",
+            "BTN",
+            "b",
+            4.4,
+            false
+          ],
+          [
+            "river",
+            "BB",
+            "c",
+            4.4,
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "hand_id": "H_1349",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": true,
+      "changed_fields": [
+        "final_pot",
+        "players",
+        "recorder_audit",
+        "streets"
+      ],
+      "diff_count": 8,
+      "action_diff": {
+        "before": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "UTG",
+            "c",
+            2.0,
+            true
+          ],
+          [
+            "preflop",
+            "MP",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "preflop",
+            "CO",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "preflop",
+            "BTN",
+            "c",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "r",
+            2.0,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "c",
+            2.0,
+            true
+          ],
+          [
+            "preflop",
+            "BTN",
+            "c",
+            2.0,
+            true
+          ],
+          [
+            "flop",
+            "SB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "BTN",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "SB",
+            "b",
+            1.0,
+            false
+          ],
+          [
+            "turn",
+            "BB",
+            "c",
+            1.0,
+            false
+          ],
+          [
+            "turn",
+            "UTG",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "turn",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "river",
+            "SB",
+            "b",
+            9.0,
+            false
+          ],
+          [
+            "river",
+            "BB",
+            "f",
+            0.0,
+            false
+          ]
+        ],
+        "after": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "UTG",
+            "c",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "MP",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "preflop",
+            "CO",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "preflop",
+            "BTN",
+            "c",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "r",
+            2.0,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "c",
+            2.0,
+            true
+          ],
+          [
+            "preflop",
+            "UTG",
+            "c",
+            2.0,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "c",
+            2.0,
+            true
+          ],
+          [
+            "flop",
+            "SB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "UTG",
+            "x",
+            0.0,
+            false
+          ],
+          [
+            "flop",
+            "BTN",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "SB",
+            "b",
+            1.0,
+            false
+          ],
+          [
+            "turn",
+            "BB",
+            "c",
+            1.0,
+            false
+          ],
+          [
+            "turn",
+            "UTG",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "turn",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "river",
+            "SB",
+            "b",
+            9.0,
+            false
+          ],
+          [
+            "river",
+            "BB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "river",
+            "UTG",
+            "f",
+            0.0,
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "hand_id": "H_1350",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": true,
+      "changed_fields": [
+        "final_pot",
+        "recorder_audit",
+        "streets"
+      ],
+      "diff_count": 7,
+      "action_diff": {
+        "before": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "UTG",
+            "r",
+            2.5,
+            false
+          ],
+          [
+            "preflop",
+            "MP",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "c",
+            2.5,
+            true
+          ],
+          [
+            "preflop",
+            "BB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "UTG",
+            "c",
+            2.5,
+            true
+          ],
+          [
+            "flop",
+            "SB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "UTG",
+            "b",
+            0.5,
+            true
+          ],
+          [
+            "turn",
+            "SB",
+            "b",
+            2.9,
+            false
+          ],
+          [
+            "turn",
+            "UTG",
+            "f",
+            0.0,
+            false
+          ]
+        ],
+        "after": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "UTG",
+            "r",
+            2.5,
+            false
+          ],
+          [
+            "preflop",
+            "MP",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "c",
+            2.5,
+            true
+          ],
+          [
+            "preflop",
+            "BB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "flop",
+            "SB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "UTG",
+            "x",
+            0.0,
+            false
+          ],
+          [
+            "turn",
+            "SB",
+            "b",
+            2.9,
+            false
+          ],
+          [
+            "turn",
+            "UTG",
+            "f",
+            0.0,
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "hand_id": "H_1351",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": true,
+      "changed_fields": [
+        "final_pot",
+        "recorder_audit",
+        "showdown",
+        "streets"
+      ],
+      "diff_count": 21,
+      "action_diff": {
+        "before": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "UTG",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "MP",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "preflop",
+            "BTN",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "preflop",
+            "SB",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "preflop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "SB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "CO",
+            "b",
+            2.0,
+            false
+          ],
+          [
+            "flop",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "flop",
+            "SB",
+            "c",
+            1.9,
+            true
+          ],
+          [
+            "flop",
+            "BB",
+            "c",
+            2.0,
+            true
+          ],
+          [
+            "flop",
+            "SB",
+            "c",
+            2.0,
+            true
+          ],
+          [
+            "turn",
+            "SB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "BB",
+            "b",
+            12.0,
+            false
+          ],
+          [
+            "turn",
+            "CO",
+            "c",
+            2.0,
+            false
+          ],
+          [
+            "turn",
+            "BB",
+            "r",
+            83.3,
+            true
+          ],
+          [
+            "turn",
+            "CO",
+            "c",
+            12.0,
+            true
+          ],
+          [
+            "river",
+            "CO",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "river",
+            "SB",
+            "f",
+            0.0,
+            true
+          ]
+        ],
+        "after": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "UTG",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "MP",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "preflop",
+            "BTN",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "preflop",
+            "SB",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "preflop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "SB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "CO",
+            "b",
+            2.0,
+            false
+          ],
+          [
+            "flop",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "flop",
+            "SB",
+            "c",
+            2.0,
+            true
+          ],
+          [
+            "flop",
+            "BB",
+            "c",
+            2.0,
+            true
+          ],
+          [
+            "turn",
+            "SB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "BB",
+            "x",
+            0.0,
+            false
+          ],
+          [
+            "turn",
+            "CO",
+            "b",
+            2.0,
+            false
+          ],
+          [
+            "turn",
+            "SB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "turn",
+            "BB",
+            "r",
+            12.0,
+            false
+          ],
+          [
+            "turn",
+            "CO",
+            "c",
+            12.0,
+            true
+          ],
+          [
+            "river",
+            "BB",
+            "b",
+            16.8,
+            false
+          ],
+          [
+            "river",
+            "CO",
+            "c",
+            16.8,
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "hand_id": "H_1352",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit",
+        "streets"
+      ],
+      "diff_count": 4,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1353",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": true,
+      "changed_fields": [
+        "final_pot",
+        "recorder_audit",
+        "streets"
+      ],
+      "diff_count": 7,
+      "action_diff": {
+        "before": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "flop",
+            "BB",
+            "b",
+            2.0,
+            true
+          ],
+          [
+            "flop",
+            "UTG",
+            "b",
+            2.0,
+            true
+          ],
+          [
+            "flop",
+            "MP",
+            "b",
+            2.0,
+            true
+          ],
+          [
+            "flop",
+            "CO",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "flop",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "flop",
+            "SB",
+            "c",
+            0.5,
+            true
+          ],
+          [
+            "flop",
+            "SB",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "UTG",
+            "b",
+            1.1,
+            false
+          ],
+          [
+            "turn",
+            "MP",
+            "c",
+            1.1,
+            true
+          ],
+          [
+            "turn",
+            "BB",
+            "c",
+            1.1,
+            true
+          ],
+          [
+            "river",
+            "UTG",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "river",
+            "MP",
+            "b",
+            3.2,
+            false
+          ],
+          [
+            "river",
+            "BB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "river",
+            "UTG",
+            "f",
+            0.0,
+            false
+          ]
+        ],
+        "after": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "UTG",
+            "r",
+            2.0,
+            false
+          ],
+          [
+            "preflop",
+            "MP",
+            "c",
+            2.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "c",
+            2.0,
+            false
+          ],
+          [
+            "flop",
+            "BB",
+            "x",
+            0.0,
+            false
+          ],
+          [
+            "flop",
+            "UTG",
+            "x",
+            0.0,
+            false
+          ],
+          [
+            "flop",
+            "MP",
+            "x",
+            0.0,
+            false
+          ],
+          [
+            "turn",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "UTG",
+            "b",
+            1.1,
+            false
+          ],
+          [
+            "turn",
+            "MP",
+            "c",
+            1.1,
+            true
+          ],
+          [
+            "turn",
+            "BB",
+            "c",
+            1.1,
+            true
+          ],
+          [
+            "river",
+            "BB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "river",
+            "UTG",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "river",
+            "MP",
+            "b",
+            3.2,
+            false
+          ],
+          [
+            "river",
+            "UTG",
+            "f",
+            0.0,
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "hand_id": "H_1354",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": true,
+      "changed_fields": [
+        "players",
+        "recorder_audit",
+        "showdown",
+        "streets"
+      ],
+      "diff_count": 11,
+      "action_diff": {
+        "before": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "MP",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "preflop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "SB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "SB",
+            "b",
+            1.0,
+            true
+          ],
+          [
+            "turn",
+            "BB",
+            "b",
+            1.0,
+            true
+          ],
+          [
+            "river",
+            "BB",
+            "f",
+            0.0,
+            true
+          ]
+        ],
+        "after": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "MP",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "preflop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "SB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "SB",
+            "b",
+            1.0,
+            true
+          ],
+          [
+            "turn",
+            "BB",
+            "b",
+            1.0,
+            true
+          ],
+          [
+            "river",
+            "SB",
+            "x",
+            0.0,
+            false
+          ],
+          [
+            "river",
+            "BB",
+            "x",
+            0.0,
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "hand_id": "H_1355",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": true,
+      "changed_fields": [
+        "players",
+        "recorder_audit",
+        "showdown",
+        "streets"
+      ],
+      "diff_count": 10,
+      "action_diff": {
+        "before": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "c",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "preflop",
+            "SB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "CO",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "BTN",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "CO",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "BTN",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "river",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "river",
+            "CO",
+            "b",
+            3.4,
+            false
+          ],
+          [
+            "river",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "river",
+            "BB",
+            "c",
+            3.4,
+            true
+          ],
+          [
+            "river",
+            "BB",
+            "f",
+            0.0,
+            true
+          ]
+        ],
+        "after": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "c",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "preflop",
+            "SB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "CO",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "BTN",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "CO",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "BTN",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "river",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "river",
+            "CO",
+            "b",
+            3.4,
+            false
+          ],
+          [
+            "river",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "river",
+            "BB",
+            "c",
+            3.4,
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "hand_id": "H_1356",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": true,
+      "changed_fields": [
+        "final_pot",
+        "players",
+        "recorder_audit",
+        "showdown",
+        "streets"
+      ],
+      "diff_count": 17,
+      "action_diff": {
+        "before": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "r",
+            3.0,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "r",
+            120.7,
+            true
+          ],
+          [
+            "preflop",
+            "BB",
+            "c",
+            3.0,
+            true
+          ],
+          [
+            "flop",
+            "BB",
+            "b",
+            4.4,
+            false
+          ],
+          [
+            "flop",
+            "CO",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "flop",
+            "SB",
+            "r",
+            8.8,
+            false
+          ],
+          [
+            "flop",
+            "BB",
+            "c",
+            8.8,
+            true
+          ],
+          [
+            "turn",
+            "SB",
+            "b",
+            26.3,
+            true
+          ],
+          [
+            "turn",
+            "BB",
+            "c",
+            26.3,
+            true
+          ],
+          [
+            "river",
+            "SB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "river",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "river",
+            "BB",
+            "f",
+            0.0,
+            true
+          ]
+        ],
+        "after": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "r",
+            3.0,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "c",
+            3.0,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "c",
+            3.0,
+            true
+          ],
+          [
+            "flop",
+            "SB",
+            "x",
+            0.0,
+            false
+          ],
+          [
+            "flop",
+            "BB",
+            "b",
+            4.4,
+            false
+          ],
+          [
+            "flop",
+            "CO",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "flop",
+            "SB",
+            "r",
+            8.8,
+            false
+          ],
+          [
+            "flop",
+            "BB",
+            "c",
+            8.8,
+            true
+          ],
+          [
+            "turn",
+            "SB",
+            "b",
+            26.3,
+            true
+          ],
+          [
+            "turn",
+            "BB",
+            "c",
+            26.3,
+            true
+          ],
+          [
+            "river",
+            "SB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "river",
+            "BB",
+            "x",
+            0.0,
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "hand_id": "H_1357",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "final_pot",
+        "recorder_audit",
+        "streets"
+      ],
+      "diff_count": 9,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1358",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "final_pot",
+        "recorder_audit"
+      ],
+      "diff_count": 7,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1359",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "final_pot",
+        "recorder_audit"
+      ],
+      "diff_count": 7,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1360",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit",
+        "streets"
+      ],
+      "diff_count": 5,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1361",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": true,
+      "changed_fields": [
+        "players",
+        "recorder_audit",
+        "showdown",
+        "streets"
+      ],
+      "diff_count": 11,
+      "action_diff": {
+        "before": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "MP",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "preflop",
+            "CO",
+            "r",
+            2.5,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "r",
+            7.5,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "c",
+            7.5,
+            true
+          ],
+          [
+            "preflop",
+            "CO",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "BTN",
+            "b",
+            5.9,
+            false
+          ],
+          [
+            "flop",
+            "BB",
+            "c",
+            5.9,
+            true
+          ],
+          [
+            "turn",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "BTN",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "river",
+            "BB",
+            "b",
+            47.0,
+            false
+          ],
+          [
+            "river",
+            "BTN",
+            "c",
+            47.0,
+            true
+          ],
+          [
+            "river",
+            "BB",
+            "f",
+            0.0,
+            true
+          ]
+        ],
+        "after": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "MP",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "preflop",
+            "CO",
+            "r",
+            2.5,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "r",
+            7.5,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "c",
+            7.5,
+            true
+          ],
+          [
+            "preflop",
+            "CO",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "BTN",
+            "b",
+            5.9,
+            false
+          ],
+          [
+            "flop",
+            "BB",
+            "c",
+            5.9,
+            true
+          ],
+          [
+            "turn",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "BTN",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "river",
+            "BB",
+            "b",
+            47.0,
+            false
+          ],
+          [
+            "river",
+            "BTN",
+            "c",
+            47.0,
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "hand_id": "H_1362",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit"
+      ],
+      "diff_count": 1,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1363",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": true,
+      "changed_fields": [
+        "recorder_audit",
+        "streets"
+      ],
+      "diff_count": 6,
+      "action_diff": {
+        "before": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "preflop",
+            "SB",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "preflop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "SB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "CO",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "BTN",
+            "b",
+            9.0,
+            false
+          ],
+          [
+            "flop",
+            "SB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "flop",
+            "BB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "flop",
+            "CO",
+            "f",
+            0.0,
+            false
+          ]
+        ],
+        "after": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "preflop",
+            "SB",
+            "c",
+            1.0,
+            true
+          ],
+          [
+            "preflop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "SB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "BTN",
+            "b",
+            9.0,
+            false
+          ],
+          [
+            "flop",
+            "SB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "flop",
+            "BB",
+            "f",
+            0.0,
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "hand_id": "H_1364",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "final_pot",
+        "recorder_audit"
+      ],
+      "diff_count": 7,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1365",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": true,
+      "changed_fields": [
+        "final_pot",
+        "players",
+        "recorder_audit",
+        "streets"
+      ],
+      "diff_count": 9,
+      "action_diff": {
+        "before": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "r",
+            36.0,
+            true
+          ],
+          [
+            "preflop",
+            "BB",
+            "c",
+            29.0,
+            true
+          ],
+          [
+            "flop",
+            "SB",
+            "b",
+            50.0,
+            false
+          ],
+          [
+            "flop",
+            "BB",
+            "r",
+            84.6,
+            true
+          ],
+          [
+            "flop",
+            "CO",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "flop",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "turn",
+            "SB",
+            "b",
+            76.9,
+            true
+          ]
+        ],
+        "after": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "c",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "r",
+            15.0,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "r",
+            29.0,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "c",
+            29.0,
+            true
+          ],
+          [
+            "flop",
+            "SB",
+            "b",
+            57.0,
+            false
+          ],
+          [
+            "flop",
+            "BB",
+            "r",
+            84.6,
+            true
+          ],
+          [
+            "flop",
+            "SB",
+            "c",
+            83.9,
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "hand_id": "H_1366",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": true,
+      "changed_fields": [
+        "recorder_audit",
+        "showdown",
+        "streets"
+      ],
+      "diff_count": 9,
+      "action_diff": {
+        "before": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "r",
+            2.5,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "c",
+            2.5,
+            true
+          ],
+          [
+            "flop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "CO",
+            "b",
+            1.8,
+            false
+          ],
+          [
+            "flop",
+            "BB",
+            "c",
+            1.8,
+            true
+          ],
+          [
+            "turn",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "CO",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "river",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "river",
+            "CO",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "river",
+            "CO",
+            "f",
+            0.0,
+            true
+          ]
+        ],
+        "after": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "r",
+            2.5,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "c",
+            2.5,
+            true
+          ],
+          [
+            "flop",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "CO",
+            "b",
+            1.8,
+            false
+          ],
+          [
+            "flop",
+            "BB",
+            "c",
+            1.8,
+            true
+          ],
+          [
+            "turn",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "turn",
+            "CO",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "river",
+            "BB",
+            "x",
+            0.0,
+            true
+          ],
+          [
+            "river",
+            "CO",
+            "x",
+            0.0,
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "hand_id": "H_1367",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "final_pot",
+        "recorder_audit"
+      ],
+      "diff_count": 7,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1368",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": true,
+      "changed_fields": [
+        "final_pot",
+        "players",
+        "recorder_audit",
+        "streets"
+      ],
+      "diff_count": 8,
+      "action_diff": {
+        "before": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "UTG",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "preflop",
+            "MP",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "preflop",
+            "CO",
+            "r",
+            2.5,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "r",
+            8.0,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "c",
+            8.0,
+            true
+          ],
+          [
+            "preflop",
+            "CO",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "BB",
+            "b",
+            13.5,
+            true
+          ],
+          [
+            "turn",
+            "SB",
+            "f",
+            0.0,
+            false
+          ]
+        ],
+        "after": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "UTG",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "preflop",
+            "MP",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "preflop",
+            "CO",
+            "r",
+            2.5,
+            false
+          ],
+          [
+            "preflop",
+            "BTN",
+            "r",
+            8.0,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "c",
+            8.0,
+            true
+          ],
+          [
+            "preflop",
+            "CO",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "flop",
+            "BB",
+            "b",
+            13.5,
+            true
+          ],
+          [
+            "flop",
+            "BTN",
+            "c",
+            13.5,
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "hand_id": "H_1369",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": true,
+      "changed_fields": [
+        "final_pot",
+        "players",
+        "recorder_audit",
+        "streets"
+      ],
+      "diff_count": 6,
+      "action_diff": {
+        "before": [
+          [
+            "preflop",
+            "SB",
+            "p",
+            0.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "MP",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "preflop",
+            "BTN",
+            "r",
+            2.5,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "c",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "SB",
+            "f",
+            0.0,
+            false
+          ]
+        ],
+        "after": [
+          [
+            "preflop",
+            "BB",
+            "p",
+            1.0,
+            false
+          ],
+          [
+            "preflop",
+            "UTG",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "MP",
+            "f",
+            0.0,
+            false
+          ],
+          [
+            "preflop",
+            "CO",
+            "f",
+            0.0,
+            true
+          ],
+          [
+            "preflop",
+            "BTN",
+            "r",
+            2.5,
+            false
+          ],
+          [
+            "preflop",
+            "BB",
+            "f",
+            0.0,
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "hand_id": "H_1370",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit",
+        "streets"
+      ],
+      "diff_count": 5,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1371",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "players",
+        "recorder_audit",
+        "streets"
+      ],
+      "diff_count": 6,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1372",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "final_pot",
+        "recorder_audit",
+        "streets"
+      ],
+      "diff_count": 10,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1373",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "final_pot",
+        "recorder_audit"
+      ],
+      "diff_count": 7,
+      "action_diff": null
+    },
+    {
+      "hand_id": "H_1374",
+      "first900": false,
+      "excluded_cm004": false,
+      "semantic_action_changed": false,
+      "changed_fields": [
+        "recorder_audit",
+        "streets"
+      ],
+      "diff_count": 5,
+      "action_diff": null
+    }
+  ]
+}
