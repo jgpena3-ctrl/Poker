@@ -116,3 +116,24 @@ repartir; la clase queda documentada como forma, no como defecto de datos.
 `H_0294` es la excepcion del lote: no es una ausencia, es una contradiccion
 (`active: false` con ciega). Se aparta igual porque no se puede decidir cual
 de las dos mitades es la buena sin la grabacion.
+
+## 6. Notas de la revision 2026-11-10
+
+Estas notas no cambian las mediciones historicas de arriba; dejan constancia de
+los casos revisados despues.
+
+- `ACTIVO_SIN_ACCION_CALLE` sobre `H_1327` era un falso positivo: en el turn
+  UTG foldea voluntariamente sin apuesta y BTN queda como unico vivo; BTN no
+  tiene a quien responder. El detector ya no exige accion al unico
+  superviviente de una calle (`tools/auditar_rango.py`).
+- `AUSENCIA_RESPUESTA_BB` sobre `H_1241` sigue siendo un falso positivo: el BB
+  esta all-in (`allin: ['p3']`) y el detector no lee `allin`. Se conserva la
+  anotacion y no se toca la cifra publicada (23) ni sus tests.
+- `H_1323` era la mano fantasma duplicada de `H_1322`; se retiro de la base
+  canonica y quedo archivada en `data/_eliminadas/H_1323.jsonl`.
+- `H_1351` conserva `pot_resolution: read_incomplete_before_close`: la lectura
+  de mesa (50.4) se tomo antes de que terminaran las apuestas; el calculo con
+  las acciones (67.3) es el correcto.
+- `H_1303` conserva un `final_pot` de bote vivo (29.0) y un
+  `pot_calculated` de showdown (26.7); la nota `pot_live_vs_awarded` explica
+  los 2.3 sin igualar que se devuelven.

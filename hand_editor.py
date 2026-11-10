@@ -495,17 +495,9 @@ class HandEditor:
         if audit.get('ambiguous'):
             lines.append('AMBIGUO: ' + ', '.join(
                 a.get('code', '?') for a in audit.get('ambiguities', [])))
-        for a in audit.get('ambiguities', []):
-            if a.get('capture'):
-                lines.append('  captura de evidencia (%s): %s' % (
-                    a.get('code', '?'), a['capture']))
         for a in audit.get('ambiguous_actions', []):
             lines.append('  accion ambigua: %s %s %s (inferred=%s)' % (
                 a.get('street'), a.get('pos'), a.get('action'), a.get('inferred')))
-        for ev in audit.get('award_display_ignored', []) or []:
-            lines.append('  premio ignorado: %s stack %s->%s bet %s' % (
-                ev.get('pos'), ev.get('stack_before'), ev.get('stack_after'),
-                ev.get('bet_display_ignored')))
         if audit.get('fold_win'):
             lines.append('Victoria por fold (fold_win=True)')
         if audit.get('pot_resolution'):

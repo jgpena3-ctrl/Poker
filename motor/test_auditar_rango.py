@@ -248,6 +248,14 @@ def test_activo_sin_accion_calle_detecta_al_que_desaparece():
     assert A.activo_sin_accion_calle(h) == ['BB sin accion en flop']
 
 
+def test_activo_sin_accion_calle_no_exige_accion_al_unico_superviviente():
+    h = mano(preflop=[acc('UTG', 'x', 0.0), acc('BB', 'x', 0.0)],
+             flop=[acc('UTG', 'b', 2.0), acc('BB', 'c', 2.0)],
+             turn=[acc('BB', 'f', 0.0)], activos=('UTG', 'BB'))
+    # BB foldea en el turn; UTG queda solo y no tiene que actuar.
+    assert A.activo_sin_accion_calle(h) == []
+
+
 def test_activo_sin_accion_calle_no_cuenta_al_que_ya_foldeo_ni_al_allin():
     h = mano(preflop=[acc('BB', 'p', 1.0), acc('UTG', 'f', 0.0)],
              flop=[acc('BB', 'b', 2.0)], activos=('UTG', 'BB'))

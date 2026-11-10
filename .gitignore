@@ -80,6 +80,18 @@ data/_snapshot_pre_audit/
 # fichero del repo. Guardar el SHA-256 en DOCS/ y el backup se identifica
 # tambien por git, porque hands_db.jsonl esta versionado.
 data/_backup_aplicar_correcciones/
+data/_backup_corregir_sesion_20261104/
+data/_backup_corregir_mano_H_1333/
+data/_backup_corregir_folds_showdown/
+data/_backup_limpiar_anotaciones_ruido/
+data/_backup_corregir_bote_inflado_fold/
+data/_backup_limpiar_notas_inferidas/
+data/_backup_corregir_resultados_20261104/
+data/_backup_corregir_showdown_posicion/
+data/_backup_corregir_resultados_20261029/
+data/_backup_eliminar_H_1323/
+data/_backup_corregir_anotaciones_20261110/
+data/_eliminadas/
 
 # Backup que escribe `hand_editor._guardar_base` en cada guardar desde la
 # GUI. Es la red del canal manual: si una edicion sale mal, esto es lo que

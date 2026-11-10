@@ -396,6 +396,19 @@ def activo_sin_accion_calle(hand):
         if not acts:
             continue
         actuaron = {a.get('pos') for a in acts if a.get('pos')}
+        folds_calle = {a.get('pos') for a in acts
+                       if a.get('action') == 'f' and a.get('pos')}
+        # Si al terminar la calle queda un unico jugador vivo, no falta
+        # ninguna accion: el superviviente no tiene a quien responder. Es el
+        # caso de H_1327, donde UTG foldea voluntariamente en el turn sin
+        # apuesta y BTN gana la mano sin actuar.
+        vivos = {p.get('pos') for p in (hand.get('players') or [])
+                 if p.get('active') and p.get('pos')
+                 and p.get('pos') not in folds
+                 and p.get('pos') not in folds_calle}
+        if len(vivos) <= 1:
+            folds |= folds_calle
+            continue
         for p in (hand.get('players') or []):
             pos = p.get('pos')
             if not p.get('active') or not pos:
@@ -404,8 +417,7 @@ def activo_sin_accion_calle(hand):
                 continue
             if pos not in actuaron:
                 fallos.append('%s sin accion en %s' % (pos, s))
-        folds |= {a.get('pos') for a in acts
-                  if a.get('action') == 'f' and a.get('pos')}
+        folds |= folds_calle
     return fallos
 
 

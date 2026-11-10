@@ -223,14 +223,14 @@ def test_ambiguedad_guarda_captura_causal_y_no_duplica(tmp_path):
     r._add_ambiguity('pot_read_vs_contributions', 'flop', difference=0.8)
 
     row = r._hand_ambiguities[0]
-    image = ROOT / row['capture']
-    assert row['capture_sha256']
-    assert image.exists()
     entries = [json.loads(x) for x in
                (captures / 'index.jsonl').read_text(encoding='utf-8').splitlines()]
     assert len(entries) == 1
     assert entries[0]['code'] == 'pot_read_vs_contributions'
     assert entries[0]['details']['difference'] == 0.7
+    image = captures / entries[0]['frame']
+    assert image.exists()
+    assert entries[0]['sha256']
 
 
 def test_apuestas_de_varios_frames_se_guardan_como_importes_absolutos():
@@ -398,6 +398,55 @@ def test_fold_lee_bote_no_inflado_pero_guarda_el_inflado_calculado(tmp_path):
     assert saved['recorder_audit']['pot_read'] == 24.2
     assert saved['recorder_audit']['pot_resolution'] == 'ambiguous_read_mismatch'
     assert saved['recorder_audit']['ambiguous'] is True
+
+
+def test_fold_win_conserva_la_apuesta_no_igualada_en_el_bote():
+    """La devolucion de la apuesta no igualada no debe vaciar el bote final.
+
+    H_1357: CO apuesta 8.8 en el river y SB foldea. La mesa devuelve el
+    excedente al ganador, pero el bote historico debe seguir inflado e incluir
+    esa apuesta; el bote en vivo si descuenta la devolucion.
+    """
+    r = _preflop_recorder()
+    r.hand['current_street'] = 'river'
+    r.hand['comunitarias'] = {'flop': ['6s', '2d', '8c'],
+                              'turn': ['4d'], 'river': ['8s']}
+    r.hand['streets']['preflop']['actions'] = [
+        {'pos': 'SB', 'action': 'p', 'amount': 0.5},
+        {'pos': 'BB', 'action': 'p', 'amount': 1.0},
+        {'pos': 'MP', 'action': 'f', 'amount': 0.0},
+        {'pos': 'CO', 'action': 'c', 'amount': 1.0},
+        {'pos': 'BTN', 'action': 'f', 'amount': 0.0},
+        {'pos': 'SB', 'action': 'c', 'amount': 1.0},
+        {'pos': 'BB', 'action': 'x', 'amount': 0.0},
+    ]
+    r.hand['streets']['flop']['actions'] = [
+        {'pos': 'SB', 'action': 'x', 'amount': 0.0},
+        {'pos': 'BB', 'action': 'x', 'amount': 0.0},
+        {'pos': 'CO', 'action': 'b', 'amount': 1.5},
+        {'pos': 'SB', 'action': 'c', 'amount': 1.5},
+        {'pos': 'BB', 'action': 'f', 'amount': 0.0},
+    ]
+    r.hand['streets']['turn']['actions'] = [
+        {'pos': 'SB', 'action': 'x', 'amount': 0.0},
+        {'pos': 'CO', 'action': 'b', 'amount': 3.8},
+        {'pos': 'SB', 'action': 'c', 'amount': 3.8},
+    ]
+    r.hand['streets']['river']['actions'] = [
+        {'pos': 'SB', 'action': 'x', 'amount': 0.0},
+        {'pos': 'CO', 'action': 'b', 'amount': 8.8},
+        {'pos': 'SB', 'action': 'f', 'amount': 0.0},
+    ]
+    # La mesa devuelve los 8.8 no igualados al ganador (CO).
+    r._returned_by_pos[('river', 'CO')] = 8.8
+
+    bd = r._pot_breakdown(final=True, fold_win=True)
+
+    assert bd['uncalled'] == 8.8
+    assert bd['pot_calculated'] == 22.1
+    assert bd['pot_calculated_noninflated'] == 13.3
+    # El bote en vivo si descuenta la devolucion para casar con la mesa.
+    assert bd['pot_live_calculated'] == 13.3
 
 
 def test_call_pendiente_en_cambio_de_calle_no_se_suma_al_bet_nuevo():
@@ -679,8 +728,150 @@ def test_fold_inferido_es_valido_si_el_agresor_reabre_la_apuesta():
     assert ('flop', 'UTG', 'f', 0.0) in detected
 
 
-def test_fold_preflop_inferido_respeta_el_orden_de_actuacion():
-    r = LiveRecorder()
+def test_fold_inferido_al_cerrar_es_inferido_pero_no_ambiguo():
+    """Un fold que la mesa ya aplicó no es una duda que requiera revisión."""
+    r = _preflop_recorder()
+    r.hand['current_street'] = 'river'
+    r.hand['players'] = [
+        {'_id': 'p1', 'pos': 'BTN', 'active': True},
+        {'_id': 'p3', 'pos': 'BB', 'active': True},
+    ]
+    r._hand_positions = {'p1': 'BTN', 'p3': 'BB'}
+    r.hand['streets']['river']['actions'] = [
+        {'pos': 'BTN', 'action': 'b', 'amount': 5.0},
+    ]
+    state = _state(btn='p1', states={'p3': 'retirarse'},
+                   stakes={'p1': 95.0, 'p3': 100.0})
+
+    r._complete_missing_folds(state)
+
+    folds = [a for a in r.hand['streets']['river']['actions']
+             if a['action'] == 'f' and a['pos'] == 'BB']
+    assert len(folds) == 1
+    assert folds[0].get('inferred') is True
+    assert 'ambiguous' not in folds[0]
+    assert not any(x.get('code') == 'fold_missing_at_close'
+                   for x in r._hand_ambiguities)
+
+
+def test_bb_check_inferido_tras_limps_no_es_ambiguo():
+    """La opción del BB tras los limps es una regla, no una duda."""
+    r = _preflop_recorder()
+    r.hand['current_street'] = 'preflop'
+    r.hand['players'] = [
+        {'_id': pid, 'pos': pos, 'active': True} for pid, pos in POS.items()]
+    r.hand['streets']['preflop']['actions'] = [
+        {'pos': 'SB', 'action': 'p', 'amount': 0.5},
+        {'pos': 'BB', 'action': 'p', 'amount': 1.0},
+        {'pos': 'UTG', 'action': 'c', 'amount': 1.0},
+        {'pos': 'MP', 'action': 'c', 'amount': 1.0},
+        {'pos': 'SB', 'action': 'c', 'amount': 1.0},
+    ]
+
+    r._finalize_street('preflop', _state(btn='p1'))
+
+    checks = [a for a in r.hand['streets']['preflop']['actions']
+              if a['action'] == 'x' and a['pos'] == 'BB']
+    assert len(checks) == 1
+    assert checks[0].get('inferred') is True
+    assert 'ambiguous' not in checks[0]
+
+
+def test_ganador_manual_no_foldea_a_un_jugador_que_sigue_activo(
+        monkeypatch):
+    """Ganar a mano no implica que el rival haya abandonado: pudo showdown."""
+    monkeypatch.setattr(rl, 'MANUAL_WINNER', ['p3'])
+    r = _preflop_recorder()
+    r.hand['current_street'] = 'river'
+    r.hand['players'] = [
+        {'_id': 'p3', 'pos': 'BB', 'active': True},
+        {'_id': 'p2', 'pos': 'MP', 'active': True},
+    ]
+    r._hand_positions = {'p3': 'BB', 'p2': 'MP'}
+    r.hand['streets']['river']['actions'] = [
+        {'pos': 'BB', 'action': 'b', 'amount': 4.5},
+        {'pos': 'MP', 'action': 'r', 'amount': 10.0},
+        {'pos': 'BB', 'action': 'c', 'amount': 10.0},
+    ]
+
+    r._complete_missing_folds(
+        _state(btn='p1', states={'p2': 'activo', 'p3': 'activo'}))
+
+    assert not any(a['action'] == 'f' and a['pos'] == 'MP'
+                   for a in r.hand['streets']['river']['actions'])
+
+
+def test_aviso_de_mesa_no_se_resta_como_devolucion_en_showdown(
+        monkeypatch):
+    """Un salto de stack con dos jugadores vivos es premio, no devolución."""
+    monkeypatch.setattr(rl, 'RAKE_RATE', 0.05)
+    monkeypatch.setattr(rl, 'RAKE_CAP_BB', 2.5)
+    r = _preflop_recorder()
+    r.hand['current_street'] = 'river'
+    r._hand_positions = {'p3': 'BB', 'p2': 'MP'}
+    r.hand['comunitarias'] = {'flop': ['Ks', 'Kd', '5s'],
+                              'turn': ['8c'], 'river': ['3d']}
+    r.hand['streets']['preflop']['actions'] = [
+        {'pos': 'SB', 'action': 'p', 'amount': 0.5},
+        {'pos': 'BB', 'action': 'p', 'amount': 1.0},
+        {'pos': 'UTG', 'action': 'c', 'amount': 1.0},
+        {'pos': 'MP', 'action': 'c', 'amount': 1.0},
+        {'pos': 'SB', 'action': 'c', 'amount': 1.0},
+    ]
+    r.hand['streets']['flop']['actions'] = [
+        {'pos': 'BB', 'action': 'b', 'amount': 1.9},
+        {'pos': 'MP', 'action': 'c', 'amount': 1.9},
+    ]
+    r.hand['streets']['turn']['actions'] = [
+        {'pos': 'BB', 'action': 'b', 'amount': 5.6},
+        {'pos': 'MP', 'action': 'c', 'amount': 5.6},
+    ]
+    r.hand['streets']['river']['actions'] = [
+        {'pos': 'BB', 'action': 'b', 'amount': 4.5},
+        {'pos': 'MP', 'action': 'r', 'amount': 10.0},
+        {'pos': 'BB', 'action': 'c', 'amount': 10.0},
+    ]
+    retirados = {'p1': 'retirarse', 'p4': 'retirarse',
+                 'p5': 'retirarse', 'hero': 'retirarse'}
+    r.last_state = _state(bets={'p2': 10.0},
+                          stakes={'p2': 40.5, 'p3': 86.6},
+                          states=retirados)
+    state = _state(bets={'p2': 0.0},
+                   stakes={'p2': 48.5, 'p3': 86.6},
+                   states=retirados)
+
+    r._detect_deltas(state)
+
+    assert r._returned_by_pos == {}
+    bd = r._pot_breakdown(final=True, fold_win=False)
+    assert bd['gross_contributions'] == 39.0
+    assert bd['matched_contributions'] == 39.0
+    assert bd['uncalled'] == 0.0
+    assert bd['rake'] == 1.95
+    assert bd['pot_calculated'] == 37.1
+
+
+def test_showdown_no_genera_folds_aunque_el_ganador_sea_manual(monkeypatch):
+    """En un showdown el juego atenua a los perdedores; no son folds."""
+    monkeypatch.setattr(rl, 'MANUAL_WINNER', ['p2'])
+    r = _preflop_recorder()
+    r.hand['current_street'] = 'river'
+    r.hand['players'] = [
+        {'_id': 'p1', 'pos': 'BTN', 'active': True},
+        {'_id': 'p2', 'pos': 'BB', 'active': True},
+    ]
+    r._hand_positions = {'p1': 'BTN', 'p2': 'BB'}
+    r.hand['streets']['river']['actions'] = [
+        {'pos': 'BTN', 'action': 'b', 'amount': 4.4},
+        {'pos': 'BB', 'action': 'r', 'amount': 17.7},
+    ]
+
+    r._complete_missing_folds(
+        _state(btn='p1', states={'p1': 'activo', 'p2': 'activo'}))
+
+    assert not any(a['action'] == 'f'
+                   for d in r.hand['streets'].values()
+                   for a in d.get('actions', []))
     r.hand_id = 0
     r._assign_positions = lambda state: dict(POS)
     state = _state(bets={'p2': 0.5, 'p3': 1.0},
