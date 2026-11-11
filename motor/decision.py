@@ -23,7 +23,7 @@ actual, útil solo para diagnósticos o presupuestos muy cortos.
 """
 import math
 from dataclasses import dataclass, field
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple
 
 import numpy as np
 
@@ -84,9 +84,14 @@ def default_response(villain_equity, amount, pot):
 class OracleResponse:
     """Respuesta del rival desde `Oracle` (P(A|C) del perfil, §7).
 
-    Funde la distribución del perfil con la heurística `default_response`:
-    cuanto mayor la n de la celda (celda `n` del Oracle), más peso del
-    perfil (fade-in 1 − n/fade_in; n=0 → heurística pura).
+    Modula la heurística `default_response` con la distribución Oracle. La
+    regla actual calcula `alpha=min(1, returned_n/fade_n)` y usa
+    `(3 * clip(P_perfil, .05, .90)) ** alpha` como factor multiplicativo,
+    normalizado junto a las respuestas heurísticas. `alpha` es un exponente,
+    no una mezcla convexa ni un porcentaje de confianza. Con `returned_n=0`
+    se usa la heurística pura, incluso si Oracle devolvió un fallback agregado
+    cuyo soporte real es mayor; el metadato de evidencia lo expone sin cambiar
+    esta regla.
 
     context: (street, facing, texture) — facing es lo que ve el rival
     cuando el hero apuesta (cbet si el hero es el iniciador en flop, etc.).
@@ -99,6 +104,28 @@ class OracleResponse:
         self.street, self.facing, self.texture = street, facing, texture
         dist = oracle.p_action(label, street, facing, texture) \
             if oracle is not None else None
+        if oracle is not None and hasattr(oracle, 'evidence'):
+            try:
+                self.evidence = oracle.evidence(
+                    label, street, facing, texture, distribution=dist)
+            except Exception as exc:
+                # El contrato sombra nunca puede suprimir una respuesta válida.
+                self.evidence = {
+                    'source': dist.get('source') if dist else 'no_prior',
+                    'returned_n': dist.get('n', 0) if dist else 0,
+                    'support_observations': dist.get('n', 0) if dist else 0,
+                    'confidence': 'not_quantified',
+                    'uncertainty_reason': 'evidence error: %s' % exc,
+                }
+        else:
+            self.evidence = {
+                'source': dist.get('source') if dist else 'no_prior',
+                'returned_n': dist.get('n', 0) if dist else 0,
+                'support_observations': dist.get('n', 0) if dist else 0,
+                'confidence': 'not_quantified',
+                'uncertainty_reason': 'Oracle sin contrato de evidencia',
+            }
+        self.fade_n = fade_n
         if dist:
             a = dist['actions']
             total = (a.get('c', 0.0) + a.get('f', 0.0) + a.get('r', 0.0))
@@ -113,6 +140,14 @@ class OracleResponse:
             self.alpha = 0.0
             self.source = 'default'
             self.sizing = None
+        self.evidence = dict(self.evidence or {})
+        self.evidence.update({
+            'fade_n': fade_n,
+            'profile_exponent': self.alpha,
+            'fade_rule': 'min(1, returned_n/fade_n); exponent, not mixture weight',
+            'profile_response': {
+                'fold': self.pf_p, 'call': self.pc_p, 'raise': self.pr_p},
+        })
 
     def __call__(self, villain_equity, amount, pot):
         if amount <= 0:
@@ -423,6 +458,9 @@ class EvTable:
     ev: Dict[str, float] = field(default_factory=dict)
     pot: float = 0.0
     hero_equity: float = 0.0
+    # Metadata informativo solamente; no participa en EV, ranking ni elección.
+    model_evidence: Optional[dict] = field(default=None, repr=False,
+                                           compare=False)
 
     def best(self, candidates=None) -> Tuple[str, float]:
         """La etiqueta con mejor EV **finito**, para PINTAR. No para decidir.

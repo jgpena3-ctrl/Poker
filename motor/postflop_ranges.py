@@ -31,12 +31,13 @@ MÉTODO — FUERZA → BUCKETS + SHRINKAGE AL ORACLE:
 
    Con n→0 manda el Oracle; con n grande manda la evidencia de la mano.
 
-Nota (misma lección §6): la DB real tiene 1.043 decisiones con mano
-conocida, repartidas por perfil×street×facing×bucket; el grid de buckets
-es grueso (5) a propósito para no atomizar la muestra. Leer siempre la `n`
-de la casilla.
+La cantidad de manos, observaciones y celdas se audita por separado en
+`tools/auditar_muestra_postflop.py`. `opp` cuenta observaciones, no manos
+distintas; leer ambos tamaños en cada consulta. El grid de buckets es grueso
+(5) a propósito, pero eso no constituye un intervalo de confianza.
 """
 import os
+from collections import defaultdict
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
@@ -114,10 +115,17 @@ class PostflopRangeModel:
         self.n_buckets = n_buckets
         self.n_hands_input = None   # manos recibidas
         self.n_hands_used = None    # manos que aportaron observacion
+        self.n_hands_with_known_cards = None
+        self.n_hands_with_postflop_observation = None
+        self.n_observations_used = None
         self.opp: Dict[Tuple[str, str, str, int], int] = {}
         self.cnt: Dict[Tuple[str, str, str, int, str], int] = {}
+        self._cell_hand_counts: Dict[Tuple[str, str, str, int], int] = {}
+        self._cell_hand_ids: Dict[Tuple[str, str, str, int], set] = {}
+        self._evidence_counts_known = False
         self.labels: Dict[str, str] = {}
         self._oracle = None
+        self._oracle_injection_source = 'none'
         self._scores_cache: Dict[str, Tuple[np.ndarray, np.ndarray]] = {}
 
     # ------------------------------------------------------------------
@@ -137,8 +145,11 @@ class PostflopRangeModel:
         model.n_hands_used = 0
         model.labels = dict(labels)
         model._oracle = Oracle(build(hands, labels=model.labels))
+        model._oracle_injection_source = 'Oracle built from input hands'
         obs = extract_hands(hands)
         manos_con_obs = set()
+        manos_con_obs_postflop = set()
+        manos_por_celda = defaultdict(set)
         for o in obs:
             if not o.hand_known or not o.cards:
                 continue
@@ -168,7 +179,17 @@ class PostflopRangeModel:
             model.opp[key] = model.opp.get(key, 0) + 1
             akey = key + (o.action,)
             model.cnt[akey] = model.cnt.get(akey, 0) + 1
+            manos_con_obs_postflop.add(o.hand_id)
+            manos_por_celda[key].add(o.hand_id)
         model.n_hands_used = len(manos_con_obs)
+        model.n_hands_with_known_cards = len(manos_con_obs)
+        model.n_hands_with_postflop_observation = len(manos_con_obs_postflop)
+        model.n_observations_used = sum(model.opp.values())
+        model._cell_hand_counts = {
+            key: len(ids) for key, ids in manos_por_celda.items()}
+        model._cell_hand_ids = {
+            key: set(ids) for key, ids in manos_por_celda.items()}
+        model._evidence_counts_known = True
         return model
 
     def _bucket_of(self, cards: np.ndarray, board_ids: np.ndarray) -> int:
@@ -217,6 +238,134 @@ class PostflopRangeModel:
         cnt = self.cnt.get(key + (action,), 0)
         return (cnt + self.alpha * p0) / (opp + self.alpha)
 
+    def evidence_for(self, perfil: str, street: str, facing: str,
+                     bucket: int, action: str,
+                     eligibility_projection: Optional[dict] = None) -> dict:
+        """Descompone una probabilidad actual en observaciones y prior.
+
+        No es usado por `p_action`; calcula solo metadatos y deja intacta la
+        probabilidad. `prior_weight` es la contribución algebraica exacta del
+        prior en la fórmula existente, no un nivel de confianza.
+        """
+        key = (perfil, street, facing, bucket)
+        n = self.opp.get(key, 0)
+        action_n = self.cnt.get(key + (action,), 0)
+        hand_n = (self._cell_hand_counts.get(key)
+                  if self._evidence_counts_known else None)
+        prior_result = None
+        oracle_evidence = None
+        if self._oracle is not None:
+            prior_result = self._oracle.p_action(perfil, street, facing)
+            if hasattr(self._oracle, 'evidence'):
+                oracle_evidence = self._oracle.evidence(
+                    perfil, street, facing, distribution=prior_result)
+        if prior_result is not None:
+            prior_source = prior_result.get('source', 'oracle')
+            prior_probability = prior_result['actions'].get(action, 0.0)
+            prior_used = True
+        elif n > 0:
+            prior_source = ('flat_no_oracle' if self._oracle is None else
+                            'flat_oracle_no_cell')
+            prior_probability = 0.2
+            prior_used = True
+        else:
+            prior_source = ('no_prior_model' if self._oracle is None else
+                            'oracle_no_distribution')
+            prior_probability = 0.0
+            prior_used = False
+        if prior_used:
+            prior_weight = self.alpha / (n + self.alpha)
+            observation_weight = n / (n + self.alpha)
+            prior_dominated = prior_weight >= 0.5
+        else:
+            prior_weight = None
+            observation_weight = 0.0
+            prior_dominated = False
+        if n == 0:
+            coverage = 'prior_only' if prior_used else 'no_evidence_no_prior'
+            reasons = (['no bucket observations; estimate is prior-only']
+                       if prior_used else
+                       ['no observations and no available prior'])
+        elif n < 3:
+            coverage = 'thin_observations_n_lt_3'
+            reasons = ['fewer than 3 observations in this bucket']
+        elif n < 20:
+            coverage = 'limited_observations_n_lt_20'
+            reasons = ['fewer than 20 observations in this bucket']
+        else:
+            coverage = 'observations_n_ge_20'
+            reasons = []
+        if hand_n == 1:
+            reasons.append('all evidence comes from one hand')
+        if prior_dominated:
+            reasons.append('prior algebraic weight is at least 50%')
+        if not reasons:
+            reasons.append('no calibrated uncertainty interval is available')
+        return {
+            'contract': 'postflop_evidence_v1',
+            'profile': perfil, 'street': street, 'facing': facing,
+            'bucket': bucket, 'action': action,
+            'estimate': self.p_action(perfil, street, facing, bucket, action),
+            'observation_count': n,
+            'distinct_hand_count': hand_n,
+            'action_observation_count': action_n,
+            'observation_provenance': 'hands_db.jsonl via extract_hands',
+            'model_prior_source': prior_source,
+            'prior_probability': (prior_probability if prior_used
+                                 else 'not_available'),
+            'prior_available': prior_used,
+            'prior_returned_n': (prior_result.get('n', 0)
+                                 if prior_result else 0),
+            'prior_support_observations': (
+                oracle_evidence.get('support_observations')
+                if oracle_evidence else 0),
+            'prior_evidence': oracle_evidence,
+            'alpha': self.alpha,
+            'prior_weight': prior_weight,
+            'observation_weight': observation_weight,
+            'prior_dominated': prior_dominated,
+            'coverage': coverage,
+            'confidence': 'not_quantified',
+            'uncertainty_reasons': reasons,
+            'eligibility_projection': (eligibility_projection or {
+                'status': 'not_attached',
+                'reason': 'P0-2 shadow counts are in the audit; no effective filtering'}),
+        }
+
+    def p_action_with_evidence(self, perfil: str, street: str, facing: str,
+                              bucket: int, action: str) -> dict:
+        """Convenience return: old scalar plus additive evidence metadata."""
+        return self.evidence_for(perfil, street, facing, bucket, action)
+
+    def evidence_for_vector(self, perfil: str, street: str, facing: str,
+                            board_codes, action: str) -> dict:
+        """Evidence sidecar for the five-bucket vector used by `prob_vec`."""
+        board = np.asarray([c for c in board_codes])
+        if board.dtype.kind in 'US':
+            from .cards import card_id
+            board = np.asarray([card_id(str(c)) for c in board],
+                               dtype=np.intp)
+        _scores, buckets = self._board_buckets(board)
+        by_bucket = [self.evidence_for(
+            perfil, street, facing, b, action) for b in range(self.n_buckets)]
+        return {
+            'contract': 'postflop_vector_evidence_v1',
+            'profile': perfil, 'street': street, 'facing': facing,
+            'action': action, 'board': [str(c) for c in board_codes],
+            'buckets': by_bucket,
+            'observations_total': sum(x['observation_count']
+                                      for x in by_bucket),
+            'distinct_hands_across_buckets': (
+                len(set().union(*[
+                    self._cell_hand_ids.get((perfil, street, facing, b), set())
+                    for b in range(self.n_buckets)]))
+                if self._evidence_counts_known else None),
+            'confidence': 'not_quantified',
+            'uncertainty_reason': 'vector contains bucket-specific evidence; '
+                                  'inspect each bucket, not one pooled n',
+            'bucket_ids_present_on_board': sorted(set(int(b) for b in buckets)),
+        }
+
     def prob_vec(self, perfil: str, street: str, facing: str,
                  board_codes, action: str) -> np.ndarray:
         """Vector (1326,) de P(A|H) para RangeState.update.
@@ -250,6 +399,41 @@ class PostflopRangeModel:
                          f'{" ".join(acts[:6])}')
         return '\n'.join(lines)
 
+    def evidence_metadata(self) -> dict:
+        """Tamaños y procedencia; nunca se consulta desde `p_action`."""
+        return {
+            'contract': 'postflop_evidence_v1',
+            'hands_received': self.n_hands_input,
+            'legacy_hands_used': self.n_hands_used,
+            'hands_with_known_card_observation':
+                self.n_hands_with_known_cards,
+            'hands_with_postflop_observation':
+                self.n_hands_with_postflop_observation,
+            'observations_used': (self.n_observations_used
+                                  if self.n_observations_used is not None
+                                  else sum(self.opp.values())),
+            'populated_cells': len(self.opp),
+            'whole_hand_validation': 'none; row-level observation filters only',
+            'observation_provenance': 'hands_db.jsonl via extract_hands',
+            'prior_provenance': self._oracle_injection_source,
+            'oracle_injected': self._oracle is not None,
+            'prior_formula': '(action_count + alpha*prior_probability) / '
+                             '(observation_count + alpha)',
+            'flat_prior_probability': 0.2,
+            'flat_prior_condition':
+                'used only if Oracle is unavailable and bucket observation_count > 0',
+            'eligibility_policy': {
+                'mode': 'shadow_only',
+                'effective_filtering': False,
+                'per_cell_projection': 'available from P0-3 audit, not serialized',
+            },
+            'uncertainty': {
+                'confidence': 'not_quantified',
+                'interval_method': None,
+                'reason': 'no calibrated statistical interval implemented',
+            },
+        }
+
     # ------------------------------------------------------------------
 
     def to_json(self) -> dict:
@@ -264,6 +448,12 @@ class PostflopRangeModel:
                     for k, v in self.opp.items()},
             'cnt': {f'{k[0]}|{k[1]}|{k[2]}|{k[3]}|{k[4]}': v
                     for k, v in self.cnt.items()},
+            'evidence': {
+                **self.evidence_metadata(),
+                'cell_distinct_hands': {
+                    f'{k[0]}|{k[1]}|{k[2]}|{k[3]}': sorted(ids)
+                    for k, ids in self._cell_hand_ids.items()},
+            },
         }
 
     def save(self, path: str = PF_RANGES_PATH):
@@ -280,6 +470,8 @@ class PostflopRangeModel:
             data = json.load(f)
         model = cls(alpha=data['meta']['alpha'],
                     n_buckets=data['meta']['n_buckets'])
+        model.n_hands_input = data['meta'].get('hands_input')
+        model.n_hands_used = data['meta'].get('hands_used')
         model.labels = data['labels']
         for k, v in data['opp'].items():
             a, b, c, d = k.split('|')
@@ -287,6 +479,32 @@ class PostflopRangeModel:
         for k, v in data['cnt'].items():
             a, b, c, d, e = k.split('|')
             model.cnt[(a, b, c, int(d), e)] = v
+        model.n_observations_used = sum(model.opp.values())
+        evidence = data.get('evidence') or {}
+        if evidence:
+            model.n_hands_with_known_cards = evidence.get(
+                'hands_with_known_card_observation')
+            model.n_hands_with_postflop_observation = evidence.get(
+                'hands_with_postflop_observation')
+            model._cell_hand_ids = {}
+            for key, ids in evidence.get('cell_distinct_hands', {}).items():
+                a, b, c, d = key.split('|')
+                model._cell_hand_ids[(a, b, c, int(d))] = set(ids)
+            model._cell_hand_counts = {
+                key: len(ids) for key, ids in model._cell_hand_ids.items()}
+            model._evidence_counts_known = bool(
+                evidence.get('hands_with_postflop_observation') is not None)
+        else:
+            # En JSON históricos solo se guardaban manos_input/used y tablas
+            # de observaciones; el n de manos distintas por celda no se puede
+            # reconstruir a partir de opp.
+            model.n_hands_with_known_cards = model.n_hands_used
+            model._evidence_counts_known = False
+        # El formato histórico no serializa Oracle. No inyectarlo aquí:
+        # hacerlo cambiaría p_action frente al comportamiento actual.
+        model._oracle = None
+        model._oracle_injection_source = (
+            'not serialized by legacy load; flat fallback remains active')
         return model
 
 

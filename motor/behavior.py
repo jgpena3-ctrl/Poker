@@ -143,6 +143,56 @@ class Oracle:
             return self._norm(agg, 'poblacion')
         return None
 
+    def evidence(self, label, street, facing, texture=None,
+                 distribution=None):
+        """Metadatos de soporte de `p_action`, sin cambiar su distribución.
+
+        `distribution['n']` es el n que el consumidor histórico realmente
+        recibió (y que OracleResponse usa para su fade). En los fallbacks
+        `label`/`poblacion` ese n es 0; `support_observations` hace visible el
+        soporte agregado real sin retroalimentarlo a la regla existente.
+        """
+        dist = (self.p_action(label, street, facing, texture)
+                if distribution is None else distribution)
+        source = dist.get('source') if dist else 'no_prior'
+        if source in ('granular', 'por_facing'):
+            support_n = dist.get('n', 0)
+        elif source == 'label':
+            support_n = sum(
+                cell.get('n', 0)
+                for (lbl, st, _fac), cell in self.facing.items()
+                if lbl == label and st == street)
+        elif source == 'poblacion':
+            support_n = sum(
+                cell.get('n', 0)
+                for (_lbl, st, _fac), cell in self.facing.items()
+                if st == street)
+        else:
+            support_n = 0
+        returned_n = dist.get('n', 0) if dist else 0
+        return {
+            'source': source,
+            'profile': label,
+            'street': street,
+            'facing': facing,
+            'texture': texture or '-',
+            'returned_n': returned_n,
+            'support_observations': support_n,
+            'support_basis': ('retained Oracle facing cells (behavior min_n)'
+                              if source in ('label', 'poblacion') else
+                              'selected Oracle cell'),
+            'distribution_available': dist is not None,
+            'minimum_cell_n': DEFAULT_MIN_N,
+            'confidence': 'not_quantified',
+            'uncertainty_reason': (
+                'fallback agregado; OracleResponse conserva returned_n=0'
+                if source in ('label', 'poblacion') else
+                ('sin distribución de prior' if dist is None else
+                 ('menos de 20 observaciones en la celda'
+                  if returned_n < 20 else
+                  'sin intervalo de incertidumbre calibrado'))),
+        }
+
     def to_dict(self):
         """Distribuciones por perfil (con textura cuando existe)."""
         out = {}

@@ -495,6 +495,8 @@ def build_models(verbose=True, eligibility_shadow=None):
     oracle = Oracle(build(hands, labels=labels))
     postflop_model = PostflopRangeModel.from_hands(hands, labels=labels)
     postflop_model._oracle = oracle          # reutiliza el Oracle
+    postflop_model._oracle_injection_source = (
+        'shared Oracle built by build_models from the same input hands')
     dt = (time.perf_counter() - t0) * 1000
     if verbose:
         n_pez = sum(1 for l in labels.values() if l == PEZ)
@@ -1599,11 +1601,24 @@ class Asistente:
         # sobrescribía y la situación/EV se calculaban sobre el board de la
         # última acción del rival en vez del board real.
         postflop = self.models.postflop_model
+        _postflop_evidence = []
         for st_v, facing, act, board_str in _villain_postflop_actions(
                 self.rec.hand, villain_pos):
             board_v = [c.strip() for c in board_str.split(',')] if board_str else []
             vec = postflop.prob_vec(perfil, st_v, facing, board_v, act)
             rs.update(vec)
+            # P0-3: evidencia informativa después de obtener el vector actual.
+            # No participa en RangeState ni en la recomendación.
+            try:
+                if hasattr(postflop, 'evidence_for_vector'):
+                    _postflop_evidence.append(
+                        postflop.evidence_for_vector(
+                            perfil, st_v, facing, board_v, act))
+            except Exception as exc:
+                _postflop_evidence.append({
+                    'contract': 'postflop_vector_evidence_v1',
+                    'status': 'unavailable', 'reason': str(exc),
+                    'confidence': 'not_quantified'})
 
         sit = situation(hero, board, villain_reach=rs,
                         pot_before_call=pot, to_call=to_call,
@@ -1627,6 +1642,7 @@ class Asistente:
             'alpha': getattr(resp, 'alpha', None),
             'source': getattr(resp, 'source', None),
             'sizing': getattr(resp, 'sizing', None),
+            'evidence': getattr(resp, 'evidence', None),
         }
         # Reglas postflop (pegar.txt §2-§22): la situación fija los
         # candidatos y sizings; el EV solo se considera sobre ellos (§21).
@@ -1793,9 +1809,15 @@ class Asistente:
                     self.rec.hand, villain_pos)
             ],
             'range_model_params': {
-                'alpha': 2.0,
-                'flat_prior': 0.15,
+                'alpha': getattr(self.models.postflop_model, 'alpha', 2.0),
+                'flat_prior': 0.2,
+                'note': 'PostflopRangeModel fallback only when Oracle unavailable',
             },
+            'preflop_range_params': {
+                'flat_prior': 0.15,
+                'note': 'ProfileRangeModel; distinct from postflop fallback',
+            },
+            'postflop_evidence': _postflop_evidence,
         }
         _postflop_response_inputs = {
             'profile': perfil,
@@ -1812,6 +1834,7 @@ class Asistente:
             'alpha': _oracle_response_state.get('alpha'),
             'source': _oracle_response_state.get('source'),
             'sizing': _oracle_response_state.get('sizing'),
+            'evidence': _oracle_response_state.get('evidence'),
         }
         _postflop_motor_settings = {
             'runout': (self.runout if runout is None else runout),
@@ -1832,6 +1855,14 @@ class Asistente:
             response_model_inputs=_postflop_response_inputs,
             motor_settings=_postflop_motor_settings,
             runout=(self.runout if runout is None else runout))
+        # El sidecar acompaña a la respuesta retornada y al callback, pero no
+        # se usa para formatear, calcular EV ni seleccionar la acción.
+        evs.model_evidence = {
+            'contract': 'live_model_evidence_v1',
+            'postflop_range_queries': _postflop_evidence,
+            'oracle_response': _oracle_response_state.get('evidence'),
+            'confidence': 'not_quantified',
+        }
         if on_reco is not None:
             on_reco(text, evs, sit, label)
         elif self.verbose or verbose:
