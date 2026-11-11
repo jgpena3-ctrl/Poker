@@ -1,0 +1,5804 @@
+{
+ "schema": "b1-excepcion-inventario/1",
+ "created_at": "2026-11-11",
+ "base": {
+  "path": "data/hands_db.jsonl",
+  "lines": 1344,
+  "sha256": "3f0e7e5ea0d5c2d06aa9b8629817984ab9b4bccf057371823fde60370818262e"
+ },
+ "commits": {
+  "8b44917": {
+   "lines": 1298,
+   "role": "importa 45"
+  },
+  "44acddb": {
+   "lines": 1298,
+   "role": "98 cambios semánticos"
+  },
+  "c1c1370": {
+   "lines": 1345,
+   "role": "importa 47"
+  },
+  "8594ed5": {
+   "lines": 1344,
+   "role": "1344 actual; elimina H_1323"
+  }
+ },
+ "calibration_window": {
+  "selected_count": 877,
+  "excluded_count": 23,
+  "selected_98": [
+   "H_0048",
+   "H_0069",
+   "H_0088",
+   "H_0092",
+   "H_0098",
+   "H_0099",
+   "H_0120",
+   "H_0123",
+   "H_0130",
+   "H_0136",
+   "H_0140",
+   "H_0144",
+   "H_0153",
+   "H_0186",
+   "H_0188",
+   "H_0194",
+   "H_0205",
+   "H_0228",
+   "H_0240",
+   "H_0265",
+   "H_0266",
+   "H_0269",
+   "H_0270",
+   "H_0272",
+   "H_0274",
+   "H_0276",
+   "H_0300",
+   "H_0306",
+   "H_0315",
+   "H_0319",
+   "H_0376",
+   "H_0415",
+   "H_0430",
+   "H_0445",
+   "H_0486",
+   "H_0527",
+   "H_0589",
+   "H_0614",
+   "H_0617",
+   "H_0640",
+   "H_0650",
+   "H_0662",
+   "H_0691",
+   "H_0708",
+   "H_0711",
+   "H_0715",
+   "H_0773",
+   "H_0826",
+   "H_0832",
+   "H_0841",
+   "H_0847",
+   "H_0852",
+   "H_0855",
+   "H_0886",
+   "H_0889",
+   "H_0918",
+   "H_0926"
+  ],
+  "outside_98": [
+   "H_0931",
+   "H_0957",
+   "H_0964",
+   "H_0965",
+   "H_0967",
+   "H_0985",
+   "H_0997",
+   "H_1000",
+   "H_1029",
+   "H_1030",
+   "H_1039",
+   "H_1085",
+   "H_1110",
+   "H_1139",
+   "H_1140",
+   "H_1143",
+   "H_1155",
+   "H_1227",
+   "H_1283",
+   "H_1284",
+   "H_1285",
+   "H_1287",
+   "H_1289",
+   "H_1292",
+   "H_1293",
+   "H_1298",
+   "H_1300",
+   "H_1305",
+   "H_1306",
+   "H_1310",
+   "H_1311",
+   "H_1312",
+   "H_1313",
+   "H_1315",
+   "H_1317",
+   "H_1318",
+   "H_1320",
+   "H_1322",
+   "H_1324",
+   "H_1325",
+   "H_1327"
+  ],
+  "excluded_98": []
+ },
+ "semantic_44acddb": [
+  {
+   "hand_id": "H_0048",
+   "block": "old",
+   "line_8b44917": 47,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "preflop",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [
+    "SIN_ALLIN"
+   ],
+   "audit_after": [
+    "SIN_ALLIN"
+   ],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [
+    "AUDITORIA_ORIGEN.md"
+   ],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    1.5
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0069",
+   "block": "old",
+   "line_8b44917": 68,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "preflop",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [
+    "SIN_ALLIN"
+   ],
+   "audit_after": [
+    "SIN_ALLIN"
+   ],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    1.5
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0088",
+   "block": "old",
+   "line_8b44917": 86,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "preflop",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [
+    "REVISION_TECNICA_AUDITORIA.md"
+   ],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    1.5
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0092",
+   "block": "old",
+   "line_8b44917": 90,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "preflop",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    1.5
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0098",
+   "block": "old",
+   "line_8b44917": 96,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "preflop",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    1.5
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0099",
+   "block": "old",
+   "line_8b44917": 97,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "preflop",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    1.5
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0120",
+   "block": "old",
+   "line_8b44917": 118,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "preflop",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    1.5
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0123",
+   "block": "old",
+   "line_8b44917": 121,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "preflop",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    1.5
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0130",
+   "block": "old",
+   "line_8b44917": 128,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "turn",
+       "pos": "SB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "river",
+       "pos": "SB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    38.95
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0136",
+   "block": "old",
+   "line_8b44917": 134,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "flop",
+       "pos": "SB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "flop",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [
+    "ACTIVO_SIN_POSICION"
+   ],
+   "audit_after": [
+    "ACTIVO_SIN_POSICION"
+   ],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_TOL",
+   "pot_netos": [
+    16.15,
+    18.05
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0140",
+   "block": "old",
+   "line_8b44917": 138,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "turn",
+       "pos": "MP",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "river",
+       "pos": "MP",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    41.9
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0144",
+   "block": "old",
+   "line_8b44917": 142,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "flop",
+       "pos": "MP",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "flop",
+       "pos": "BTN",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    },
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "river",
+       "pos": "BTN",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    87.6
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0153",
+   "block": "old",
+   "line_8b44917": 150,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "flop",
+       "pos": "SB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "flop",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "flop",
+       "pos": "UTG",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "flop",
+       "pos": "MP",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    33.91
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0186",
+   "block": "old",
+   "line_8b44917": 181,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "river",
+       "pos": "CO",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    59.5
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0188",
+   "block": "old",
+   "line_8b44917": 183,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "insert",
+     "removed": [],
+     "added": [
+      {
+       "street": "turn",
+       "pos": "SB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": true
+      }
+     ]
+    },
+    {
+     "op": "insert",
+     "removed": [],
+     "added": [
+      {
+       "street": "river",
+       "pos": "SB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": true
+      }
+     ]
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [
+    "SANEAMIENTO.md"
+   ],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    120.3
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0194",
+   "block": "old",
+   "line_8b44917": 189,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "river",
+       "pos": "MP",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_TOL",
+   "pot_netos": [
+    57.8
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0205",
+   "block": "old",
+   "line_8b44917": 200,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "river",
+       "pos": "SB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    43.32,
+    44.27
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0228",
+   "block": "old",
+   "line_8b44917": 223,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "preflop",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    1.5
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0240",
+   "block": "old",
+   "line_8b44917": 235,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "flop",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "flop",
+       "pos": "CO",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [
+    "DEFECTO_FANTASMA.md",
+    "HALLZGOS_H0001_H1014.md"
+   ],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_TOL",
+   "pot_netos": [
+    198.9,
+    212.5
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0265",
+   "block": "old",
+   "line_8b44917": 260,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "river",
+       "pos": "UTG",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "river",
+       "pos": "MP",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    71.7
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0266",
+   "block": "old",
+   "line_8b44917": 261,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "preflop",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    1.5
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0269",
+   "block": "old",
+   "line_8b44917": 264,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "preflop",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    1.5
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0270",
+   "block": "old",
+   "line_8b44917": 265,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "preflop",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    1.5
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0272",
+   "block": "old",
+   "line_8b44917": 267,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "preflop",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    1.5
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0274",
+   "block": "old",
+   "line_8b44917": 269,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "turn",
+       "pos": "CO",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "river",
+       "pos": "CO",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    25.65
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0276",
+   "block": "old",
+   "line_8b44917": 271,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "preflop",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    1.5
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0300",
+   "block": "old",
+   "line_8b44917": 295,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "flop",
+       "pos": "CO",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "turn",
+       "pos": "CO",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "river",
+       "pos": "CO",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    26.5
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0306",
+   "block": "old",
+   "line_8b44917": 301,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "turn",
+       "pos": "CO",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "river",
+       "pos": "CO",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    33.73
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0315",
+   "block": "old",
+   "line_8b44917": 310,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "turn",
+       "pos": "SB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "river",
+       "pos": "SB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    54.9
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0319",
+   "block": "old",
+   "line_8b44917": 314,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "preflop",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    1.5
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0376",
+   "block": "old",
+   "line_8b44917": 362,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "turn",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "turn",
+       "pos": "MP",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "turn",
+       "pos": "BTN",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [
+    "DEFECTO_214.md",
+    "HALLZGOS_H0001_H1014.md",
+    "SANEAMIENTO.md"
+   ],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    84.8
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0415",
+   "block": "old",
+   "line_8b44917": 398,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "flop",
+       "pos": "SB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "flop",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    },
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "river",
+       "pos": "SB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "river",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    13.87,
+    14.82
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0430",
+   "block": "old",
+   "line_8b44917": 412,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "flop",
+       "pos": "BTN",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    21.38
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0445",
+   "block": "old",
+   "line_8b44917": 427,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "flop",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "flop",
+       "pos": "MP",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "flop",
+       "pos": "BTN",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_TOL",
+   "pot_netos": [
+    177.0
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0486",
+   "block": "old",
+   "line_8b44917": 466,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "insert",
+     "removed": [],
+     "added": [
+      {
+       "street": "flop",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": true
+      }
+     ]
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    8.46
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0527",
+   "block": "old",
+   "line_8b44917": 506,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "turn",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    33.34
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0589",
+   "block": "old",
+   "line_8b44917": 566,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "flop",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0614",
+   "block": "old",
+   "line_8b44917": 590,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "insert",
+     "removed": [],
+     "added": [
+      {
+       "street": "flop",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": true
+      }
+     ]
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    2.38
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0617",
+   "block": "old",
+   "line_8b44917": 593,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "turn",
+       "pos": "BTN",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    24.04
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0640",
+   "block": "old",
+   "line_8b44917": 616,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "flop",
+       "pos": "CO",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "turn",
+       "pos": "CO",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    14.72
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0650",
+   "block": "old",
+   "line_8b44917": 626,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "flop",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "flop",
+       "pos": "BTN",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "turn",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "turn",
+       "pos": "BTN",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "river",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "river",
+       "pos": "BTN",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    2.38
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0662",
+   "block": "old",
+   "line_8b44917": 638,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "flop",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    24.04
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0691",
+   "block": "old",
+   "line_8b44917": 666,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "flop",
+       "pos": "MP",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "flop",
+       "pos": "BTN",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_TOL",
+   "pot_netos": [
+    35.62
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0708",
+   "block": "old",
+   "line_8b44917": 682,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "flop",
+       "pos": "SB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "flop",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "flop",
+       "pos": "BTN",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    61.5
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0711",
+   "block": "old",
+   "line_8b44917": 685,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "turn",
+       "pos": "BTN",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [
+    "HALLZGOS_H0001_H1014.md"
+   ],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    18.71
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0715",
+   "block": "old",
+   "line_8b44917": 689,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "insert",
+     "removed": [],
+     "added": [
+      {
+       "street": "flop",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": true
+      }
+     ]
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    40.66
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0773",
+   "block": "old",
+   "line_8b44917": 747,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "flop",
+       "pos": "SB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "flop",
+       "pos": "UTG",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_TOL",
+   "pot_netos": [
+    38.95
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0826",
+   "block": "old",
+   "line_8b44917": 800,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "flop",
+       "pos": "CO",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "turn",
+       "pos": "CO",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    14.35
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0832",
+   "block": "old",
+   "line_8b44917": 806,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "turn",
+       "pos": "UTG",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    20.43
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0841",
+   "block": "old",
+   "line_8b44917": 815,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "flop",
+       "pos": "SB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "flop",
+       "pos": "BTN",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    },
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "river",
+       "pos": "SB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "river",
+       "pos": "BTN",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    7.6
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0847",
+   "block": "old",
+   "line_8b44917": 821,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "flop",
+       "pos": "BTN",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    41.9,
+    43.8
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0852",
+   "block": "old",
+   "line_8b44917": 826,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "insert",
+     "removed": [],
+     "added": [
+      {
+       "street": "flop",
+       "pos": "SB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": true
+      }
+     ]
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_TOL",
+   "pot_netos": [
+    8.36
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0855",
+   "block": "old",
+   "line_8b44917": 829,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "insert",
+     "removed": [],
+     "added": [
+      {
+       "street": "river",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": true
+      }
+     ]
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    82.3
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0886",
+   "block": "old",
+   "line_8b44917": 860,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "flop",
+       "pos": "UTG",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "turn",
+       "pos": "UTG",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    16.25
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0889",
+   "block": "old",
+   "line_8b44917": 863,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "flop",
+       "pos": "SB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "turn",
+       "pos": "SB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    36.48,
+    38.38
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0918",
+   "block": "old",
+   "line_8b44917": 892,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "flop",
+       "pos": "SB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "flop",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "turn",
+       "pos": "SB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "turn",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "river",
+       "pos": "SB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "river",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    3.8,
+    4.75
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0926",
+   "block": "old",
+   "line_8b44917": 900,
+   "window_status": "selected",
+   "action_diff": [
+    {
+     "op": "insert",
+     "removed": [],
+     "added": [
+      {
+       "street": "turn",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": true
+      }
+     ]
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    200.5
+   ],
+   "risk": "medio",
+   "notes": [
+    "Dentro de la ventana de calibración de 877."
+   ]
+  },
+  {
+   "hand_id": "H_0931",
+   "block": "old",
+   "line_8b44917": 905,
+   "window_status": "outside",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "turn",
+       "pos": "CO",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    102.7
+   ],
+   "risk": "bajo",
+   "notes": [
+    "Fuera de la ventana de calibración actual."
+   ]
+  },
+  {
+   "hand_id": "H_0957",
+   "block": "old",
+   "line_8b44917": 931,
+   "window_status": "outside",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "flop",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "flop",
+       "pos": "MP",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "flop",
+       "pos": "BTN",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [
+    "DEFECTO_214.md",
+    "HALLZGOS_H0001_H1014.md",
+    "SANEAMIENTO.md"
+   ],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_TOL",
+   "pot_netos": [
+    38.48
+   ],
+   "risk": "bajo",
+   "notes": [
+    "Fuera de la ventana de calibración actual."
+   ]
+  },
+  {
+   "hand_id": "H_0964",
+   "block": "old",
+   "line_8b44917": 938,
+   "window_status": "outside",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "flop",
+       "pos": "SB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "flop",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "flop",
+       "pos": "CO",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    58.3
+   ],
+   "risk": "bajo",
+   "notes": [
+    "Fuera de la ventana de calibración actual."
+   ]
+  },
+  {
+   "hand_id": "H_0965",
+   "block": "old",
+   "line_8b44917": 939,
+   "window_status": "outside",
+   "action_diff": [
+    {
+     "op": "insert",
+     "removed": [],
+     "added": [
+      {
+       "street": "flop",
+       "pos": "SB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": true
+      }
+     ]
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    2.85
+   ],
+   "risk": "bajo",
+   "notes": [
+    "Fuera de la ventana de calibración actual."
+   ]
+  },
+  {
+   "hand_id": "H_0967",
+   "block": "old",
+   "line_8b44917": 941,
+   "window_status": "outside",
+   "action_diff": [
+    {
+     "op": "insert",
+     "removed": [],
+     "added": [
+      {
+       "street": "river",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": true
+      }
+     ]
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    1.9
+   ],
+   "risk": "bajo",
+   "notes": [
+    "Fuera de la ventana de calibración actual."
+   ]
+  },
+  {
+   "hand_id": "H_0985",
+   "block": "old",
+   "line_8b44917": 959,
+   "window_status": "outside",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "flop",
+       "pos": "SB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "flop",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "flop",
+       "pos": "UTG",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "flop",
+       "pos": "CO",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "flop",
+       "pos": "BTN",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    62.8
+   ],
+   "risk": "bajo",
+   "notes": [
+    "Fuera de la ventana de calibración actual."
+   ]
+  },
+  {
+   "hand_id": "H_0997",
+   "block": "old",
+   "line_8b44917": 971,
+   "window_status": "outside",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "flop",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "flop",
+       "pos": "CO",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "turn",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "turn",
+       "pos": "CO",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "river",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "river",
+       "pos": "CO",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    4.28
+   ],
+   "risk": "bajo",
+   "notes": [
+    "Fuera de la ventana de calibración actual."
+   ]
+  },
+  {
+   "hand_id": "H_1000",
+   "block": "old",
+   "line_8b44917": 974,
+   "window_status": "outside",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "flop",
+       "pos": "SB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "flop",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "flop",
+       "pos": "CO",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    6.65
+   ],
+   "risk": "bajo",
+   "notes": [
+    "Fuera de la ventana de calibración actual."
+   ]
+  },
+  {
+   "hand_id": "H_1029",
+   "block": "old",
+   "line_8b44917": 1002,
+   "window_status": "outside",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "flop",
+       "pos": "SB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "flop",
+       "pos": "UTG",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "turn",
+       "pos": "SB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "turn",
+       "pos": "UTG",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [
+    "APARCADO_DB.md",
+    "CANAL_MANUAL_CERRADO.md"
+   ],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    12.35
+   ],
+   "risk": "bajo",
+   "notes": [
+    "Fuera de la ventana de calibración actual."
+   ]
+  },
+  {
+   "hand_id": "H_1030",
+   "block": "old",
+   "line_8b44917": 1003,
+   "window_status": "outside",
+   "action_diff": [
+    {
+     "op": "insert",
+     "removed": [],
+     "added": [
+      {
+       "street": "river",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": true
+      }
+     ]
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [
+    "CANAL_MANUAL_CERRADO.md"
+   ],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    2.38
+   ],
+   "risk": "bajo",
+   "notes": [
+    "Fuera de la ventana de calibración actual."
+   ]
+  },
+  {
+   "hand_id": "H_1039",
+   "block": "old",
+   "line_8b44917": 1012,
+   "window_status": "outside",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "flop",
+       "pos": "SB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "flop",
+       "pos": "UTG",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "turn",
+       "pos": "SB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "turn",
+       "pos": "UTG",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    25.27,
+    26.22
+   ],
+   "risk": "bajo",
+   "notes": [
+    "Fuera de la ventana de calibración actual."
+   ]
+  },
+  {
+   "hand_id": "H_1085",
+   "block": "old",
+   "line_8b44917": 1058,
+   "window_status": "outside",
+   "action_diff": [
+    {
+     "op": "insert",
+     "removed": [],
+     "added": [
+      {
+       "street": "flop",
+       "pos": "MP",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": true
+      }
+     ]
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    52.7
+   ],
+   "risk": "bajo",
+   "notes": [
+    "Fuera de la ventana de calibración actual."
+   ]
+  },
+  {
+   "hand_id": "H_1110",
+   "block": "old",
+   "line_8b44917": 1083,
+   "window_status": "outside",
+   "action_diff": [
+    {
+     "op": "insert",
+     "removed": [],
+     "added": [
+      {
+       "street": "flop",
+       "pos": "UTG",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": true
+      }
+     ]
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    10.45
+   ],
+   "risk": "bajo",
+   "notes": [
+    "Fuera de la ventana de calibración actual."
+   ]
+  },
+  {
+   "hand_id": "H_1139",
+   "block": "old",
+   "line_8b44917": 1111,
+   "window_status": "outside",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "turn",
+       "pos": "SB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "turn",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    17.39,
+    20.23
+   ],
+   "risk": "bajo",
+   "notes": [
+    "Fuera de la ventana de calibración actual."
+   ]
+  },
+  {
+   "hand_id": "H_1140",
+   "block": "old",
+   "line_8b44917": 1112,
+   "window_status": "outside",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "flop",
+       "pos": "MP",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "flop",
+       "pos": "CO",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_TOL",
+   "pot_netos": [
+    29.73
+   ],
+   "risk": "bajo",
+   "notes": [
+    "Fuera de la ventana de calibración actual."
+   ]
+  },
+  {
+   "hand_id": "H_1143",
+   "block": "old",
+   "line_8b44917": 1115,
+   "window_status": "outside",
+   "action_diff": [
+    {
+     "op": "insert",
+     "removed": [],
+     "added": [
+      {
+       "street": "flop",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": true
+      }
+     ]
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [
+    "ACTIVO_SIN_ACCION_CALLE"
+   ],
+   "audit_after": [
+    "ACTIVO_SIN_ACCION_CALLE"
+   ],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [
+    "B1_PROCEDENCIA_FORENSE.md"
+   ],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_TOL",
+   "pot_netos": [
+    20.9
+   ],
+   "risk": "bajo",
+   "notes": [
+    "Incluida en las 23 verificadas por B1-R; esta verificación es del estado final, no del paso 44acddb.",
+    "Fuera de la ventana de calibración actual.",
+    "Secuencia modificada otra vez en 8594ed5; el estado actual difiere del paso 44acddb."
+   ]
+  },
+  {
+   "hand_id": "H_1155",
+   "block": "old",
+   "line_8b44917": 1127,
+   "window_status": "outside",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "flop",
+       "pos": "UTG",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "flop",
+       "pos": "MP",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    33.73
+   ],
+   "risk": "bajo",
+   "notes": [
+    "Fuera de la ventana de calibración actual."
+   ]
+  },
+  {
+   "hand_id": "H_1227",
+   "block": "old",
+   "line_8b44917": 1198,
+   "window_status": "outside",
+   "action_diff": [
+    {
+     "op": "insert",
+     "removed": [],
+     "added": [
+      {
+       "street": "flop",
+       "pos": "SB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": true
+      },
+      {
+       "street": "flop",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": true
+      }
+     ]
+    }
+   ],
+   "changed_fields": [
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "N/A",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    7.6
+   ],
+   "risk": "bajo",
+   "notes": [
+    "Fuera de la ventana de calibración actual."
+   ]
+  },
+  {
+   "hand_id": "H_1283",
+   "block": "new",
+   "line_8b44917": 1254,
+   "window_status": "outside",
+   "action_diff": [
+    {
+     "op": "insert",
+     "removed": [],
+     "added": [
+      {
+       "street": "turn",
+       "pos": "SB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": true
+      },
+      {
+       "street": "turn",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": true
+      },
+      {
+       "street": "turn",
+       "pos": "BTN",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": true
+      }
+     ]
+    }
+   ],
+   "changed_fields": [
+    "final_pot",
+    "players",
+    "recorder_audit",
+    "streets",
+    "winner"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "U",
+   "pot_current": "NADA",
+   "pot_netos": [
+    32.97
+   ],
+   "risk": "alto",
+   "notes": [
+    "Bote actual NADA: aritmética no reconciliada.",
+    "Fuera de la ventana de calibración actual."
+   ]
+  },
+  {
+   "hand_id": "H_1284",
+   "block": "new",
+   "line_8b44917": 1255,
+   "window_status": "outside",
+   "action_diff": [
+    {
+     "op": "insert",
+     "removed": [],
+     "added": [
+      {
+       "street": "flop",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": true
+      },
+      {
+       "street": "flop",
+       "pos": "CO",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": true
+      }
+     ]
+    }
+   ],
+   "changed_fields": [
+    "final_pot",
+    "recorder_audit",
+    "streets",
+    "winner"
+   ],
+   "audit_before": [
+    "WINNER_FOLDEO"
+   ],
+   "audit_after": [],
+   "audit_fixed": [
+    "WINNER_FOLDEO"
+   ],
+   "audit_new": [],
+   "docs_mentions": [
+    "DEFECTO_H1292.md"
+   ],
+   "specific_docs": [
+    "DEFECTO_H1292.md"
+   ],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "T",
+   "pot_current": "UNICA_TOL",
+   "pot_netos": [
+    2.38
+   ],
+   "risk": "medio",
+   "notes": [
+    "Fuera de la ventana de calibración actual."
+   ]
+  },
+  {
+   "hand_id": "H_1285",
+   "block": "new",
+   "line_8b44917": 1256,
+   "window_status": "outside",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "turn",
+       "pos": "BTN",
+       "action": "r",
+       "amount": 51.2,
+       "inferred": true
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "final_pot",
+    "recorder_audit",
+    "streets",
+    "winner"
+   ],
+   "audit_before": [
+    "WINNER_FOLDEO"
+   ],
+   "audit_after": [],
+   "audit_fixed": [
+    "WINNER_FOLDEO"
+   ],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "T",
+   "action_evidence_text": "Técnica directa: la corrección elimina una contradicción detectada (auditoría antes/después) o completa una acción obligatoria.",
+   "field_evidence": "T",
+   "pot_current": "UNICA_TOL",
+   "pot_netos": [
+    2.38
+   ],
+   "risk": "medio",
+   "notes": [
+    "Fuera de la ventana de calibración actual."
+   ]
+  },
+  {
+   "hand_id": "H_1287",
+   "block": "new",
+   "line_8b44917": 1258,
+   "window_status": "outside",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "turn",
+       "pos": "SB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": true
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "final_pot",
+    "players",
+    "recorder_audit",
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "U",
+   "pot_current": "NADA",
+   "pot_netos": [
+    18.05
+   ],
+   "risk": "alto",
+   "notes": [
+    "Bote actual NADA: aritmética no reconciliada.",
+    "Fuera de la ventana de calibración actual."
+   ]
+  },
+  {
+   "hand_id": "H_1289",
+   "block": "new",
+   "line_8b44917": 1260,
+   "window_status": "outside",
+   "action_diff": [
+    {
+     "op": "insert",
+     "removed": [],
+     "added": [
+      {
+       "street": "flop",
+       "pos": "UTG",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": true
+      },
+      {
+       "street": "flop",
+       "pos": "CO",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": true
+      }
+     ]
+    }
+   ],
+   "changed_fields": [
+    "final_pot",
+    "players",
+    "recorder_audit",
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "U",
+   "pot_current": "NADA",
+   "pot_netos": [
+    17.57
+   ],
+   "risk": "alto",
+   "notes": [
+    "Bote actual NADA: aritmética no reconciliada.",
+    "Fuera de la ventana de calibración actual."
+   ]
+  },
+  {
+   "hand_id": "H_1292",
+   "block": "new",
+   "line_8b44917": 1263,
+   "window_status": "outside",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "flop",
+       "pos": "UTG",
+       "action": "f",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "final_pot",
+    "recorder_audit",
+    "streets",
+    "winner"
+   ],
+   "audit_before": [
+    "WINNER_FOLDEO"
+   ],
+   "audit_after": [],
+   "audit_fixed": [
+    "WINNER_FOLDEO"
+   ],
+   "audit_new": [],
+   "docs_mentions": [
+    "CANAL_MANUAL_CERRADO.md",
+    "DEFECTO_H1292.md"
+   ],
+   "specific_docs": [
+    "DEFECTO_H1292.md"
+   ],
+   "action_evidence": "T",
+   "action_evidence_text": "Técnica directa: la corrección elimina una contradicción detectada (auditoría antes/después) o completa una acción obligatoria.",
+   "field_evidence": "T",
+   "pot_current": "UNICA_TOL",
+   "pot_netos": [
+    7.12
+   ],
+   "risk": "medio",
+   "notes": [
+    "Fuera de la ventana de calibración actual."
+   ]
+  },
+  {
+   "hand_id": "H_1293",
+   "block": "new",
+   "line_8b44917": 1264,
+   "window_status": "outside",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "turn",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": true
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "final_pot",
+    "players",
+    "recorder_audit",
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "U",
+   "pot_current": "NADA",
+   "pot_netos": [
+    18.52
+   ],
+   "risk": "alto",
+   "notes": [
+    "Bote actual NADA: aritmética no reconciliada.",
+    "Fuera de la ventana de calibración actual."
+   ]
+  },
+  {
+   "hand_id": "H_1298",
+   "block": "new",
+   "line_8b44917": 1269,
+   "window_status": "outside",
+   "action_diff": [
+    {
+     "op": "insert",
+     "removed": [],
+     "added": [
+      {
+       "street": "river",
+       "pos": "BB",
+       "action": "c",
+       "amount": 16.8,
+       "inferred": false
+      }
+     ]
+    }
+   ],
+   "changed_fields": [
+    "final_pot",
+    "recorder_audit",
+    "streets"
+   ],
+   "audit_before": [
+    "ACTIVO_SIN_ACCION_CALLE"
+   ],
+   "audit_after": [],
+   "audit_fixed": [
+    "ACTIVO_SIN_ACCION_CALLE"
+   ],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "T",
+   "action_evidence_text": "Técnica directa: la corrección elimina una contradicción detectada (auditoría antes/después) o completa una acción obligatoria.",
+   "field_evidence": "T",
+   "pot_current": "NADA",
+   "pot_netos": [
+    64.9
+   ],
+   "risk": "medio",
+   "notes": [
+    "Bote actual NADA: aritmética no reconciliada.",
+    "Fuera de la ventana de calibración actual."
+   ]
+  },
+  {
+   "hand_id": "H_1300",
+   "block": "new",
+   "line_8b44917": 1271,
+   "window_status": "outside",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "preflop",
+       "pos": "SB",
+       "action": "p",
+       "amount": 0.5,
+       "inferred": false
+      }
+     ],
+     "added": []
+    },
+    {
+     "op": "replace",
+     "removed": [
+      {
+       "street": "preflop",
+       "pos": "SB",
+       "action": "c",
+       "amount": 1.0,
+       "inferred": false
+      },
+      {
+       "street": "preflop",
+       "pos": "BB",
+       "action": "f",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": [
+      {
+       "street": "preflop",
+       "pos": "BB",
+       "action": "c",
+       "amount": 2.0,
+       "inferred": false
+      }
+     ]
+    },
+    {
+     "op": "replace",
+     "removed": [
+      {
+       "street": "preflop",
+       "pos": "SB",
+       "action": "c",
+       "amount": 2.0,
+       "inferred": true
+      }
+     ],
+     "added": [
+      {
+       "street": "flop",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "flop",
+       "pos": "MP",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": true
+      }
+     ]
+    },
+    {
+     "op": "replace",
+     "removed": [
+      {
+       "street": "flop",
+       "pos": "SB",
+       "action": "r",
+       "amount": 3.8,
+       "inferred": false
+      }
+     ],
+     "added": [
+      {
+       "street": "flop",
+       "pos": "BB",
+       "action": "r",
+       "amount": 3.8,
+       "inferred": false
+      }
+     ]
+    },
+    {
+     "op": "replace",
+     "removed": [
+      {
+       "street": "river",
+       "pos": "SB",
+       "action": "b",
+       "amount": 8.6,
+       "inferred": false
+      }
+     ],
+     "added": [
+      {
+       "street": "turn",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "turn",
+       "pos": "MP",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": true
+      },
+      {
+       "street": "turn",
+       "pos": "BTN",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": true
+      },
+      {
+       "street": "river",
+       "pos": "BB",
+       "action": "b",
+       "amount": 8.6,
+       "inferred": false
+      }
+     ]
+    },
+    {
+     "op": "replace",
+     "removed": [
+      {
+       "street": "river",
+       "pos": "SB",
+       "action": "r",
+       "amount": 77.2,
+       "inferred": true
+      }
+     ],
+     "added": [
+      {
+       "street": "river",
+       "pos": "BB",
+       "action": "r",
+       "amount": 77.2,
+       "inferred": false
+      }
+     ]
+    }
+   ],
+   "changed_fields": [
+    "final_pot",
+    "players",
+    "recorder_audit",
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "U",
+   "action_evidence_text": "Procedencia desconocida: reconstrucción no trivial sin documento específico ni clase de auditoría resuelta; el estado posterior pasa la auditoría, pero no está verificado contra grabación.",
+   "field_evidence": "R",
+   "pot_current": "NADA",
+   "pot_netos": [
+    177.9,
+    195.1
+   ],
+   "risk": "alto",
+   "notes": [
+    "Bote actual NADA: aritmética no reconciliada.",
+    "Fuera de la ventana de calibración actual."
+   ]
+  },
+  {
+   "hand_id": "H_1305",
+   "block": "new",
+   "line_8b44917": 1276,
+   "window_status": "outside",
+   "action_diff": [
+    {
+     "op": "insert",
+     "removed": [],
+     "added": [
+      {
+       "street": "preflop",
+       "pos": "BB",
+       "action": "f",
+       "amount": 0.0,
+       "inferred": true
+      }
+     ]
+    }
+   ],
+   "changed_fields": [
+    "final_pot",
+    "recorder_audit",
+    "showdown",
+    "streets"
+   ],
+   "audit_before": [
+    "AUSENCIA_RESPUESTA_BB"
+   ],
+   "audit_after": [],
+   "audit_fixed": [
+    "AUSENCIA_RESPUESTA_BB"
+   ],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "T",
+   "action_evidence_text": "Técnica directa: la corrección elimina una contradicción detectada (auditoría antes/después) o completa una acción obligatoria.",
+   "field_evidence": "T",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    2.5
+   ],
+   "risk": "medio",
+   "notes": [
+    "Fuera de la ventana de calibración actual."
+   ]
+  },
+  {
+   "hand_id": "H_1306",
+   "block": "new",
+   "line_8b44917": 1277,
+   "window_status": "outside",
+   "action_diff": [
+    {
+     "op": "insert",
+     "removed": [],
+     "added": [
+      {
+       "street": "preflop",
+       "pos": "CO",
+       "action": "c",
+       "amount": 1.0,
+       "inferred": false
+      }
+     ]
+    },
+    {
+     "op": "insert",
+     "removed": [],
+     "added": [
+      {
+       "street": "preflop",
+       "pos": "CO",
+       "action": "c",
+       "amount": 7.0,
+       "inferred": false
+      }
+     ]
+    },
+    {
+     "op": "insert",
+     "removed": [],
+     "added": [
+      {
+       "street": "flop",
+       "pos": "SB",
+       "action": "b",
+       "amount": 8.5,
+       "inferred": false
+      },
+      {
+       "street": "flop",
+       "pos": "CO",
+       "action": "f",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ]
+    }
+   ],
+   "changed_fields": [
+    "final_pot",
+    "players",
+    "recorder_audit",
+    "streets",
+    "winner"
+   ],
+   "audit_before": [
+    "WINNER_FOLDEO"
+   ],
+   "audit_after": [],
+   "audit_fixed": [
+    "WINNER_FOLDEO"
+   ],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "T",
+   "action_evidence_text": "Técnica directa: la corrección elimina una contradicción detectada (auditoría antes/después) o completa una acción obligatoria.",
+   "field_evidence": "T",
+   "pot_current": "UNICA_TOL",
+   "pot_netos": [
+    15.2,
+    16.15
+   ],
+   "risk": "medio",
+   "notes": [
+    "Fuera de la ventana de calibración actual."
+   ]
+  },
+  {
+   "hand_id": "H_1310",
+   "block": "new",
+   "line_8b44917": 1281,
+   "window_status": "outside",
+   "action_diff": [
+    {
+     "op": "insert",
+     "removed": [],
+     "added": [
+      {
+       "street": "river",
+       "pos": "SB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": true
+      },
+      {
+       "street": "river",
+       "pos": "CO",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": true
+      }
+     ]
+    }
+   ],
+   "changed_fields": [
+    "final_pot",
+    "recorder_audit",
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "U",
+   "pot_current": "NADA",
+   "pot_netos": [
+    41.8
+   ],
+   "risk": "alto",
+   "notes": [
+    "Bote actual NADA: aritmética no reconciliada.",
+    "Fuera de la ventana de calibración actual."
+   ]
+  },
+  {
+   "hand_id": "H_1311",
+   "block": "new",
+   "line_8b44917": 1282,
+   "window_status": "outside",
+   "action_diff": [
+    {
+     "op": "insert",
+     "removed": [],
+     "added": [
+      {
+       "street": "preflop",
+       "pos": "UTG",
+       "action": "c",
+       "amount": 1.0,
+       "inferred": false
+      }
+     ]
+    },
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "preflop",
+       "pos": "BTN",
+       "action": "f",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    },
+    {
+     "op": "insert",
+     "removed": [],
+     "added": [
+      {
+       "street": "preflop",
+       "pos": "UTG",
+       "action": "c",
+       "amount": 3.0,
+       "inferred": false
+      },
+      {
+       "street": "flop",
+       "pos": "SB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": true
+      },
+      {
+       "street": "flop",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": true
+      },
+      {
+       "street": "flop",
+       "pos": "UTG",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "flop",
+       "pos": "MP",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": true
+      }
+     ]
+    },
+    {
+     "op": "replace",
+     "removed": [
+      {
+       "street": "turn",
+       "pos": "BB",
+       "action": "b",
+       "amount": 3.9,
+       "inferred": false
+      }
+     ],
+     "added": [
+      {
+       "street": "turn",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "turn",
+       "pos": "UTG",
+       "action": "b",
+       "amount": 3.9,
+       "inferred": false
+      }
+     ]
+    },
+    {
+     "op": "replace",
+     "removed": [
+      {
+       "street": "river",
+       "pos": "SB",
+       "action": "b",
+       "amount": 17.5,
+       "inferred": false
+      },
+      {
+       "street": "river",
+       "pos": "BB",
+       "action": "f",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "river",
+       "pos": "MP",
+       "action": "c",
+       "amount": 17.5,
+       "inferred": false
+      }
+     ],
+     "added": [
+      {
+       "street": "turn",
+       "pos": "BB",
+       "action": "f",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "river",
+       "pos": "SB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "river",
+       "pos": "UTG",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": false
+      },
+      {
+       "street": "river",
+       "pos": "MP",
+       "action": "b",
+       "amount": 17.5,
+       "inferred": false
+      },
+      {
+       "street": "river",
+       "pos": "SB",
+       "action": "c",
+       "amount": 17.5,
+       "inferred": false
+      },
+      {
+       "street": "river",
+       "pos": "UTG",
+       "action": "f",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ]
+    }
+   ],
+   "changed_fields": [
+    "final_pot",
+    "players",
+    "recorder_audit",
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "U",
+   "action_evidence_text": "Procedencia desconocida: reconstrucción no trivial sin documento específico ni clase de auditoría resuelta; el estado posterior pasa la auditoría, pero no está verificado contra grabación.",
+   "field_evidence": "R",
+   "pot_current": "NADA",
+   "pot_netos": [
+    56.2
+   ],
+   "risk": "alto",
+   "notes": [
+    "Bote actual NADA: aritmética no reconciliada.",
+    "Fuera de la ventana de calibración actual."
+   ]
+  },
+  {
+   "hand_id": "H_1312",
+   "block": "new",
+   "line_8b44917": 1283,
+   "window_status": "outside",
+   "action_diff": [
+    {
+     "op": "insert",
+     "removed": [],
+     "added": [
+      {
+       "street": "preflop",
+       "pos": "CO",
+       "action": "f",
+       "amount": 0.0,
+       "inferred": true
+      }
+     ]
+    },
+    {
+     "op": "replace",
+     "removed": [
+      {
+       "street": "preflop",
+       "pos": "SB",
+       "action": "c",
+       "amount": 1.0,
+       "inferred": false
+      }
+     ],
+     "added": [
+      {
+       "street": "preflop",
+       "pos": "SB",
+       "action": "f",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ]
+    },
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "preflop",
+       "pos": "SB",
+       "action": "f",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "final_pot",
+    "recorder_audit",
+    "streets",
+    "winner"
+   ],
+   "audit_before": [
+    "ACTIVO_SIN_ACCION",
+    "ACTIVO_SIN_ACCION_CALLE",
+    "WINNER_FOLDEO"
+   ],
+   "audit_after": [],
+   "audit_fixed": [
+    "ACTIVO_SIN_ACCION",
+    "ACTIVO_SIN_ACCION_CALLE",
+    "WINNER_FOLDEO"
+   ],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "T",
+   "action_evidence_text": "Técnica directa: la corrección elimina una contradicción detectada (auditoría antes/después) o completa una acción obligatoria.",
+   "field_evidence": "T",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    2.5
+   ],
+   "risk": "medio",
+   "notes": [
+    "Fuera de la ventana de calibración actual."
+   ]
+  },
+  {
+   "hand_id": "H_1313",
+   "block": "new",
+   "line_8b44917": 1284,
+   "window_status": "outside",
+   "action_diff": [
+    {
+     "op": "insert",
+     "removed": [],
+     "added": [
+      {
+       "street": "flop",
+       "pos": "MP",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": true
+      }
+     ]
+    }
+   ],
+   "changed_fields": [
+    "final_pot",
+    "players",
+    "recorder_audit",
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "U",
+   "pot_current": "NADA",
+   "pot_netos": [
+    36.1,
+    44.08
+   ],
+   "risk": "alto",
+   "notes": [
+    "Bote actual NADA: aritmética no reconciliada.",
+    "Fuera de la ventana de calibración actual."
+   ]
+  },
+  {
+   "hand_id": "H_1315",
+   "block": "new",
+   "line_8b44917": 1286,
+   "window_status": "outside",
+   "action_diff": [
+    {
+     "op": "insert",
+     "removed": [],
+     "added": [
+      {
+       "street": "turn",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": true
+      },
+      {
+       "street": "turn",
+       "pos": "UTG",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": true
+      }
+     ]
+    }
+   ],
+   "changed_fields": [
+    "final_pot",
+    "recorder_audit",
+    "streets",
+    "winner"
+   ],
+   "audit_before": [
+    "WINNER_FOLDEO"
+   ],
+   "audit_after": [],
+   "audit_fixed": [
+    "WINNER_FOLDEO"
+   ],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "T",
+   "pot_current": "UNICA_TOL",
+   "pot_netos": [
+    7.7
+   ],
+   "risk": "medio",
+   "notes": [
+    "Fuera de la ventana de calibración actual."
+   ]
+  },
+  {
+   "hand_id": "H_1317",
+   "block": "new",
+   "line_8b44917": 1288,
+   "window_status": "outside",
+   "action_diff": [
+    {
+     "op": "replace",
+     "removed": [
+      {
+       "street": "preflop",
+       "pos": "SB",
+       "action": "c",
+       "amount": 1.0,
+       "inferred": true
+      }
+     ],
+     "added": [
+      {
+       "street": "preflop",
+       "pos": "SB",
+       "action": "r",
+       "amount": 2.0,
+       "inferred": false
+      }
+     ]
+    }
+   ],
+   "changed_fields": [
+    "final_pot",
+    "recorder_audit",
+    "streets",
+    "winner"
+   ],
+   "audit_before": [
+    "WINNER_FOLDEO"
+   ],
+   "audit_after": [],
+   "audit_fixed": [
+    "WINNER_FOLDEO"
+   ],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "T",
+   "action_evidence_text": "Técnica directa: la corrección elimina una contradicción detectada (auditoría antes/después) o completa una acción obligatoria.",
+   "field_evidence": "T",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    2.0
+   ],
+   "risk": "medio",
+   "notes": [
+    "Fuera de la ventana de calibración actual."
+   ]
+  },
+  {
+   "hand_id": "H_1318",
+   "block": "new",
+   "line_8b44917": 1289,
+   "window_status": "outside",
+   "action_diff": [
+    {
+     "op": "insert",
+     "removed": [],
+     "added": [
+      {
+       "street": "flop",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": true
+      }
+     ]
+    },
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "turn",
+       "pos": "UTG",
+       "action": "r",
+       "amount": 93.5,
+       "inferred": true
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "final_pot",
+    "recorder_audit",
+    "streets",
+    "winner"
+   ],
+   "audit_before": [
+    "WINNER_FOLDEO"
+   ],
+   "audit_after": [],
+   "audit_fixed": [
+    "WINNER_FOLDEO"
+   ],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "T",
+   "action_evidence_text": "Técnica directa: la corrección elimina una contradicción detectada (auditoría antes/después) o completa una acción obligatoria.",
+   "field_evidence": "T",
+   "pot_current": "UNICA_TOL",
+   "pot_netos": [
+    6.17
+   ],
+   "risk": "medio",
+   "notes": [
+    "Fuera de la ventana de calibración actual."
+   ]
+  },
+  {
+   "hand_id": "H_1320",
+   "block": "new",
+   "line_8b44917": 1291,
+   "window_status": "outside",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "preflop",
+       "pos": "SB",
+       "action": "f",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "recorder_audit",
+    "streets",
+    "winner"
+   ],
+   "audit_before": [
+    "WINNER_FOLDEO"
+   ],
+   "audit_after": [],
+   "audit_fixed": [
+    "WINNER_FOLDEO"
+   ],
+   "audit_new": [],
+   "docs_mentions": [
+    "DEFECTO_H1292.md"
+   ],
+   "specific_docs": [
+    "DEFECTO_H1292.md"
+   ],
+   "action_evidence": "T",
+   "action_evidence_text": "Técnica directa: la corrección elimina una contradicción detectada (auditoría antes/después) o completa una acción obligatoria.",
+   "field_evidence": "T",
+   "pot_current": "UNICA_EXACTA",
+   "pot_netos": [
+    2.0
+   ],
+   "risk": "medio",
+   "notes": [
+    "Fuera de la ventana de calibración actual."
+   ]
+  },
+  {
+   "hand_id": "H_1322",
+   "block": "new",
+   "line_8b44917": 1293,
+   "window_status": "outside",
+   "action_diff": [
+    {
+     "op": "insert",
+     "removed": [],
+     "added": [
+      {
+       "street": "flop",
+       "pos": "BB",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": true
+      },
+      {
+       "street": "flop",
+       "pos": "CO",
+       "action": "x",
+       "amount": 0.0,
+       "inferred": true
+      }
+     ]
+    }
+   ],
+   "changed_fields": [
+    "final_pot",
+    "recorder_audit",
+    "streets",
+    "winner"
+   ],
+   "audit_before": [
+    "WINNER_FOLDEO"
+   ],
+   "audit_after": [],
+   "audit_fixed": [
+    "WINNER_FOLDEO"
+   ],
+   "audit_new": [],
+   "docs_mentions": [
+    "AUDITORIA_ESTADO_JUGADORES.md"
+   ],
+   "specific_docs": [],
+   "action_evidence": "G",
+   "action_evidence_text": "Genérica/patrón: cambio exclusivamente de checks; mensaje de commit y patrón sistemático, sin verificación visual individual.",
+   "field_evidence": "T",
+   "pot_current": "NADA",
+   "pot_netos": [
+    10.16
+   ],
+   "risk": "medio",
+   "notes": [
+    "Bote actual NADA: aritmética no reconciliada.",
+    "Fuera de la ventana de calibración actual."
+   ]
+  },
+  {
+   "hand_id": "H_1324",
+   "block": "new",
+   "line_8b44917": 1295,
+   "window_status": "outside",
+   "action_diff": [
+    {
+     "op": "insert",
+     "removed": [],
+     "added": [
+      {
+       "street": "turn",
+       "pos": "SB",
+       "action": "f",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ]
+    }
+   ],
+   "changed_fields": [
+    "final_pot",
+    "recorder_audit",
+    "streets"
+   ],
+   "audit_before": [],
+   "audit_after": [],
+   "audit_fixed": [],
+   "audit_new": [],
+   "docs_mentions": [],
+   "specific_docs": [],
+   "action_evidence": "U",
+   "action_evidence_text": "Procedencia desconocida: reconstrucción no trivial sin documento específico ni clase de auditoría resuelta; el estado posterior pasa la auditoría, pero no está verificado contra grabación.",
+   "field_evidence": "R",
+   "pot_current": "NADA",
+   "pot_netos": [
+    22.32
+   ],
+   "risk": "alto",
+   "notes": [
+    "Bote actual NADA: aritmética no reconciliada.",
+    "Fuera de la ventana de calibración actual."
+   ]
+  },
+  {
+   "hand_id": "H_1325",
+   "block": "new",
+   "line_8b44917": 1296,
+   "window_status": "outside",
+   "action_diff": [
+    {
+     "op": "delete",
+     "removed": [
+      {
+       "street": "river",
+       "pos": "CO",
+       "action": "f",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": []
+    }
+   ],
+   "changed_fields": [
+    "final_pot",
+    "recorder_audit",
+    "streets",
+    "winner"
+   ],
+   "audit_before": [
+    "WINNER_FOLDEO"
+   ],
+   "audit_after": [],
+   "audit_fixed": [
+    "WINNER_FOLDEO"
+   ],
+   "audit_new": [],
+   "docs_mentions": [
+    "DEFECTO_H1292.md"
+   ],
+   "specific_docs": [
+    "DEFECTO_H1292.md"
+   ],
+   "action_evidence": "T",
+   "action_evidence_text": "Técnica directa: la corrección elimina una contradicción detectada (auditoría antes/después) o completa una acción obligatoria.",
+   "field_evidence": "T",
+   "pot_current": "NADA",
+   "pot_netos": [
+    29.93
+   ],
+   "risk": "medio",
+   "notes": [
+    "Bote actual NADA: aritmética no reconciliada.",
+    "Fuera de la ventana de calibración actual."
+   ]
+  },
+  {
+   "hand_id": "H_1327",
+   "block": "new",
+   "line_8b44917": 1298,
+   "window_status": "outside",
+   "action_diff": [
+    {
+     "op": "replace",
+     "removed": [
+      {
+       "street": "flop",
+       "pos": "UTG",
+       "action": "f",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ],
+     "added": [
+      {
+       "street": "flop",
+       "pos": "UTG",
+       "action": "c",
+       "amount": 2.1,
+       "inferred": false
+      },
+      {
+       "street": "turn",
+       "pos": "UTG",
+       "action": "f",
+       "amount": 0.0,
+       "inferred": false
+      }
+     ]
+    }
+   ],
+   "changed_fields": [
+    "final_pot",
+    "recorder_audit",
+    "streets",
+    "winner"
+   ],
+   "audit_before": [
+    "WINNER_FOLDEO"
+   ],
+   "audit_after": [],
+   "audit_fixed": [
+    "WINNER_FOLDEO"
+   ],
+   "audit_new": [],
+   "docs_mentions": [
+    "AUDITORIA_ESTADO_JUGADORES.md"
+   ],
+   "specific_docs": [
+    "AUDITORIA_ESTADO_JUGADORES.md"
+   ],
+   "action_evidence": "T",
+   "action_evidence_text": "Técnica directa: la corrección elimina una contradicción detectada (auditoría antes/después) o completa una acción obligatoria.",
+   "field_evidence": "T",
+   "pot_current": "NADA",
+   "pot_netos": [
+    10.16
+   ],
+   "risk": "medio",
+   "notes": [
+    "Bote actual NADA: aritmética no reconciliada.",
+    "Fuera de la ventana de calibración actual."
+   ]
+  }
+ ],
+ "imports": {
+  "block_45": {
+   "commit": "8b44917",
+   "range": [
+    "H_1283",
+    "H_1327"
+   ],
+   "count": 45,
+   "unique_ids": 45,
+   "players_per_hand": {
+    "6": 45
+   },
+   "active_players_per_hand": {
+    "5": 15,
+    "6": 24,
+    "4": 5,
+    "3": 1
+   },
+   "exact_duplicate_groups": [],
+   "dates": [
+    "2026-10-29T08:57:17.714209",
+    "2026-10-29T09:50:48.291355"
+   ],
+   "nada_ids": [
+    "H_1283",
+    "H_1287",
+    "H_1288",
+    "H_1289",
+    "H_1293",
+    "H_1295",
+    "H_1296",
+    "H_1298",
+    "H_1300",
+    "H_1301",
+    "H_1302",
+    "H_1310",
+    "H_1311",
+    "H_1313",
+    "H_1322",
+    "H_1324",
+    "H_1325",
+    "H_1327"
+   ],
+   "active_null_stack": [
+    [
+     "H_1304",
+     "Tonytruco",
+     "BTN"
+    ],
+    [
+     "H_1323",
+     "Jarduan",
+     "BB"
+    ]
+   ],
+   "audit_defects_at_import": {
+    "H_1284": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1285": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1286": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1288": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1290": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1291": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1292": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1294": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1296": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1297": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1298": [
+     "ACTIVO_SIN_ACCION_CALLE"
+    ],
+    "H_1301": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1302": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1303": [
+     "IMPORTE_SUBIDA"
+    ],
+    "H_1304": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1305": [
+     "AUSENCIA_RESPUESTA_BB"
+    ],
+    "H_1306": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1307": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1308": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1309": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1312": [
+     "ACTIVO_SIN_ACCION",
+     "ACTIVO_SIN_ACCION_CALLE",
+     "WINNER_FOLDEO"
+    ],
+    "H_1315": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1316": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1317": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1318": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1319": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1320": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1321": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1322": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1323": [
+     "WINNER_VACIO"
+    ],
+    "H_1325": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1326": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1327": [
+     "WINNER_FOLDEO"
+    ]
+   },
+   "audit_defects_current": {}
+  },
+  "block_47": {
+   "commit": "c1c1370",
+   "range": [
+    "H_1328",
+    "H_1374"
+   ],
+   "count": 47,
+   "unique_ids": 47,
+   "players_per_hand": {
+    "6": 47
+   },
+   "active_players_per_hand": {
+    "5": 13,
+    "6": 25,
+    "4": 9
+   },
+   "exact_duplicate_groups": [],
+   "dates": [
+    "2026-11-04T11:00:26.495471",
+    "2026-11-04T11:58:53.893144"
+   ],
+   "nada_ids": [
+    "H_1343",
+    "H_1344",
+    "H_1345",
+    "H_1346",
+    "H_1348",
+    "H_1349",
+    "H_1351",
+    "H_1355",
+    "H_1356",
+    "H_1357",
+    "H_1358",
+    "H_1361",
+    "H_1365",
+    "H_1368",
+    "H_1371",
+    "H_1372",
+    "H_1374"
+   ],
+   "active_null_stack": [],
+   "audit_defects_at_import": {
+    "H_1330": [
+     "ACTIVO_SIN_ACCION_CALLE"
+    ],
+    "H_1338": [
+     "ACTIVO_SIN_ACCION_CALLE"
+    ],
+    "H_1341": [
+     "ACTIVO_SIN_ACCION_CALLE"
+    ],
+    "H_1349": [
+     "IMPORTE_SUBIDA",
+     "INACTIVO_QUE_ACTUA"
+    ],
+    "H_1353": [
+     "ACTIVO_SIN_ACCION_CALLE"
+    ],
+    "H_1363": [
+     "ACTIVO_SIN_ACCION_CALLE"
+    ],
+    "H_1365": [
+     "ACTIVO_SIN_ACCION_CALLE"
+    ],
+    "H_1368": [
+     "ACTIVO_SIN_ACCION_CALLE"
+    ]
+   },
+   "audit_defects_current": {}
+  }
+ },
+ "current_imported_active_null_stack": [
+  [
+   "H_1304",
+   "Tonytruco",
+   "BTN"
+  ],
+  [
+   "H_1349",
+   "LaloMora",
+   "UTG"
+  ]
+ ],
+ "h1323": {
+  "in_current_base": false,
+  "eliminated_file": "data/_eliminadas/H_1323.jsonl",
+  "eliminated_equals_c1c1370": false,
+  "decisions_references": [],
+  "active_references": [
+   {
+    "path": "C:/Users/Jorgito/Documents/Repositorios/Poker/DOCS/AUDITORIA_ESTADO_JUGADORES.md",
+    "count": 2
+   },
+   {
+    "path": "C:/Users/Jorgito/Documents/Repositorios/Poker/DOCS/B1_CHECKPOINT_2026-11-10.md",
+    "count": 5
+   },
+   {
+    "path": "C:/Users/Jorgito/Documents/Repositorios/Poker/DOCS/B1_PROCEDENCIA_FORENSE.md",
+    "count": 8
+   },
+   {
+    "path": "C:/Users/Jorgito/Documents/Repositorios/Poker/DOCS/B1_REPRO_DIFF.json",
+    "count": 1
+   },
+   {
+    "path": "C:/Users/Jorgito/Documents/Repositorios/Poker/DOCS/PLAN_TECNICO_MOTOR_2026-11-10.md",
+    "count": 1
+   },
+   {
+    "path": "C:/Users/Jorgito/Documents/Repositorios/Poker/pruebas/recorder/sesiones/sesion_validacion_1_20261104/hands_db_full_after_session.jsonl",
+    "count": 1
+   },
+   {
+    "path": "C:/Users/Jorgito/Documents/Repositorios/Poker/recorder/recorder_live.py",
+    "count": 1
+   },
+   {
+    "path": "C:/Users/Jorgito/Documents/Repositorios/Poker/tools/eliminar_mano_H_1323.py",
+    "count": 15
+   }
+  ],
+  "removal_script": "tools/eliminar_mano_H_1323.py",
+  "same_board_as_H_1322": true,
+  "same_player_positions_as_H_1322": true,
+  "same_stacks_as_H_1322": false,
+  "stack_differences": [
+   {
+    "pos": "BB",
+    "name": "Jarduan",
+    "H_1322": 150.2,
+    "H_1323": null
+   },
+   {
+    "pos": "CO",
+    "name": "ElChurco",
+    "H_1322": 101.3,
+    "H_1323": 96.2
+   },
+   {
+    "pos": "SB",
+    "name": "OtB_RedBaron",
+    "H_1322": 52.6,
+    "H_1323": 52.1
+   }
+  ],
+  "winner_empty": true,
+  "final_pot": 1.0,
+  "recorder_fold_win": true,
+  "preflop_actions": 7,
+  "postflop_actions": 0,
+  "note": "Coincide en mesa, tablero y jugadores/posiciones con H_1322; no coincide exactamente en stacks. El archivo eliminado coincide con el backup previo a la eliminación; difiere de c1c1370 solo por un campo vacío de auditoría. El script de eliminación verifica tablero y conjunto pos/name, no igualdad de stacks.",
+  "eliminated_equals_pre_removal_backup": true,
+  "pre_removal_backup": "data/_backup_eliminar_H_1323/hands_db.jsonl",
+  "difference_from_c1c1370": "Solo falta recorder_audit.award_display_ignored: [] (campo vacío); no hay diferencia de acciones, ganador, bote ni jugadores."
+ },
+ "decisions": {
+  "rows": 506,
+  "non_null_hand_ids": 91,
+  "orphan_hand_ids": [],
+  "null_hand_id_rows": 3,
+  "null_hand_id_decision_ids": [
+   "fa6c3648ae2946899f75ff9cc924233e",
+   "8f217fb9aba6487286690cebb403d4f4",
+   "82ec509c6f14491099f07aa17a53ddea"
+  ],
+  "h1323_decisions": []
+ },
+ "current_known_defects": {
+  "ACTIVO_SIN_POSICION": [
+   "H_0030",
+   "H_0033",
+   "H_0035",
+   "H_0038",
+   "H_0050",
+   "H_0051",
+   "H_0055",
+   "H_0057",
+   "H_0073",
+   "H_0134",
+   "H_0135",
+   "H_0136",
+   "H_0137",
+   "H_0151",
+   "H_0167",
+   "H_0168",
+   "H_0170",
+   "H_0171",
+   "H_0172",
+   "H_0173",
+   "H_0174",
+   "H_0175",
+   "H_0177",
+   "H_0178",
+   "H_0179",
+   "H_0207",
+   "H_0208",
+   "H_0209",
+   "H_0210",
+   "H_0212",
+   "H_0220",
+   "H_0222",
+   "H_0226",
+   "H_0234",
+   "H_0235",
+   "H_0241",
+   "H_0242",
+   "H_0257",
+   "H_0258",
+   "H_0262",
+   "H_0281",
+   "H_0282",
+   "H_0283",
+   "H_0302",
+   "H_0323",
+   "H_0324",
+   "H_0325",
+   "H_0326",
+   "H_0327",
+   "H_0359",
+   "H_0360",
+   "H_0361",
+   "H_0362",
+   "H_0363",
+   "H_0448"
+  ],
+  "SIN_ALLIN": [
+   "H_0001",
+   "H_0002",
+   "H_0003",
+   "H_0004",
+   "H_0005",
+   "H_0006",
+   "H_0007",
+   "H_0008",
+   "H_0009",
+   "H_0010",
+   "H_0011",
+   "H_0012",
+   "H_0013",
+   "H_0014",
+   "H_0015",
+   "H_0016",
+   "H_0017",
+   "H_0018",
+   "H_0019",
+   "H_0020",
+   "H_0021",
+   "H_0022",
+   "H_0023",
+   "H_0024",
+   "H_0025",
+   "H_0026",
+   "H_0027",
+   "H_0029",
+   "H_0030",
+   "H_0031",
+   "H_0032",
+   "H_0033",
+   "H_0034",
+   "H_0035",
+   "H_0036",
+   "H_0037",
+   "H_0038",
+   "H_0039",
+   "H_0040",
+   "H_0041",
+   "H_0042",
+   "H_0043",
+   "H_0044",
+   "H_0045",
+   "H_0046",
+   "H_0047",
+   "H_0048",
+   "H_0049",
+   "H_0050",
+   "H_0051",
+   "H_0052",
+   "H_0053",
+   "H_0054",
+   "H_0055",
+   "H_0056",
+   "H_0057",
+   "H_0058",
+   "H_0059",
+   "H_0060",
+   "H_0061",
+   "H_0062",
+   "H_0063",
+   "H_0064",
+   "H_0065",
+   "H_0066",
+   "H_0067",
+   "H_0068",
+   "H_0069",
+   "H_0070",
+   "H_0071",
+   "H_0073"
+  ],
+  "AUSENCIA_RESPUESTA_BB": [
+   "H_1241"
+  ]
+ },
+ "counts": {
+  "semantic_total": 98,
+  "old": 75,
+  "new": 23,
+  "selected": 57,
+  "outside": 41,
+  "excluded": 0,
+  "action_evidence": {
+   "G": 84,
+   "T": 11,
+   "U": 3
+  },
+  "risk": {
+   "medio": 71,
+   "bajo": 18,
+   "alto": 9
+  },
+  "nada_in_98": 13
+ }
+}
