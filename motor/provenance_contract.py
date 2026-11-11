@@ -84,6 +84,7 @@ class ProvenanceEnvelope:
     built_at: Optional[str] = None
     origin: str = ORIGIN_UNKNOWN
     status: str = UNKNOWN
+    classification: Optional[str] = None
     required_fields: List[str] = field(default_factory=list)
     present_fields: List[str] = field(default_factory=list)
     missing_fields: List[str] = field(default_factory=list)
@@ -304,12 +305,18 @@ def diagnosticar_56_154_envelope():
     env = ProvenanceEnvelope(component='diagnosticar_56_154',
                             kind='auxiliary_tool',
                             source_path='tools/diagnosticar_56_154.py',
-                            origin=ORIGIN_UNKNOWN)
+                            origin=ORIGIN_HISTORICAL)
     env.database_hash = _hand_hash()
     env.required_fields = ['mode_historical', 'mode_current', 'separation']
     env.missing_fields = list(env.required_fields)
-    env.status = UNKNOWN
-    env.notes.append('auditar si separa modo historico y modo actual')
+    env.classification = 'historical_only'
+    env.status = HISTORICAL
+    env.notes.append('lee data/_snapshot_pre_rebuild_1b14c18/profile_ranges.json '
+                     'y data/_snapshot_pre_rebuild_1b14c18/postflop_ranges.json')
+    env.notes.append('compara contra data/profile_ranges.json y '
+                     'data/postflop_ranges.json actuales')
+    env.notes.append('no construye modelos desde la base actual ni recomienda')
+    env.notes.append('no existe separacion de modos: es un comparador historico')
     return env
 
 
@@ -320,9 +327,17 @@ def range_lab_gui_envelope():
     env.database_hash = _hand_hash()
     env.required_fields = ['mode_historical', 'mode_current', 'separation']
     env.missing_fields = list(env.required_fields)
-    env.status = UNKNOWN
-    env.notes.append('auditar consumo de profile_ranges/postflop_ranges '
-                     'historicos vs actuales')
+    env.classification = 'not_suitable'
+    env.status = INCOMPATIBLE
+    env.notes.append('load_models() intenta ProfileRangeModel.load() y '
+                     'PostflopRangeModel.load() primero; si existen artefactos '
+                     'historicos, los usa sin verificar procedencia')
+    env.notes.append('si falta el artefacto, reconstruye desde la base actual')
+    env.notes.append('reinyecta Oracle desde la base actual cuando load() lo '
+                     'perdio, mezclando Oracle actual con tablas historicas')
+    env.notes.append('la interfaz no comunica que modelo/fuente se esta usando')
+    env.notes.append('no existe separacion real de fuentes ni comprobacion de '
+                     'compatibilidad')
     return env
 
 

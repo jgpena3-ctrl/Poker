@@ -52,8 +52,9 @@ def run(argv=None):
     print()
     print('== ENVELOPES ==')
     for e in result['envelopes']:
-        print('  %-22s %-12s %-14s missing=%s' % (
+        print('  %-22s %-12s %-14s class=%-16s missing=%s' % (
             e['component'], e['origin'], e['status'],
+            e.get('classification') or '-',
             ','.join(e['missing_fields']) or '-'))
         if e['notes']:
             for n in e['notes']:

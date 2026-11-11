@@ -81,6 +81,21 @@ def test_envelope_roundtrip_json():
     assert isinstance(data['missing_fields'], list)
 
 
+def test_auxiliary_tools_classification():
+    envs = {e.component: e for e in all_envelopes()}
+    diag = envs['diagnosticar_56_154']
+    assert diag.classification == 'historical_only'
+    assert diag.origin == ORIGIN_HISTORICAL
+    assert any('snapshot' in n for n in diag.notes)
+    gui = envs['range_lab_gui']
+    assert gui.classification == 'not_suitable'
+    assert gui.status == INCOMPATIBLE
+    assert any('mezcl' in n or 'mezcla' in n or 'mezcl' in n.lower()
+               or 'Mezcla' in n for n in gui.notes)
+    assert any('no comunica' in n or 'no existe separacion' in n
+               for n in gui.notes)
+
+
 def test_no_model_change_by_audit():
     # El envelope no construye ni muta modelos.
     from motor.asistente_live import build_models

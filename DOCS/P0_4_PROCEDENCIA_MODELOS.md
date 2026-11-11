@@ -106,6 +106,55 @@ La auditoría P0-4 es de solo lectura y no bloquea consultas live. No se
 activaron P0-1, P0-2 ni P0-3. No se regeneraron derivados, calibraron modelos
 ni realizaron sesiones reales.
 
+## 9. Complemento: auditoría de herramientas auxiliares
+
+### 9.1 `tools/diagnosticar_56_154.py`
+
+Flujo real:
+- Lee `data/_snapshot_pre_rebuild_1b14c18/profile_ranges.json` y
+  `data/_snapshot_pre_rebuild_1b14c18/postflop_ranges.json`.
+- Lee `data/profile_ranges.json` y `data/postflop_ranges.json` actuales.
+- Compara jugadores, claves y totales de `opp`/`cnt`.
+- No lee la base canónica, no construye modelos, no usa P0-1/P0-2/P0-3, no
+  recomienda.
+
+Clasificación: `historical_only`. Depende exclusivamente del snapshot histórico
+`_snapshot_pre_rebuild_1b14c18` y de los artefactos actuales como comparador
+histórico. No existe separación de modos ni modo actual; por eso no puede
+presentarse como diagnóstico de los modelos live actuales. Su salida sirve para
+explicar el salto 56 → 154 jugadores, no para auditar el modelo reconstruido.
+
+### 9.2 `tools/range_lab_gui.py`
+
+Flujo real:
+- `load_models()` intenta `ProfileRangeModel.load()` y
+  `PostflopRangeModel.load()` primero; si existen artefactos históricos, los
+  usa sin verificar procedencia.
+- Si falta un artefacto, reconstruye el modelo correspondiente desde la base
+  actual (`load_hands(reliable_only=True)`).
+- Si `PostflopRangeModel.load()` perdió `_oracle`, lo reconstruye con
+  `Oracle(build(hands, labels=dict(post.labels)))` desde la base actual.
+- `build_base_range()` usa `ProfileRangeModel.prob_vec` o `opening_range()`.
+- `run_pipeline()` usa `PostflopRangeModel.prob_vec`, `RangeState.update`,
+  `equity_vs_range`.
+- La interfaz no comunica qué fuente se está usando ni si hay mezcla.
+
+Clasificación: `not_suitable`. Existe una mezcla previamente identificada entre
+`profile_ranges.json` histórico, `postflop_ranges.json` histórico y Oracle
+reconstruido desde la ventana actual. No hay separación real de fuentes ni
+comprobación de compatibilidad, y la GUI no comunica claramente qué modelo está
+utilizando. No se declara compatible por tener datos disponibles o estructuras
+técnicamente legibles.
+
+### 9.3 Limitaciones abiertas
+
+- `range_lab_gui.py` sigue pudiendo mezclar artefactos históricos y Oracle
+  actual; no se corrige en este bloque.
+- `diagnosticar_56_154.py` sigue dependiendo del snapshot histórico, que debe
+  conservarse como evidencia.
+- Ninguna de las dos herramientas reconstruye modelos con el envelope P0-4;
+  su clasificación queda documentada y probada, no activada.
+
 **Me detengo aquí para revisión.** No activar contratos ni continuar con otro
 bloque automáticamente.
 *** End Patch
