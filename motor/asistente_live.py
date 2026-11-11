@@ -43,6 +43,8 @@ from .player_ranges import ProfileRangeModel
 from .postflop_ranges import PostflopRangeModel
 from .preflop import (classify_missing_table, load_tables, lookup_table,
                       table_key)
+from .preflop_contract import (ShadowPreflopLog, actions_of, first_decision,
+                               table_plan)
 from .profile import PEZ, Profiles, TIBURON, STACK_FISH_BB
 from .ranges import COMBO0, COMBO1, RangeState
 from .rules import plan as rules_plan
@@ -1173,6 +1175,7 @@ class Asistente:
 
         perfil = self._perfil_for(pid, state)
         spot, action = _preflop_spot(self.rec.hand, main_pos)
+        self._preflop_shadow_spot('equity_main', main_pos, spot, action)
         reach = self.models.range_model.prob_vec(
             perfil, spot, action, pos=main_pos,
             villain_pos=_pf_rival_pos(self.rec.hand, main_pos, spot))
@@ -1342,6 +1345,9 @@ class Asistente:
         if self.rec.hand is not None:
             actions = (self.rec.hand.get('streets', {}).get('preflop', {})
                        or {}).get('actions', [])
+        # Contrato en sombra: compara el estado que van a leer las tablas con
+        # la lectura contextual. No se usa para elegir tabla ni acción.
+        self._preflop_shadow_hero(actions, hero_pos)
         n_raises, vs_pos, vs_amount = _preflop_raises(actions, hero_pos)
         hand_idx = _combo_index(hero)
         if hand_idx is None:
@@ -1572,6 +1578,8 @@ class Asistente:
         # heroes conocidos (no solo el propio: el segundo hero tampoco puede
         # estar en el rango de nadie).
         spot, action = _preflop_spot(self.rec.hand, villain_pos)
+        self._preflop_shadow_spot('rango_rival_produccion', villain_pos,
+                                  spot, action)
         reach = self.models.range_model.prob_vec(
             perfil, spot, action, pos=villain_pos,
             villain_pos=_pf_rival_pos(self.rec.hand, villain_pos, spot))
@@ -1821,6 +1829,154 @@ class Asistente:
         elif self.verbose or verbose:
             print(text)
         return evs
+
+    def _preflop_shadow_log(self):
+        """Log del contrato preflop, perezoso y SIN fichero por defecto.
+
+        El log de jerarquía escribe en `data/` porque acumula sesiones. Este
+        todavía es una comparación de activación: guarda en memoria y solo
+        escribe si el que arranca lo pide con `POKER_PREFLOP_SHADOW_LOG`.
+        Así la suite no toca `data/` por accidente.
+        """
+        lg = getattr(self, '_preflop_shadow_log_obj', None)
+        if lg is None:
+            lg = ShadowPreflopLog(
+                path=os.environ.get('POKER_PREFLOP_SHADOW_LOG') or None,
+                enabled=bool(getattr(self, 'shadow', True)))
+            self._preflop_shadow_log_obj = lg
+        return lg
+
+    @staticmethod
+    def _preflop_shadow_sequence(actions):
+        """Acciones crudas en forma estable para el registro."""
+        out = []
+        for a in actions or []:
+            if not isinstance(a, dict):
+                continue
+            out.append({'pos': a.get('pos'), 'action': a.get('action'),
+                        'amount': a.get('amount')})
+        return out
+
+    @staticmethod
+    def _preflop_shadow_vs(context, denom):
+        """Rival relevante del prior, con la misma convención que
+        `_pf_rival_pos`: primer agresor para facing_open, segundo para
+        facing_3bet."""
+        if denom == 'facing_open':
+            return context.aggressors[0] if context.aggressors else ''
+        if denom == 'facing_3bet':
+            return context.aggressors[1] if len(context.aggressors) >= 2 else ''
+        return ''
+
+    def _preflop_shadow_spot(self, consumer, player_pos, old_spot, old_action):
+        """Compara `_preflop_spot` con la primera decisión del contrato.
+
+        No devuelve ni escribe nada que el motor lea: solo anota en el log.
+        Cualquier fallo se traga para que una instrumentación no pueda cambiar
+        una recomendación.
+        """
+        try:
+            hand = self.rec.hand
+            new = first_decision(hand, player_pos)
+            legacy = first_decision(hand, player_pos, legacy=True)
+            old_vs = _pf_rival_pos(hand, player_pos, old_spot)
+            new_vs = (self._preflop_shadow_vs(new.context, new.denom)
+                      if new.resolved else '')
+            old_key = (old_spot, old_action, old_vs)
+            new_key = ((new.denom, new.category, new_vs)
+                       if new.resolved else (None, None, None))
+            fields = []
+            if old_key[:2] != new_key[:2]:
+                fields.append('spot_accion')
+            if old_vs != new_vs:
+                fields.append('vs_pos')
+            if not new.resolved:
+                fields.append('no_resuelto')
+            self._preflop_shadow_log().append({
+                'contract': 'preflop_context_v1',
+                'mode': 'shadow',
+                'consumer': consumer,
+                'hand_id': (hand or {}).get('hand_id', ''),
+                'player_pos': player_pos,
+                'old': {'spot': old_spot, 'action': old_action,
+                        'vs_pos': old_vs},
+                'new': {
+                    'spot': new.denom,
+                    'action': new.category if new.resolved else None,
+                    'training_category': new.training_category,
+                    'training_denom': new.training_denom,
+                    'status': new.status,
+                    'reason': new.reason,
+                    'vs_pos': new_vs,
+                    'classification': new.as_dict(),
+                },
+                'legacy_training': {
+                    'spot': legacy.denom,
+                    'action': legacy.category,
+                    'status': legacy.status,
+                    'reason': legacy.reason,
+                },
+                'difference': bool(fields),
+                'difference_fields': fields,
+                'unresolved': not new.resolved,
+                'sequence': self._preflop_shadow_sequence(actions_of(hand)),
+            })
+        except Exception:
+            pass       # la sombra nunca rompe la recomendación
+
+    def _preflop_shadow_hero(self, actions, hero_pos):
+        """Compara el estado que usan las tablas del héroe con el contrato."""
+        try:
+            old_n, old_vs, old_amount = _preflop_raises(actions, hero_pos)
+            old_limp = False
+            raise_seen = False
+            for a in actions:
+                if a.get('pos') == hero_pos:
+                    continue
+                if a.get('action') == 'r':
+                    raise_seen = True
+                elif a.get('action') == 'c' and not raise_seen:
+                    old_limp = True
+            plan = table_plan(actions, hero_pos)
+            old_key = (old_n, bool(old_limp), old_vs)
+            new_key = (plan.raises_before, plan.limps_before > 0, plan.vs_pos)
+            fields = []
+            if old_key[0] != new_key[0]:
+                fields.append('n_raises')
+            if old_key[1] != new_key[1]:
+                fields.append('limp')
+            if old_key[2] != new_key[2]:
+                fields.append('vs_pos')
+            if plan.status != 'resolved':
+                fields.append('no_resuelto')
+            self._preflop_shadow_log().append({
+                'contract': 'preflop_context_v1',
+                'mode': 'shadow',
+                'consumer': 'hero_preflop_tables',
+                'hand_id': (self.rec.hand or {}).get('hand_id', ''),
+                'player_pos': hero_pos,
+                'old': {'n_raises': old_n, 'limp': bool(old_limp),
+                        'vs_pos': old_vs, 'vs_amount': old_amount},
+                'new': {
+                    'raises_before': plan.raises_before,
+                    'limps_before': plan.limps_before,
+                    'callers_before': plan.callers_before,
+                    'vs_pos': plan.vs_pos,
+                    'vs_amount': plan.vs_amount,
+                    'table_raise': plan.table_raise,
+                    'table_call': plan.table_call,
+                    'status': plan.status,
+                    'reason': plan.reason,
+                    'plan': plan.as_dict(),
+                },
+                'legacy_training': None,
+                'difference': bool(fields),
+                'difference_fields': fields,
+                'unresolved': plan.status != 'resolved',
+                'sequence': self._preflop_shadow_sequence(actions),
+            })
+        except Exception:
+            pass       # la sombra nunca rompe la recomendación
 
     def _shadow_log(self):
         """ShadowLog perezoso: no se crea hasta la primera escritura."""

@@ -26,21 +26,19 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 from typing import Dict, Tuple
 
+from .preflop_contract import (CATEGORY_DENOM, DENOM_ORDER, PreflopAction,
+                               is_blind_post, legacy_training_category,
+                               walk_preflop)
+
 REPO_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB_PATH = os.path.join(REPO_DIR, 'data', 'hands_db.jsonl')
 
 BB = 1.0                                  # big blind nominal del juego
 HERO_NAMES = ('Jarduan',)                 # el usuario real: mano siempre conocida
 
-CATEGORY_DENOM = {
-    'fold': 'no_raise', 'limp': 'no_raise', 'open': 'no_raise',
-    'call_limp': 'no_raise', 'rol': 'no_raise', 'bb_check': 'no_raise',
-    'call_open': 'facing_open', '3bet': 'facing_open',
-    'squeeze': 'facing_open', 'fold_vs_open': 'facing_open',
-    'call_3bet': 'facing_3bet', '4bet': 'facing_3bet',
-    'fold_vs_3bet': 'facing_3bet',
-}
-DENOM_ORDER = ('no_raise', 'facing_open', 'facing_3bet')
+# Orden histórico de las categorías del entrenamiento. El vocabulario vive en
+# `preflop_contract`; esta tupla se conserva porque hay consumidores y tests
+# que la importan, pero NO añade categorías nuevas a los eventos históricos.
 CATEGORY_ORDER = ('open', 'limp', 'rol', 'call_limp', 'call_open', '3bet',
                   'squeeze', '4bet', 'call_3bet', 'fold', 'fold_vs_open',
                   'fold_vs_3bet', 'bb_check')
@@ -318,42 +316,16 @@ def classify_first_action(action, amount, raises_before, limps_before, bb=BB, ca
     """Categoría + denominador de la primera decisión preflop de un jugador.
 
     action: 'f' | 'x' | 'c' | 'b' | 'r'   (formato del recorder)
+
+    ADAPTADOR. La regla única vive en `preflop_contract.classify_action`. Aquí
+    se llama con `legacy=True` para conservar EXACTAMENTE la clasificación que
+    ya usaban los eventos históricos, incluida su deuda conocida (un limpe
+    corto `b` se clasifica `limp`, y un `x` de cualquier posición se lee como
+    `bb_check`). El camino estricto del contrato no se activa en serving
+    todavía; se ejecuta en sombra.
     """
-    if action == 'x':
-        return 'bb_check', 'no_raise'
-    if action == 'f':
-        if raises_before == 0:
-            return 'fold', 'no_raise'
-        if raises_before == 1:
-            return 'fold_vs_open', 'facing_open'
-        return 'fold_vs_3bet', 'facing_3bet'
-    if action == 'c':
-        if raises_before == 0:
-            return ('limp' if limps_before == 0 else 'call_limp'), 'no_raise'
-        if raises_before == 1:
-            return 'call_open', 'facing_open'
-        return 'call_3bet', 'facing_3bet'
-    if action in ('b', 'r'):
-        # Un 'b'/'r' de a lo sumo 1BB sin subida previa es un limpe corto grabado
-        # como bet (ver PROYECTO.md §6.1). No se cuenta como subida real.
-        if raises_before == 0 and (amount is not None) and amount <= bb + 1e-9:
-            return 'limp', 'no_raise'
-        if raises_before == 0:
-            return 'open' if limps_before == 0 else 'rol', 'no_raise'
-        if raises_before == 1:
-            # squeeze = subir cuando ALGUIEN YA HA PAGADO la apuesta
-            # vigente. Ese es exactamente `callers` (calls con subida
-            # previa).
-            #
-            # `limps_before` NO cuenta: un limpe ocurre ANTES del open,
-            # asi que el open se hizo 'sobre limp' y quien paga la subida
-            # actual no se esta levantando por nadie -> es un 3bet normal.
-            #   UTG c1.0 (limp) | MP r3.0 (open over limp) | CO r8.0
-            #     -> raises=1, limps=1, callers=0 -> 3bet, NO squeeze.
-            # Mezclar ambos daba 13 falsos squeezes en las 900 fiables.
-            return ('squeeze' if callers >= 1 else '3bet'), 'facing_open'
-        return '4bet', 'facing_3bet'
-    raise ValueError(f'acción preflop desconocida: {action!r}')
+    return legacy_training_category(action, amount, raises_before,
+                                    limps_before, callers, bb)
 
 
 def _preflop_sequence(hand):
@@ -459,91 +431,61 @@ def _es_ciega_bb(i, pos, act, amount, is_blind, voluntary_before, bb=BB):
     Medido sobre las 900 manos fiables: **0 casos**. Es una medición, no una
     prueba, y por eso hay un test que la fija.
     """
-    if is_blind:
-        return True
-    if pos == 'BB' and act in ('b', 'p') and not voluntary_before:
-        return True
-    return False
+    # La regla vive en `preflop_contract.is_blind_post`; aquí solo se adapta
+    # la firma histórica (que conserva `i`, `amount` y `bb` por compatibilidad).
+    return is_blind_post(
+        PreflopAction(index=i, pos=pos or '', action=act or '',
+                      amount=amount, is_blind=is_blind),
+        voluntary_before)
 
 
 def preflop_events(hand, bb=BB):
-    """Primera decisión de cada jugador en preflop -> [PreflopEvent]."""
+    """Primera decisión de cada jugador en preflop -> [PreflopEvent].
+
+    La secuencia y el estado se recorren con `preflop_contract.walk_preflop`
+    en modo legado. Así la regla de ciegas, la clasificación y el avance de
+    contadores son UNA sola implementación compartida con el camino nuevo; el
+    modo legado fija el comportamiento histórico para no mover ni una etiqueta
+    mientras el contrato estricto está en sombra.
+    """
     seq = _preflop_sequence(hand)
     events = []
     decided = set()
-    raises = 0
-    limps = 0
-    callers = 0        # calls que ya enfrentaban una subida (squeeze)
-    voluntary_before = False   # ¿hubo ya una acción voluntaria (subida o limp)?
-    for i, (pos, act, amount, is_blind) in enumerate(seq):
-        es_ciega_bb = _es_ciega_bb(i, pos, act, amount, is_blind,
-                                   voluntary_before, bb)
-        if es_ciega_bb:
+    for i, step in enumerate(walk_preflop(seq, bb=bb, legacy=True)):
+        cls = step.classification
+        if cls.status == 'non_decision':
+            # Una POSTA (o una ciega) no es una decisión. El jugador SIGUE
+            # sin decidir y su siguiente acción es su primera decisión.
+            # Contrato: `DOCS/CONTRATO_ACCION_P.md`.
             continue
-        if act == 'p':
-            # Una POSTA no es una decisión. El jugador que posta la ciega
-            # SIGUE sin decidir, y su siguiente acción es su primera
-            # decisión.
-            #
-            # Y el filtro va ANTES de `decided.add(pos)`, y no despues: si la
-            # posta contara como decision, la siguiente acción del mismo
-            # jugador caeria en la rama de «ya decidio», y una subida se
-            # contaria como la segunda acción de alguien que no habia
-            # decidido. MEDIDO, con las ciegas recodificadas: 922 de 1258
-            # manos cambiaban de respuesta sin este salto.
-            #
-            # Y el contrato es `DOCS/CONTRATO_ACCION_P.md`.
-            continue
+        pos = step.raw.pos
         if pos in decided:
-            if act in ('b', 'r'):
-                raises += 1
-                voluntary_before = True
-            elif act == 'c':
-                # Un call con subida previa NO es limp, pero si cuenta
-                # como 'ya hay gente dentro' para detectar un squeeze.
-                if raises == 0:
-                    limps += 1
-                else:
-                    callers += 1
-                voluntary_before = True
+            # `walk_preflop(legacy=True)` ya actualizó raises/limps/callers
+            # para las acciones repetidas. Aquí solo se evita crear un segundo
+            # evento del mismo jugador.
             continue
         decided.add(pos)
-        category, denom = classify_first_action(act, amount, raises, limps, bb, callers)
+        if cls.reason == 'accion_desconocida':
+            # Mismo contrato que la función histórica: una acción que no se
+            # sabe leer no se convierte en una categoría.
+            raise ValueError(f'acción preflop desconocida: {step.raw.action!r}')
         cards = cards_of_pos(hand, pos)
+        player = player_of_pos(hand, pos)
         events.append(PreflopEvent(
             hand_id=hand.get('hand_id', '?'),
-            # `player_of_pos(...) or pos` ERA `... or pos`: cuando la posicion
-            # no tiene jugador, devolvia la POSICION como nombre. Con eso, una
-            # accion fantasma creaba un jugador entero: H_0846 producia un
-            # `PreflopEvent` con player='MP', y de ahi salia un "MP" y un "CO"
-            # en player_stats.json y profiles.json, con etiqueta TIBURON y
-            # confianza 0.0. Medido: 2 observaciones y 2 eventos sobre 1258
-            # manos.
-            #
-            # Aqui NO se inventa un nombre. La decision SIGUE contando en el
-            # denominador —algo ocurrio, y el denominador es lo que hay que
-            # medir—, pero `player` queda vacio, que es la verdad: no se sabe
-            # quien la hizo. Quien necesite atribuirlo lo descarta explicito
-            # (`stats.py`), en vez de heredarlo bajo el nombre de una
-            # posicion.
-            player=player_of_pos(hand, pos),
+            # No se inventa un nombre cuando la posición no tiene jugador:
+            # `player` queda vacío, que es la verdad. La decisión sigue
+            # contando en el denominador. Ver la nota histórica de H_0846 en
+            # `DOCS/` y el test que la fija.
+            player=player,
             pos=pos,
-            category=category,
-            denom=denom,
-            amount=amount,
-            hand_known=hand_known(player_of_pos(hand, pos), cards),
+            category=cls.category,
+            denom=cls.denom or '',
+            amount=0.0 if step.raw.amount is None else step.raw.amount,
+            hand_known=hand_known(player, cards),
             cards=cards,
             prereq=tuple(f'{p}:{a}' for p, a, _m, _b in seq[:i]),
         ))
-        if act in ('b', 'r'):
-            raises += 1
-            voluntary_before = True
-        elif act == 'c':
-            if raises == 0:
-                limps += 1
-            else:
-                callers += 1
-            voluntary_before = True
     return events
 
 

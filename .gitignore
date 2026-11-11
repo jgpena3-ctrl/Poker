@@ -106,6 +106,9 @@ data/hands_db.jsonl.tmp
 # observacion, no una fuente: su valor esta en acumularse, no en versionarse.
 # Versionarlo solo anadiria ruido al diff de cada sesion.
 data/shadow_hierarchy.jsonl
+# Log opcional de la comparación P0-1 viejo-vs-nuevo. El contrato NO escribe
+# por defecto: solo si se arranca con POKER_PREFLOP_SHADOW_LOG.
+data/shadow_preflop.jsonl
 
 # Salidas de herramientas de prueba. MEDIDO: 4 ficheros versionados en data/
 # que NO los escribe ningun modulo del motor, 3 de ellos no los referencia
