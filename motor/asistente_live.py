@@ -475,13 +475,17 @@ def _format_preflop(hero, hero_pos, label_spot, pot, to_call, ev, action,
 # Modelos del asistente (perfiles PEZ/TIBURON desde hands_db)
 # ---------------------------------------------------------------------------
 
-def build_models(verbose=True):
+def build_models(verbose=True, eligibility_shadow=None):
     """Construye los modelos de 2 perfiles desde data/hands_db.jsonl.
 
     labels          {jugador: 'PEZ'|'TIBURON'}   (regla stack < 50 BB)
     range_model     ProfileRangeModel  (P(A|H) preflop por perfil)
     oracle          Oracle             (P(A|C) postflop por perfil)
     postflop_model  PostflopRangeModel (P(A|H) postflop por perfil)
+
+    `eligibility_shadow`: hook opcional de P0-2. Si se pasa un objeto con
+    `record_build(...)`, registra el informe de elegibilidad DESPUÉS de
+    construir los modelos. No filtra observaciones ni cambia ninguna salida.
     """
     hands = load_hands(reliable_only=True)
     profs = Profiles.from_hands(hands)
@@ -497,8 +501,12 @@ def build_models(verbose=True):
         n_tib = sum(1 for l in labels.values() if l == TIBURON)
         print(f'  modelos 2 perfiles: {n_pez} PEZ / {n_tib} TIBURON '
               f'· {len(hands)} manos · build {dt:.0f} ms')
-    return _Models(labels=labels, range_model=range_model,
-                   oracle=oracle, postflop_model=postflop_model)
+    models = _Models(labels=labels, range_model=range_model,
+                     oracle=oracle, postflop_model=postflop_model)
+    if eligibility_shadow is not None:
+        eligibility_shadow.record_build(
+            hands, labels, profs, range_model, oracle, postflop_model)
+    return models
 
 
 class _Models:
