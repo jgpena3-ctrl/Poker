@@ -94,6 +94,12 @@ RELIABLE_HANDS = 900
 #               · `BB b` mal ordenadas: 0 -> 0.  Sin ganador: 0 -> 0.
 #             Las 40 son POSTERIORES a la ventana de 877, asi que las cifras
 #             de `CONTRATO_F72A.md` §5 NO se mueven: se comprobo mediendo.
+#   8594ed5   ADOPCION COMO REGISTRO CANONICO (2026-11-11). 1344 lineas.
+#             Excepcion de procedencia B: contenido aceptado con la evidencia
+#             de B1-R/B1-E; reproducibilidad historica NO demostrada.
+#             No certifica calibracion, derivados, estrategia ni sesiones.
+#             Ver `DOCS/CANAL_MANUAL_CERRADO.md` y
+#             `DOCS/B1_EXCEPCION_PROCEDENCIA.md`.
 #   e314f74   salida de `tools/aplicar_reinterpretacion.py`
 #             (sha256 173a7274...). Estado ALTERNATIVO, al que se puede volver
 #             con `--apply --descartar-cambios`.
@@ -104,11 +110,12 @@ RELIABLE_HANDS = 900
 # blob `7d972b2b` (0 CRLF) contra disco `202a1f54` (1258 CRLF). Un hash que
 # no se puede reproducir no es un hash.
 #
-# Documentacion: `DOCS/CANAL_MANUAL_CERRADO.md`, `DOCS/RANGO_VIGENTE.md`.
-HANDS_DB_COMMIT = '51a6fb9'
+# Documentacion: `DOCS/CANAL_MANUAL_CERRADO.md`, `DOCS/RANGO_VIGENTE.md`,
+# `DOCS/B1_EXCEPCION_PROCEDENCIA.md`.
+HANDS_DB_COMMIT = '8594ed5'
 HANDS_DB_SHA256 = (
-    'c3172a147423d12a652767586dd76c36f24347c9dd503959dbea019e64944a09')
-HANDS_DB_LINEAS = 1253
+    '3f0e7e5ea0d5c2d06aa9b8629817984ab9b4bccf057371823fde60370818262e')
+HANDS_DB_LINEAS = 1344
 
 # El rango AUDITADO no es el de calibracion. Son dos cosas distintas y
 # confundirlas es lo que produjo tres cifras conviviendo:

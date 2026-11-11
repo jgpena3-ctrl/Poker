@@ -6853,6 +6853,21 @@
  },
  "adoption_1344": {
   "recommendation": "adoptar como registro canonico con excepcion de procedencia y limitaciones de campo; no como base de calibracion validada",
+  "adoption_status": "adopted_as_record",
+  "adoption_date": "2026-11-11",
+  "manifest_target": {
+   "commit": "8594ed5",
+   "sha256": "3f0e7e5ea0d5c2d06aa9b8629817984ab9b4bccf057371823fde60370818262e",
+   "lines": 1344
+  },
+  "derivatives_source": {
+   "base_commit": "51a6fb9",
+   "base_lines": 1253,
+   "window": 877,
+   "status": "legacy_not_reanchored"
+  },
+  "calibration_status": "provisional_not_validated",
+  "verifier": "tools/verificar_adopcion_1344.py",
   "record_included": 1344,
   "hand_level_exclusions": [],
   "field_level_exclusions": {
@@ -7059,7 +7074,7 @@
   },
   "conditions": [
    "no reanclar derivados",
-   "no actualizar manifiesto/pines/hashes",
+   "redeclarar solo el manifiesto de base; no reanclar derivados, pines ni hashes de derivados",
    "no iniciar B2",
    "no ejecutar sesiones reales",
    "mantener MULTIWAY_SOPORTADO=False",

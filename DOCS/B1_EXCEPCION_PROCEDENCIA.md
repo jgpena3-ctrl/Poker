@@ -1,7 +1,8 @@
 # B1-E — Revisión de integridad y nueva propuesta de adopción de la base de 1344
 
 **Fecha:** 2026-11-11
-**Estado:** revisión documental independiente, previa a autorización humana.
+**Estado:** revisión documental independiente, aceptada el 2026-11-11 como base
+para la adopción del registro; no reabre B1-R.
 **Base auditada:** `data/hands_db.jsonl`, 1344 líneas, SHA-256
 `3f0e7e5ea0d5c2d06aa9b8629817984ab9b4bccf057371823fde60370818262e`.
 **Alcance:** los 98 cambios semánticos de `44acddb`, las importaciones de 45 y
@@ -11,6 +12,16 @@ de `H_1323` y la aptitud analítica de la base completa.
 manifiesto, los derivados canónicos, los hashes, los pines, la calibración, el
 motor, las tablas, los rangos ni `MULTIWAY_SOPORTADO`. No se inicia B2 ni se
 ejecutan sesiones reales.
+
+**Nota de vigencia (2026-11-11):** revisión aceptada como base para la
+adopción. La autorización permite redeclarar únicamente las tres constantes
+del manifiesto de base —`HANDS_DB_COMMIT`, `HANDS_DB_SHA256` y
+`HANDS_DB_LINEAS`— y añadir un verificador de solo lectura. Las condiciones de
+§7.1.5, §7.2 (fila «Derivados/pines/manifiesto») y §7.4.1 se entienden
+modificadas solo en ese punto: el manifiesto declara la base adoptada, pero no
+se reanclan derivados, pines, hashes de derivados ni la calibración. Los
+hallazgos, matrices y clasificaciones de este informe no cambian. El acto formal
+está en `DOCS/CANAL_MANUAL_CERRADO.md`.
 
 **Referencia cerrada:** B1-R, `DOCS/B1_PROCEDENCIA_FORENSE.md`, veredicto en
 `0744ebd`. Este documento no reabre la investigación de las 23 manos allí

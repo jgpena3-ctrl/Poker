@@ -1,14 +1,94 @@
 # CANAL MANUAL CERRADO — `hands_db.jsonl`
 
-**Estado:** vigente.
-**Fecha:** 2026-10-25
-**Commit del estado canónico:** `51a6fb9`
-**SHA-256:** `c3172a147423d12a652767586dd76c36f24347c9dd503959dbea019e64944a09`
-**Líneas:** 1253
-**Revisión manual:** **terminada**. `H_0001`..`H_1282`, en tres tramos.
+**Estado:** vigente como registro canónico con excepción de procedencia B;
+no validado como base de calibración.
+**Fecha:** 2026-11-11
+**Commit del estado canónico:** `8594ed5`
+**SHA-256:** `3f0e7e5ea0d5c2d06aa9b8629817984ab9b4bccf057371823fde60370818262e`
+**Líneas:** 1344
+**Revisión manual:** `H_0001`..`H_1282` revisadas a mano una a una, en tres
+tramos, cerrada el 2026-10-15; no fue una revisión visual contra grabación.
+Las 45+47 manos importadas y las 98 modificaciones semánticas de `44acddb` no
+se verificaron visualmente en bloque; 23 manos sí se verificaron visualmente
+en B1-R.
 **Saneamiento:** empezado. 3 correcciones; el resto documentado en
 `DOCS/SANEAMIENTO.md`.
-**Vigila:** `motor/test_canal_manual.py` — 16 tests
+**Calibración:** ventana de 877 **provisional**, no validada.
+**Derivados:** siete canónicos congelados; calculados sobre `51a6fb9`/1253,
+no regenerados sobre 1344.
+**Vigila:** `motor/test_canal_manual.py` — 17 tests
+**Verificador de adopción:** `tools/verificar_adopcion_1344.py`
+
+---
+
+## Adopción como registro canónico con excepción B — 2026-11-11
+
+| | antes | después |
+|---|---|---|
+| líneas | 1253 | **1344** |
+| SHA-256 | `c3172a14…` | **`3f0e7e5e…`** |
+| commit del blob | `51a6fb9` | **`8594ed5`** |
+| estado | manifiesto obsoleto | registro canónico con excepción B |
+| calibración | 877 provisional | 877 provisional, no validada |
+| derivados | `51a6fb9`/877 | idénticos, sin reanclar |
+
+El cambio de estado es **1253 -> 1344** líneas y **`c3172a14…` -> `3f0e7e5e…`**.
+
+### Qué se adopta
+
+`data/hands_db.jsonl` de **1344 líneas** se adopta como **registro canónico**.
+La adopción no reescribe la base, no excluye manos por procedencia y no cambia
+la ventana de calibración. `H_1323` sigue eliminada y no se reincorpora.
+
+### Excepción de procedencia B
+
+Se acepta el contenido como registro según la evidencia revisada, pero **no se
+afirma que la base sea reproducible** con los artefactos versionados. La
+excepción cubre:
+
+1. las 23 correcciones manuales de `8594ed5` verificadas visualmente en B1-R;
+2. los 98 cambios semánticos de `44acddb` —75 antiguos y 23 nuevos—, sin script
+   por mano; no se presuponen correctos por las 23 de B1-R y no tienen
+   verificación visual en bloque;
+3. las importaciones de 45 y 47 manos de `8b44917` y `c1c1370`, que son bloques
+   de sesión, no reconstrucciones manuales;
+4. la eliminación de `H_1323`, que conserva script y expediente.
+
+Las 23 de B1-R son contenido verificado; solo `H_1143` coincide con las 98.
+Los otros 97 cambios de `44acddb` tienen evidencia de procedencia G/T/U, no V,
+y esa diferencia no se borra.
+
+### Dimensiones separadas
+
+- **Exactitud comprobada:** hashes, bytes, líneas y correspondencia entre
+  manifiesto, base, derivados registrados y ventana seleccionada.
+- **Evidencia técnica:** B1-R, B1-E, inventario, scripts parciales y capturas
+  documentadas.
+- **Procedencia histórica:** revisión manual, importaciones y commits
+  `8b44917`, `44acddb`, `c1c1370`, `8594ed5`.
+- **Reproducibilidad:** **no demostrada**. La adopción no la declara.
+
+### Límites registrados, sin cambios
+
+Se mantienen las limitaciones del inventario: 13 secuencias imposibles y 3
+problemas de orden/codificación para análisis dependientes de la secuencia;
+39 manos no confiables para bote/EV/ROI/pot odds; 11 para board/equity; 25 para
+stack/SPR; 23 para el campo `allin`; 55 para estado/asiento; 4 para texto de
+showdown; y 11 para `recorder_audit.pot_*`. El detalle exacto de cada lista
+está en `DOCS/B1_EXCEPCION_INVENTARIO.json`.
+
+### Derivados y calibración
+
+Los siete derivados canónicos **no se modifican, no se regeneran y no se
+reanclan**. Siguen siendo legado de `51a6fb9`/1253 y conservan la ventana de
+877: `preflop_stats.hands=877`, `behavior.hands=877`,
+`behavior.observaciones=8742`, y `profile_ranges`/`postflop_ranges` con
+`hands_input=877` y `hands_used=866`. No deben presentarse como cálculos sobre
+las 1344 manos.
+
+`data/calibration_window.json` sigue en estado `provisional`. La ventana de 877
+no queda validada como conjunto: conserva `H_0926`, el limp codificado de
+`H_0832`, los boards truncados y los botes no reconciliados.
 
 ---
 
