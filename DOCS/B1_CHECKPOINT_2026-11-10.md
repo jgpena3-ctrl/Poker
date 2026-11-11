@@ -3,9 +3,15 @@
 **Fecha:** 2026-11-10
 **Base actual:** `data/hands_db.jsonl` de 1344 líneas, SHA-256
 `3f0e7e5ea0d5c2d06aa9b8629817984ab9b4bccf057371823fde60370818262e`
-(commit que introdujo el blob: `8594ed5`; HEAD de trabajo: `1544249`).
+(commit que introdujo el blob: `8594ed5`; HEAD de trabajo: `aa3fb73`).
 **Autorización:** B1 autorizado para procedencia, auditoría, snapshot,
 regeneración en copias y corrección de métricas F7.2.
+
+**Cierre B1-R (2026-11-11):** revisión visual humana de las 23 manos
+completada. Veredicto **B**: contenido correcto, procedencia manual no
+reproducible. Ver
+[`B1_PROCEDENCIA_FORENSE.md`](B1_PROCEDENCIA_FORENSE.md). No cambia la base,
+el manifiesto, los derivados ni `MULTIWAY_SOPORTADO`.
 
 ## 1. Veredicto
 
@@ -32,9 +38,10 @@ Por tanto:
 | Commit | Líneas | SHA-256 | Papel |
 |---|---:|---|---|
 | `51a6fb9` | 1253 | `c3172a147423d12a652767586dd76c36f24347c9dd503959dbea019e64944a09` | Base declarada por el manifiesto |
-| `44acddb` | 1298 | `4002ca236a850d159d43c6c9b756c3fbafd1d33d208ff1d7605ba89420b58af8` | Primera expansión; sin scripts de base |
-| `c1c1370` | 1345 | `797c85e1408962eb2d6c01aa5bbc3de49502618a2c28305b359a317b9c52f332` | Punto de partida del intento |
-| `8594ed5` / HEAD | 1344 | `3f0e7e5ea0d5c2d06aa9b8629817984ab9b4bccf057371823fde60370818262e` | Base actual |
+| `8b44917` | 1298 | `21b14d4d23aaf4636435d1c66aef9355fc22d57d35ae0b011a34b17bf26fc068` | Importa 45 manos, H_1283–H_1327 |
+| `44acddb` | 1298 | `4002ca236a850d159d43c6c9b756c3fbafd1d33d208ff1d7605ba89420b58af8` | Corrige 119 manos; no añade ni quita |
+| `c1c1370` | 1345 | `797c85e1408962eb2d6c01aa5bbc3de49502618a2c28305b359a317b9c52f332` | Importa 47 manos, H_1328–H_1374 |
+| `8594ed5` / HEAD | 1344 | `3f0e7e5ea0d5c2d06aa9b8629817984ab9b4bccf057371823fde60370818262e` | Base actual; elimina H_1323 |
 
 ### 2.2 Intento de orden histórico
 
@@ -104,12 +111,22 @@ mismo número de manos.
 
 ### 2.4 La expansión de la base tampoco está scriptada
 
-- `44acddb` añade 45 manos y no incluye ningún script de corrección de
-  `data/hands_db.jsonl`; solo `hand_editor.py` y cambios de recorder/motor.
-- `c1c1370` añade 47 manos y solo toca `data/hands_db.jsonl` y
-  `data/decisions.jsonl`; no incluye scripts.
-- La base pasa de 1253 a 1298 y después a 1345 sin un procedimiento
-  versionado que pueda reejecutarse.
+> **Corrección B1-R (2026-11-11):** la expansión 1253→1298 la introduce
+> `8b44917`, no `44acddb`. `44acddb` no añade ni quita manos: modifica 119
+> existentes, 98 de ellas con cambio semántico de acciones. La evidencia
+> completa está en [`B1_PROCEDENCIA_FORENSE.md`](B1_PROCEDENCIA_FORENSE.md).
+
+- `8b44917` (“seccion prueba 1”) añade 45 manos, `H_1283`–`H_1327`, y
+  `data/decisions.jsonl`; no modifica manos existentes ni incluye script de
+  corrección de base.
+- `44acddb` no añade manos; modifica 119 existentes (98 con cambio semántico:
+  75 antiguas y 23 de `H_1283`–`H_1327`) y no incluye ningún script que
+  reejecute esas correcciones.
+- `c1c1370` añade 47 manos, `H_1328`–`H_1374`, y solo toca
+  `data/hands_db.jsonl` y `data/decisions.jsonl`; no incluye scripts.
+- `8594ed5` elimina `H_1323`, modifica 144 manos y añade los 11 scripts.
+- La base pasa de 1253 a 1298, después a 1345 y finalmente a 1344 sin una
+  cadena versionada que pueda reejecutarse.
 
 ### 2.5 Resultado de la comparación byte a byte
 
@@ -376,3 +393,8 @@ una decisión independiente entre:
 
 No se sustituyen derivados canónicos, no se actualiza el manifiesto y no se
 declaran los 11 escritores hasta que esa revisión ocurra.
+
+**Cierre B1-R (2026-11-11):** la revisión humana confirmó el contenido de las
+23 manos; la procedencia exacta sigue sin demostrarse. El veredicto es **B**
+con excepción de procedencia explícita. Ver
+[`B1_PROCEDENCIA_FORENSE.md`](B1_PROCEDENCIA_FORENSE.md).
