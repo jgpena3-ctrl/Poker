@@ -1,137 +1,1407 @@
 {
- "schema": "b1-excepcion-inventario/1",
+ "schema": "b1-excepcion-inventario/2",
  "created_at": "2026-11-11",
  "base": {
   "path": "data/hands_db.jsonl",
   "lines": 1344,
   "sha256": "3f0e7e5ea0d5c2d06aa9b8629817984ab9b4bccf057371823fde60370818262e"
  },
- "commits": {
-  "8b44917": {
-   "lines": 1298,
-   "role": "importa 45"
-  },
-  "44acddb": {
-   "lines": 1298,
-   "role": "98 cambios semánticos"
-  },
-  "c1c1370": {
-   "lines": 1345,
-   "role": "importa 47"
-  },
-  "8594ed5": {
-   "lines": 1344,
-   "role": "1344 actual; elimina H_1323"
-  }
+ "reference": {
+  "b1r": "DOCS/B1_PROCEDENCIA_FORENSE.md",
+  "b1r_commit": "0744ebd",
+  "closed": true,
+  "b1e_previous_commit": "11bbba0",
+  "b1e_status": "revision de integridad y propuesta de adopcion, 2026-11-11"
  },
- "calibration_window": {
-  "selected_count": 877,
-  "excluded_count": 23,
-  "selected_98": [
-   "H_0048",
-   "H_0069",
-   "H_0088",
-   "H_0092",
-   "H_0098",
-   "H_0099",
-   "H_0120",
-   "H_0123",
-   "H_0130",
-   "H_0136",
-   "H_0140",
-   "H_0144",
-   "H_0153",
-   "H_0186",
-   "H_0188",
-   "H_0194",
-   "H_0205",
-   "H_0228",
-   "H_0240",
-   "H_0265",
-   "H_0266",
-   "H_0269",
-   "H_0270",
-   "H_0272",
-   "H_0274",
-   "H_0276",
-   "H_0300",
-   "H_0306",
-   "H_0315",
-   "H_0319",
-   "H_0376",
-   "H_0415",
-   "H_0430",
-   "H_0445",
-   "H_0486",
-   "H_0527",
-   "H_0589",
-   "H_0614",
-   "H_0617",
-   "H_0640",
-   "H_0650",
-   "H_0662",
-   "H_0691",
-   "H_0708",
-   "H_0711",
-   "H_0715",
-   "H_0773",
-   "H_0826",
-   "H_0832",
-   "H_0841",
-   "H_0847",
-   "H_0852",
-   "H_0855",
-   "H_0886",
-   "H_0889",
-   "H_0918",
-   "H_0926"
+ "criteria": {
+  "provenance_is_not_quality": true,
+  "exclude_by_field_or_analysis": true,
+  "no_whole_hand_exclusion_without_real_defect": true,
+  "provenance_dimensions": [
+   "procedencia",
+   "exactitud",
+   "integridad",
+   "aptitud_analitica"
   ],
-  "outside_98": [
-   "H_0931",
-   "H_0957",
-   "H_0964",
-   "H_0965",
-   "H_0967",
-   "H_0985",
-   "H_0997",
-   "H_1000",
-   "H_1029",
-   "H_1030",
-   "H_1039",
-   "H_1085",
-   "H_1110",
-   "H_1139",
+  "not_evidence": [
+   "mencion generica en documento",
+   "PARTICION_FASE_D.md",
+   "ausencia de script reproductor",
+   "ausencia de documento individual"
+  ]
+ },
+ "counts": {
+  "base_hands": 1344,
+  "semantic_44acddb": 98,
+  "old": 75,
+  "new": 23,
+  "window_selected": 57,
+  "window_outside": 41,
+  "nada_35": 35,
+  "hard_sequence": 13,
+  "order_or_code": 3,
+  "board_contradiction": 5,
+  "board_missing": 6,
+  "comunitarias_truncated": 45,
+  "pot_internal_conflict": 17,
+  "missing_allin": 23,
+  "active_null_stack": 25,
+  "active_no_position_hands": 55,
+  "split_display_incomplete": 4,
+  "recorder_audit_invalid": 1,
+  "pot_unreliable": 39,
+  "b1r_recorder_audit_pot_stale": 10
+ },
+ "actual_defects": {
+  "hard_sequence": {
+   "H_0005": {
+    "street": "turn",
+    "index": 4,
+    "evidence": "MP b 13.0 después de MP x 0.0 en la misma calle y sin nueva apuesta."
+   },
+   "H_0059": {
+    "street": "preflop",
+    "index": 6,
+    "evidence": "BTN c 2.5 después de que SB y BB se retiran; no queda rival y no hay apuesta viva."
+   },
+   "H_0214": {
+    "street": "turn",
+    "index": 2,
+    "evidence": "BB b 1.0 después de BB x 0.0 en la misma calle y sin nueva apuesta."
+   },
+   "H_0226": {
+    "street": "river",
+    "index": 2,
+    "evidence": "SB c 4.9 después de que MP se retira; no hay apuesta viva que igualar."
+   },
+   "H_0327": {
+    "street": "river",
+    "index": 2,
+    "evidence": "MP b 0.0: apuesta de importe cero, sin all-in ni stack agotado."
+   },
+   "H_0357": {
+    "street": "preflop",
+    "index": 2,
+    "evidence": "BB b 0.5 después de BB p 1.0; el importe no supera la ciega y el jugador actúa dos veces."
+   },
+   "H_0834": {
+    "street": "preflop",
+    "index": 5,
+    "evidence": "BTN r 4.0 después de BTN b 1.0 y de dos folds; no hay nueva apuesta que justifique otra acción."
+   },
+   "H_0925": {
+    "street": "river",
+    "index": 4,
+    "evidence": "MP f 0.0 después de MP c 9.0 en la misma calle y sin nueva apuesta."
+   },
+   "H_0926": {
+    "street": "turn",
+    "index": 0,
+    "evidence": "SB x 0.0 después de que SB f 0.0 en el flop. Acción de un jugador ya retirado.",
+    "history": "En 8b44917 ya existe SB x en turn tras SB f en flop. 44acddb anade BB x antes de UTG b y no retira SB x; el defecto es preexistente y el cambio de 44acddb es legal."
+   },
+   "H_0946": {
+    "street": "flop",
+    "index": 3,
+    "evidence": "UTG x 0.0 enfrentando MP b 7.1; un check no es legal con apuesta viva."
+   },
+   "H_1141": {
+    "street": "preflop",
+    "index": 4,
+    "evidence": "SB x 0.0 enfrentando la ciega BB de 1.0; el SB no puede checkear preflop."
+   },
+   "H_1287": {
+    "street": "preflop",
+    "index": 4,
+    "evidence": "CO c 1.0 con apuesta viva 6.0 y stack 20.0; no es all-in corto. Además CO f 0.0 después de SB c 6.0, sin nueva apuesta."
+   },
+   "H_1310": {
+    "street": "preflop",
+    "index": 4,
+    "evidence": "SB c 1.0 con apuesta viva 3.0 y stack 92.4; no es all-in. Después SB c 3.0 (índice 6) y en flop SB c 4.3 / SB c 4.4: llamadas duplicadas."
+   }
+  },
+  "order_or_code": {
+   "H_0832": "preflop.actions[2]: CO b 1.0 con BB en 1.0; es un limp/call codificado como apuesta, no una subida.",
+   "H_1328": "flop.actions[0]: BB b 1.4 antes de SB x 0.0; falta la accion de SB antes de la apuesta o el orden esta desplazado. Ademas river.board vacio; final_pot 21.7 verificado por B1-R, no se corrige.",
+   "H_1354": "turn.actions[1]: BB b 1.0 con apuesta viva 1.0; no es una subida; el código/importe no distingue call de bet."
+  },
+  "board_contradiction": {
+   "H_0093": "streets.flop = Js 2c 2d; comunitarias.flop = Js 2c 2c (2c duplicada).",
+   "H_0297": "streets.turn = Ah; comunitarias.turn = As (carta distinta).",
+   "H_0812": "streets.flop = 2s 6c Td; comunitarias.flop = 2s 6c 2s (2s duplicada).",
+   "H_0915": "streets.flop = As 6s 6c; comunitarias.flop = As 6s 2s.",
+   "H_0921": "streets.river = 9c; comunitarias.river = 2s."
+  },
+  "board_missing": {
+   "H_0372": "river.actions con river.board vacío.",
+   "H_0587": "turn y river con acciones y board vacío.",
+   "H_0590": "river.actions con river.board vacío.",
+   "H_0909": "river.actions con river.board vacío.",
+   "H_1008": "flop.actions sin flop.board; el board está en preflop.board (8c Qs Js).",
+   "H_1328": "river.actions con river.board vacío."
+  },
+  "comunitarias_truncated": [
+   "H_0145",
+   "H_0349",
+   "H_0350",
+   "H_0358",
+   "H_0367",
+   "H_0369",
+   "H_0374",
+   "H_0381",
+   "H_0383",
+   "H_0387",
+   "H_0388",
+   "H_0395",
+   "H_0407",
+   "H_0430",
+   "H_0485",
+   "H_0589",
+   "H_0590",
+   "H_0598",
+   "H_0602",
+   "H_0662",
+   "H_0678",
+   "H_0709",
+   "H_0717",
+   "H_0724",
+   "H_0743",
+   "H_0744",
+   "H_0767",
+   "H_0847",
+   "H_0911",
+   "H_0917",
+   "H_0975",
+   "H_1022",
+   "H_1041",
+   "H_1061",
+   "H_1112",
+   "H_1118",
+   "H_1137",
    "H_1140",
-   "H_1143",
-   "H_1155",
-   "H_1227",
+   "H_1147",
+   "H_1150",
+   "H_1228",
+   "H_1241",
+   "H_1244",
+   "H_1270",
+   "H_1276"
+  ],
+  "pot_nada": [
    "H_1283",
-   "H_1284",
-   "H_1285",
    "H_1287",
+   "H_1288",
    "H_1289",
-   "H_1292",
    "H_1293",
+   "H_1295",
+   "H_1296",
    "H_1298",
    "H_1300",
-   "H_1305",
+   "H_1301",
+   "H_1302",
+   "H_1310",
+   "H_1311",
+   "H_1313",
+   "H_1322",
+   "H_1324",
+   "H_1325",
+   "H_1327",
+   "H_1343",
+   "H_1344",
+   "H_1345",
+   "H_1346",
+   "H_1348",
+   "H_1349",
+   "H_1351",
+   "H_1355",
+   "H_1356",
+   "H_1357",
+   "H_1358",
+   "H_1361",
+   "H_1365",
+   "H_1368",
+   "H_1371",
+   "H_1372",
+   "H_1374"
+  ],
+  "pot_internal_conflict": [
+   {
+    "hand_id": "H_1298",
+    "final_pot": 67.2,
+    "pot_calculated": 33.5,
+    "pot_read": 50.4,
+    "uncalled": 16.8,
+    "fold_win": false,
+    "classification": "sin B1-R: conflicto no resuelto",
+    "use": "limitar bote/EV/ROI"
+   },
+   {
+    "hand_id": "H_1300",
+    "final_pot": 180.1,
+    "pot_calculated": 181.1,
+    "pot_read": 180.1,
+    "uncalled": 0.0,
+    "fold_win": false,
+    "classification": "sin B1-R: conflicto no resuelto",
+    "use": "limitar bote/EV/ROI"
+   },
+   {
+    "hand_id": "H_1303",
+    "final_pot": 29.0,
+    "pot_calculated": 26.7,
+    "pot_read": 26.6,
+    "uncalled": 2.3,
+    "fold_win": false,
+    "classification": "B1-R: final_pot actual verificado; recorder_audit.pot_* obsoleto",
+    "use": "usar final_pot; no usar recorder_audit.pot_*"
+   },
+   {
+    "hand_id": "H_1306",
+    "final_pot": 24.3,
+    "pot_calculated": 8.9,
+    "pot_read": 15.8,
+    "uncalled": 6.0,
+    "fold_win": true,
+    "classification": "sin B1-R: conflicto no resuelto",
+    "use": "limitar bote/EV/ROI"
+   },
+   {
+    "hand_id": "H_1311",
+    "final_pot": 58.5,
+    "pot_calculated": 55.4,
+    "pot_read": 58.5,
+    "uncalled": 0.0,
+    "fold_win": false,
+    "classification": "sin B1-R: conflicto no resuelto",
+    "use": "limitar bote/EV/ROI"
+   },
+   {
+    "hand_id": "H_1312",
+    "final_pot": 4.0,
+    "pot_calculated": 4.5,
+    "pot_read": 2.5,
+    "uncalled": 1.5,
+    "fold_win": true,
+    "classification": "sin B1-R: conflicto no resuelto",
+    "use": "limitar bote/EV/ROI"
+   },
+   {
+    "hand_id": "H_1317",
+    "final_pot": 3.0,
+    "pot_calculated": 2.0,
+    "pot_read": 2.0,
+    "uncalled": 0.0,
+    "fold_win": true,
+    "classification": "sin B1-R: conflicto no resuelto",
+    "use": "limitar bote/EV/ROI"
+   },
+   {
+    "hand_id": "H_1328",
+    "final_pot": 21.7,
+    "pot_calculated": 8.1,
+    "pot_read": 8.2,
+    "uncalled": 0.0,
+    "fold_win": true,
+    "classification": "B1-R: final_pot actual verificado; recorder_audit.pot_* obsoleto",
+    "use": "usar final_pot; no usar recorder_audit.pot_*"
+   },
+   {
+    "hand_id": "H_1330",
+    "final_pot": 41.6,
+    "pot_calculated": 39.6,
+    "pot_read": 42.1,
+    "uncalled": 35.8,
+    "fold_win": true,
+    "classification": "sin B1-R: conflicto no resuelto",
+    "use": "limitar bote/EV/ROI"
+   },
+   {
+    "hand_id": "H_1341",
+    "final_pot": 84.6,
+    "pot_calculated": 10.9,
+    "pot_read": 84.6,
+    "uncalled": 75.6,
+    "fold_win": false,
+    "classification": "B1-R: final_pot actual verificado; recorder_audit.pot_* obsoleto",
+    "use": "usar final_pot; no usar recorder_audit.pot_*"
+   },
+   {
+    "hand_id": "H_1346",
+    "final_pot": 17.7,
+    "pot_calculated": 16.7,
+    "pot_read": 17.7,
+    "uncalled": 8.9,
+    "fold_win": true,
+    "classification": "B1-R: final_pot actual verificado; recorder_audit.pot_* obsoleto",
+    "use": "usar final_pot; no usar recorder_audit.pot_*"
+   },
+   {
+    "hand_id": "H_1349",
+    "final_pot": 19.7,
+    "pot_calculated": 10.7,
+    "pot_read": 10.8,
+    "uncalled": 0.0,
+    "fold_win": true,
+    "classification": "B1-R: final_pot actual verificado; recorder_audit.pot_* obsoleto",
+    "use": "usar final_pot; no usar recorder_audit.pot_*"
+   },
+   {
+    "hand_id": "H_1350",
+    "final_pot": 8.7,
+    "pot_calculated": 5.8,
+    "pot_read": 5.8,
+    "uncalled": 1.0,
+    "fold_win": true,
+    "classification": "B1-R: final_pot actual verificado; recorder_audit.pot_* obsoleto",
+    "use": "usar final_pot; no usar recorder_audit.pot_*"
+   },
+   {
+    "hand_id": "H_1353",
+    "final_pot": 12.7,
+    "pot_calculated": 11.0,
+    "pot_read": 9.6,
+    "uncalled": 0.5,
+    "fold_win": true,
+    "classification": "B1-R: final_pot actual verificado; recorder_audit.pot_* obsoleto",
+    "use": "usar final_pot; no usar recorder_audit.pot_*"
+   },
+   {
+    "hand_id": "H_1365",
+    "final_pot": 225.6,
+    "pot_calculated": 157.7,
+    "pot_read": null,
+    "uncalled": 118.5,
+    "fold_win": false,
+    "classification": "B1-R: final_pot actual verificado; recorder_audit.pot_* obsoleto",
+    "use": "usar final_pot; no usar recorder_audit.pot_*"
+   },
+   {
+    "hand_id": "H_1368",
+    "final_pot": 45.8,
+    "pot_calculated": 18.7,
+    "pot_read": 45.8,
+    "uncalled": 13.5,
+    "fold_win": false,
+    "classification": "B1-R: final_pot actual verificado; recorder_audit.pot_* obsoleto",
+    "use": "usar final_pot; no usar recorder_audit.pot_*"
+   },
+   {
+    "hand_id": "H_1369",
+    "final_pot": 3.5,
+    "pot_calculated": 4.5,
+    "pot_read": 2.0,
+    "uncalled": 1.5,
+    "fold_win": true,
+    "classification": "B1-R: final_pot actual verificado; recorder_audit.pot_* obsoleto",
+    "use": "usar final_pot; no usar recorder_audit.pot_*"
+   }
+  ],
+  "missing_allin": [
+   "H_0006",
+   "H_0008",
+   "H_0022",
+   "H_0034",
+   "H_0036",
+   "H_0055",
+   "H_0058",
+   "H_0070",
+   "H_0145",
+   "H_0185",
+   "H_0293",
+   "H_0311",
+   "H_0321",
+   "H_0383",
+   "H_0441",
+   "H_0713",
+   "H_0883",
+   "H_0906",
+   "H_0963",
+   "H_1112",
+   "H_1118",
+   "H_1231",
+   "H_1365"
+  ],
+  "active_null_stack": [
+   [
+    "H_0016",
+    "Jarduan",
+    "BTN"
+   ],
+   [
+    "H_0022",
+    "mur420",
+    "BB"
+   ],
+   [
+    "H_0061",
+    "DominoSaurio",
+    "BB"
+   ],
+   [
+    "H_0198",
+    "MegustanLas...",
+    "SB"
+   ],
+   [
+    "H_0415",
+    "Onix22",
+    "MP"
+   ],
+   [
+    "H_0421",
+    "Iker69",
+    "CO"
+   ],
+   [
+    "H_0430",
+    "Onix22",
+    "UTG"
+   ],
+   [
+    "H_0515",
+    "Edup",
+    "MP"
+   ],
+   [
+    "H_0526",
+    "Juancuellar987",
+    "MP"
+   ],
+   [
+    "H_0547",
+    "Jarduan",
+    "CO"
+   ],
+   [
+    "H_0557",
+    "Danielev",
+    "CO"
+   ],
+   [
+    "H_0697",
+    "Aneurin",
+    "CO"
+   ],
+   [
+    "H_0824",
+    "Jarduan",
+    "MP"
+   ],
+   [
+    "H_0834",
+    "Jarduan",
+    "MP"
+   ],
+   [
+    "H_0853",
+    "Davi-Ari",
+    "CO"
+   ],
+   [
+    "H_0863",
+    "chupapepita",
+    "SB"
+   ],
+   [
+    "H_0906",
+    "proplayer555",
+    "CO"
+   ],
+   [
+    "H_0932",
+    "proplayer555",
+    "MP"
+   ],
+   [
+    "H_1076",
+    "Oscar.RG",
+    "UTG"
+   ],
+   [
+    "H_1096",
+    "Nicolás daza",
+    "CO"
+   ],
+   [
+    "H_1113",
+    "ALEJANDR079",
+    "CO"
+   ],
+   [
+    "H_1141",
+    "mur420",
+    "BTN"
+   ],
+   [
+    "H_1149",
+    "Jarduan",
+    "BTN"
+   ],
+   [
+    "H_1304",
+    "Tonytruco",
+    "BTN"
+   ],
+   [
+    "H_1349",
+    "LaloMora",
+    "UTG"
+   ]
+  ],
+  "active_no_position": {
+   "hands": [
+    "H_0030",
+    "H_0033",
+    "H_0035",
+    "H_0038",
+    "H_0050",
+    "H_0051",
+    "H_0055",
+    "H_0057",
+    "H_0073",
+    "H_0134",
+    "H_0135",
+    "H_0136",
+    "H_0137",
+    "H_0151",
+    "H_0167",
+    "H_0168",
+    "H_0170",
+    "H_0171",
+    "H_0172",
+    "H_0173",
+    "H_0174",
+    "H_0175",
+    "H_0177",
+    "H_0178",
+    "H_0179",
+    "H_0207",
+    "H_0208",
+    "H_0209",
+    "H_0210",
+    "H_0212",
+    "H_0220",
+    "H_0222",
+    "H_0226",
+    "H_0234",
+    "H_0235",
+    "H_0241",
+    "H_0242",
+    "H_0257",
+    "H_0258",
+    "H_0262",
+    "H_0281",
+    "H_0282",
+    "H_0283",
+    "H_0302",
+    "H_0323",
+    "H_0324",
+    "H_0325",
+    "H_0326",
+    "H_0327",
+    "H_0359",
+    "H_0360",
+    "H_0361",
+    "H_0362",
+    "H_0363",
+    "H_0448"
+   ],
+   "players": [
+    [
+     "H_0030",
+     "P5",
+     60.6
+    ],
+    [
+     "H_0033",
+     "mur420",
+     79.2
+    ],
+    [
+     "H_0035",
+     "mur420",
+     79.2
+    ],
+    [
+     "H_0038",
+     "mur420",
+     80.2
+    ],
+    [
+     "H_0050",
+     "JHONCASH",
+     168.4
+    ],
+    [
+     "H_0051",
+     "Hachirama",
+     100.0
+    ],
+    [
+     "H_0055",
+     "Juanmabm",
+     50.0
+    ],
+    [
+     "H_0057",
+     "Juanmabm",
+     19.0
+    ],
+    [
+     "H_0073",
+     "Mateo",
+     25.0
+    ],
+    [
+     "H_0134",
+     "Juanfelipe1",
+     75.9
+    ],
+    [
+     "H_0135",
+     "Juanfelipe1",
+     75.9
+    ],
+    [
+     "H_0136",
+     "Juanfelipe1",
+     75.9
+    ],
+    [
+     "H_0137",
+     "Juanfelipe1",
+     75.9
+    ],
+    [
+     "H_0151",
+     "Elyessi27",
+     71.0
+    ],
+    [
+     "H_0167",
+     "Johan Otero",
+     100.0
+    ],
+    [
+     "H_0168",
+     "Johan Otero",
+     100.0
+    ],
+    [
+     "H_0168",
+     "P1",
+     20.0
+    ],
+    [
+     "H_0170",
+     "P1",
+     20.0
+    ],
+    [
+     "H_0170",
+     "Geilyn21",
+     130.3
+    ],
+    [
+     "H_0171",
+     "Geilyn21",
+     130.3
+    ],
+    [
+     "H_0172",
+     "Geilyn21",
+     130.3
+    ],
+    [
+     "H_0173",
+     "Geilyn21",
+     130.3
+    ],
+    [
+     "H_0174",
+     "Geilyn21",
+     130.3
+    ],
+    [
+     "H_0175",
+     "Maicolp",
+     33.5
+    ],
+    [
+     "H_0175",
+     "Geilyn21",
+     130.3
+    ],
+    [
+     "H_0177",
+     "Maicolp",
+     33.5
+    ],
+    [
+     "H_0177",
+     "P5",
+     20.0
+    ],
+    [
+     "H_0178",
+     "Maicolp",
+     33.5
+    ],
+    [
+     "H_0178",
+     "P5",
+     20.0
+    ],
+    [
+     "H_0179",
+     "Maicolp",
+     33.5
+    ],
+    [
+     "H_0207",
+     "Johan Otero",
+     93.2
+    ],
+    [
+     "H_0208",
+     "Johan Otero",
+     93.2
+    ],
+    [
+     "H_0209",
+     "Johan Otero",
+     93.2
+    ],
+    [
+     "H_0210",
+     "Johan Otero",
+     93.2
+    ],
+    [
+     "H_0212",
+     "Johan Otero",
+     93.2
+    ],
+    [
+     "H_0212",
+     "MegustanLas...",
+     100.0
+    ],
+    [
+     "H_0220",
+     "LaloMora",
+     58.2
+    ],
+    [
+     "H_0222",
+     "HERO",
+     100.0
+    ],
+    [
+     "H_0226",
+     "Elyessi27",
+     84.3
+    ],
+    [
+     "H_0234",
+     "Elyessi27",
+     79.3
+    ],
+    [
+     "H_0235",
+     "Elyessi27",
+     79.3
+    ],
+    [
+     "H_0241",
+     "Elyessi27",
+     77.3
+    ],
+    [
+     "H_0242",
+     "Elyessi27",
+     77.3
+    ],
+    [
+     "H_0257",
+     "P1",
+     32.3
+    ],
+    [
+     "H_0258",
+     "P1",
+     32.3
+    ],
+    [
+     "H_0262",
+     "Rolitoyerda",
+     24.0
+    ],
+    [
+     "H_0281",
+     "triki12",
+     122.2
+    ],
+    [
+     "H_0282",
+     "triki12",
+     122.2
+    ],
+    [
+     "H_0283",
+     "triki12",
+     122.2
+    ],
+    [
+     "H_0302",
+     "Rolitoyerda",
+     20.0
+    ],
+    [
+     "H_0323",
+     "triki12",
+     198.4
+    ],
+    [
+     "H_0324",
+     "triki12",
+     198.4
+    ],
+    [
+     "H_0325",
+     "triki12",
+     198.4
+    ],
+    [
+     "H_0326",
+     "triki12",
+     198.4
+    ],
+    [
+     "H_0327",
+     "triki12",
+     198.4
+    ],
+    [
+     "H_0359",
+     "p4",
+     49.3
+    ],
+    [
+     "H_0360",
+     "p4",
+     49.3
+    ],
+    [
+     "H_0361",
+     "p4",
+     49.3
+    ],
+    [
+     "H_0362",
+     "p4",
+     49.3
+    ],
+    [
+     "H_0363",
+     "p4",
+     49.3
+    ],
+    [
+     "H_0448",
+     "santibenavides",
+     61.6
+    ]
+   ]
+  },
+  "split_display_incomplete": [
+   "H_0798",
+   "H_1283",
+   "H_1337",
+   "H_1342"
+  ],
+  "recorder_audit_invalid": {
+   "H_1300": "recorder_audit.ambiguities[4].pos = SB, pero la mano no tiene SB; el campo de auditoria quedo referido a una posicion eliminada."
+  },
+  "pot_unreliable": [
+   "H_1283",
+   "H_1287",
+   "H_1288",
+   "H_1289",
+   "H_1293",
+   "H_1295",
+   "H_1296",
+   "H_1298",
+   "H_1300",
+   "H_1301",
+   "H_1302",
    "H_1306",
    "H_1310",
    "H_1311",
    "H_1312",
    "H_1313",
-   "H_1315",
    "H_1317",
-   "H_1318",
-   "H_1320",
    "H_1322",
    "H_1324",
    "H_1325",
-   "H_1327"
+   "H_1327",
+   "H_1330",
+   "H_1343",
+   "H_1344",
+   "H_1345",
+   "H_1346",
+   "H_1348",
+   "H_1349",
+   "H_1351",
+   "H_1355",
+   "H_1356",
+   "H_1357",
+   "H_1358",
+   "H_1361",
+   "H_1365",
+   "H_1368",
+   "H_1371",
+   "H_1372",
+   "H_1374"
   ],
-  "excluded_98": []
+  "b1r_recorder_audit_pot_stale": [
+   "H_1303",
+   "H_1328",
+   "H_1341",
+   "H_1346",
+   "H_1349",
+   "H_1350",
+   "H_1353",
+   "H_1365",
+   "H_1368",
+   "H_1369"
+  ]
  },
- "semantic_44acddb": [
+ "recovered_values": {
+  "H_1349": {
+   "stack_initial_candidate": 45.9,
+   "evidence": "decisions.jsonl: p5 stack=44.9 con bet p5=1.0; p2 pasa de 206.3 a 205.3 tras aportar 1.0; por tanto 44.9+1.0=45.9. No se escribe en la base.",
+   "status": "derivado, no canonico",
+   "final_pot_note": "B1-R confirma final_pot 19.7; la resolucion intermedia 10.7 no se usa para corregirlo; el bote sigue en NADA."
+  },
+  "H_1304": {
+   "stack_initial_candidate": null,
+   "evidence": "decisions.jsonl mantiene p5/BTN en null; no hay valor recuperable.",
+   "status": "no recuperable"
+  }
+ },
+ "calibration_window": {
+  "status": "provisional",
+  "selected": 877,
+  "excluded_cm004": 23,
+  "actual_action_defect": "H_0926: turn.actions[0] SB x tras SB f en flop; preexistente en 8b44917, no introducido por 44acddb. No usar para frecuencias/secuencia hasta corregir o excluir la accion.",
+  "semantic_limit": "H_0832: preflop.actions[2] CO b 1.0; no contabilizar como subida.",
+  "board_limit": "H_0430, H_0589, H_0662, H_0847: comunitarias truncada; usar streets.*.board y limitar equity basada en comunitarias.",
+  "verdict": "no validada como conjunto; no por procedencia, sino por defectos de campo localizados."
+ },
+ "imports": {
+  "block_45": {
+   "commit": "8b44917",
+   "range": [
+    "H_1283",
+    "H_1327"
+   ],
+   "count": 45,
+   "unique_ids": 45,
+   "players_per_hand": {
+    "6": 45
+   },
+   "active_players_per_hand": {
+    "5": 15,
+    "6": 24,
+    "4": 5,
+    "3": 1
+   },
+   "exact_duplicate_groups": [],
+   "dates": [
+    "2026-10-29T08:57:17.714209",
+    "2026-10-29T09:50:48.291355"
+   ],
+   "nada_ids": [
+    "H_1283",
+    "H_1287",
+    "H_1288",
+    "H_1289",
+    "H_1293",
+    "H_1295",
+    "H_1296",
+    "H_1298",
+    "H_1300",
+    "H_1301",
+    "H_1302",
+    "H_1310",
+    "H_1311",
+    "H_1313",
+    "H_1322",
+    "H_1324",
+    "H_1325",
+    "H_1327"
+   ],
+   "active_null_stack": [
+    [
+     "H_1304",
+     "Tonytruco",
+     "BTN"
+    ]
+   ],
+   "audit_defects_at_import": {
+    "H_1284": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1285": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1286": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1288": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1290": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1291": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1292": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1294": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1296": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1297": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1298": [
+     "ACTIVO_SIN_ACCION_CALLE"
+    ],
+    "H_1301": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1302": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1303": [
+     "IMPORTE_SUBIDA"
+    ],
+    "H_1304": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1305": [
+     "AUSENCIA_RESPUESTA_BB"
+    ],
+    "H_1306": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1307": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1308": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1309": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1312": [
+     "ACTIVO_SIN_ACCION",
+     "ACTIVO_SIN_ACCION_CALLE",
+     "WINNER_FOLDEO"
+    ],
+    "H_1315": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1316": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1317": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1318": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1319": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1320": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1321": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1322": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1323": [
+     "WINNER_VACIO"
+    ],
+    "H_1325": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1326": [
+     "WINNER_FOLDEO"
+    ],
+    "H_1327": [
+     "WINNER_FOLDEO"
+    ]
+   },
+   "audit_defects_current": {},
+   "actual_defects": {
+    "H_1283": [
+     "BOTE_NADA",
+     "SHOWDOWN_TEXTO_INCOMPLETO"
+    ],
+    "H_1287": [
+     "BOTE_NADA",
+     "SECUENCIA_IMPOSIBLE"
+    ],
+    "H_1288": [
+     "BOTE_NADA"
+    ],
+    "H_1289": [
+     "BOTE_NADA"
+    ],
+    "H_1293": [
+     "BOTE_NADA"
+    ],
+    "H_1295": [
+     "BOTE_NADA"
+    ],
+    "H_1296": [
+     "BOTE_NADA"
+    ],
+    "H_1298": [
+     "BOTE_CONFLICTO_INTERNO",
+     "BOTE_NADA"
+    ],
+    "H_1300": [
+     "BOTE_CONFLICTO_INTERNO",
+     "BOTE_NADA",
+     "RECORDER_AUDIT_BOTE_OBSOLETO",
+     "RECORDER_AUDIT_POSICION_INVALIDA"
+    ],
+    "H_1301": [
+     "BOTE_NADA"
+    ],
+    "H_1302": [
+     "BOTE_NADA"
+    ],
+    "H_1303": [
+     "RECORDER_AUDIT_BOTE_OBSOLETO"
+    ],
+    "H_1304": [
+     "STACK_NULO"
+    ],
+    "H_1306": [
+     "BOTE_CONFLICTO_INTERNO"
+    ],
+    "H_1310": [
+     "BOTE_NADA",
+     "SECUENCIA_IMPOSIBLE"
+    ],
+    "H_1311": [
+     "BOTE_CONFLICTO_INTERNO",
+     "BOTE_NADA"
+    ],
+    "H_1312": [
+     "BOTE_CONFLICTO_INTERNO"
+    ],
+    "H_1313": [
+     "BOTE_NADA"
+    ],
+    "H_1317": [
+     "BOTE_CONFLICTO_INTERNO"
+    ],
+    "H_1322": [
+     "BOTE_NADA"
+    ],
+    "H_1324": [
+     "BOTE_NADA"
+    ],
+    "H_1325": [
+     "BOTE_NADA"
+    ],
+    "H_1327": [
+     "BOTE_NADA"
+    ]
+   },
+   "current_active_null_stack": [
+    [
+     "H_1304",
+     "Tonytruco",
+     "BTN"
+    ]
+   ],
+   "note": "H_1323 fue eliminada; su stack nulo historico no cuenta como actual."
+  },
+  "block_47": {
+   "commit": "c1c1370",
+   "range": [
+    "H_1328",
+    "H_1374"
+   ],
+   "count": 47,
+   "unique_ids": 47,
+   "players_per_hand": {
+    "6": 47
+   },
+   "active_players_per_hand": {
+    "5": 13,
+    "6": 25,
+    "4": 9
+   },
+   "exact_duplicate_groups": [],
+   "dates": [
+    "2026-11-04T11:00:26.495471",
+    "2026-11-04T11:58:53.893144"
+   ],
+   "nada_ids": [
+    "H_1343",
+    "H_1344",
+    "H_1345",
+    "H_1346",
+    "H_1348",
+    "H_1349",
+    "H_1351",
+    "H_1355",
+    "H_1356",
+    "H_1357",
+    "H_1358",
+    "H_1361",
+    "H_1365",
+    "H_1368",
+    "H_1371",
+    "H_1372",
+    "H_1374"
+   ],
+   "active_null_stack": [],
+   "audit_defects_at_import": {
+    "H_1330": [
+     "ACTIVO_SIN_ACCION_CALLE"
+    ],
+    "H_1338": [
+     "ACTIVO_SIN_ACCION_CALLE"
+    ],
+    "H_1341": [
+     "ACTIVO_SIN_ACCION_CALLE"
+    ],
+    "H_1349": [
+     "IMPORTE_SUBIDA",
+     "INACTIVO_QUE_ACTUA"
+    ],
+    "H_1353": [
+     "ACTIVO_SIN_ACCION_CALLE"
+    ],
+    "H_1363": [
+     "ACTIVO_SIN_ACCION_CALLE"
+    ],
+    "H_1365": [
+     "ACTIVO_SIN_ACCION_CALLE"
+    ],
+    "H_1368": [
+     "ACTIVO_SIN_ACCION_CALLE"
+    ]
+   },
+   "audit_defects_current": {},
+   "actual_defects": {
+    "H_1328": [
+     "ORDEN_O_CODIGO_ACCION",
+     "RECORDER_AUDIT_BOTE_OBSOLETO",
+     "TABLERO_AUSENTE"
+    ],
+    "H_1330": [
+     "BOTE_CONFLICTO_INTERNO"
+    ],
+    "H_1337": [
+     "SHOWDOWN_TEXTO_INCOMPLETO"
+    ],
+    "H_1341": [
+     "RECORDER_AUDIT_BOTE_OBSOLETO"
+    ],
+    "H_1342": [
+     "SHOWDOWN_TEXTO_INCOMPLETO"
+    ],
+    "H_1343": [
+     "BOTE_NADA"
+    ],
+    "H_1344": [
+     "BOTE_NADA"
+    ],
+    "H_1345": [
+     "BOTE_NADA"
+    ],
+    "H_1346": [
+     "BOTE_NADA",
+     "RECORDER_AUDIT_BOTE_OBSOLETO"
+    ],
+    "H_1348": [
+     "BOTE_NADA"
+    ],
+    "H_1349": [
+     "BOTE_NADA",
+     "RECORDER_AUDIT_BOTE_OBSOLETO",
+     "STACK_NULO"
+    ],
+    "H_1350": [
+     "RECORDER_AUDIT_BOTE_OBSOLETO"
+    ],
+    "H_1351": [
+     "BOTE_NADA"
+    ],
+    "H_1353": [
+     "RECORDER_AUDIT_BOTE_OBSOLETO"
+    ],
+    "H_1354": [
+     "ORDEN_O_CODIGO_ACCION"
+    ],
+    "H_1355": [
+     "BOTE_NADA"
+    ],
+    "H_1356": [
+     "BOTE_NADA"
+    ],
+    "H_1357": [
+     "BOTE_NADA"
+    ],
+    "H_1358": [
+     "BOTE_NADA"
+    ],
+    "H_1361": [
+     "BOTE_NADA"
+    ],
+    "H_1365": [
+     "ALLIN_NO_MARCADO",
+     "BOTE_NADA",
+     "RECORDER_AUDIT_BOTE_OBSOLETO"
+    ],
+    "H_1368": [
+     "BOTE_NADA",
+     "RECORDER_AUDIT_BOTE_OBSOLETO"
+    ],
+    "H_1369": [
+     "RECORDER_AUDIT_BOTE_OBSOLETO"
+    ],
+    "H_1371": [
+     "BOTE_NADA"
+    ],
+    "H_1372": [
+     "BOTE_NADA"
+    ],
+    "H_1374": [
+     "BOTE_NADA"
+    ]
+   }
+  }
+ },
+ "provenance_98": [
   {
    "hand_id": "H_0048",
    "block": "old",
@@ -175,9 +1445,9 @@
     1.5
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0069",
@@ -220,9 +1490,9 @@
     1.5
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0088",
@@ -263,9 +1533,9 @@
     1.5
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0092",
@@ -304,9 +1574,9 @@
     1.5
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0098",
@@ -345,9 +1615,9 @@
     1.5
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0099",
@@ -386,9 +1656,9 @@
     1.5
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0120",
@@ -427,9 +1697,9 @@
     1.5
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0123",
@@ -468,9 +1738,9 @@
     1.5
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0130",
@@ -516,9 +1786,9 @@
     38.95
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0136",
@@ -569,9 +1839,13 @@
     18.05
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [
+    "ACTIVO_SIN_POSICION"
+   ],
+   "restrictions": [
+    "estado/asiento del jugador"
+   ],
+   "actual_integrity": "defecto o limitacion registrada"
   },
   {
    "hand_id": "H_0140",
@@ -617,9 +1891,9 @@
     41.9
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0144",
@@ -678,9 +1952,9 @@
     87.6
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0153",
@@ -740,9 +2014,9 @@
     33.91
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0186",
@@ -781,9 +2055,9 @@
     59.5
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0188",
@@ -837,9 +2111,9 @@
     120.3
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0194",
@@ -878,9 +2152,9 @@
     57.8
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0205",
@@ -920,9 +2194,9 @@
     44.27
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0228",
@@ -961,9 +2235,9 @@
     1.5
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0240",
@@ -1013,9 +2287,9 @@
     212.5
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0265",
@@ -1061,9 +2335,9 @@
     71.7
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0266",
@@ -1102,9 +2376,9 @@
     1.5
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0269",
@@ -1143,9 +2417,9 @@
     1.5
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0270",
@@ -1184,9 +2458,9 @@
     1.5
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0272",
@@ -1225,9 +2499,9 @@
     1.5
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0274",
@@ -1273,9 +2547,9 @@
     25.65
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0276",
@@ -1314,9 +2588,9 @@
     1.5
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0300",
@@ -1369,9 +2643,9 @@
     26.5
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0306",
@@ -1417,9 +2691,9 @@
     33.73
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0315",
@@ -1465,9 +2739,9 @@
     54.9
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0319",
@@ -1506,9 +2780,9 @@
     1.5
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0376",
@@ -1565,9 +2839,9 @@
     84.8
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0415",
@@ -1634,9 +2908,13 @@
     14.82
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [
+    "STACK_NULO"
+   ],
+   "restrictions": [
+    "stack efectivo/SPR"
+   ],
+   "actual_integrity": "defecto o limitacion registrada"
   },
   {
    "hand_id": "H_0430",
@@ -1675,9 +2953,15 @@
     21.38
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [
+    "COMUNITARIAS_TRUNCADA",
+    "STACK_NULO"
+   ],
+   "restrictions": [
+    "analisis que lean comunitarias en vez de streets.*.board",
+    "stack efectivo/SPR"
+   ],
+   "actual_integrity": "defecto o limitacion registrada"
   },
   {
    "hand_id": "H_0445",
@@ -1730,9 +3014,9 @@
     177.0
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0486",
@@ -1771,9 +3055,9 @@
     8.46
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0527",
@@ -1812,9 +3096,9 @@
     33.34
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0589",
@@ -1851,9 +3135,13 @@
    "pot_current": "UNICA_EXACTA",
    "pot_netos": [],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [
+    "COMUNITARIAS_TRUNCADA"
+   ],
+   "restrictions": [
+    "analisis que lean comunitarias en vez de streets.*.board"
+   ],
+   "actual_integrity": "defecto o limitacion registrada"
   },
   {
    "hand_id": "H_0614",
@@ -1892,9 +3180,9 @@
     2.38
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0617",
@@ -1933,9 +3221,9 @@
     24.04
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0640",
@@ -1981,9 +3269,9 @@
     14.72
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0650",
@@ -2057,9 +3345,9 @@
     2.38
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0662",
@@ -2098,9 +3386,13 @@
     24.04
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [
+    "COMUNITARIAS_TRUNCADA"
+   ],
+   "restrictions": [
+    "analisis que lean comunitarias en vez de streets.*.board"
+   ],
+   "actual_integrity": "defecto o limitacion registrada"
   },
   {
    "hand_id": "H_0691",
@@ -2146,9 +3438,9 @@
     35.62
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0708",
@@ -2201,9 +3493,9 @@
     61.5
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0711",
@@ -2244,9 +3536,9 @@
     18.71
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0715",
@@ -2285,9 +3577,9 @@
     40.66
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0773",
@@ -2333,9 +3625,9 @@
     38.95
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0826",
@@ -2381,9 +3673,9 @@
     14.35
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0832",
@@ -2422,9 +3714,13 @@
     20.43
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [
+    "CODIFICACION_ACCION"
+   ],
+   "restrictions": [
+    "frecuencias de agresion preflop; no contar b 1.0 como subida"
+   ],
+   "actual_integrity": "defecto o limitacion registrada"
   },
   {
    "hand_id": "H_0841",
@@ -2490,9 +3786,9 @@
     7.6
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0847",
@@ -2532,9 +3828,13 @@
     43.8
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [
+    "COMUNITARIAS_TRUNCADA"
+   ],
+   "restrictions": [
+    "analisis que lean comunitarias en vez de streets.*.board"
+   ],
+   "actual_integrity": "defecto o limitacion registrada"
   },
   {
    "hand_id": "H_0852",
@@ -2573,9 +3873,9 @@
     8.36
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0855",
@@ -2614,9 +3914,9 @@
     82.3
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0886",
@@ -2662,9 +3962,9 @@
     16.25
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0889",
@@ -2711,9 +4011,9 @@
     38.38
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0918",
@@ -2788,9 +4088,9 @@
     4.75
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0926",
@@ -2829,9 +4129,14 @@
     200.5
    ],
    "risk": "medio",
-   "notes": [
-    "Dentro de la ventana de calibración de 877."
-   ]
+   "defect_codes": [
+    "SECUENCIA_IMPOSIBLE"
+   ],
+   "restrictions": [
+    "secuencia/frecuencias de accion"
+   ],
+   "actual_integrity": "defecto o limitacion registrada",
+   "history_note": "Defecto preexistente: SB x ya estaba en 8b44917; 44acddb anadio BB x legal y no retiro SB x."
   },
   {
    "hand_id": "H_0931",
@@ -2870,9 +4175,9 @@
     102.7
    ],
    "risk": "bajo",
-   "notes": [
-    "Fuera de la ventana de calibración actual."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0957",
@@ -2929,9 +4234,9 @@
     38.48
    ],
    "risk": "bajo",
-   "notes": [
-    "Fuera de la ventana de calibración actual."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0964",
@@ -2984,9 +4289,9 @@
     58.3
    ],
    "risk": "bajo",
-   "notes": [
-    "Fuera de la ventana de calibración actual."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0965",
@@ -3025,9 +4330,9 @@
     2.85
    ],
    "risk": "bajo",
-   "notes": [
-    "Fuera de la ventana de calibración actual."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0967",
@@ -3066,9 +4371,9 @@
     1.9
    ],
    "risk": "bajo",
-   "notes": [
-    "Fuera de la ventana de calibración actual."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0985",
@@ -3135,9 +4440,9 @@
     62.8
    ],
    "risk": "bajo",
-   "notes": [
-    "Fuera de la ventana de calibración actual."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_0997",
@@ -3211,9 +4516,9 @@
     4.28
    ],
    "risk": "bajo",
-   "notes": [
-    "Fuera de la ventana de calibración actual."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_1000",
@@ -3266,9 +4571,9 @@
     6.65
    ],
    "risk": "bajo",
-   "notes": [
-    "Fuera de la ventana de calibración actual."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_1029",
@@ -3331,9 +4636,9 @@
     12.35
    ],
    "risk": "bajo",
-   "notes": [
-    "Fuera de la ventana de calibración actual."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_1030",
@@ -3374,9 +4679,9 @@
     2.38
    ],
    "risk": "bajo",
-   "notes": [
-    "Fuera de la ventana de calibración actual."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_1039",
@@ -3437,9 +4742,9 @@
     26.22
    ],
    "risk": "bajo",
-   "notes": [
-    "Fuera de la ventana de calibración actual."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_1085",
@@ -3478,9 +4783,9 @@
     52.7
    ],
    "risk": "bajo",
-   "notes": [
-    "Fuera de la ventana de calibración actual."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_1110",
@@ -3519,9 +4824,9 @@
     10.45
    ],
    "risk": "bajo",
-   "notes": [
-    "Fuera de la ventana de calibración actual."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_1139",
@@ -3568,9 +4873,9 @@
     20.23
    ],
    "risk": "bajo",
-   "notes": [
-    "Fuera de la ventana de calibración actual."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_1140",
@@ -3616,9 +4921,13 @@
     29.73
    ],
    "risk": "bajo",
-   "notes": [
-    "Fuera de la ventana de calibración actual."
-   ]
+   "defect_codes": [
+    "COMUNITARIAS_TRUNCADA"
+   ],
+   "restrictions": [
+    "analisis que lean comunitarias en vez de streets.*.board"
+   ],
+   "actual_integrity": "defecto o limitacion registrada"
   },
   {
    "hand_id": "H_1143",
@@ -3663,11 +4972,9 @@
     20.9
    ],
    "risk": "bajo",
-   "notes": [
-    "Incluida en las 23 verificadas por B1-R; esta verificación es del estado final, no del paso 44acddb.",
-    "Fuera de la ventana de calibración actual.",
-    "Secuencia modificada otra vez en 8594ed5; el estado actual difiere del paso 44acddb."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_1155",
@@ -3713,9 +5020,9 @@
     33.73
    ],
    "risk": "bajo",
-   "notes": [
-    "Fuera de la ventana de calibración actual."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_1227",
@@ -3761,9 +5068,9 @@
     7.6
    ],
    "risk": "bajo",
-   "notes": [
-    "Fuera de la ventana de calibración actual."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_1283",
@@ -3820,10 +5127,15 @@
     32.97
    ],
    "risk": "alto",
-   "notes": [
-    "Bote actual NADA: aritmética no reconciliada.",
-    "Fuera de la ventana de calibración actual."
-   ]
+   "defect_codes": [
+    "BOTE_NADA",
+    "SHOWDOWN_TEXTO_INCOMPLETO"
+   ],
+   "restrictions": [
+    "bote/EV/ROI/odds de bote",
+    "texto de showdown; no el ganador"
+   ],
+   "actual_integrity": "defecto o limitacion registrada"
   },
   {
    "hand_id": "H_1284",
@@ -3880,9 +5192,9 @@
     2.38
    ],
    "risk": "medio",
-   "notes": [
-    "Fuera de la ventana de calibración actual."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_1285",
@@ -3928,9 +5240,9 @@
     2.38
    ],
    "risk": "medio",
-   "notes": [
-    "Fuera de la ventana de calibración actual."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_1287",
@@ -3972,10 +5284,16 @@
     18.05
    ],
    "risk": "alto",
-   "notes": [
-    "Bote actual NADA: aritmética no reconciliada.",
-    "Fuera de la ventana de calibración actual."
-   ]
+   "defect_codes": [
+    "SECUENCIA_IMPOSIBLE",
+    "BOTE_NADA"
+   ],
+   "restrictions": [
+    "secuencia/frecuencias de accion",
+    "bote/EV/ROI/odds de bote"
+   ],
+   "actual_integrity": "defecto o limitacion registrada",
+   "history_note": "Defecto preexistente: CO c 1.0 y CO f ya estaban en 8b44917; 44acddb no los corrigio."
   },
   {
    "hand_id": "H_1289",
@@ -4024,10 +5342,13 @@
     17.57
    ],
    "risk": "alto",
-   "notes": [
-    "Bote actual NADA: aritmética no reconciliada.",
-    "Fuera de la ventana de calibración actual."
-   ]
+   "defect_codes": [
+    "BOTE_NADA"
+   ],
+   "restrictions": [
+    "bote/EV/ROI/odds de bote"
+   ],
+   "actual_integrity": "defecto o limitacion registrada"
   },
   {
    "hand_id": "H_1292",
@@ -4078,9 +5399,9 @@
     7.12
    ],
    "risk": "medio",
-   "notes": [
-    "Fuera de la ventana de calibración actual."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_1293",
@@ -4122,10 +5443,13 @@
     18.52
    ],
    "risk": "alto",
-   "notes": [
-    "Bote actual NADA: aritmética no reconciliada.",
-    "Fuera de la ventana de calibración actual."
-   ]
+   "defect_codes": [
+    "BOTE_NADA"
+   ],
+   "restrictions": [
+    "bote/EV/ROI/odds de bote"
+   ],
+   "actual_integrity": "defecto o limitacion registrada"
   },
   {
    "hand_id": "H_1298",
@@ -4170,10 +5494,14 @@
     64.9
    ],
    "risk": "medio",
-   "notes": [
-    "Bote actual NADA: aritmética no reconciliada.",
-    "Fuera de la ventana de calibración actual."
-   ]
+   "defect_codes": [
+    "BOTE_NADA",
+    "BOTE_CONFLICTO_INTERNO"
+   ],
+   "restrictions": [
+    "bote/EV/ROI/odds de bote"
+   ],
+   "actual_integrity": "defecto o limitacion registrada"
   },
   {
    "hand_id": "H_1300",
@@ -4356,10 +5684,16 @@
     195.1
    ],
    "risk": "alto",
-   "notes": [
-    "Bote actual NADA: aritmética no reconciliada.",
-    "Fuera de la ventana de calibración actual."
-   ]
+   "defect_codes": [
+    "BOTE_NADA",
+    "BOTE_CONFLICTO_INTERNO",
+    "RECORDER_AUDIT_POSICION_INVALIDA"
+   ],
+   "restrictions": [
+    "bote/EV/ROI/odds de bote",
+    "campo recorder_audit y pot"
+   ],
+   "actual_integrity": "defecto o limitacion registrada"
   },
   {
    "hand_id": "H_1305",
@@ -4405,9 +5739,9 @@
     2.5
    ],
    "risk": "medio",
-   "notes": [
-    "Fuera de la ventana de calibración actual."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_1306",
@@ -4488,9 +5822,13 @@
     16.15
    ],
    "risk": "medio",
-   "notes": [
-    "Fuera de la ventana de calibración actual."
-   ]
+   "defect_codes": [
+    "BOTE_CONFLICTO_INTERNO"
+   ],
+   "restrictions": [
+    "bote/EV/ROI/odds de bote"
+   ],
+   "actual_integrity": "defecto o limitacion registrada"
   },
   {
    "hand_id": "H_1310",
@@ -4538,10 +5876,16 @@
     41.8
    ],
    "risk": "alto",
-   "notes": [
-    "Bote actual NADA: aritmética no reconciliada.",
-    "Fuera de la ventana de calibración actual."
-   ]
+   "defect_codes": [
+    "SECUENCIA_IMPOSIBLE",
+    "BOTE_NADA"
+   ],
+   "restrictions": [
+    "secuencia/frecuencias de accion",
+    "bote/EV/ROI/odds de bote"
+   ],
+   "actual_integrity": "defecto o limitacion registrada",
+   "history_note": "Defecto preexistente: llamadas duplicadas de SB ya estaban en 8b44917; 44acddb no las corrigio."
   },
   {
    "hand_id": "H_1311",
@@ -4735,10 +6079,14 @@
     56.2
    ],
    "risk": "alto",
-   "notes": [
-    "Bote actual NADA: aritmética no reconciliada.",
-    "Fuera de la ventana de calibración actual."
-   ]
+   "defect_codes": [
+    "BOTE_NADA",
+    "BOTE_CONFLICTO_INTERNO"
+   ],
+   "restrictions": [
+    "bote/EV/ROI/odds de bote"
+   ],
+   "actual_integrity": "defecto o limitacion registrada"
   },
   {
    "hand_id": "H_1312",
@@ -4822,9 +6170,13 @@
     2.5
    ],
    "risk": "medio",
-   "notes": [
-    "Fuera de la ventana de calibración actual."
-   ]
+   "defect_codes": [
+    "BOTE_CONFLICTO_INTERNO"
+   ],
+   "restrictions": [
+    "bote/EV/ROI/odds de bote"
+   ],
+   "actual_integrity": "defecto o limitacion registrada"
   },
   {
    "hand_id": "H_1313",
@@ -4867,10 +6219,13 @@
     44.08
    ],
    "risk": "alto",
-   "notes": [
-    "Bote actual NADA: aritmética no reconciliada.",
-    "Fuera de la ventana de calibración actual."
-   ]
+   "defect_codes": [
+    "BOTE_NADA"
+   ],
+   "restrictions": [
+    "bote/EV/ROI/odds de bote"
+   ],
+   "actual_integrity": "defecto o limitacion registrada"
   },
   {
    "hand_id": "H_1315",
@@ -4923,9 +6278,9 @@
     7.7
    ],
    "risk": "medio",
-   "notes": [
-    "Fuera de la ventana de calibración actual."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_1317",
@@ -4979,9 +6334,13 @@
     2.0
    ],
    "risk": "medio",
-   "notes": [
-    "Fuera de la ventana de calibración actual."
-   ]
+   "defect_codes": [
+    "BOTE_CONFLICTO_INTERNO"
+   ],
+   "restrictions": [
+    "bote/EV/ROI/odds de bote"
+   ],
+   "actual_integrity": "defecto o limitacion registrada"
   },
   {
    "hand_id": "H_1318",
@@ -5040,9 +6399,9 @@
     6.17
    ],
    "risk": "medio",
-   "notes": [
-    "Fuera de la ventana de calibración actual."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_1320",
@@ -5091,9 +6450,9 @@
     2.0
    ],
    "risk": "medio",
-   "notes": [
-    "Fuera de la ventana de calibración actual."
-   ]
+   "defect_codes": [],
+   "restrictions": [],
+   "actual_integrity": "sin defecto real detectado en las comprobaciones aplicadas"
   },
   {
    "hand_id": "H_1322",
@@ -5148,10 +6507,13 @@
     10.16
    ],
    "risk": "medio",
-   "notes": [
-    "Bote actual NADA: aritmética no reconciliada.",
-    "Fuera de la ventana de calibración actual."
-   ]
+   "defect_codes": [
+    "BOTE_NADA"
+   ],
+   "restrictions": [
+    "bote/EV/ROI/odds de bote"
+   ],
+   "actual_integrity": "defecto o limitacion registrada"
   },
   {
    "hand_id": "H_1324",
@@ -5192,10 +6554,13 @@
     22.32
    ],
    "risk": "alto",
-   "notes": [
-    "Bote actual NADA: aritmética no reconciliada.",
-    "Fuera de la ventana de calibración actual."
-   ]
+   "defect_codes": [
+    "BOTE_NADA"
+   ],
+   "restrictions": [
+    "bote/EV/ROI/odds de bote"
+   ],
+   "actual_integrity": "defecto o limitacion registrada"
   },
   {
    "hand_id": "H_1325",
@@ -5245,10 +6610,13 @@
     29.93
    ],
    "risk": "medio",
-   "notes": [
-    "Bote actual NADA: aritmética no reconciliada.",
-    "Fuera de la ventana de calibración actual."
-   ]
+   "defect_codes": [
+    "BOTE_NADA"
+   ],
+   "restrictions": [
+    "bote/EV/ROI/odds de bote"
+   ],
+   "actual_integrity": "defecto o limitacion registrada"
   },
   {
    "hand_id": "H_1327",
@@ -5313,255 +6681,103 @@
     10.16
    ],
    "risk": "medio",
-   "notes": [
-    "Bote actual NADA: aritmética no reconciliada.",
-    "Fuera de la ventana de calibración actual."
-   ]
+   "defect_codes": [
+    "BOTE_NADA"
+   ],
+   "restrictions": [
+    "bote/EV/ROI/odds de bote"
+   ],
+   "actual_integrity": "defecto o limitacion registrada"
   }
  ],
- "imports": {
-  "block_45": {
-   "commit": "8b44917",
-   "range": [
-    "H_1283",
-    "H_1327"
-   ],
-   "count": 45,
-   "unique_ids": 45,
-   "players_per_hand": {
-    "6": 45
-   },
-   "active_players_per_hand": {
-    "5": 15,
-    "6": 24,
-    "4": 5,
-    "3": 1
-   },
-   "exact_duplicate_groups": [],
-   "dates": [
-    "2026-10-29T08:57:17.714209",
-    "2026-10-29T09:50:48.291355"
-   ],
-   "nada_ids": [
-    "H_1283",
-    "H_1287",
-    "H_1288",
-    "H_1289",
-    "H_1293",
-    "H_1295",
-    "H_1296",
-    "H_1298",
-    "H_1300",
-    "H_1301",
-    "H_1302",
-    "H_1310",
-    "H_1311",
-    "H_1313",
-    "H_1322",
-    "H_1324",
-    "H_1325",
-    "H_1327"
-   ],
-   "active_null_stack": [
-    [
-     "H_1304",
-     "Tonytruco",
-     "BTN"
-    ],
-    [
-     "H_1323",
-     "Jarduan",
-     "BB"
-    ]
-   ],
-   "audit_defects_at_import": {
-    "H_1284": [
-     "WINNER_FOLDEO"
-    ],
-    "H_1285": [
-     "WINNER_FOLDEO"
-    ],
-    "H_1286": [
-     "WINNER_FOLDEO"
-    ],
-    "H_1288": [
-     "WINNER_FOLDEO"
-    ],
-    "H_1290": [
-     "WINNER_FOLDEO"
-    ],
-    "H_1291": [
-     "WINNER_FOLDEO"
-    ],
-    "H_1292": [
-     "WINNER_FOLDEO"
-    ],
-    "H_1294": [
-     "WINNER_FOLDEO"
-    ],
-    "H_1296": [
-     "WINNER_FOLDEO"
-    ],
-    "H_1297": [
-     "WINNER_FOLDEO"
-    ],
-    "H_1298": [
-     "ACTIVO_SIN_ACCION_CALLE"
-    ],
-    "H_1301": [
-     "WINNER_FOLDEO"
-    ],
-    "H_1302": [
-     "WINNER_FOLDEO"
-    ],
-    "H_1303": [
-     "IMPORTE_SUBIDA"
-    ],
-    "H_1304": [
-     "WINNER_FOLDEO"
-    ],
-    "H_1305": [
-     "AUSENCIA_RESPUESTA_BB"
-    ],
-    "H_1306": [
-     "WINNER_FOLDEO"
-    ],
-    "H_1307": [
-     "WINNER_FOLDEO"
-    ],
-    "H_1308": [
-     "WINNER_FOLDEO"
-    ],
-    "H_1309": [
-     "WINNER_FOLDEO"
-    ],
-    "H_1312": [
-     "ACTIVO_SIN_ACCION",
-     "ACTIVO_SIN_ACCION_CALLE",
-     "WINNER_FOLDEO"
-    ],
-    "H_1315": [
-     "WINNER_FOLDEO"
-    ],
-    "H_1316": [
-     "WINNER_FOLDEO"
-    ],
-    "H_1317": [
-     "WINNER_FOLDEO"
-    ],
-    "H_1318": [
-     "WINNER_FOLDEO"
-    ],
-    "H_1319": [
-     "WINNER_FOLDEO"
-    ],
-    "H_1320": [
-     "WINNER_FOLDEO"
-    ],
-    "H_1321": [
-     "WINNER_FOLDEO"
-    ],
-    "H_1322": [
-     "WINNER_FOLDEO"
-    ],
-    "H_1323": [
-     "WINNER_VACIO"
-    ],
-    "H_1325": [
-     "WINNER_FOLDEO"
-    ],
-    "H_1326": [
-     "WINNER_FOLDEO"
-    ],
-    "H_1327": [
-     "WINNER_FOLDEO"
-    ]
-   },
-   "audit_defects_current": {}
-  },
-  "block_47": {
-   "commit": "c1c1370",
-   "range": [
-    "H_1328",
-    "H_1374"
-   ],
-   "count": 47,
-   "unique_ids": 47,
-   "players_per_hand": {
-    "6": 47
-   },
-   "active_players_per_hand": {
-    "5": 13,
-    "6": 25,
-    "4": 9
-   },
-   "exact_duplicate_groups": [],
-   "dates": [
-    "2026-11-04T11:00:26.495471",
-    "2026-11-04T11:58:53.893144"
-   ],
-   "nada_ids": [
-    "H_1343",
-    "H_1344",
-    "H_1345",
-    "H_1346",
-    "H_1348",
-    "H_1349",
-    "H_1351",
-    "H_1355",
-    "H_1356",
-    "H_1357",
-    "H_1358",
-    "H_1361",
-    "H_1365",
-    "H_1368",
-    "H_1371",
-    "H_1372",
-    "H_1374"
-   ],
-   "active_null_stack": [],
-   "audit_defects_at_import": {
-    "H_1330": [
-     "ACTIVO_SIN_ACCION_CALLE"
-    ],
-    "H_1338": [
-     "ACTIVO_SIN_ACCION_CALLE"
-    ],
-    "H_1341": [
-     "ACTIVO_SIN_ACCION_CALLE"
-    ],
-    "H_1349": [
-     "IMPORTE_SUBIDA",
-     "INACTIVO_QUE_ACTUA"
-    ],
-    "H_1353": [
-     "ACTIVO_SIN_ACCION_CALLE"
-    ],
-    "H_1363": [
-     "ACTIVO_SIN_ACCION_CALLE"
-    ],
-    "H_1365": [
-     "ACTIVO_SIN_ACCION_CALLE"
-    ],
-    "H_1368": [
-     "ACTIVO_SIN_ACCION_CALLE"
-    ]
-   },
-   "audit_defects_current": {}
-  }
- },
- "current_imported_active_null_stack": [
-  [
-   "H_1304",
-   "Tonytruco",
-   "BTN"
-  ],
-  [
+ "b1r_23": {
+  "list": [
+   "H_1143",
+   "H_1303",
+   "H_1328",
+   "H_1336",
+   "H_1338",
+   "H_1340",
+   "H_1341",
+   "H_1342",
+   "H_1343",
+   "H_1345",
+   "H_1346",
+   "H_1348",
    "H_1349",
-   "LaloMora",
-   "UTG"
-  ]
- ],
+   "H_1350",
+   "H_1351",
+   "H_1353",
+   "H_1354",
+   "H_1356",
+   "H_1363",
+   "H_1365",
+   "H_1366",
+   "H_1368",
+   "H_1369"
+  ],
+  "content_verified_final": true,
+  "exact_procedure_unknown": true,
+  "actual_field_observations": {
+   "H_1328": [
+    "ORDEN_O_CODIGO_ACCION",
+    "RECORDER_AUDIT_BOTE_OBSOLETO",
+    "TABLERO_AUSENTE"
+   ],
+   "H_1342": [
+    "SHOWDOWN_TEXTO_INCOMPLETO"
+   ],
+   "H_1349": [
+    "BOTE_NADA",
+    "RECORDER_AUDIT_BOTE_OBSOLETO",
+    "STACK_NULO"
+   ],
+   "H_1354": [
+    "ORDEN_O_CODIGO_ACCION"
+   ],
+   "H_1365": [
+    "ALLIN_NO_MARCADO",
+    "BOTE_NADA",
+    "RECORDER_AUDIT_BOTE_OBSOLETO"
+   ],
+   "H_1368": [
+    "BOTE_NADA",
+    "RECORDER_AUDIT_BOTE_OBSOLETO"
+   ],
+   "H_1303": [
+    "RECORDER_AUDIT_BOTE_OBSOLETO"
+   ],
+   "H_1341": [
+    "RECORDER_AUDIT_BOTE_OBSOLETO"
+   ],
+   "H_1346": [
+    "RECORDER_AUDIT_BOTE_OBSOLETO"
+   ],
+   "H_1350": [
+    "RECORDER_AUDIT_BOTE_OBSOLETO"
+   ],
+   "H_1353": [
+    "RECORDER_AUDIT_BOTE_OBSOLETO"
+   ],
+   "H_1369": [
+    "RECORDER_AUDIT_BOTE_OBSOLETO"
+   ]
+  },
+  "final_pot_verified_current": true,
+  "recorder_audit_pot_stale_in": [
+   "H_1303",
+   "H_1328",
+   "H_1341",
+   "H_1346",
+   "H_1349",
+   "H_1350",
+   "H_1353",
+   "H_1365",
+   "H_1368",
+   "H_1369"
+  ],
+  "pot_arithmetic_certified": false
+ },
  "h1323": {
   "in_current_base": false,
   "eliminated_file": "data/_eliminadas/H_1323.jsonl",
@@ -5635,170 +6851,502 @@
   "pre_removal_backup": "data/_backup_eliminar_H_1323/hands_db.jsonl",
   "difference_from_c1c1370": "Solo falta recorder_audit.award_display_ignored: [] (campo vacío); no hay diferencia de acciones, ganador, bote ni jugadores."
  },
- "decisions": {
-  "rows": 506,
-  "non_null_hand_ids": 91,
-  "orphan_hand_ids": [],
-  "null_hand_id_rows": 3,
-  "null_hand_id_decision_ids": [
-   "fa6c3648ae2946899f75ff9cc924233e",
-   "8f217fb9aba6487286690cebb403d4f4",
-   "82ec509c6f14491099f07aa17a53ddea"
-  ],
-  "h1323_decisions": []
- },
- "current_known_defects": {
-  "ACTIVO_SIN_POSICION": [
-   "H_0030",
-   "H_0033",
-   "H_0035",
-   "H_0038",
-   "H_0050",
-   "H_0051",
-   "H_0055",
-   "H_0057",
-   "H_0073",
-   "H_0134",
-   "H_0135",
-   "H_0136",
-   "H_0137",
-   "H_0151",
-   "H_0167",
-   "H_0168",
-   "H_0170",
-   "H_0171",
-   "H_0172",
-   "H_0173",
-   "H_0174",
-   "H_0175",
-   "H_0177",
-   "H_0178",
-   "H_0179",
-   "H_0207",
-   "H_0208",
-   "H_0209",
-   "H_0210",
-   "H_0212",
-   "H_0220",
-   "H_0222",
-   "H_0226",
-   "H_0234",
-   "H_0235",
-   "H_0241",
-   "H_0242",
-   "H_0257",
-   "H_0258",
-   "H_0262",
-   "H_0281",
-   "H_0282",
-   "H_0283",
-   "H_0302",
-   "H_0323",
-   "H_0324",
-   "H_0325",
-   "H_0326",
-   "H_0327",
-   "H_0359",
-   "H_0360",
-   "H_0361",
-   "H_0362",
-   "H_0363",
-   "H_0448"
-  ],
-  "SIN_ALLIN": [
-   "H_0001",
-   "H_0002",
-   "H_0003",
-   "H_0004",
-   "H_0005",
-   "H_0006",
-   "H_0007",
-   "H_0008",
-   "H_0009",
-   "H_0010",
-   "H_0011",
-   "H_0012",
-   "H_0013",
-   "H_0014",
-   "H_0015",
-   "H_0016",
-   "H_0017",
-   "H_0018",
-   "H_0019",
-   "H_0020",
-   "H_0021",
-   "H_0022",
-   "H_0023",
-   "H_0024",
-   "H_0025",
-   "H_0026",
-   "H_0027",
-   "H_0029",
-   "H_0030",
-   "H_0031",
-   "H_0032",
-   "H_0033",
-   "H_0034",
-   "H_0035",
-   "H_0036",
-   "H_0037",
-   "H_0038",
-   "H_0039",
-   "H_0040",
-   "H_0041",
-   "H_0042",
-   "H_0043",
-   "H_0044",
-   "H_0045",
-   "H_0046",
-   "H_0047",
-   "H_0048",
-   "H_0049",
-   "H_0050",
-   "H_0051",
-   "H_0052",
-   "H_0053",
-   "H_0054",
-   "H_0055",
-   "H_0056",
-   "H_0057",
-   "H_0058",
-   "H_0059",
-   "H_0060",
-   "H_0061",
-   "H_0062",
-   "H_0063",
-   "H_0064",
-   "H_0065",
-   "H_0066",
-   "H_0067",
-   "H_0068",
-   "H_0069",
-   "H_0070",
-   "H_0071",
-   "H_0073"
-  ],
-  "AUSENCIA_RESPUESTA_BB": [
-   "H_1241"
+ "adoption_1344": {
+  "recommendation": "adoptar como registro canonico con excepcion de procedencia y limitaciones de campo; no como base de calibracion validada",
+  "record_included": 1344,
+  "hand_level_exclusions": [],
+  "field_level_exclusions": {
+   "acciones": [
+    "H_0005",
+    "H_0059",
+    "H_0214",
+    "H_0226",
+    "H_0327",
+    "H_0357",
+    "H_0832",
+    "H_0834",
+    "H_0925",
+    "H_0926",
+    "H_0946",
+    "H_1141",
+    "H_1287",
+    "H_1310",
+    "H_1328",
+    "H_1354"
+   ],
+   "bote": [
+    "H_1283",
+    "H_1287",
+    "H_1288",
+    "H_1289",
+    "H_1293",
+    "H_1295",
+    "H_1296",
+    "H_1298",
+    "H_1300",
+    "H_1301",
+    "H_1302",
+    "H_1306",
+    "H_1310",
+    "H_1311",
+    "H_1312",
+    "H_1313",
+    "H_1317",
+    "H_1322",
+    "H_1324",
+    "H_1325",
+    "H_1327",
+    "H_1330",
+    "H_1343",
+    "H_1344",
+    "H_1345",
+    "H_1346",
+    "H_1348",
+    "H_1349",
+    "H_1351",
+    "H_1355",
+    "H_1356",
+    "H_1357",
+    "H_1358",
+    "H_1361",
+    "H_1365",
+    "H_1368",
+    "H_1371",
+    "H_1372",
+    "H_1374"
+   ],
+   "tablero": [
+    "H_0093",
+    "H_0297",
+    "H_0372",
+    "H_0587",
+    "H_0590",
+    "H_0812",
+    "H_0909",
+    "H_0915",
+    "H_0921",
+    "H_1008",
+    "H_1328"
+   ],
+   "stack": [
+    "H_0016",
+    "H_0022",
+    "H_0061",
+    "H_0198",
+    "H_0415",
+    "H_0421",
+    "H_0430",
+    "H_0515",
+    "H_0526",
+    "H_0547",
+    "H_0557",
+    "H_0697",
+    "H_0824",
+    "H_0834",
+    "H_0853",
+    "H_0863",
+    "H_0906",
+    "H_0932",
+    "H_1076",
+    "H_1096",
+    "H_1113",
+    "H_1141",
+    "H_1149",
+    "H_1304",
+    "H_1349"
+   ],
+   "allin": [
+    "H_0006",
+    "H_0008",
+    "H_0022",
+    "H_0034",
+    "H_0036",
+    "H_0055",
+    "H_0058",
+    "H_0070",
+    "H_0145",
+    "H_0185",
+    "H_0293",
+    "H_0311",
+    "H_0321",
+    "H_0383",
+    "H_0441",
+    "H_0713",
+    "H_0883",
+    "H_0906",
+    "H_0963",
+    "H_1112",
+    "H_1118",
+    "H_1231",
+    "H_1365"
+   ],
+   "asientos": [
+    "H_0030",
+    "H_0033",
+    "H_0035",
+    "H_0038",
+    "H_0050",
+    "H_0051",
+    "H_0055",
+    "H_0057",
+    "H_0073",
+    "H_0134",
+    "H_0135",
+    "H_0136",
+    "H_0137",
+    "H_0151",
+    "H_0167",
+    "H_0168",
+    "H_0170",
+    "H_0171",
+    "H_0172",
+    "H_0173",
+    "H_0174",
+    "H_0175",
+    "H_0177",
+    "H_0178",
+    "H_0179",
+    "H_0207",
+    "H_0208",
+    "H_0209",
+    "H_0210",
+    "H_0212",
+    "H_0220",
+    "H_0222",
+    "H_0226",
+    "H_0234",
+    "H_0235",
+    "H_0241",
+    "H_0242",
+    "H_0257",
+    "H_0258",
+    "H_0262",
+    "H_0281",
+    "H_0282",
+    "H_0283",
+    "H_0302",
+    "H_0323",
+    "H_0324",
+    "H_0325",
+    "H_0326",
+    "H_0327",
+    "H_0359",
+    "H_0360",
+    "H_0361",
+    "H_0362",
+    "H_0363",
+    "H_0448"
+   ],
+   "showdown_texto": [
+    "H_0798",
+    "H_1283",
+    "H_1337",
+    "H_1342"
+   ],
+   "recorder_audit": [
+    "H_1300",
+    "H_1303",
+    "H_1328",
+    "H_1341",
+    "H_1346",
+    "H_1349",
+    "H_1350",
+    "H_1353",
+    "H_1365",
+    "H_1368",
+    "H_1369"
+   ]
+  },
+  "conditions": [
+   "no reanclar derivados",
+   "no actualizar manifiesto/pines/hashes",
+   "no iniciar B2",
+   "no ejecutar sesiones reales",
+   "mantener MULTIWAY_SOPORTADO=False",
+   "no declarar reproducibilidad",
+   "no declarar calibracion validada"
   ]
  },
- "counts": {
-  "semantic_total": 98,
-  "old": 75,
-  "new": 23,
-  "selected": 57,
-  "outside": 41,
-  "excluded": 0,
-  "action_evidence": {
-   "G": 84,
-   "T": 11,
-   "U": 3
+ "analysis_fitness": {
+  "secuencia_acciones": {
+   "allowed": true,
+   "restricted_hands": [
+    "H_0005",
+    "H_0059",
+    "H_0214",
+    "H_0226",
+    "H_0327",
+    "H_0357",
+    "H_0832",
+    "H_0834",
+    "H_0925",
+    "H_0926",
+    "H_0946",
+    "H_1141",
+    "H_1287",
+    "H_1310",
+    "H_1328",
+    "H_1354"
+   ],
+   "reason": "secuencias imposibles, orden o codigo de accion"
   },
-  "risk": {
-   "medio": 71,
-   "bajo": 18,
-   "alto": 9
+  "frecuencias_preflop": {
+   "allowed": true,
+   "restricted_hands": [
+    "H_0832",
+    "H_0005",
+    "H_0059",
+    "H_0214",
+    "H_0226",
+    "H_0327",
+    "H_0357",
+    "H_0834",
+    "H_0925",
+    "H_0926",
+    "H_0946",
+    "H_1141",
+    "H_1287",
+    "H_1310"
+   ],
+   "reason": "H_0832 codifica limp como b 1.0"
   },
-  "nada_in_98": 13
+  "frecuencias_postflop": {
+   "allowed": true,
+   "restricted_hands": [
+    "H_0926",
+    "H_1328",
+    "H_1354",
+    "H_0005",
+    "H_0059",
+    "H_0214",
+    "H_0226",
+    "H_0327",
+    "H_0357",
+    "H_0834",
+    "H_0925",
+    "H_0926",
+    "H_0946",
+    "H_1141",
+    "H_1287",
+    "H_1310"
+   ],
+   "reason": "H_0926 turn, H_1328 flop, H_1354 turn"
+  },
+  "tablero_equity": {
+   "allowed": true,
+   "restricted_hands": [
+    "H_0093",
+    "H_0297",
+    "H_0372",
+    "H_0587",
+    "H_0590",
+    "H_0812",
+    "H_0909",
+    "H_0915",
+    "H_0921",
+    "H_1008",
+    "H_1328"
+   ],
+   "reason": "contradiccion o board ausente; usar streets.*.board"
+  },
+  "showdown_ganador": {
+   "allowed": true,
+   "restricted_hands": [
+    "H_0798",
+    "H_1283",
+    "H_1337",
+    "H_1342"
+   ],
+   "field": "showdown.winner1",
+   "reason": "texto incompleto en split; winner y cartas son la fuente"
+  },
+  "bote_ev_roi_pot_odds": {
+   "allowed": false,
+   "restricted_hands": [
+    "H_1283",
+    "H_1287",
+    "H_1288",
+    "H_1289",
+    "H_1293",
+    "H_1295",
+    "H_1296",
+    "H_1298",
+    "H_1300",
+    "H_1301",
+    "H_1302",
+    "H_1306",
+    "H_1310",
+    "H_1311",
+    "H_1312",
+    "H_1313",
+    "H_1317",
+    "H_1322",
+    "H_1324",
+    "H_1325",
+    "H_1327",
+    "H_1330",
+    "H_1343",
+    "H_1344",
+    "H_1345",
+    "H_1346",
+    "H_1348",
+    "H_1349",
+    "H_1351",
+    "H_1355",
+    "H_1356",
+    "H_1357",
+    "H_1358",
+    "H_1361",
+    "H_1365",
+    "H_1368",
+    "H_1371",
+    "H_1372",
+    "H_1374"
+   ],
+   "reason": "35 NADA + 4 conflictos internos no B1-R"
+  },
+  "stack_efectivo_spr": {
+   "allowed": false,
+   "restricted_hands": [
+    "H_0016",
+    "H_0022",
+    "H_0061",
+    "H_0198",
+    "H_0415",
+    "H_0421",
+    "H_0430",
+    "H_0515",
+    "H_0526",
+    "H_0547",
+    "H_0557",
+    "H_0697",
+    "H_0824",
+    "H_0834",
+    "H_0853",
+    "H_0863",
+    "H_0906",
+    "H_0932",
+    "H_1076",
+    "H_1096",
+    "H_1113",
+    "H_1141",
+    "H_1149",
+    "H_1304",
+    "H_1349"
+   ],
+   "reason": "stack nulo; H_1349 admite 45.9 derivado; H_1304 no recuperable"
+  },
+  "allin": {
+   "allowed": false,
+   "restricted_hands": [
+    "H_0006",
+    "H_0008",
+    "H_0022",
+    "H_0034",
+    "H_0036",
+    "H_0055",
+    "H_0058",
+    "H_0070",
+    "H_0145",
+    "H_0185",
+    "H_0293",
+    "H_0311",
+    "H_0321",
+    "H_0383",
+    "H_0441",
+    "H_0713",
+    "H_0883",
+    "H_0906",
+    "H_0963",
+    "H_1112",
+    "H_1118",
+    "H_1231",
+    "H_1365"
+   ],
+   "reason": "marca allin ausente para el jugador que agota stack"
+  },
+  "estado_asiento": {
+   "allowed": false,
+   "restricted_hands": [
+    "H_0030",
+    "H_0033",
+    "H_0035",
+    "H_0038",
+    "H_0050",
+    "H_0051",
+    "H_0055",
+    "H_0057",
+    "H_0073",
+    "H_0134",
+    "H_0135",
+    "H_0136",
+    "H_0137",
+    "H_0151",
+    "H_0167",
+    "H_0168",
+    "H_0170",
+    "H_0171",
+    "H_0172",
+    "H_0173",
+    "H_0174",
+    "H_0175",
+    "H_0177",
+    "H_0178",
+    "H_0179",
+    "H_0207",
+    "H_0208",
+    "H_0209",
+    "H_0210",
+    "H_0212",
+    "H_0220",
+    "H_0222",
+    "H_0226",
+    "H_0234",
+    "H_0235",
+    "H_0241",
+    "H_0242",
+    "H_0257",
+    "H_0258",
+    "H_0262",
+    "H_0281",
+    "H_0282",
+    "H_0283",
+    "H_0302",
+    "H_0323",
+    "H_0324",
+    "H_0325",
+    "H_0326",
+    "H_0327",
+    "H_0359",
+    "H_0360",
+    "H_0361",
+    "H_0362",
+    "H_0363",
+    "H_0448"
+   ],
+   "reason": "activo sin posicion"
+  },
+  "calibracion_877": {
+   "allowed": false,
+   "restricted_hands": [
+    "H_0926",
+    "H_0832",
+    "H_0430",
+    "H_0589",
+    "H_0662",
+    "H_0847"
+   ],
+   "reason": "ventana provisional; H_0926 accion imposible preexistente; H_0832 limp; comunitarias truncada; bote limitado"
+  },
+  "registro_procedencia": {
+   "allowed": true,
+   "restricted_hands": [],
+   "reason": "registro canonico con excepcion B; no reproducibilidad"
+  },
+  "derivados_canonicos": {
+   "allowed": false,
+   "restricted_hands": [],
+   "reason": "no reanclar ni regenerar sin autorizacion humana"
+  }
  }
 }
