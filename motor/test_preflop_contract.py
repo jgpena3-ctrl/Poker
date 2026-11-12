@@ -256,13 +256,13 @@ def test_paridad_legado_con_los_4594_eventos_de_la_ventana(hands_877):
     assert total == 4594
 
 
-def test_deuda_legada_declarada_49_diferencias_y_29_no_resueltos(hands_877):
+def test_deuda_legada_y_restricciones_p02_quedan_visibles(hands_877):
     """El modo estricto NO finge que el entrenamiento viejo era correcto.
 
-    Las 49 diferencias vienen, todas, de que el contador legado cuenta un
-    limpe corto `b` como subida para el jugador siguiente. Los 29 no
-    resueltos son checks de una posición que no es BB. Se fijan aquí para que
-    una activación no los pueda silenciar por accidente.
+    Las 49 diferencias vienen de que el contador legado cuenta un limpe corto
+    `b` como subida para el jugador siguiente. Se conservan los 29 checks fuera
+    de BB; además, H_0357 deja visible que la segunda acción del BB contradice
+    su posta y contamina cuatro decisiones posteriores según P0-2.
     """
     same = 0
     diffs = []
@@ -277,10 +277,15 @@ def test_deuda_legada_declarada_49_diferencias_y_29_no_resueltos(hands_877):
                 diffs.append((ev.category, got.training_category))
             else:
                 same += 1
-    assert same == 4516
+    assert same == 4512
     assert len(diffs) == 49
-    assert len(unresolved) == 29
-    assert collections.Counter(unresolved) == {('bb_check', 'check_non_bb'): 29}
+    assert len(unresolved) == 33
+    assert collections.Counter(unresolved) == {
+        ('bb_check', 'check_non_bb'): 29,
+        ('fold', 'unknown'): 2,
+        ('open', 'unknown'): 1,
+        ('fold_vs_open', 'unknown'): 1,
+    }
     assert collections.Counter(diffs) == {
         ('fold_vs_open', 'fold'): 14,
         ('call_open', 'call_limp'): 13,
@@ -305,15 +310,16 @@ def test_las_162_b_mayor_1bb_y_las_15_b_menor_igual_1bb(hands_877):
             cats[(bucket, cls.category, cls.status)] += 1
     assert total == {'>1': 162, '<=1': 15}
     assert cats == {
-        ('>1', 'open', 'resolved'): 116,
+        ('>1', 'open', 'resolved'): 115,
         ('>1', 'rol', 'resolved'): 44,
         ('>1', 'blind', 'non_decision'): 2,
         ('<=1', 'limp', 'resolved'): 14,
-        ('<=1', 'blind', 'non_decision'): 1,
+        ('<=1', 'unknown', 'unresolved'): 1,
+        ('>1', 'unknown', 'unresolved'): 1,
     }
 
 
-def test_serving_viejo_y_contrato_nuevo_difieren_en_3970_estados(hands_877):
+def test_serving_viejo_y_contrato_nuevo_difieren_en_3967_estados(hands_877):
     same = 0
     diff = 0
     unresolved = 0
@@ -327,7 +333,7 @@ def test_serving_viejo_y_contrato_nuevo_difieren_en_3970_estados(hands_877):
                 diff += 1
             else:
                 same += 1
-    assert (same, diff, unresolved) == (595, 3970, 29)
+    assert (same, diff, unresolved) == (594, 3967, 33)
 
 
 @pytest.mark.xfail(strict=True,
@@ -380,7 +386,7 @@ def test_estado_de_tablas_del_heroe_difiere_en_208_estados(hands_877):
                 diff += 1
             else:
                 same += 1
-    assert (same, diff, unresolved) == (4386, 208, 0)
+    assert (same, diff, unresolved) == (4384, 208, 2)
 
 
 # ---------------------------------------------------------------------------

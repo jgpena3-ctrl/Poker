@@ -43,8 +43,14 @@ from __future__ import annotations
 
 import json
 import os
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from typing import Any, Dict, List, Optional, Tuple
+
+from .action_amount import (
+    ABSENT as AMOUNT_ABSENT,
+    AmountEvidence,
+    classify_amount,
+)
 
 BB_NOMINAL = 1.0
 TOL = 1e-9
@@ -121,6 +127,8 @@ class PreflopAction:
     amount: Optional[float]
     is_blind: bool
     raw_amount: Any = None
+    amount_evidence: AmountEvidence = field(
+        default_factory=lambda: classify_amount({}))
 
 
 @dataclass(frozen=True)
@@ -240,6 +248,7 @@ class PreflopClassification:
             'pos': self.raw.pos,
             'action': self.raw.action,
             'amount': self.raw.amount,
+            'amount_evidence': self.raw.amount_evidence.as_dict(),
             'category': self.category,
             'training_category': self.training_category,
             'denom': self.denom,
@@ -321,9 +330,9 @@ def _coerce_source(source: Any) -> List[Any]:
 def normalize_actions(source: Any, *, keep_invalid: bool = False) -> List[PreflopAction]:
     """Normaliza dicts del recorder o tuplas `(pos, action, amount, blind)`.
 
-    `amount` queda en `None` cuando el dato no existe. El modo legado lo
-    convierte a 0.0 como hacía `_preflop_sequence`; el modo estricto no puede
-    distinguir "no hay importe" de "importe cero" sin esa diferencia.
+    `amount` queda en `None` cuando falta o no es numérico. `amount_evidence`
+    distingue ausencia, valor inválido, cero conocido y valor positivo, además
+    de la procedencia declarada. Ningún modo convierte la ausencia a 0.0.
 
     `keep_invalid=True` conserva acciones sin posición o sin código para que
     el camino estricto las declare `unresolved`. El camino legado las descarta,
@@ -336,6 +345,7 @@ def normalize_actions(source: Any, *, keep_invalid: bool = False) -> List[Preflo
             act = a.get('action') or ''
             raw_amount = a.get('amount')
             is_blind = bool(a.get('blind') or a.get('is_blind'))
+            amount_evidence = classify_amount(a)
         else:
             try:
                 pos, act = a[0], a[1]
@@ -344,21 +354,18 @@ def normalize_actions(source: Any, *, keep_invalid: bool = False) -> List[Preflo
                     continue
                 pos, act, raw_amount = '', '', None
                 is_blind = False
+                amount_evidence = classify_amount({})
             else:
                 raw_amount = a[2] if len(a) > 2 else None
                 is_blind = bool(a[3]) if len(a) > 3 else False
+                amount_evidence = classify_amount(raw_amount)
         if (not pos or not act) and not keep_invalid:
             continue
-        if raw_amount is None or raw_amount == '':
-            amount = None
-        else:
-            try:
-                amount = float(raw_amount)
-            except (TypeError, ValueError):
-                amount = None
+        amount = amount_evidence.value
         out.append(PreflopAction(index=i, pos=str(pos or ''), action=str(act or ''),
                                  amount=amount, is_blind=is_blind,
-                                 raw_amount=raw_amount))
+                                 raw_amount=raw_amount,
+                                 amount_evidence=amount_evidence))
     return out
 
 
@@ -377,14 +384,31 @@ def is_blind_post(action: PreflopAction, voluntary_before: bool) -> bool:
             and not voluntary_before)
 
 
-def _legacy_amount(action: PreflopAction) -> float:
-    return 0.0 if action.amount is None else float(action.amount)
+def _legacy_amount(action: PreflopAction) -> Optional[float]:
+    """Valor numérico disponible; no rellena una ausencia con cero."""
+    return None if action.amount is None else float(action.amount)
 
 
 def _classify(context: PreflopContext, action: PreflopAction,
               *, is_blind: bool = False,
               legacy: bool = False) -> PreflopClassification:
     """Clasifica una acción contra el estado anterior."""
+    repeated_bb_post = (not legacy and not context.voluntary_actions
+                        and action.pos == 'BB'
+                        and action.pos in context.blind_posts)
+    if (repeated_bb_post and action.action == 'p'):
+        return PreflopClassification(
+            raw=action, category='unknown', denom=None, status='unresolved',
+            reason='posta_repetida', context=context)
+    if (repeated_bb_post and action.action == 'b'
+            and (action.amount is None
+                 or action.amount <= context.current_level + TOL)):
+        reason = ('importe_ausente' if action.amount is None else
+                  'subida_sin_incremento')
+        return PreflopClassification(
+            raw=action, category='unknown', denom=None, status='unresolved',
+            reason=reason, context=context)
+
     if is_blind or action.action == 'p':
         category = 'blind' if is_blind else 'post'
         return PreflopClassification(
@@ -469,10 +493,18 @@ def _classify(context: PreflopContext, action: PreflopAction,
             reason=None, context=context)
 
     if act in ('b', 'r'):
-        if amount is None or (not legacy and amount <= TOL):
+        if amount is None:
+            reason = ('importe_ausente'
+                      if action.amount_evidence.value_status == AMOUNT_ABSENT
+                      else 'importe_invalido')
             return PreflopClassification(
                 raw=action, category='unknown', denom=None,
-                status='unresolved', reason='importe_ausente',
+                status='unresolved', reason=reason,
+                context=context)
+        if not legacy and amount <= TOL:
+            return PreflopClassification(
+                raw=action, category='unknown', denom=None,
+                status='unresolved', reason='importe_cero',
                 context=context)
 
         # Limpe corto: <= BB sin subida previa. No se mira el carácter para
@@ -522,8 +554,9 @@ def _advance(context: PreflopContext, action: PreflopAction,
              *, is_blind: bool, legacy: bool) -> PreflopContext:
     """Estado posterior. `legacy=True` reproduce los contadores antiguos."""
     amount = action.amount
-    if amount is None:
-        amount = 0.0
+
+    if (not legacy and classification.reason == 'posta_repetida'):
+        return replace(context, tainted_reason='posta_repetida')
 
     if is_blind or action.action == 'p':
         bb_posted = context.bb_posted or (
@@ -534,11 +567,12 @@ def _advance(context: PreflopContext, action: PreflopAction,
         # La ciega real es el nivel vigente, aunque venga con un importe
         # anómalo. En modo legado no hay validación de subida, pero el
         # contexto debe conservar lo que el dato dice.
-        level = max(context.current_level, amount)
+        level = (context.current_level if amount is None else
+                 max(context.current_level, amount))
         return replace(context, current_level=level,
                        bb_posted=bb_posted, blind_posts=posts)
 
-    if legacy:
+    if legacy and classification.status == 'resolved':
         raises = context.raises_before
         limps = context.limps_before
         callers = context.callers_before
@@ -561,7 +595,8 @@ def _advance(context: PreflopContext, action: PreflopAction,
             voluntary += 1
         return replace(
             context,
-            current_level=max(context.current_level, amount),
+            current_level=(context.current_level if amount is None else
+                           max(context.current_level, amount)),
             raises_before=raises, limps_before=limps,
             callers_before=callers, voluntary_actions=voluntary,
             aggressors=aggressors, aggressor_amounts=aggressor_amounts,
@@ -582,7 +617,8 @@ def _advance(context: PreflopContext, action: PreflopAction,
         # inventada. Un check inválido no mueve dinero, así que no contamina
         # el estado: solo la acción agresiva/desconocida lo hace.
         if classification.reason in ('subida_sin_incremento',
-                                     'importe_ausente',
+                                     'importe_ausente', 'importe_invalido',
+                                     'importe_cero', 'posta_repetida',
                                      'accion_desconocida',
                                      'accion_ausente',
                                      'pos_ausente'):
@@ -628,7 +664,16 @@ def walk_preflop(source: Any, *, bb: float = BB_NOMINAL,
     context = PreflopContext.initial(bb)
     steps: List[PreflopStep] = []
     for action in normalize_actions(source, keep_invalid=not legacy):
-        blind = is_blind_post(action, bool(context.voluntary_actions))
+        repeated_bb_post = (not legacy and not context.voluntary_actions
+                            and action.pos == 'BB'
+                            and action.pos in context.blind_posts
+                            and (action.action == 'p'
+                                 or (action.action == 'b'
+                                     and (action.amount is None
+                                          or action.amount <=
+                                          context.current_level + TOL))))
+        blind = (False if repeated_bb_post else
+                 is_blind_post(action, bool(context.voluntary_actions)))
         cls = _classify(context, action, is_blind=blind, legacy=legacy)
         after = _advance(context, action, cls, is_blind=blind, legacy=legacy)
         steps.append(PreflopStep(raw=action, classification=cls, after=after))
@@ -660,8 +705,11 @@ def classify_action(action: str, amount: Optional[float],
         bb=float(bb), current_level=float(level),
         raises_before=int(raises_before), limps_before=int(limps_before),
         callers_before=int(callers), bb_posted=bool(bb_posted))
+    amount_evidence = classify_amount({'amount': amount})
     raw = PreflopAction(index=0, pos=pos or '', action=action,
-                        amount=amount, is_blind=False, raw_amount=amount)
+                        amount=amount_evidence.value, is_blind=False,
+                        raw_amount=amount,
+                        amount_evidence=amount_evidence)
     return _classify(context, raw, legacy=legacy)
 
 
@@ -675,7 +723,7 @@ def first_decision(source: Any, pos: str, *, bb: float = BB_NOMINAL,
             return step.classification
     context = steps[-1].after if steps else PreflopContext.initial(bb)
     raw = PreflopAction(index=-1, pos=pos or '', action='', amount=None,
-                        is_blind=False)
+                        is_blind=False, amount_evidence=classify_amount({}))
     return PreflopClassification(
         raw=raw, category='unknown', denom=None, status='unresolved',
         reason='sin_decision', context=context)
@@ -694,7 +742,7 @@ def last_decision(source: Any, pos: str, *, bb: float = BB_NOMINAL,
         return found
     context = steps[-1].after if steps else PreflopContext.initial(bb)
     raw = PreflopAction(index=-1, pos=pos or '', action='', amount=None,
-                        is_blind=False)
+                        is_blind=False, amount_evidence=classify_amount({}))
     return PreflopClassification(
         raw=raw, category='unknown', denom=None, status='unresolved',
         reason='sin_decision', context=context)

@@ -45,7 +45,22 @@ ACCION_NOMBRE = {'x': 'check', 'b': 'bet', 'c': 'call', 'f': 'fold', 'r': 'raise
 # ---------------------------------------------------------------------------
 
 def load_models():
-    """Carga ProfileRangeModel + PostflopRangeModel (json si existe, si no DB)."""
+    """Carga solo modelos de una fuente común y con procedencia apta.
+
+    Los JSON incluidos en el repositorio son derivados históricos parciales.
+    Cargarlos y reinyectar un Oracle reconstruido desde la base actual mezcla
+    fuentes; hasta que exista una combinación verificada, el laboratorio falla
+    cerrado en vez de presentarla como un solo modelo.
+    """
+    persisted = (pr_mod.RANGES_PATH, pf_mod.PF_RANGES_PATH)
+    present = [path for path in persisted if os.path.exists(path)]
+    if present:
+        names = ', '.join(os.path.relpath(p, os.path.dirname(
+            os.path.dirname(os.path.abspath(__file__)))) for p in present)
+        raise RuntimeError(
+            'range_lab_gui no apta: modelos persistidos sin compatibilidad '
+            'verificada; se rechaza mezclar rangos históricos con un Oracle '
+            'actual (%s)' % names)
     t = {}
     t0 = time.perf_counter()
     try:

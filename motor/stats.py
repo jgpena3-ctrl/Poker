@@ -16,6 +16,7 @@ import os
 import re
 from collections import defaultdict
 
+from .action_amount import classify_amount
 from .learn import HERO_NAMES, load_hands, preflop_events
 
 SHOWDOWN_RE = re.compile(r'\(([^)]+)\)')
@@ -233,19 +234,18 @@ class TransitionStats:
 
 
 def _actions(street):
-    """[(pos, action, amount)] normalizados desde la calle del dict."""
+    """[(pos, action, amount)] conservando importe None/invalid."""
     out = []
     for a in street.get('actions', []) or []:
         if isinstance(a, dict):
             pos, act = a.get('pos'), a.get('action')
-            try:
-                amt = float(a.get('amount') or 0.0)
-            except (TypeError, ValueError):
-                amt = 0.0
+            amt = classify_amount(a).value
         else:
             try:
-                pos, act, amt = a[0], a[1], float(a[2] or 0.0)
-            except (IndexError, TypeError, ValueError):
+                pos, act = a[0], a[1]
+                raw_amount = a[2] if len(a) > 2 else None
+                amt = classify_amount(raw_amount).value
+            except (IndexError, TypeError):
                 continue
         if pos and act:
             out.append((pos, act, amt))

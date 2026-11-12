@@ -104,9 +104,9 @@ histórica del entrenamiento.
 
 | lectura | coincide | diferente | no resuelto |
 |---|---:|---:|---:|
-| estricto vs etiqueta histórica | 4.516 | 49 | 29 |
-| `_preflop_spot` viejo vs estricto | 595 | 3.970 | 29 |
-| `_preflop_raises` + limpe viejo vs `table_plan` | 4.386 | 208 | 0 |
+| estricto vs etiqueta histórica | 4.512 | 49 | 33 |
+| `_preflop_spot` viejo vs estricto | 594 | 3.967 | 33 |
+| `_preflop_raises` + limpe viejo vs `table_plan` | 4.384 | 208 | 2 |
 
 ### 4.1 Los 49 "diferentes" tienen una sola causa
 
@@ -122,10 +122,10 @@ un limpe corto `b` como subida para el jugador siguiente.
 | `call_3bet` | `call_open` | 3 |
 | `squeeze` | `rol` | 2 |
 
-### 4.2 Los 29 no resueltos
+### 4.2 Los 33 no resueltos
 
-Los 29 son `bb_check` históricos que en realidad son un `x` de una posición
-que no es BB:
+29 son `bb_check` históricos que en realidad son un `x` de una posición que no
+es BB:
 
 ```
 ('bb_check', 'check_non_bb'): 29
@@ -135,25 +135,33 @@ motivo: check_fuera_de_BB
 No se convierten a `bb_check` ni a `limp`. Quedan sin resolver, que es la
 verdad del dato.
 
+Los otros cuatro se concentran en `H_0357`: tras SB `p 0.5` y BB `p 1.0`, el
+BB vuelve a aparecer con `b 0.5`. P0-2 declara esa acción como
+`subida_sin_incremento`, `invalid`, con cuatro decisiones preflop dependientes.
+La lectura estricta P0-1 ahora también la deja `unresolved` y tañe las
+decisiones siguientes; no la vuelve a contar como una segunda ciega ni como un
+limp corto. Las categorías históricas de esas cuatro decisiones quedan visibles
+como unresolved, no se reatribuyen.
+
 ### 4.3 Las `b` de la ventana
 
 | importe | n | lectura estricta |
 |---|---:|---|
-| `b > 1 BB` | 162 | 116 `open`, 44 `rol`, 2 ciega/post (no decisión) |
-| `b <= 1 BB` | 15 | 14 `limp` corto, 1 ciega/post (no decisión) |
+| `b > 1 BB` | 162 | 115 `open`, 44 `rol`, 2 ciega/post (no decisión), 1 unresolved (`H_0357`) |
+| `b <= 1 BB` | 15 | 14 `limp` corto, 1 unresolved (`H_0357`) |
 
-Total de `b` crudas: 177. Los 3 que no son decisión son ciegas del BB
-codificadas como `b`.
+Total de `b` crudas: 177. Dos `b` >1 BB son posts del BB/no decisiones; el
+`b 0.5` repetido de `H_0357` queda unresolved.
 
 ### 4.4 La lectura vieja del serving
 
-`_preflop_spot` solo coincide con el contrato en **595 / 4.594** estados
-(12,95 %). Las diferencias dominantes son:
+`_preflop_spot` solo coincide con el contrato en **594 / 4.594** estados
+(12,93 %). Las diferencias dominantes son:
 
 | lectura vieja | lectura contextual | n |
 |---|---|---:|
-| `open` | `fold` | 1.535 |
-| `open` | `fold_vs_open` | 1.069 |
+| `open` | `fold` | 1.533 |
+| `open` | `fold_vs_open` | 1.068 |
 | `3bet` | `open` | 275 |
 | `call_open` | `limp` | 262 |
 | `limp` | `bb_check` | 182 |
@@ -171,7 +179,9 @@ folds, no distingue limpe de call y llama 3bet a cualquier `r`.
 `_preflop_raises` solo cuenta `'r'`; y `_recom_preflop` marca limpe solo con
 `'c'` antes de un `'r'`. El contrato estricto cuenta las subidas reales y los
 limpes cortos. Hay **208** estados de 4.594 con diferencia (4,53 %). Las
-diferencias no son ruido: son aperturas `b` que el camino viejo no veía.
+diferencias no son ruido: son aperturas `b` que el camino viejo no veía. Dos
+prefijos de H_0357 quedan unresolved por la secuencia P0-2; están contabilizados
+por separado, no como diferencias válidas de tabla.
 
 Ejemplos de la tabla:
 
@@ -195,7 +205,8 @@ El contrato no convierte una categoría sin celda en otra. Cada
 | `no_table` | categoría válida sin celda (5bet, call_4bet, fold_vs_4bet, ...) |
 | `unresolved` | la secuencia no se pudo leer |
 
-En la ventana: `available=1681`, `no_range=2884`, `unresolved=29`,
+En la ventana tras añadir la propagación explícita de `H_0357`:
+`available=1680`, `no_range=2881`, `unresolved=33`,
 `no_table=0` (las 5bet+ no aparecen como primera decisión en esas 877).
 
 Además, `ProfileRangeModel.CAT_TABLE` no tiene celdas para `5bet`,
@@ -260,7 +271,8 @@ python -m pytest motor/test_learn.py motor/test_asistente_live.py `
   motor/test_preflop_contract.py -q
 ```
 
-Resultado: **227 passed, 1 xfailed**.
+Resultado histórico de P0-1: **227 passed, 1 xfailed**. La regresión adicional
+de H_0357 se prueba en P0-6 y las cifras actuales se actualizan en esta sección.
 
 No se afirma suite completa verde. Los censos históricos de
 `test_auditar_origen.py`, `test_cm004.py` y el conteo de postas de
@@ -276,7 +288,7 @@ El `xfail` es deliberado y estricto:
   actualizarlo.
 
 La prueba que fija la deuda estricta es
-`test_deuda_legada_declarada_49_diferencias_y_29_no_resueltos`; la de las
+`test_deuda_legada_y_restricciones_p02_quedan_visibles`; la de las
 ciegas, `test_las_162_b_mayor_1bb_y_las_15_b_menor_igual_1bb`.
 
 ## 8. REPRODUCIR LAS CIFRAS
@@ -293,7 +305,7 @@ El script solo lee la base y no escribe logs ni derivatives.
 - No se ha activado el contrato en las recomendaciones.
 - No se ha cambiado `data/`, ni derivados, hashes, manifests, pines, rangos,
   probabilidades, priors, tablas, la selección de 877 ni `MULTIWAY_SOPORTADO`.
-- No se ha empezado P0-2, ni B2, ni sesiones reales, ni calibración.
+- P0-2 sigue en sombra; no se ha empezado B2, sesiones reales ni calibración.
 - No se ha cambiado la etiqueta PEZ/TIBURON.
 
 La activación y cualquier trabajo posterior quedan a la espera de

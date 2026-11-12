@@ -583,19 +583,14 @@ def range_lab_gui_envelope():
     env.classification = CLASS_NOT_SUITABLE
     env.status = INCOMPATIBLE
     env.notes.append(
-        'load_models() intenta ProfileRangeModel.load() y '
-        'PostflopRangeModel.load() primero; si existen artefactos historicos, '
-        'los usa sin verificar procedencia')
+        'P0-4 detecto carga historica sin verificar; P0-6 añade guard que '
+        'rechaza los JSON persistidos antes de cargarlos')
     env.notes.append(
-        'si falta el artefacto, reconstruye desde la base actual')
+        'si no hay JSON persistidos, el fallback reconstruye los modelos desde '
+        'la misma entrada; build_models sigue partial')
     env.notes.append(
-        'reinyecta Oracle desde la base actual cuando load() lo perdio, '
-        'mezclando Oracle actual con tablas historicas')
-    env.notes.append(
-        'la interfaz no comunica que modelo/fuente se esta usando')
-    env.notes.append(
-        'no existe separacion real de fuentes ni comprobacion de '
-        'compatibilidad')
+        'clasificacion not_suitable se conserva; la ruta histórica falla '
+        'cerrado y no inyecta Oracle actual en tablas históricas')
     _complete(env, ['database_hash'])
     return env
 
@@ -767,37 +762,35 @@ def auxiliary_tool_flows():
             'tool': 'range_lab_gui',
             'source_path': 'tools/range_lab_gui.py',
             'files_read': [
-                'data/profile_ranges.json (si existe)',
-                'data/postflop_ranges.json (si existe)',
-                'data/hands_db.jsonl (fallback y reinyeccion de Oracle)',
+                'existencia de data/profile_ranges.json y data/postflop_ranges.json',
+                'data/hands_db.jsonl (solo si ambos artefactos persistidos faltan)',
                 'data/preflop_matrices.json (via player_ranges)',
             ],
             'models_built': [
-                'ProfileRangeModel.load() o ProfileRangeModel.from_hands()',
-                'PostflopRangeModel.load() o PostflopRangeModel.from_hands()',
-                'Oracle(build(hands, labels)) si _oracle is None',
+                'RuntimeError si existe cualquiera de los JSON históricos',
+                'si ambos faltan: ProfileRangeModel y PostflopRangeModel desde el mismo hands',
+                'Oracle construido desde esa misma entrada en fallback fresco',
             ],
             'historical_sources': [
-                'data/profile_ranges.json (si load tiene exito)',
-                'data/postflop_ranges.json (si load tiene exito)',
+                'data/profile_ranges.json (detectado; carga bloqueada)',
+                'data/postflop_ranges.json (detectado; carga bloqueada)',
             ],
             'current_sources': [
                 'data/hands_db.jsonl via load_hands(reliable_only=True)',
             ],
             'priors_used': [
-                'Oracle actual reconstruido desde hands_db',
+                'Oracle desde la misma entrada solo en fallback fresco',
                 'preflop_matrices.json via ProfileRangeModel._prior_grid',
-                'fallback plano 0.2 si el Oracle falta (n>0)',
+                'fallback plano 0.2 solo si Oracle falta (n>0)',
             ],
             'ranges_used': [
                 'ProfileRangeModel.prob_vec / opening_range',
                 'PostflopRangeModel.prob_vec',
             ],
             'combinations': [
-                'perfil historico + Oracle actual (reinyectado)',
-                'postflop historico + Oracle actual (reinyectado)',
-                'preflop historico + matrices de procedencia desconocida',
-                'artefacto ausente -> modelo reconstruido desde base actual',
+                'JSON persistido presente -> carga rechazada; no hay mezcla',
+                'ambos JSON ausentes -> modelos rebuilt desde el mismo input',
+                'matrices preflop siguen con procedencia desconocida',
             ],
             'caches': [
                 '_TABLES', '_tables_cache', '_scores_cache', '_poblacion',
@@ -811,19 +804,19 @@ def auxiliary_tool_flows():
             ],
             'classification': CLASS_NOT_SUITABLE,
             'evidence': [
-                'load_models() lineas 47-79: json si existe, DB si falla',
-                'lineas 70-76: reinyecta Oracle desde la base actual',
-                'la cabecera solo muestra ms de carga, no la fuente',
-                'no compara hashes ni commit de los artefactos cargados',
+                'P0-6 load_models() rechaza cualquier JSON persistido antes de load()',
+                'no llama Oracle(build(...)) cuando detecta artefacto histórico',
+                'sin artefactos, todo el fallback se construye desde la misma entrada',
+                'fallback no convierte build_models partial en verified',
             ],
             'incompatibilities': [
-                'tablas postflop historicas + Oracle actual',
-                'perfil preflop historico + matrices sin procedencia',
+                'artefactos históricos no aptos; carga bloqueada',
+                'fallback fresco aún usa matrices de procedencia unknown',
             ],
             'limitations': [
-                'no separa modo historico y modo actual',
-                'no comunica que modelo esta usando',
-                'no se corrige en P0-4: solo se documenta y prueba',
+                'sigue clasificada not_suitable para usar JSON persistidos',
+                'si no hay JSON, la procedencia del rebuild sigue partial',
+                'no se activa en serving ni modifica modelos live',
             ],
         },
     ]

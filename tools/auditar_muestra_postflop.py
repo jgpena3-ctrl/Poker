@@ -146,6 +146,9 @@ def audit(hands=None, declared=None):
                 'facing': o.facing,
                 'bucket': bucket,
                 'action': o.action,
+                'amount': o.amount,
+                'amount_evidence': dict(o.amount_evidence),
+                'sizing': o.sizing,
                 'cards': list(o.cards) if isinstance(o.cards, (list, tuple))
                 else o.cards,
                 'board': o.board,

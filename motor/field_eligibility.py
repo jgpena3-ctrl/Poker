@@ -58,6 +58,11 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
+from .action_amount import (
+    ABSENT as AMOUNT_ABSENT,
+    INVALID as AMOUNT_INVALID,
+    classify_amount,
+)
 from .behavior import build as build_behavior
 from .learn import HERO_NAMES, load_hands, preflop_events
 from .observations import _seq, extract_hand, extract_hands
@@ -214,12 +219,16 @@ class ActionIssue:
     seq_index: int              # índice dentro de _seq() (alineado con obs)
     pos: str
     action: str
-    amount: float
+    amount: Optional[float]
     code: str
     detail: str
     severity: str = INVALID     # invalid | ambiguous | code_ambiguous
     source: str = 'detected'    # detected | declared | declared+detected
     taints_context: bool = True
+    amount_value_status: Optional[str] = None
+    amount_origin_status: Optional[str] = None
+    amount_type: Optional[str] = None
+    action_inferred: bool = False
 
     @property
     def key(self):
@@ -234,9 +243,11 @@ class DependentAction:
     seq_index: int
     pos: str
     action: str
-    amount: float
+    amount: Optional[float]
     root: ActionIssue
     scope: str = 'same_street'   # same_street | later_streets
+    amount_value_status: Optional[str] = None
+    amount_origin_status: Optional[str] = None
 
 
 @dataclass
@@ -313,6 +324,11 @@ class ObservationEligibility:
     cards_required: bool = False
     cards_present: bool = False
     not_applicable: bool = False
+    amount_value_status: Optional[str] = None
+    amount_origin_status: Optional[str] = None
+    amount_type: Optional[str] = None
+    action_inferred: bool = False
+    amount_usable: bool = True
 
 
 # ---------------------------------------------------------------------------
@@ -332,20 +348,47 @@ def _indexed_seq(hand, street):
     for raw_i, a in enumerate(raw):
         if isinstance(a, dict):
             pos, act = a.get('pos'), a.get('action')
-            try:
-                amt = float(a.get('amount') or 0.0)
-            except (TypeError, ValueError):
-                amt = 0.0
+            amt = classify_amount(a).value
         else:
             try:
-                pos, act, amt = a[0], a[1], float(a[2] or 0.0)
-            except (IndexError, TypeError, ValueError):
+                pos, act = a[0], a[1]
+                raw_amount = a[2] if len(a) > 2 else None
+                amt = classify_amount(raw_amount).value
+            except (IndexError, TypeError):
                 continue
         if not pos or not act:
             continue
         out.append((seq_i, raw_i, pos, act, amt))
         seq_i += 1
     return out
+
+
+def _amount_evidence_at(hand, street, raw_idx):
+    raw = ((hand.get('streets') or {}).get(street) or {}).get('actions') or []
+    if raw_idx is None or raw_idx < 0 or raw_idx >= len(raw):
+        return classify_amount({}).as_dict()
+    action = raw[raw_idx]
+    if isinstance(action, dict):
+        return classify_amount(action).as_dict()
+    try:
+        value = action[2] if len(action) > 2 else None
+    except (IndexError, TypeError):
+        value = None
+    return classify_amount(value).as_dict()
+
+
+def _amount_issue_fields(hand, street, raw_idx):
+    evidence = _amount_evidence_at(hand, street, raw_idx)
+    return {
+        'amount_value_status': evidence['value_status'],
+        'amount_origin_status': evidence['origin_status'],
+        'amount_type': evidence['amount_type'],
+        'action_inferred': evidence['action_inferred'],
+    }
+
+
+def _fmt_amount(amount):
+    return 'ausente' if amount is None else ('%g' % amount)
 
 
 def _street_names(hand):
@@ -398,7 +441,7 @@ def _is_blind_like(pos, act, amt, live_level, voluntary_before):
     if act == 'p':
         return True
     return (pos == 'BB' and act == 'b' and not voluntary_before
-            and live_level <= amt + TOL)
+            and (amt is None or live_level <= amt + TOL))
 
 
 def detect_action_issues(hand):
@@ -438,14 +481,15 @@ def detect_action_issues(hand):
         if _is_blind_like(pos, act, amt, live_level, voluntary_before):
             if pos in posted and act != 'p':
                 code = 'posta_repetida'
-                detail = (f'{pos} {act} {amt:g} después de una posta '
-                          f'previa del mismo jugador')
+                detail = ('%s %s %s después de una posta previa del mismo '
+                          'jugador' % (pos, act, _fmt_amount(amt)))
             elif act == 'p' and pos in posted:
                 code = 'posta_repetida'
-                detail = f'{pos} p {amt:g} repetida'
+                detail = '%s p %s repetida' % (pos, _fmt_amount(amt))
             else:
                 posted.add(pos)
-                live_level = max(live_level, amt)
+                if amt is not None:
+                    live_level = max(live_level, amt)
                 if act in ('b', 'r', 'c'):
                     voluntary_before = True
                 continue
@@ -455,7 +499,16 @@ def detect_action_issues(hand):
                 # Aquí solo se marca lo que el contrato no resuelve.
                 pass
             elif act in ('b', 'r'):
-                if amt <= TOL:
+                if amt is None:
+                    evidence = _amount_evidence_at(hand, 'preflop', raw_i)
+                    code = ('importe_ausente'
+                            if evidence['value_status'] == AMOUNT_ABSENT
+                            else 'importe_invalido')
+                    detail = '%s %s con importe %s' % (
+                        pos, act, evidence['value_status'])
+                    severity = 'ambiguous'
+                    taints = False
+                elif amt <= TOL:
                     code = 'apuesta_cero'
                     detail = f'{pos} {act} {amt:g}'
                 elif live_level > TOL and amt <= live_level + TOL:
@@ -477,7 +530,16 @@ def detect_action_issues(hand):
                     last_raiser = pos
                     live_level = amt
             elif act == 'c':
-                if live_level <= TOL:
+                if amt is None:
+                    evidence = _amount_evidence_at(hand, 'preflop', raw_i)
+                    code = ('importe_ausente'
+                            if evidence['value_status'] == AMOUNT_ABSENT
+                            else 'importe_invalido')
+                    detail = '%s c con importe %s' % (
+                        pos, evidence['value_status'])
+                    severity = 'ambiguous'
+                    taints = False
+                elif live_level <= TOL:
                     code = 'call_sin_apuesta'
                     detail = f'{pos} c {amt:g} sin apuesta viva'
                 elif last_raiser == pos:
@@ -506,7 +568,8 @@ def detect_action_issues(hand):
         if code is not None:
             issue = ActionIssue(
                 'preflop', raw_i, seq_i, pos, act, amt, code, detail,
-                severity=severity, taints_context=taints)
+                severity=severity, taints_context=taints,
+                **_amount_issue_fields(hand, 'preflop', raw_i))
             issues.append(issue)
             if severity == INVALID and taints:
                 preflop_taint = issue
@@ -547,9 +610,10 @@ def detect_action_issues(hand):
             continue
         issues.append(ActionIssue(
             'preflop', step.raw.index, step.raw.index, step.raw.pos,
-            step.raw.action, step.raw.amount or 0.0,
+            step.raw.action, step.raw.amount,
             'preflop_no_resuelto', cls.reason or 'sin razón',
-            severity='ambiguous', source='detected', taints_context=False))
+            severity='ambiguous', source='detected', taints_context=False,
+            **_amount_issue_fields(hand, 'preflop', step.raw.index)))
 
     # ---------- postflop ----------
     for street in ('flop', 'turn', 'river'):
@@ -573,7 +637,8 @@ def detect_action_issues(hand):
             taints = True
             if pos in folded:
                 code = 'accion_tras_fold'
-                detail = f'{pos} {act} {amt:g} después de retirarse'
+                detail = '%s %s %s después de retirarse' % (
+                    pos, act, _fmt_amount(amt))
                 # La acción de un jugador retirado no cambia el contexto
                 # posterior: es un no-op. No se propaga taint.
                 taints = False
@@ -585,7 +650,16 @@ def detect_action_issues(hand):
                     code = 'check_repetido_sin_apuesta'
                     detail = f'{pos} x repetido sin nueva apuesta'
             elif act in ('b', 'r'):
-                if amt <= TOL:
+                if amt is None:
+                    evidence = _amount_evidence_at(hand, street, raw_i)
+                    code = ('importe_ausente'
+                            if evidence['value_status'] == AMOUNT_ABSENT
+                            else 'importe_invalido')
+                    detail = '%s %s con importe %s' % (
+                        pos, act, evidence['value_status'])
+                    severity = 'ambiguous'
+                    taints = False
+                elif amt <= TOL:
                     code = 'apuesta_cero'
                     detail = f'{pos} {act} {amt:g}'
                 elif live_level > TOL and amt <= live_level + TOL:
@@ -605,7 +679,16 @@ def detect_action_issues(hand):
                     last_raiser = pos
                     live_level = amt
             elif act == 'c':
-                if live_level <= TOL:
+                if amt is None:
+                    evidence = _amount_evidence_at(hand, street, raw_i)
+                    code = ('importe_ausente'
+                            if evidence['value_status'] == AMOUNT_ABSENT
+                            else 'importe_invalido')
+                    detail = '%s c con importe %s' % (
+                        pos, evidence['value_status'])
+                    severity = 'ambiguous'
+                    taints = False
+                elif live_level <= TOL:
                     code = 'call_sin_apuesta'
                     detail = f'{pos} c {amt:g} sin apuesta viva'
                 elif last_raiser == pos:
@@ -632,7 +715,8 @@ def detect_action_issues(hand):
             if code is not None:
                 issue = ActionIssue(
                     street, raw_i, seq_i, pos, act, amt, code, detail,
-                    severity=severity, taints_context=taints)
+                    severity=severity, taints_context=taints,
+                    **_amount_issue_fields(hand, street, raw_i))
                 issues.append(issue)
                 if severity == INVALID and taints:
                     taint = issue
@@ -1068,8 +1152,10 @@ def assess_hand(hand, declared: Optional[DeclaredDefects] = None,
         for i, p in enumerate(players)
     ]
     issue_evidence = [
-        '%s.actions[%d] %s %s %.6g [%s/%s]' %
-        (i.street, i.index, i.pos, i.action, i.amount, i.code, i.source)
+        '%s.actions[%d] %s %s %s [%s/%s; amount=%s/%s type=%r]' %
+        (i.street, i.index, i.pos, i.action, _fmt_amount(i.amount),
+         i.code, i.source, i.amount_value_status, i.amount_origin_status,
+         i.amount_type)
         for i in he.issues
     ]
     evidence_by_field = {
@@ -1127,7 +1213,8 @@ def _merge_declared_actions(hand, declared, issues, dependent):
                 _declared_code(d, act),
                 d.get('evidence') or 'secuencia declarada',
                 severity=INVALID, source='declared',
-                taints_context=_declared_taints(d, act))
+                taints_context=_declared_taints(d, act),
+                **_amount_issue_fields(hand, street, raw_idx))
             out.append(issue)
             if issue.taints_context:
                 deps.extend(_dependent_after(hand, street, seq_i, issue))
@@ -1159,7 +1246,8 @@ def _merge_declared_actions(hand, declared, issues, dependent):
             out.append(ActionIssue(
                 street, raw_idx, seq_i, pos, act, amt,
                 'ordeno_codigo', code, severity='code_ambiguous',
-                source='declared', taints_context=False))
+                source='declared', taints_context=False,
+                **_amount_issue_fields(hand, street, raw_idx)))
         elif existing is not None:
             existing.source = 'declared+detected'
             if code and code not in existing.detail:
@@ -1244,18 +1332,17 @@ def _seq_index_for_raw(hand, street, raw_idx):
 def _raw_action(hand, street, raw_idx):
     raw = ((hand.get('streets') or {}).get(street) or {}).get('actions') or []
     if raw_idx is None or raw_idx < 0 or raw_idx >= len(raw):
-        return '', '', 0.0
+        return '', '', None
     a = raw[raw_idx]
     if isinstance(a, dict):
-        try:
-            amt = float(a.get('amount') or 0.0)
-        except (TypeError, ValueError):
-            amt = 0.0
+        amt = classify_amount(a).value
         return a.get('pos') or '', a.get('action') or '', amt
     try:
-        return a[0], a[1], float(a[2] or 0.0)
-    except (IndexError, TypeError, ValueError):
-        return '', '', 0.0
+        pos, act = a[0], a[1]
+    except (IndexError, TypeError):
+        return '', '', None
+    amount = a[2] if len(a) > 2 else None
+    return pos, act, classify_amount(amount).value
 
 
 def _index_from_text(text):
@@ -1276,12 +1363,16 @@ def _dependent_after(hand, street, seq_i, issue):
                     continue
                 deps.append(DependentAction(
                     st, ri, si, pos, act, amt, issue,
-                    'same_street' if st == 'preflop' else 'later_streets'))
+                    'same_street' if st == 'preflop' else 'later_streets',
+                    _amount_evidence_at(hand, st, ri)['value_status'],
+                    _amount_evidence_at(hand, st, ri)['origin_status']))
         return deps
     for si, ri, pos, act, amt in _indexed_seq(hand, street):
         if si > seq_i:
             deps.append(DependentAction(
-                street, ri, si, pos, act, amt, issue, 'same_street'))
+                street, ri, si, pos, act, amt, issue, 'same_street',
+                _amount_evidence_at(hand, street, ri)['value_status'],
+                _amount_evidence_at(hand, street, ri)['origin_status']))
     # La iniciativa postflop (último bettor) puede cambiar las calles
     # posteriores; se declara como dependencia de alcance amplio para
     # `TransitionStats`, aunque Oracle/postflop no la consuman.
@@ -1290,7 +1381,9 @@ def _dependent_after(hand, street, seq_i, issue):
         for st in later[later.index(street) + 1:]:
             for si, ri, pos, act, amt in _indexed_seq(hand, st):
                 deps.append(DependentAction(
-                    st, ri, si, pos, act, amt, issue, 'later_streets'))
+                    st, ri, si, pos, act, amt, issue, 'later_streets',
+                    _amount_evidence_at(hand, st, ri)['value_status'],
+                    _amount_evidence_at(hand, st, ri)['origin_status']))
     return deps
 
 
@@ -1386,6 +1479,7 @@ def _declared_limp_context(he, issue):
             pos, action, amount = match.group(1), match.group(2), float(
                 match.group(3))
             if (pos == issue.pos and action == issue.action == 'b'
+                    and issue.amount is not None
                     and abs(amount - issue.amount) <= TOL):
                 return True
     return False
@@ -1397,6 +1491,11 @@ def _declared_limp_context(he, issue):
 def observation_eligibility(he: HandEligibility, obs, street, seq_i,
                             consumer: str) -> ObservationEligibility:
     name = obs.player or ''
+    amount_meta = (getattr(obs, 'amount_evidence', None)
+                   or classify_amount({
+                       'amount': getattr(obs, 'amount', None)}).as_dict())
+    amount_usable = amount_meta.get('value_status') not in (
+        AMOUNT_ABSENT, AMOUNT_INVALID)
     reasons = []
     direct = he.issue_at(street, seq_i)
     dep = he.dependent_at(street, seq_i)
@@ -1444,6 +1543,15 @@ def observation_eligibility(he: HandEligibility, obs, street, seq_i,
     if cards_required and not cards_present:
         restricted = True
         reasons.append('requiere cartas conocidas y no las hay')
+
+    if (consumer == CONSUMER_PROFILE_RANGE and street == 'preflop'
+            and obs.action in ('b', 'r') and not amount_usable):
+        restricted = True
+        reasons.append('categoría de rango preflop requiere importe; valor '
+                       'ausente o inválido')
+    elif not amount_usable:
+        reasons.append('importe %s; no se usa como cero' %
+                       amount_meta.get('value_status'))
 
     # Tablero.
     board = he.boards.get(street)
@@ -1496,7 +1604,12 @@ def observation_eligibility(he: HandEligibility, obs, street, seq_i,
         root_code=root.code if root else None,
         board_warning=board_warning, label_warning=label_warning,
         cards_required=cards_required, cards_present=cards_present,
-        not_applicable=not_applicable)
+        not_applicable=not_applicable,
+        amount_value_status=amount_meta.get('value_status'),
+        amount_origin_status=amount_meta.get('origin_status'),
+        amount_type=amount_meta.get('amount_type'),
+        action_inferred=bool(amount_meta.get('action_inferred')),
+        amount_usable=amount_usable)
 
 
 def preflop_event_eligibility(he: HandEligibility, event, seq_i,
@@ -1520,18 +1633,36 @@ def preflop_event_eligibility(he: HandEligibility, event, seq_i,
     if cards_required and not cards_present:
         restricted = True
         reasons.append('requiere cartas conocidas y no las hay')
+    amount_meta = event.amount_evidence.as_dict()
+    amount_usable = amount_meta['value_status'] not in (
+        AMOUNT_ABSENT, AMOUNT_INVALID)
+    if (consumer in (CONSUMER_PROFILE_RANGE, CONSUMER_PREFLOP_STATS)
+            and event.category == 'unknown' and not amount_usable):
+        restricted = True
+        reasons.append('acción preflop sin categoría por importe ausente o '
+                       'inválido')
+    elif not amount_usable:
+        reasons.append('importe %s; no se usa como cero' %
+                       amount_meta['value_status'])
     label_warning = event.player in he.null_stack_names
     if label_warning and consumer == CONSUMER_PROFILE_RANGE:
         reasons.append('etiqueta de perfil con stack nulo; no canónica')
+    evidence_root = (direct if direct is not None and direct.severity == INVALID
+                     else taint or direct)
     return ObservationEligibility(
         hand_id=he.hand_id, street='preflop', seq_index=seq_i,
         player=event.player, action=event.category, consumer=consumer,
         usable=not restricted, restricted=restricted, reasons=reasons,
         direct=direct is not None and direct.severity == INVALID,
         dependent=taint is not None,
-        root_code=(direct or taint).code if (direct or taint) else None,
+        root_code=evidence_root.code if evidence_root else None,
         label_warning=label_warning, cards_required=cards_required,
-        cards_present=cards_present)
+        cards_present=cards_present,
+        amount_value_status=amount_meta['value_status'],
+        amount_origin_status=amount_meta['origin_status'],
+        amount_type=amount_meta['amount_type'],
+        action_inferred=amount_meta['action_inferred'],
+        amount_usable=amount_usable)
 
 
 # ---------------------------------------------------------------------------
@@ -1755,6 +1886,11 @@ def oracle_breakdown(hands, declared=None) -> dict:
             rows.append({
                 'street': street, 'pos': pos, 'action': act,
                 'amount': amt, 'facing': obs.facing,
+                'amount_value_status': marginal.amount_value_status,
+                'amount_origin_status': marginal.amount_origin_status,
+                'amount_type': marginal.amount_type,
+                'action_inferred': marginal.action_inferred,
+                'amount_usable': marginal.amount_usable,
                 'texture': obs.texture_class,
                 'known': obs.hand_known, 'class': cls,
                 'code': (direct or (dep.root if dep else None)).code
@@ -1765,8 +1901,10 @@ def oracle_breakdown(hands, declared=None) -> dict:
                 'marginal_usable': marginal.usable,
                 'granular_usable': granular.usable,
                 'reason': root.detail if root else '',
-                'evidence': '%s.actions[%d] %s %s %.6g' %
-                            (street, raw_i, pos, act, amt),
+                'evidence': '%s.actions[%d] %s %s %s amount=%s/%s' %
+                            (street, raw_i, pos, act, _fmt_amount(amt),
+                             marginal.amount_value_status,
+                             marginal.amount_origin_status),
                 'consumer_reasons': reasons,
             })
         per_hand[hid] = {
@@ -1817,7 +1955,11 @@ def collect_counts(hands, labels=None, declared=None) -> dict:
         out['hand_issues'][he.hand_id] = [
             {'street': i.street, 'index': i.index, 'code': i.code,
              'severity': i.severity, 'source': i.source,
-             'detail': i.detail}
+             'detail': i.detail, 'amount': i.amount,
+             'amount_value_status': i.amount_value_status,
+             'amount_origin_status': i.amount_origin_status,
+             'amount_type': i.amount_type,
+             'action_inferred': i.action_inferred}
             for i in he.issues
         ]
         for name, f in he.fields.items():

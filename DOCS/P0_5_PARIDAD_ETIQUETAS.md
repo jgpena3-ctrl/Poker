@@ -186,6 +186,12 @@ Cada `LabelDecision` registra:
 - `uncertainty`: motivos concretos de incertidumbre;
 - `rules_blocking`: reglas que impidieron asignar una etiqueta validada;
 - `reproducible`: si la regla se puede repetir con los campos dados;
+- `evidence_eligible`: si las entradas de la regla se proyectaron tras las
+  restricciones P0-2 pertinentes;
+- `eligibility_projection`: eventos preflop restringidos y contadores
+  VPIP/PFR efectivos frente a elegibles, más cantidades de stacks numéricos y
+  ausentes;
+- `provenance_compatible`: resultado de la regla explícita P0-6;
 - `valid_for_serving`: **diagnóstico de sombra**, nunca leído por serving.
 
 No se rellena ningún campo ausente. Un `None` del artefacto sigue siendo `None`.
@@ -219,9 +225,12 @@ marcar el primer tramo. No cambia ninguna etiqueta ni bloquea nada.
 | `unknown` | no hay etiqueta que comparar |
 
 Una etiqueta determinista no se considera válida por sí sola: `reproducible=True`
-solo dice que la regla se repite; la validez exige además evidencia suficiente y
-procedencia adecuada. Por eso `valid_for_serving` es `False` para históricos,
-desconocidos e insuficientes.
+solo dice que la regla se repite. P0-6 separa reproducibilidad,
+`evidence_eligible`, `provenance_compatible` y `valid_for_serving`. La
+procedencia actual `partial` no es compatible; por eso el candidato de
+clasificación puede ser reproducible pero `contract_label=UNKNOWN` y
+`valid_for_serving=False`. Las etiquetas históricas también conservan `label`
+para comparación, pero `contract_label=UNKNOWN` por no ser evidencia actual.
 
 ---
 
@@ -374,16 +383,18 @@ No se investiga su origen en P0-5.
 
 - **P0-1** (contrato preflop estricto/legacy) no se activa ni se consulta para
   cambiar etiquetas.
-- **P0-2** (elegibilidad) no filtra observaciones ni cambia etiquetas; no se usa
-  en este bloque.
+- **P0-2** (elegibilidad) no filtra observaciones efectivas. La corrección P0-6
+  sí proyecta sus seis eventos preflop restringidos fuera de los contadores
+  VPIP/PFR del candidato de etiqueta; conserva el rastro y no cambia etiquetas
+  efectivas.
 - **P0-3** (evidencia postflop) no se usa para validar etiquetas.
 - **P0-4** se usa solo como fuente de procedencia: ventana de 877, hash de
   ventana, estado `partial` de `build_models`, estado `partial` y hash canónico
   de `profiles.json`. No se usa su matriz de compatibilidad para bloquear nada.
 
-El contrato P0-5 no activa restricciones, no bloquea consultas live y no cambia
-la etiqueta que serving sigue usando. `valid_for_serving` es un campo de
-diagnóstico; ningún camino de producción lo lee.
+El contrato P0-5/P0-6 no activa restricciones, no bloquea consultas live y no
+cambia la etiqueta que serving sigue usando. `valid_for_serving` es diagnóstico;
+ningún camino de producción lo lee.
 
 ---
 
@@ -500,3 +511,27 @@ no bloquea consultas y no activa ningún contrato.
 
 **Este bloque se detiene aquí.** No se activa el contrato, no se cambia ninguna
 etiqueta efectiva y no se inicia otro bloque sin autorización explícita.
+
+---
+
+## Addendum P0-6 — propagación de elegibilidad y procedencia
+
+Este addendum supersede solo el estado del contrato contextual; las cifras de
+paridad efectiva anteriores siguen describiendo la misma salida de serving.
+
+- `label_audit()` ahora calcula la proyección P0-2 por jugador y conserva en
+  `player_decisions[].p02_eligibility_projection` los eventos restringidos y
+  los contadores VPIP/PFR efectivos y elegibles.
+- En la ventana hay 6 eventos restringidos para `preflop_stats`; retirar esos
+  eventos del candidato sombra no cambia las etiquetas efectivas de los seis
+  jugadores.
+- Se separan `reproducible`, `evidence_eligible`, `provenance_compatible` y
+  `valid_for_serving`. `build_models` mantiene procedencia `partial`, por lo que
+  las **138** `contract_label` quedan `UNKNOWN` y `valid_for_serving=0`; las
+  etiquetas efectivas continúan 78 PEZ / 60 TIBURON.
+- Las etiquetas históricas pueden seguir siendo reproducibles desde los campos
+  almacenados, pero no se convierten por ello en `contract_label` actual.
+- P0-2 permanece sombra: los seis eventos se excluyen solo de la evaluación
+  candidata P0-5, no de `Profiles.from_hands`, modelos ni recomendaciones.
+
+Prueba reproducible: `python tools/auditar_etiquetas.py --json`.

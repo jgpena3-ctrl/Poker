@@ -70,6 +70,7 @@ auditoría. No son niveles de confianza ni activan reglas estadísticas.
 | `distinct_hand_count` | IDs de manos diferentes; `None` en cargas históricas sin esa traza |
 | `action_observation_count` | `cnt` de esa acción |
 | `observation_provenance` | `hands_db.jsonl` → `extract_hands` |
+| `amount_evidence` | Valor original (`known_zero`, `known_positive`, `absent`, `invalid`) y origen (`canonical_observed`, `derived`, `non_canonical`, `unknown`); ausencia no es cero |
 | `model_prior_source` | Celda/fallback Oracle, `flat_no_oracle`, `flat_oracle_no_cell` o ausencia de prior |
 | `prior_probability` | Probabilidad de esa acción en el prior efectivamente usado; no se sustituye ausencia por cero |
 | `prior_returned_n` / `prior_support_observations` | n devuelto por `Oracle.p_action` y soporte efectivamente agregado, por separado |
@@ -235,3 +236,13 @@ No se regeneraron derivados ni se guardó un modelo auditado sobre los
 archivos de datos. No se cambiaron probabilidades, distribuciones, alpha,
 priors, selección efectiva, recomendaciones visibles ni los modos de
 activación P0-1/P0-2. No se inició P0-4, B2, calibración ni sesiones reales.
+
+## Addendum P0-6 — procedencia de importes por observación
+
+El sidecar de cada observación incluye ahora `amount`, `amount_evidence` y
+`sizing`; P0-2 incluye los mismos estados en su proyección de elegibilidad.
+Esto solo añade evidencia: no cambia `opp`, `cnt`, `p_action`, el prior ni la
+selección efectiva. En la base actual todos los 16.486 importes de acciones son
+numéricamente cero-conocido o positivo-conocido; 908 declaran
+`amount_type=observed`, y en 15.578 el origen queda `unknown` porque no se
+registra `amount_type`. No se promueve ese origen a canónico por inferencia.

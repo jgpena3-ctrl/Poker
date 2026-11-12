@@ -24,8 +24,9 @@ import json
 import os
 from collections import Counter, defaultdict
 from dataclasses import dataclass
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple
 
+from .action_amount import AmountEvidence
 from .preflop_contract import (CATEGORY_DENOM, DENOM_ORDER, PreflopAction,
                                is_blind_post, legacy_training_category,
                                walk_preflop)
@@ -306,7 +307,8 @@ class PreflopEvent:
     pos: str
     category: str                 # clave en CATEGORY_DENOM
     denom: str                    # no_raise | facing_open | facing_3bet
-    amount: float
+    amount: Optional[float]
+    amount_evidence: AmountEvidence
     hand_known: bool
     cards: str
     prereq: Tuple[str, ...]       # acciones previas ('POS:a')
@@ -329,26 +331,25 @@ def classify_first_action(action, amount, raises_before, limps_before, bb=BB, ca
 
 
 def _preflop_sequence(hand):
-    """Secuencia preflop normalizada: [(pos, action, amount, is_blind)] válidos.
+    """Secuencia preflop: [(pos, action, amount, is_blind)] válidos.
 
     `is_blind` es la identidad explícita de una ciega obligatoria (no una
     decisión voluntaria). El recorder la marca; para datos antiguos sin marca
-    se infiere estructuralmente en `_es_ciega_bb`.
+    se infiere estructuralmente en `_es_ciega_bb`. Un importe ausente o inválido
+    se conserva como dato no numérico; nunca se sustituye por 0.0.
     """
     actions = (hand.get('streets', {}).get('preflop', {}) or {}).get('actions', [])
     seq = []
     for a in actions:
         if isinstance(a, dict):
             pos, act = a.get('pos'), a.get('action')
-            try:
-                amount = float(a.get('amount') or 0.0)
-            except (TypeError, ValueError):
-                amount = 0.0
+            amount = a.get('amount')
             is_blind = bool(a.get('blind') or a.get('is_blind'))
         else:
             try:
-                pos, act, amount = a[0], a[1], float(a[2] or 0.0)
-            except (IndexError, TypeError, ValueError):
+                pos, act = a[0], a[1]
+                amount = a[2] if len(a) > 2 else None
+            except (IndexError, TypeError):
                 continue
             is_blind = bool(a[3]) if len(a) > 3 else False
         if not pos or not act:
@@ -481,7 +482,8 @@ def preflop_events(hand, bb=BB):
             pos=pos,
             category=cls.category,
             denom=cls.denom or '',
-            amount=0.0 if step.raw.amount is None else step.raw.amount,
+            amount=step.raw.amount,
+            amount_evidence=step.raw.amount_evidence,
             hand_known=hand_known(player, cards),
             cards=cards,
             prereq=tuple(f'{p}:{a}' for p, a, _m, _b in seq[:i]),

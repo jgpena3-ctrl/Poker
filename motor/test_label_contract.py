@@ -26,6 +26,7 @@ from .label_contract import (
     compare_labels,
     historical_decision,
     historical_evidence_diffs,
+    label_provenance_compatible,
     label_audit,
     serving_decision,
     simple_label,
@@ -50,6 +51,29 @@ def _profile(name='X', n=10, stats=None, counts=None, stack=None):
                          stack_mean=stack)
 
 
+def _eligible_projection(profile, n_stack=1):
+    counts = profile.counts or {}
+    vo, va = counts.get('vpip', (0, 0))
+    po, pa = counts.get('pfr', (0, 0))
+    return {
+        'status': 'computed',
+        'preflop_events_seen': profile.n,
+        'preflop_events_restricted': 0,
+        'restricted_events': [],
+        'vpip_effective_opp_act': [vo, va],
+        'pfr_effective_opp_act': [po, pa],
+        'vpip_eligible_opp_act': [vo, va],
+        'pfr_eligible_opp_act': [po, pa],
+        'eligible_vpip': profile.stats.get('vpip'),
+        'eligible_pfr': profile.stats.get('pfr'),
+        'eligible_stack_mean_bb': profile.stack_mean,
+        'stack_observations': n_stack,
+        'stack_rows_eligible_by_p02': n_stack,
+        'stack_missing_observations': 0,
+        'stack_invalid_observations': 0,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Reglas
 # ---------------------------------------------------------------------------
@@ -69,28 +93,38 @@ def test_simple_label_precedence_and_strict_thresholds():
 def test_training_stack_rule_is_provisional_with_small_stack_sample():
     p = _profile(n=2, stats={'vpip': 0.5, 'pfr': 0.5},
                  counts={'vpip': (2, 1), 'pfr': (2, 1)}, stack=48.8)
-    d = training_decision(p, 2, 877, provenance=PROV)
+    d = training_decision(
+        p, 2, 877, provenance=PROV,
+        eligibility_projection=_eligible_projection(p, 2))
     assert d.label == PEZ
     assert d.method == 'stack_mean_lt_50bb'
     assert d.state == STATE_PROVISIONAL
-    assert d.variables['stack_mean_bb'] == 48.8
+    assert d.variables['effective_stack_mean_bb'] == 48.8
     assert d.relevant_observations['stack_observations'] == 2
     assert d.reproducible is True
-    assert d.valid_for_serving is True
+    assert d.evidence_eligible is True
+    assert d.provenance_compatible is False
+    assert d.contract_label == LABEL_UNKNOWN
+    assert d.valid_for_serving is False
     assert any('margen' in u for u in d.uncertainty)
 
 
 def test_training_fallback_traces_vpip_pfr():
     p = _profile(n=1, stats={'vpip': 1.0, 'pfr': 0.0},
                  counts={'vpip': (1, 1), 'pfr': (1, 0)}, stack=123.5)
-    d = training_decision(p, 1, 877, provenance=PROV)
+    d = training_decision(
+        p, 1, 877, provenance=PROV,
+        eligibility_projection=_eligible_projection(p, 1))
     assert d.label == PEZ
     assert d.method == 'loose_passive_fallback'
-    assert d.variables['vpip'] == 1.0
-    assert d.variables['pfr'] == 0.0
-    assert d.relevant_observations['vpip_opp'] == 1
-    assert d.relevant_observations['pfr_opp'] == 1
+    assert d.variables['effective_vpip'] == 1.0
+    assert d.variables['effective_pfr'] == 0.0
+    assert d.relevant_observations['vpip_opp_eligible'] == 1
+    assert d.relevant_observations['pfr_opp_eligible'] == 1
     assert d.state == STATE_PROVISIONAL
+    assert d.variables['candidate_label_from_eligible_evidence'] == PEZ
+    assert d.contract_label == LABEL_UNKNOWN
+    assert d.valid_for_serving is False
 
 
 def test_training_missing_evidence_is_insufficient_not_valid_tiburon():
@@ -102,12 +136,14 @@ def test_training_missing_evidence_is_insufficient_not_valid_tiburon():
     assert d.method == 'default_no_evidence'
     assert d.valid_for_serving is False
     assert d.rules_blocking
-    assert any('sin ninguna evidencia' in u for u in d.uncertainty)
+    assert any('por defecto sin evidencia' in u for u in d.uncertainty)
 
 
 def test_training_missing_stats_does_not_invent_fallback():
     p = _profile(n=5, stats={}, stack=60.0)
-    d = training_decision(p, 5, 877, provenance=PROV)
+    d = training_decision(
+        p, 5, 877, provenance=PROV,
+        eligibility_projection=_eligible_projection(p, 5))
     assert d.label == TIBURON
     assert d.state == STATE_INSUFFICIENT
     assert d.method == 'default_rest_no_stats'
@@ -117,6 +153,23 @@ def test_training_missing_stats_does_not_invent_fallback():
 
 def test_first_reliability_band_is_reused_not_invented():
     assert FIRST_RELIABILITY_BAND == HANDS_BANDS[0][0] == 40
+
+
+def test_label_provenance_compatibility_fails_closed():
+    verified = {
+        'provenance_status': 'verified', 'window': 'reliable_only',
+        'origin': 'rebuilt_from_current_base',
+        'database_hash': 'db-sha', 'window_hash': 'window-sha',
+        'hands_n': 877, 'built_commit': 'abc123', 'code_dirty': False,
+    }
+    assert label_provenance_compatible(verified) is True
+    for status in ('partial', 'unknown', 'incompatible'):
+        assert not label_provenance_compatible(
+            dict(verified, provenance_status=status))
+    assert not label_provenance_compatible(
+        dict(verified, origin='historical_derivative'))
+    assert not label_provenance_compatible(dict(verified, window_hash=None))
+    assert not label_provenance_compatible(dict(verified, code_dirty=True))
 
 
 # ---------------------------------------------------------------------------
@@ -184,8 +237,11 @@ def test_historical_consistent_fields_make_label_reproducible():
         'label': PEZ, 'stats': {'vpip': 1.0, 'pfr': 0.0},
         'stack_mean': 123.5})
     assert d.reproducible is True
-    assert d.contract_label == PEZ
+    assert d.contract_label == LABEL_UNKNOWN
     assert d.state == STATE_HISTORICAL
+    assert d.evidence_eligible is False
+    assert d.provenance_compatible is False
+    assert d.valid_for_serving is False
 
 
 def test_historical_entry_without_label_is_unknown_not_tiburon():
@@ -266,9 +322,51 @@ def test_audit_training_counts(audit):
     assert audit['hands_in_window'] == 877
     assert audit['training']['players'] == 138
     assert audit['training']['labels'] == {PEZ: 78, TIBURON: 60}
+    assert audit['training']['eligible_candidate_labels'] == {
+        PEZ: 78, TIBURON: 60}
+    assert audit['training']['candidate_effective_differences'] == []
     assert audit['training']['provisional'] == 105
     assert audit['training']['current'] == 33
     assert audit['training']['insufficient'] == 0
+    assert audit['training']['contract_labels'] == {LABEL_UNKNOWN: 138}
+    assert audit['training']['evidence_eligible'] == 138
+    assert audit['training']['provenance_compatible'] == 0
+    assert audit['training']['valid_for_serving'] == 0
+    assert audit['training']['p02_restricted_label_events'] == 6
+    assert audit['training']['players_with_p02_restricted_label_events'] == [
+        'CamiloG208', 'HarryPoker18', 'Jarduan', 'RABBUNI', 'pardoKing',
+        'vidents']
+
+
+def test_p02_restrictions_reach_label_evidence_without_changing_effective_labels(
+        audit):
+    rows = audit['player_decisions']
+    h0357_restricted = []
+    for name in ('CamiloG208', 'HarryPoker18', 'Jarduan', 'pardoKing',
+                 'vidents', 'RABBUNI'):
+        row = rows[name]
+        decision = row['decision']
+        projection = row['p02_eligibility_projection']
+        assert projection['preflop_events_restricted'] >= 1
+        assert projection['restricted_events']
+        assert decision['reproducible'] is True
+        assert decision['evidence_eligible'] is True
+        assert decision['provenance_status'] == 'partial'
+        assert decision['provenance_compatible'] is False
+        assert decision['valid_for_serving'] is False
+        assert decision['contract_label'] == LABEL_UNKNOWN
+        assert decision['variables'][
+            'candidate_label_from_eligible_evidence'] == decision['label']
+        h0357_restricted.extend(
+            event for event in projection['restricted_events']
+            if event['hand_id'] == 'H_0357')
+    assert len(h0357_restricted) == 4
+    assert {x['position'] for x in h0357_restricted} == {
+        'CO', 'BTN', 'SB', 'BB'}
+    # Removing the six shadow-restricted events from the candidate inputs does
+    # not alter the effective labels or their established fingerprint.
+    assert audit['training']['labels_sha256'] == \
+        'dca28d2607e817b8794b4579602bbe8cedf456754377d17dfa5b9e39cb8e6060'
 
 
 def test_audit_historical_labels_and_evidence(audit):

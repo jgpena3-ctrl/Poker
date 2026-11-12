@@ -51,6 +51,12 @@ def run(argv=None):
     print('  jugadores:', tr['players'])
     print('  etiquetas:', tr['labels'])
     print('  estados:', tr['states'])
+    print('  contract_label:', tr['contract_labels'])
+    print('  P0-2 restricciones en eventos etiqueta:',
+          tr['p02_restricted_label_events'])
+    print('  evidencia elegible / procedencia compatible / apta serving:',
+          tr['evidence_eligible'], tr['provenance_compatible'],
+          tr['valid_for_serving'])
     print()
 
     h = result['historical']
@@ -97,6 +103,17 @@ def run(argv=None):
             s['n_vpip_opportunities'], s['stack_mean_bb'],
             s['last_stack_bb']))
         print('      metodo:', s['training']['method'])
+        p02 = s['training']['eligibility_projection']
+        print('      P0-2 restringidos:',
+              p02.get('preflop_events_restricted'),
+              'candidato elegible:',
+              s['training']['variables'].get(
+                  'candidate_label_from_eligible_evidence'))
+        print('      reproducible/evidencia/procedencia/serving:',
+              s['training']['reproducible'],
+              s['training']['evidence_eligible'],
+              s['training']['provenance_compatible'],
+              s['training']['valid_for_serving'])
         print('      sesion-media:', s['comparison_session_mean']['status'],
               '-', s['comparison_session_mean']['reason'])
         print('      stack-actual:', s['comparison_current_stack']['status'],

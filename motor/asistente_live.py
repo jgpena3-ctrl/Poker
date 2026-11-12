@@ -31,6 +31,7 @@ from capture_live import capture, get_readers
 from recorder_live import LiveRecorder, POSITION_ORDER
 
 from .behavior import Oracle, build
+from .action_amount import KNOWN_POSITIVE, KNOWN_ZERO, classify_amount
 from .cards import card_id
 from .decision import EvTable, OracleResponse, compute_evs
 from .decision_log import DecisionLog, _clean as _safe_json
@@ -186,10 +187,10 @@ def _es_limpe_corto(action, bb=None, tol=1e-9):
         bb = BB_NOMINAL
     if action.get('action') != 'b':
         return False
-    try:
-        amt = float(action.get('amount') or 0.0)
-    except (TypeError, ValueError):
+    evidence = classify_amount(action)
+    if evidence.value_status not in (KNOWN_ZERO, KNOWN_POSITIVE):
         return False
+    amt = evidence.value
     return amt <= bb + tol
 
 

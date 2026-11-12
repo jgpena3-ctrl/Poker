@@ -297,3 +297,30 @@ ventana, selecciones, priors, etiquetas, hashes/manifiestos/pins ni
 recomendaciones. No se ejecutaron calibraciones ni se inició P0-3, B2 o
 sesiones reales. P0-2 queda en sombra hasta autorización explícita para
 cualquier activación.
+
+## Addendum P0-6 — importes y propagación a etiquetas
+
+`motor/action_amount.py` conserva por separado `value_status` y
+`origin_status`. Estados del valor: `known_zero`, `known_positive`, `absent`,
+`invalid`; estados del origen: `canonical_observed`, `derived`,
+`non_canonical`, `unknown`. La falta de `amount_type` queda `unknown`, no se
+rellena como `observed`; un importe numérico cero conserva `known_zero` y no se
+confunde con `None`.
+
+`_indexed_seq`, `_raw_action`, `PreflopEvent` y `Observation` propagan la
+evidencia sin sustituir ausencias por `0.0`. P0-2 la incluye en
+`ActionIssue`, `ObservationEligibility`, `hand_issues` y las trazas Oracle. Un
+importe ausente en una agresión preflop requerida deja la observación
+estadística/rango restringida en sombra; en Oracle/postflop la fila expone
+`amount_usable=False` sin alterar selección efectiva ni probabilidades.
+
+En la lectura contextual común de `H_0357`, la segunda `BB b 0.5` no se trata
+como otra ciega: queda `subida_sin_incremento`, P0-1 la deja unresolved y tañe
+las cuatro decisiones siguientes; P0-2 conserva el root inválido y sus cuatro
+dependencias. El modo legado de entrenamiento no se cambia y P0-2 no filtra el
+builder.
+
+P0-5 consume ahora esta proyección P0-2 para sus candidatos de etiqueta. Las
+seis observaciones preflop restringidas se restan solo de los contadores sombra
+del candidato; los outputs efectivos siguen 78 PEZ / 60 TIBURON. El reporte
+expone los IDs/reasons por jugador y los contadores efectivos/elegibles.

@@ -20,9 +20,10 @@ Reglas:
 """
 import json
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
+from .action_amount import classify_amount
 from .learn import HERO_NAMES, load_hands
 from .situation import board_texture
 
@@ -38,7 +39,7 @@ class Observation:
     kind: str                       # hero | villain
     pos: str
     action: str                     # f | x | c | b | r
-    amount: float
+    amount: Optional[float]
     sizing: Optional[float]         # b/r: amount / pot_before
     pot_before: float
     stack_effective: Optional[float]
@@ -52,6 +53,7 @@ class Observation:
     preflop_sequence: str           # 'UTG:b,BB:c'
     hand_known: bool
     cards: str
+    amount_evidence: dict = field(default_factory=dict)
 
 
 def _texture_class(board):
@@ -65,24 +67,24 @@ def _texture_class(board):
     return base
 
 
-def _seq(hand, street) -> List[Tuple[str, str, float]]:
-    """[(pos, act, amt)] de una calle (dicts o tuplas del DB)."""
+def _seq(hand, street) -> List[Tuple[str, str, Optional[float], dict]]:
+    """[(pos, act, amt, evidence)] sin completar importes ausentes."""
     s = (hand.get('streets', {}).get(street, {}) or {})
     out = []
     for a in s.get('actions', []) or []:
         if isinstance(a, dict):
             pos, act = a.get('pos'), a.get('action')
-            try:
-                amt = float(a.get('amount') or 0.0)
-            except (TypeError, ValueError):
-                amt = 0.0
+            amount_evidence = classify_amount(a)
         else:
             try:
-                pos, act, amt = a[0], a[1], float(a[2] or 0.0)
-            except (IndexError, TypeError, ValueError):
+                pos, act = a[0], a[1]
+                raw_amount = a[2] if len(a) > 2 else None
+                amount_evidence = classify_amount(raw_amount)
+            except (IndexError, TypeError):
                 continue
+        amt = amount_evidence.value
         if pos and act:
-            out.append((pos, act, amt))
+            out.append((pos, act, amt, amount_evidence.as_dict()))
     return out
 
 
@@ -125,7 +127,7 @@ def extract_hand(hand) -> List[Observation]:
     folded: set = set()
     total = 0.0                     # aportado en la mano hasta la decisión
     pf_raises = 0                    # raises preflop ya contados
-    pf_initiator = next((p for p, a, _ in reversed(pf_seq)
+    pf_initiator = next((p for p, a, _, _e in reversed(pf_seq)
                          if a in RAISE_ACTS), '')
 
     obs: List[Observation] = []
@@ -143,14 +145,15 @@ def extract_hand(hand) -> List[Observation]:
         if board:
             prev_board = list(board)
         street_facing = None          # label de la apuesta/raise vigente
-        for pos, act, amt in acts:
+        for pos, act, amt, amount_meta in acts:
             # `p` es una posta, no una decisión. En la base normalizada
             # aparece antes de las decisiones preflop; aporta al bote y al
             # stack del jugador, pero no puede alimentar una tabla de
             # comportamiento ni convertirse en una acción del Oracle.
             if act == 'p':
-                total += amt
-                invested[pos] = invested.get(pos, 0.0) + amt
+                if amt is not None:
+                    total += amt
+                    invested[pos] = invested.get(pos, 0.0) + amt
                 continue
             pot_before = total
             active = max(1, total_players - len(folded))
@@ -168,7 +171,7 @@ def extract_hand(hand) -> List[Observation]:
                                  lead_label(street, pos, pf_initiator,
                                             pf_raises >= 1))
             sizing = None
-            if act in RAISE_ACTS and pot_before > 0:
+            if act in RAISE_ACTS and amt is not None and pot_before > 0:
                 sizing = amt / pot_before
 
             # Una acción de una posición que NO tiene jugador no pertenece a
@@ -201,7 +204,8 @@ def extract_hand(hand) -> List[Observation]:
                 street=street,
                 player=name,
                 kind='hero' if name in HERO_NAMES else 'villain',
-                pos=pos, action=act, amount=amt, sizing=sizing,
+                pos=pos, action=act, amount=amt,
+                amount_evidence=amount_meta, sizing=sizing,
                 pot_before=pot_before,
                 stack_effective=eff_stack,
                 spr=eff_stack / pot_before
@@ -212,14 +216,16 @@ def extract_hand(hand) -> List[Observation]:
                 texture_class=tclass,
                 facing=facing,
                 raised_before=pf_raises if street == 'preflop' else 0,
-                preflop_sequence='/'.join(f'{p}:{a}' for p, a, _ in pf_seq),
+                preflop_sequence='/'.join(f'{p}:{a}'
+                                          for p, a, _m, _e in pf_seq),
                 hand_known=bool(cards_of.get(pos)),
                 cards=cards_of.get(pos, '')))
 
             if street == 'preflop' and act in RAISE_ACTS:
                 pf_raises += 1
-            total += amt
-            invested[pos] = invested.get(pos, 0.0) + amt
+            if amt is not None:
+                total += amt
+                invested[pos] = invested.get(pos, 0.0) + amt
             if act == 'f':
                 folded.add(pos)
     return obs

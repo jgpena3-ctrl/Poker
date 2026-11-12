@@ -27,6 +27,7 @@ import datetime
 import hashlib
 import io
 import json
+import math
 import os
 from collections import Counter, defaultdict
 from dataclasses import asdict, dataclass, field
@@ -42,10 +43,21 @@ from .profile import (
 )
 from .provenance_contract import (
     INCOMPATIBLE,
+    ORIGIN_REBUILT,
     PARTIAL,
+    VERIFIED,
+    UNKNOWN as PROVENANCE_UNKNOWN,
     build_models_envelope,
     profiles_envelope,
 )
+from .field_eligibility import (
+    CONSUMER_PREFLOP_STATS,
+    assess_hand,
+    load_declared,
+    preflop_event_contexts,
+    preflop_event_eligibility,
+)
+from .stats import MONEY_CATS, RAISE_CATS
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROFILES_PATH = os.path.join(ROOT, 'data', 'profiles.json')
@@ -98,6 +110,9 @@ class LabelDecision:
     uncertainty: List[str] = field(default_factory=list)
     rules_blocking: List[str] = field(default_factory=list)
     reproducible: Optional[bool] = None
+    evidence_eligible: Optional[bool] = None
+    provenance_compatible: Optional[bool] = None
+    eligibility_projection: Dict[str, Any] = field(default_factory=dict)
     valid_for_serving: Optional[bool] = None
     notes: List[str] = field(default_factory=list)
 
@@ -167,6 +182,8 @@ def _current_provenance():
         'provenance': ('data/hands_db.jsonl · ventana fiable 877 · '
                        'build actual'),
         'provenance_status': env.status,
+        'origin': env.origin,
+        'database_hash': env.database_hash,
         'window': env.window,
         'window_hash': env.window_hash,
         'built_commit': env.code_commit,
@@ -191,6 +208,133 @@ def _historical_provenance():
     }
 
 
+def label_provenance_compatible(provenance):
+    """Regla explícita: solo base/ventana actuales verificadas son aptas.
+
+    No se eleva `partial`, `unknown` ni `incompatible` por coincidencia de
+    etiquetas o por reproducibilidad aritmética.
+    """
+    return bool(
+        provenance.get('provenance_status') == VERIFIED
+        and provenance.get('origin') == ORIGIN_REBUILT
+        and provenance.get('window') == 'reliable_only'
+        and provenance.get('database_hash')
+        and provenance.get('window_hash')
+        and provenance.get('hands_n') == 877
+        and provenance.get('built_commit')
+        and provenance.get('code_dirty') is False)
+
+
+def _label_evidence_projection(hands, profiles, declared=None):
+    """Proyecta P0-2 en las estadísticas que sustentan etiquetas.
+
+    No reconstruye ni altera Profiles.from_hands. Devuelve contadores sombra
+    por jugador después de quitar solo los eventos preflop que P0-2 marca como
+    restringidos para `preflop_stats`, además de un rastro de esos eventos.
+    """
+    declared = declared if declared is not None else load_declared()
+    removed = defaultdict(lambda: {
+        'vpip_opp': 0, 'vpip_act': 0, 'pfr_opp': 0, 'pfr_act': 0,
+        'events': [],
+    })
+    event_counts = Counter()
+    for hand in hands:
+        he = assess_hand(hand, declared)
+        for event, seq_i, _step in preflop_event_contexts(hand):
+            if not event.player:
+                continue
+            event_counts[event.player] += 1
+            eligibility = preflop_event_eligibility(
+                he, event, seq_i, CONSUMER_PREFLOP_STATS)
+            if eligibility.usable:
+                continue
+            row = removed[event.player]
+            row['vpip_opp'] += 1
+            row['pfr_opp'] += 1
+            row['vpip_act'] += int(event.category in MONEY_CATS)
+            row['pfr_act'] += int(event.category in RAISE_CATS)
+            row['events'].append({
+                'hand_id': event.hand_id,
+                'seq_index': seq_i,
+                'position': event.pos,
+                'category': event.category,
+                'reason': list(eligibility.reasons),
+                'root_code': eligibility.root_code,
+                'amount_value_status': event.amount_evidence.value_status,
+                'amount_origin_status': event.amount_evidence.origin_status,
+            })
+
+    projected = {}
+    for name, profile in profiles.items():
+        counts = dict(profile.counts or {})
+        vpip_opp, vpip_act = counts.get('vpip', (0, 0))
+        pfr_opp, pfr_act = counts.get('pfr', (0, 0))
+        cut = removed.get(name, {})
+        eligible_vpip_opp = vpip_opp - cut.get('vpip_opp', 0)
+        eligible_vpip_act = vpip_act - cut.get('vpip_act', 0)
+        eligible_pfr_opp = pfr_opp - cut.get('pfr_opp', 0)
+        eligible_pfr_act = pfr_act - cut.get('pfr_act', 0)
+        projected[name] = {
+            'status': 'computed',
+            'preflop_events_seen': event_counts.get(name, 0),
+            'preflop_events_restricted': len(cut.get('events', [])),
+            'restricted_events': list(cut.get('events', [])),
+            'vpip_effective_opp_act': [vpip_opp, vpip_act],
+            'pfr_effective_opp_act': [pfr_opp, pfr_act],
+            'vpip_eligible_opp_act': [eligible_vpip_opp,
+                                      eligible_vpip_act],
+            'pfr_eligible_opp_act': [eligible_pfr_opp, eligible_pfr_act],
+            'eligible_vpip': (eligible_vpip_act / eligible_vpip_opp
+                              if eligible_vpip_opp > 0 else None),
+            'eligible_pfr': (eligible_pfr_act / eligible_pfr_opp
+                             if eligible_pfr_opp > 0 else None),
+            'stack_observations': None,
+            'stack_missing_observations': None,
+        }
+    # Stack evidence is row based: numeric `players[].stack` values are kept,
+    # absent/invalid values are counted but never substituted by zero.
+    stack_counts = defaultdict(Counter)
+    stack_values = defaultdict(list)
+    for hand in hands:
+        for player in hand.get('players', []):
+            name = player.get('name')
+            if not name:
+                continue
+            raw = player.get('stack')
+            if raw is None:
+                stack_counts[name]['absent'] += 1
+                continue
+            try:
+                value = float(raw)
+            except (TypeError, ValueError, OverflowError):
+                stack_counts[name]['invalid'] += 1
+                continue
+            if not math.isfinite(value) or value < 0:
+                stack_counts[name]['invalid'] += 1
+            else:
+                stack_counts[name]['numeric'] += 1
+                stack_values[name].append(value)
+                if value == 0:
+                    stack_counts[name]['known_zero'] += 1
+                else:
+                    stack_counts[name]['known_positive'] += 1
+    for name in profiles:
+        stack = stack_counts[name]
+        projected[name]['stack_observations'] = stack['numeric']
+        projected[name]['stack_rows_eligible_by_p02'] = stack['numeric']
+        projected[name]['stack_rows_restricted_by_p02'] = (
+            stack['absent'] + stack['invalid'])
+        projected[name]['eligible_stack_mean_bb'] = (
+            sum(stack_values[name]) / len(stack_values[name])
+            if stack_values[name] else None)
+        projected[name]['stack_missing_observations'] = stack['absent']
+        projected[name]['stack_invalid_observations'] = stack['invalid']
+        projected[name]['stack_known_zero_observations'] = stack['known_zero']
+        projected[name]['stack_known_positive_observations'] = \
+            stack['known_positive']
+    return projected
+
+
 def _state_from_evidence(n_rule_observations):
     if n_rule_observations is None or n_rule_observations <= 0:
         return STATE_INSUFFICIENT
@@ -204,113 +348,157 @@ def _state_from_evidence(n_rule_observations):
 # ---------------------------------------------------------------------------
 
 def training_decision(profile, n_stack_observations, hands_n,
-                      provenance=None):
-    """Traza exacta de la etiqueta de entrenamiento para un PlayerProfile."""
+                      provenance=None, eligibility_projection=None):
+    """Separa salida efectiva, evidencia elegible y aptitud para serving."""
     provenance = provenance or _current_provenance()
-    vpip = profile.stats.get('vpip')
-    pfr = profile.stats.get('pfr')
-    stack = profile.stack_mean
+    projection = dict(eligibility_projection or {})
     counts = dict(profile.counts or {})
     n = profile.n
+    stack = profile.stack_mean
+    vpip = profile.stats.get('vpip')
+    pfr = profile.stats.get('pfr')
 
+    eligible_vpip = projection.get('eligible_vpip')
+    eligible_pfr = projection.get('eligible_pfr')
+    eligible_stack = projection.get('eligible_stack_mean_bb')
+    projection_computed = projection.get('status') == 'computed'
+    provenance_compatible = label_provenance_compatible(provenance)
+
+    # `label` reproduce exactamente el clasificador efectivo. El candidato del
+    # contrato usa la proyección P0-2 y no alimenta serving.
+    label = simple_label(vpip, pfr, stack)
+    effective_stack_rule = stack is not None and stack < STACK_FISH_BB
+    if effective_stack_rule:
+        method = 'stack_mean_lt_50bb'
+    elif vpip is not None and pfr is not None:
+        method = ('loose_passive_fallback'
+                  if vpip > VPIP_FALLBACK_MIN and pfr < PFR_FALLBACK_MAX
+                  else 'default_rest')
+    elif stack is not None:
+        method = 'default_rest_no_stats'
+    else:
+        method = 'default_no_evidence'
+
+    candidate = simple_label(eligible_vpip, eligible_pfr, eligible_stack)
+    candidate_stack_rule = (eligible_stack is not None
+                            and eligible_stack < STACK_FISH_BB)
+    if candidate_stack_rule:
+        candidate_method = 'stack_mean_lt_50bb'
+        n_rule_obs = projection.get('stack_rows_eligible_by_p02') or 0
+        evidence_eligible = bool(
+            projection_computed and n_rule_obs > 0
+            and n_rule_obs == n_stack_observations)
+    elif eligible_vpip is not None and eligible_pfr is not None:
+        candidate_method = ('loose_passive_fallback' if candidate == PEZ
+                            else 'default_rest')
+        n_rule_obs = (projection.get('vpip_eligible_opp_act') or [0, 0])[0]
+        evidence_eligible = bool(projection_computed and n_rule_obs > 0)
+    elif eligible_stack is not None:
+        candidate_method = 'default_rest_no_stats'
+        n_rule_obs = 0
+        evidence_eligible = False
+    else:
+        candidate_method = 'default_no_evidence'
+        n_rule_obs = 0
+        evidence_eligible = False
+
+    state = _state_from_evidence(n_rule_obs)
+    if not projection_computed:
+        evidence_eligible = False
+        state = STATE_INSUFFICIENT
+
+    uncertainty = []
+    blocking = []
+    if candidate_stack_rule:
+        uncertainty.append(
+            'regla de stack: %.2f BB < %.1f BB; margen %.2f BB'
+            % (eligible_stack, STACK_FISH_BB,
+               STACK_FISH_BB - eligible_stack))
+    elif candidate_method == 'loose_passive_fallback':
+        uncertainty.append(
+            'fallback usa VPIP/PFR elegibles; serving no dispone de estas '
+            'variables')
+    elif candidate_method == 'default_rest_no_stats':
+        uncertainty.append('TIBURON efectivo es fallback; faltan VPIP/PFR')
+        blocking.append('VPIP/PFR elegibles ausentes; no se valida TIBURON')
+    elif candidate_method == 'default_no_evidence':
+        uncertainty.append('TIBURON efectivo por defecto sin evidencia')
+        blocking.append('stack, VPIP y PFR ausentes en evidencia elegible')
+    if state == STATE_PROVISIONAL:
+        uncertainty.append(
+            'n=%s < %s: primer tramo HANDS_BANDS (diagnostico, no '
+            'intervalo de confianza)' % (n_rule_obs, FIRST_RELIABILITY_BAND))
+    if not projection_computed:
+        blocking.append('no se calculó proyección P0-2 para las observaciones')
+    elif projection.get('preflop_events_restricted', 0):
+        uncertainty.append(
+            '%s eventos P0-2 restringidos excluidos del candidato de etiqueta'
+            % projection['preflop_events_restricted'])
+    if not evidence_eligible:
+        blocking.append('la evidencia elegible no satisface las entradas de la regla')
+    if provenance['provenance_status'] == PARTIAL:
+        uncertainty.append(
+            'procedencia P0-4 partial: no apta para serving')
+    if provenance['provenance_status'] in (INCOMPATIBLE, PROVENANCE_UNKNOWN):
+        uncertainty.append('procedencia incompatible/desconocida: no apta para serving')
+        state = (STATE_INCOMPATIBLE if provenance['provenance_status'] == INCOMPATIBLE
+                 else STATE_UNKNOWN)
+
+    valid = bool(evidence_eligible and provenance_compatible
+                 and state == STATE_CURRENT and candidate in (PEZ, TIBURON))
+    contract_label = candidate if valid else LABEL_UNKNOWN
     variables = {
-        'stack_mean_bb': stack,
+        'effective_stack_mean_bb': stack,
+        'eligible_stack_mean_bb': eligible_stack,
         'stack_threshold_bb': STACK_FISH_BB,
-        'vpip': vpip,
+        'effective_vpip': vpip,
+        'effective_pfr': pfr,
+        'eligible_vpip': eligible_vpip,
+        'eligible_pfr': eligible_pfr,
         'vpip_threshold': VPIP_FALLBACK_MIN,
-        'pfr': pfr,
         'pfr_threshold': PFR_FALLBACK_MAX,
         'vpip_counts_opp_act': counts.get('vpip'),
         'pfr_counts_opp_act': counts.get('pfr'),
         'n_vpip_opportunities': n,
         'stack_observations': n_stack_observations,
         'reliability_band_first': FIRST_RELIABILITY_BAND,
+        'candidate_label_from_eligible_evidence': candidate,
+        'candidate_method_from_eligible_evidence': candidate_method,
     }
     relevant = {
-        'n_vpip_opportunities': n,
-        'vpip_opp': (counts.get('vpip') or (None, None))[0],
-        'vpip_act': (counts.get('vpip') or (None, None))[1],
-        'pfr_opp': (counts.get('pfr') or (None, None))[0],
-        'pfr_act': (counts.get('pfr') or (None, None))[1],
+        'n_vpip_opportunities_effective': n,
+        'vpip_opp_effective': (counts.get('vpip') or (None, None))[0],
+        'vpip_act_effective': (counts.get('vpip') or (None, None))[1],
+        'pfr_opp_effective': (counts.get('pfr') or (None, None))[0],
+        'pfr_act_effective': (counts.get('pfr') or (None, None))[1],
+        'vpip_opp_eligible': (projection.get('vpip_eligible_opp_act')
+                              or [None, None])[0],
+        'vpip_act_eligible': (projection.get('vpip_eligible_opp_act')
+                              or [None, None])[1],
+        'pfr_opp_eligible': (projection.get('pfr_eligible_opp_act')
+                             or [None, None])[0],
+        'pfr_act_eligible': (projection.get('pfr_eligible_opp_act')
+                             or [None, None])[1],
         'stack_observations': n_stack_observations,
+        'stack_missing_observations': projection.get(
+            'stack_missing_observations'),
         'hands_in_window': hands_n,
     }
-
-    uncertainty = []
-    blocking = []
-    label = TIBURON
-
-    if stack is not None and stack < STACK_FISH_BB:
-        label = PEZ
-        method = 'stack_mean_lt_50bb'
-        n_rule_obs = n_stack_observations or 0
-        state = _state_from_evidence(n_rule_obs)
-        uncertainty.append(
-            'regla de stack: %.2f BB < %.1f BB; margen %.2f BB'
-            % (stack, STACK_FISH_BB, STACK_FISH_BB - stack))
-    elif vpip is not None and pfr is not None:
-        n_rule_obs = n
-        state = _state_from_evidence(n_rule_obs)
-        if vpip > VPIP_FALLBACK_MIN and pfr < PFR_FALLBACK_MAX:
-            label = PEZ
-            method = 'loose_passive_fallback'
-            uncertainty.append(
-                'fallback VPIP>0.32 y PFR<0.10; serving no dispone de estas '
-                'variables')
-        else:
-            label = TIBURON
-            method = 'default_rest'
-    elif stack is not None:
-        # stack >= 50 but no VPIP/PFR: TIBURON is the classifier default,
-        # not a validated classification.
-        label = TIBURON
-        method = 'default_rest_no_stats'
-        state = STATE_INSUFFICIENT
-        blocking.append(
-            'VPIP/PFR ausentes; el fallback estadistico no se puede evaluar')
-        uncertainty.append('TIBURON por defecto sin evidencia estadistica')
-    else:
-        label = TIBURON
-        method = 'default_no_evidence'
-        state = STATE_INSUFFICIENT
-        blocking.append('stack, VPIP y PFR ausentes')
-        uncertainty.append('TIBURON por defecto sin ninguna evidencia')
-
-    if state == STATE_PROVISIONAL:
-        uncertainty.append(
-            'n=%s < %s: primer tramo de HANDS_BANDS (diagnostico, no '
-            'intervalo de confianza)' % (n, FIRST_RELIABILITY_BAND))
-    if provenance['provenance_status'] == PARTIAL:
-        uncertainty.append(
-            'procedencia P0-4 partial: reproduccion de la base no demostrada')
-    if provenance['provenance_status'] == INCOMPATIBLE:
-        state = STATE_INCOMPATIBLE
-        uncertainty.append('procedencia incompatible: no se usa como evidencia')
-
-    valid = (state in (STATE_CURRENT, STATE_PROVISIONAL)
-             and label in (PEZ, TIBURON))
-    contract_label = (label if state in (STATE_CURRENT, STATE_PROVISIONAL)
-                      else LABEL_UNKNOWN)
     return LabelDecision(
-        player=profile.player,
-        source='training_current',
-        label=label,
-        contract_label=contract_label,
-        state=state,
-        method=method,
-        variables=variables,
-        hands_n=hands_n,
+        player=profile.player, source='training_current', label=label,
+        contract_label=contract_label, state=state, method=method,
+        variables=variables, hands_n=hands_n,
         relevant_observations=relevant,
         provenance=provenance['provenance'],
         provenance_status=provenance['provenance_status'],
-        window=provenance['window'],
-        window_hash=provenance['window_hash'],
-        built_commit=provenance['built_commit'],
-        uncertainty=uncertainty,
-        rules_blocking=blocking,
-        reproducible=True,
-        valid_for_serving=valid,
-        notes=['la etiqueta efectiva no se modifica; el contrato es sombra'],
+        window=provenance['window'], window_hash=provenance['window_hash'],
+        built_commit=provenance['built_commit'], uncertainty=uncertainty,
+        rules_blocking=blocking, reproducible=True,
+        evidence_eligible=evidence_eligible,
+        provenance_compatible=provenance_compatible,
+        eligibility_projection=projection, valid_for_serving=valid,
+        notes=['label es salida efectiva; contract_label solo acepta evidencia '
+               'elegible y procedencia compatible; modo sombra'],
     )
 
 
@@ -365,8 +553,7 @@ def serving_decision(player_id, samples, state=None, source='serving',
         player=player_id,
         source=source,
         label=label,
-        contract_label=(label if state_contract == STATE_CURRENT
-                        else LABEL_UNKNOWN),
+        contract_label=LABEL_UNKNOWN,
         state=state_contract,
         method=method,
         variables={
@@ -386,8 +573,15 @@ def serving_decision(player_id, samples, state=None, source='serving',
         rules_blocking=['serving no tiene historial de manos; solo stack '
                         'visible'],
         reproducible=True,
-        valid_for_serving=(state_contract == STATE_CURRENT),
-        notes=['la etiqueta efectiva de serving no se modifica'],
+        evidence_eligible=(state_contract == STATE_CURRENT),
+        provenance_compatible=False,
+        eligibility_projection={
+            'status': 'simulated_session_not_p02_projected',
+            'stack_samples': n_obs,
+        },
+        valid_for_serving=False,
+        notes=['la etiqueta efectiva de serving no se modifica; la simulacion '
+               'no certifica procedencia de modelo'],
     )
 
 
@@ -415,7 +609,8 @@ def historical_decision(player, entry, current_evidence_available=True):
             built_commit=prov['built_commit'],
             uncertainty=['el jugador no aparece en el artefacto historico'],
             rules_blocking=['sin etiqueta historica que comparar'],
-            reproducible=False, valid_for_serving=False,
+            reproducible=False, evidence_eligible=False,
+            provenance_compatible=False, valid_for_serving=False,
         )
 
     stats = entry.get('stats') or {}
@@ -454,8 +649,9 @@ def historical_decision(player, entry, current_evidence_available=True):
             'sin contraparte en la evidencia actual: no conciliable con la '
             'base actual')
 
-    contract_label = (label if state == STATE_HISTORICAL
-                      and reproducible is True else LABEL_UNKNOWN)
+    # La coincidencia con los campos de un artefacto parcial solo reproduce
+    # ese resultado histórico; nunca lo convierte en evidencia actual.
+    contract_label = LABEL_UNKNOWN
     return LabelDecision(
         player=player, source='historical_artifact', label=label,
         contract_label=contract_label,
@@ -481,6 +677,11 @@ def historical_decision(player, entry, current_evidence_available=True):
         built_commit=prov['built_commit'],
         uncertainty=uncertainty, rules_blocking=blocking,
         reproducible=reproducible, valid_for_serving=False,
+        evidence_eligible=False, provenance_compatible=False,
+        eligibility_projection={
+            'status': 'historical_source_not_projected',
+            'current_observation_eligibility': None,
+        },
         notes=['etiqueta historica; no es una etiqueta calculada con '
                'evidencia actual'],
     )
@@ -545,7 +746,17 @@ def compare_labels(training, historical, serving, stack_only_label=None,
         detail={
             'training_method': training.method,
             'training_state': training.state,
+            'training_contract_label': training.contract_label,
+            'training_reproducible': training.reproducible,
+            'training_evidence_eligible': training.evidence_eligible,
+            'training_provenance_compatible':
+                training.provenance_compatible,
+            'training_valid_for_serving': training.valid_for_serving,
             'serving_method': serving.method,
+            'serving_contract_label': serving.contract_label,
+            'serving_evidence_eligible': serving.evidence_eligible,
+            'serving_provenance_compatible': serving.provenance_compatible,
+            'serving_valid_for_serving': serving.valid_for_serving,
             'training_uncertainty': list(training.uncertainty),
             'serving_uncertainty': list(serving.uncertainty),
             'training_variables': dict(training.variables),
@@ -623,6 +834,8 @@ def label_audit():
     prov = _current_provenance()
     hist_prov = _historical_provenance()
     serving = _serving_instance()
+    eligibility_by_player = _label_evidence_projection(
+        hands, profs.profiles)
 
     training_rows = {}
     serving_mean = {}
@@ -632,7 +845,8 @@ def label_audit():
     for name, profile in profs.profiles.items():
         n_stack = len(samples.get(name, []))
         training_rows[name] = training_decision(
-            profile, n_stack, hands_n, provenance=prov)
+            profile, n_stack, hands_n, provenance=prov,
+            eligibility_projection=eligibility_by_player.get(name))
         serving_mean[name] = serving_decision(
             name, samples.get(name, []), state={},
             source='serving_session_mean', instance=serving)
@@ -699,6 +913,13 @@ def label_audit():
         return dict(Counter(r.status for r in rows))
 
     training_labels = Counter(t.label for t in training_rows.values())
+    candidate_labels = Counter(
+        t.variables.get('candidate_label_from_eligible_evidence', LABEL_UNKNOWN)
+        for t in training_rows.values())
+    candidate_effective_differences = [
+        name for name, decision in training_rows.items()
+        if decision.variables.get('candidate_label_from_eligible_evidence')
+        != decision.label]
     contract_labels = Counter(t.contract_label
                               for t in training_rows.values())
     training_states = Counter(t.state for t in training_rows.values())
@@ -763,14 +984,39 @@ def label_audit():
             'players': len(training_rows),
             'labels': dict(training_labels),
             'labels_sha256': effective_labels_sha256,
+            'eligible_candidate_labels': dict(candidate_labels),
+            'candidate_effective_differences': sorted(
+                candidate_effective_differences),
             'contract_labels': dict(contract_labels),
             'states': dict(training_states),
+            'evidence_eligible': sum(
+                1 for t in training_rows.values()
+                if t.evidence_eligible),
+            'provenance_compatible': sum(
+                1 for t in training_rows.values()
+                if t.provenance_compatible),
+            'valid_for_serving': sum(
+                1 for t in training_rows.values()
+                if t.valid_for_serving),
+            'p02_restricted_label_events': sum(
+                p['preflop_events_restricted']
+                for p in eligibility_by_player.values()),
+            'players_with_p02_restricted_label_events': sorted(
+                n for n, p in eligibility_by_player.items()
+                if p['preflop_events_restricted']),
             'provisional': sum(1 for t in training_rows.values()
                                if t.state == STATE_PROVISIONAL),
             'current': sum(1 for t in training_rows.values()
                            if t.state == STATE_CURRENT),
             'insufficient': sum(1 for t in training_rows.values()
                                 if t.state == STATE_INSUFFICIENT),
+        },
+        'player_decisions': {
+            name: {
+                'decision': decision.as_dict(),
+                'p02_eligibility_projection': eligibility_by_player.get(name),
+            }
+            for name, decision in sorted(training_rows.items())
         },
         'historical': {
             'artifact': 'data/profiles.json',

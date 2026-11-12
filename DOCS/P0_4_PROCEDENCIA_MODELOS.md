@@ -266,46 +266,50 @@ live actuales. Evidencia: no hay ninguna llamada a `build_models`, `Oracle` o
 
 Flujo real:
 
-- `load_models()` (líneas 47-79) intenta `ProfileRangeModel.load()` y
-  `PostflopRangeModel.load()` primero; si existen artefactos históricos, los usa
-  sin verificar procedencia.
-- Si un artefacto falta o falla, reconstruye el modelo desde la base actual con
-  `load_hands(reliable_only=True)`.
-- Si `PostflopRangeModel.load()` perdió `_oracle`, reinyecta
-  `Oracle(build(hands, labels=dict(post.labels)))` desde la base actual
-  (líneas 70-79).
+- **Al auditar P0-4**, `load_models()` intentaba `ProfileRangeModel.load()` y
+  `PostflopRangeModel.load()` primero, y luego reinyectaba un Oracle de la base
+  actual sin verificar procedencia. Esa mezcla motivó `not_suitable`.
+- **Desde P0-6**, `load_models()` falla cerrado si cualquiera de los dos JSON
+  persistidos existe. No los carga ni construye un Oracle actual que se combine
+  con ellos. El error declara explícitamente la mezcla rechazada. Si ambos
+  ficheros faltaran, el fallback reconstruye los componentes desde las mismas
+  manos de entrada; esa ruta sigue sin elevar la procedencia `partial` a
+  `verified`.
+- La corrección es una protección de la herramienta auxiliar, no una
+  habilitación: la clasificación P0-4 continúa `not_suitable` para el modo de
+  artefactos históricos y no se presentan esos modelos como actuales.
 - `build_base_range()` usa `ProfileRangeModel.prob_vec` u `opening_range()`.
 - `run_pipeline()` usa `PostflopRangeModel.prob_vec`, `RangeState.update` y
   `equity_vs_range`.
-- La cabecera solo muestra milisegundos de carga (líneas 393-400), no la fuente
-  ni la procedencia de cada modelo.
+- El modo con JSON persistidos ahora se detiene con error claro; en fallback
+  sin esos archivos, la cabecera todavía no sella hash/commit de cada modelo.
 
 Matriz de fuentes:
 
 | Fuente | Tipo | Uso |
 |---|---|---|
-| `data/profile_ranges.json` | histórica | si `load()` tiene éxito |
-| `data/postflop_ranges.json` | histórica | si `load()` tiene éxito |
-| `data/hands_db.jsonl` | actual | fallback y reinyección de Oracle |
+| `data/profile_ranges.json` | histórica | detectada y rechazada por el guard |
+| `data/postflop_ranges.json` | histórica | detectada y rechazada por el guard |
+| `data/hands_db.jsonl` | actual | fallback únicamente si ambos JSON faltan |
 | `data/preflop_matrices.json` | desconocida | prior preflop vía `player_ranges` |
-| `Oracle` reconstruido | actual | prior postflop reinyectado |
+| `Oracle` reconstruido | actual | fallback fresco desde el mismo input |
 | fallback 0.2 | estático | cuando no hay Oracle y `n>0` |
 
-Combinaciones posibles:
-
-- perfil histórico + Oracle actual;
-- postflop histórico + Oracle actual;
-- perfil histórico + matrices de procedencia desconocida;
-- artefacto ausente + modelo reconstruido desde la base actual.
+En el código auditado por P0-4 eran posibles perfil/postflop históricos con
+Oracle actual y perfil histórico con matrices desconocidas. Desde P0-6, la
+presencia de cualquiera de los dos JSON hace que `load_models()` falle antes
+de cargar modelos; esas combinaciones quedan documentadas como riesgo
+histórico, no como flujo habilitado. Si ambos JSON faltan, la ruta fallback
+reconstruye los tres modelos desde la misma entrada, pero sigue con procedencia
+`partial`.
 
 Cachés implicadas: `_TABLES`, `_tables_cache`, `_scores_cache`, `_poblacion`,
 `_omega`, `_prior_grid`, `_board_buckets`.
 
-Clasificación: **`not_suitable`**. Existe una mezcla real entre artefactos
-históricos y Oracle reconstruido desde la ventana actual; no hay separación de
-fuentes ni comprobación de compatibilidad, y la interfaz no comunica qué modelo
-está usando. No se declara compatible por tener datos disponibles o estructuras
-técnicamente legibles.
+Clasificación: **`not_suitable`**. En la revisión P0-4 se reprodujo una mezcla
+real entre artefactos históricos y Oracle reconstruido desde la ventana actual.
+P0-6 añade un guard fail-closed para JSON persistidos; el guard no eleva la
+procedencia ni cambia la clasificación auxiliar a apta.
 
 ## 10. Pruebas y no interferencia
 
@@ -331,8 +335,8 @@ ni realizaron sesiones reales.
 
 ## 11. Limitaciones abiertas
 
-- `range_lab_gui.py` sigue pudiendo mezclar artefactos históricos y Oracle
-  actual; no se corrige en este bloque.
+- `range_lab_gui.py` permanece `not_suitable` para los artefactos persistidos;
+  P0-6 impide la mezcla con un error explícito. No se regeneraron artefactos.
 - `diagnosticar_56_154.py` sigue dependiendo del snapshot histórico, que debe
   conservarse como evidencia.
 - `preflop_matrices.json` sigue sin procedencia verificable y sigue alimentando

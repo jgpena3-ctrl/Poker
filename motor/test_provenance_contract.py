@@ -152,12 +152,11 @@ def test_auxiliary_tools_classification_and_flow():
     gui = envs['range_lab_gui']
     assert gui.classification == CLASS_NOT_SUITABLE
     assert gui.status == INCOMPATIBLE
-    assert any('mezclando' in n or 'mezcla' in n for n in gui.notes)
-    assert any('no comunica' in n for n in gui.notes)
+    assert any('rechaza' in n or 'bloqueada' in n for n in gui.notes)
     flows = {f['tool']: f for f in auxiliary_tool_flows()}
     assert flows['diagnosticar_56_154']['models_built'] == []
-    assert 'Oracle(build(hands, labels)) si _oracle is None' in (
-        flows['range_lab_gui']['models_built'])
+    assert any('RuntimeError' in x
+               for x in flows['range_lab_gui']['models_built'])
     assert flows['range_lab_gui']['classification'] == CLASS_NOT_SUITABLE
 
 
