@@ -168,7 +168,7 @@ def test_historical_decision_does_not_fill_missing_fields():
     d = historical_decision('X', {'player': 'X', 'label': PEZ,
                                   'stats': {}, 'n': 2})
     assert d.label == PEZ
-    assert d.contract_label == PEZ
+    assert d.contract_label == LABEL_UNKNOWN  # no reproducible sin campos
     assert d.state == STATE_HISTORICAL
     assert d.hands_n is None
     assert d.relevant_observations['pfr_opp'] is None
@@ -177,6 +177,15 @@ def test_historical_decision_does_not_fill_missing_fields():
     assert d.window_hash is None
     assert d.built_commit is None
     assert any('no registra' in u for u in d.uncertainty)
+
+
+def test_historical_consistent_fields_make_label_reproducible():
+    d = historical_decision('X', {
+        'label': PEZ, 'stats': {'vpip': 1.0, 'pfr': 0.0},
+        'stack_mean': 123.5})
+    assert d.reproducible is True
+    assert d.contract_label == PEZ
+    assert d.state == STATE_HISTORICAL
 
 
 def test_historical_entry_without_label_is_unknown_not_tiburon():

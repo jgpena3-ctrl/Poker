@@ -418,7 +418,7 @@ python -m pytest motor/test_label_contract.py motor/test_profile.py \
   motor/test_behavior.py motor/test_asistente_live.py \
   motor/test_provenance_contract.py motor/test_field_eligibility.py \
   motor/test_postflop_evidence.py motor/test_preflop_contract.py -q
-253 passed, 1 xfailed
+254 passed, 1 xfailed
 ```
 
 Las dos advertencias de `_prior_grid` (`FLAT_PRIOR=0.15`) son preexistentes y no
@@ -426,7 +426,7 @@ provienen de P0-5.
 
 ### 7.3 Suite completa: límite declarado
 
-`python -m pytest motor -q` da **1035 passed, 1 skipped, 6 xfailed, 23 failed**.
+`python -m pytest motor -q` da **1036 passed, 1 skipped, 6 xfailed, 23 failed**.
 Los 23 fallos son preexistentes y no pertenecen a P0-5: fijan cifras de la base
 normalizada de 1253/1182 manos (`test_accion_p`, `test_auditar_origen`,
 `test_cm004`, `test_diagnostico_grabador`, `test_lista_saneamiento`,

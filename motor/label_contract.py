@@ -455,7 +455,7 @@ def historical_decision(player, entry, current_evidence_available=True):
             'base actual')
 
     contract_label = (label if state == STATE_HISTORICAL
-                      else LABEL_UNKNOWN)
+                      and reproducible is True else LABEL_UNKNOWN)
     return LabelDecision(
         player=player, source='historical_artifact', label=label,
         contract_label=contract_label,
