@@ -1,242 +1,447 @@
-# F0.2 - contrato de integridad de escritura y arnés de fallos
+# F0 — Contrato de integridad de escritura
 
-**Estado:** F0.2 implementado para reauditoría. No implementa F1: no hay mutex
-real, journal en disco, CAS, backups, cambios de writers, cambios de datos ni
-cambios de conducta preflop/postflop.
+## Estado de este documento
 
-## 1. Qué fija F0.2
+- Revisión de implementación/arnés: `F0.7 (2026-11-12)`; la versión del
+  contrato serializado/journal permanece `F0.5` porque no cambió su esquema.
+- HEAD auditado: `1a9a4277e7176abadf2c20af6cd6a3aab792d970`.
+- Estado de implementación: `F0.7_LISTO_PARA_REAUDITORIA`.
+- Estado Git: tres archivos F0 modificados, sin cambios staged ni untracked;
+  `data/` intacta.
+- Este documento **no declara F0 cerrado**. El cierre corresponde a una
+  reauditoría independiente.
+- No se inicia F1.
+- No se implementan mutex real, journal en disco, CAS físico, backup,
+  temporal ni replace.
+- `MULTIWAY_SOPORTADO` permanece en `False`.
 
-F0.2 separa el contrato de la implementación. El contrato vive en
-`motor/write_contract.py` y el arnés en `motor/test_write_contract.py`.
+## 1. Objetivo y alcance
 
-Reglas cerradas:
+F0 define el vocabulario, las políticas, las transiciones y las garantías
+verificables de una escritura canónica. F0 no abre archivos, no crea mutex, no
+escribe journal y no toca `data/`. F1/F2 deben implementar el contrato sin
+inventar estados ni aceptar evidencia incompleta.
 
-- Exclusión: mutex con nombre de Windows `Global\Poker.HandsDB.v1`.
-- Sin fallback a lockfile, `msvcrt.locking` ni otro mecanismo.
-- Sin soporte multi-host: si el volumen no garantiza el mutex, se aborta.
-- `WAIT_ABANDONED`: se adquiere, se ejecuta recuperación y solo después se
-  escribe.
-- Timeout o fallo al crear/adquirir el mutex: abortar de forma visible.
-- Lectores: instantánea verificada bajo el mismo mutex exclusivo; no hay lock
-  de lectura.
-- Journal corrupto, truncado, con evidencia no ligada al plan o con un tercer
-  hash: cuarentena. Prohibida la restauración automática.
-- Pins: se proponen para revisión; no se actualizan en runtime.
-- Una ausencia no se convierte en cero, en hash válido ni en evidencia.
-- El `WritePlan` es autoritativo: la evidencia no puede sobrescribir sus
-  campos ni una evidencia ya verificada. Los reintentos solo son idempotentes
-  si repiten exactamente la evidencia ya fijada.
-- El CAS exige hash, líneas y bytes de la preimagen. Una discrepancia produce
-  el estado terminal `cas_conflict`; no se reintenta con otra preimagen.
-- El backup se identifica por `backup_txn_id`, disposición y nombre de archivo;
-  debe ser copia exacta (hash y bytes) de la preimagen verificada.
-- El manifiesto se declara en el plan y pasa por `manifest_pending` antes de
-  su verificación; `manifest_path` debe ser `data/calibration_window.json`.
-- Toda ruta se canonicaliza y se rechaza cualquier alias, symlink, junction o
-  ruta fuera del repositorio.
-- Toda evidencia se congela en profundidad; los mappings y secuencias anidados
-  no se pueden mutar después de entrar en un `TransactionRecord`.
+F0.7 corrige exclusivamente la autorización por `id(record)` reutilizable
+reproducida por la reauditoría independiente de F0.6. La instancia autorizada
+se conserva por referencia fuerte y se compara con `is`. D1 sigue pendiente de
+confirmación independiente; no se inicia F1.
 
-## 2. Máquina de estados
+## 2. Modelo de amenaza
 
-Secuencia normal:
+### 2.1 Amenazas cubiertas
 
-```text
-prepared
-  -> preimage_verified
-  -> backup_verified
-  -> temp_verified
-  -> replaced
-  -> post_verified
-  -> manifest_pending
-  -> manifest_verified
-  -> pins_proposed
-  -> committed
-```
+F0 cubre:
 
-Estados terminales:
+- Uso normal de la API con planes, declaraciones, evidencia y transiciones
+  incompletas o contradictorias.
+- Errores de programación que intentan saltar estados, reutilizar evidencia,
+  debilitar políticas o completar una transacción invalidada.
+- Extensibilidad accidental: subclases, duck typing, objetos mutables,
+  políticas globales sustituidas o serializadores alternativos.
+- Reutilización de campos copiados (`authority_id`, `txn_id`,
+  `plan_fingerprint`, `transaction_uid`) para intentar adquirir autoridad por
+  coincidencia.
+- Journal estructuralmente válido pero no autenticado por una autoridad viva
+  del proceso.
+- Errores de tipo, rango, conversión, Unicode y nombres de artefactos.
 
-```text
-committed | cas_conflict | aborted | failed | quarantined
-```
+### 2.2 Amenazas no cubiertas
 
-Reglas de fallo:
+F0 es un contrato Python, no una frontera de seguridad frente a código
+arbitrario dentro del mismo proceso. No se garantiza protección contra código
+que inspecciona y modifica módulos, globals, funciones privadas, el registro
+de autoridades o los objetos en memoria. `frozen=True`, `NamedTuple`,
+fingerprints y nombres privados no sustituyen un límite de proceso.
 
-- `aborted`, `failed` y `quarantined` se permiten desde `prepared` hasta
-  `temp_verified`.
-- Antes de `replaced` se puede abortar o fallar sin tocar la base.
-- Desde `prepared`, una discrepancia de CAS entra en `cas_conflict`, que es
-  terminal y no admite reintento con otra preimagen, evidencia o plan.
-- Desde `replaced` solo se permite `post_verified` o `quarantined`. Un fallo
-  posterior al reemplazo no puede presentarse como `failed` ni como `aborted`.
-- `committed` exige postimagen verificada, operación verificada, manifiesto
-  resuelto y pins propuestos.
-- `manifest_pending` registra la decisión de manifiesto antes de verificarlo;
-  no se puede saltar hacia `manifest_verified`.
-- Ningún estado terminal admite transición ni reintento.
-- Un reintento de un estado no terminal solo se acepta sin cambios de
-  evidencia y no añade un estado al historial.
+Tampoco se cubren:
 
-`CasConflict` expone en `.record` el registro terminal `cas_conflict` que F1
-debe persistir. El registro previo al conflicto no es un journal válido para
-continuar: la recuperación solo acepta la cadena que termina en el estado
-terminal.
+- Recuperación entre reinicios.
+- Coordinación multiproceso o multi-host.
+- Persistencia de la unicidad de `txn_id`.
+- Hardlinks, junctions, symlinks creados después de validar o carreras TOCTOU.
+- Uso deliberado de la misma instancia de registro autorizada por código que
+  ya controla el proceso. La autoridad se liga a la instancia, pero un
+  atacante con acceso al proceso puede usar el objeto autorizado o modificar
+  el registro en memoria. Esa frontera queda fuera de F0 y deberá ser tratada
+  por F1 con persistencia y controles de proceso.
 
-## 3. Evidencia exigida
+La limitación de código hostil no se usa para dejar bypasses accesibles por la
+API contractual normal.
 
-| Estado | Evidencia mínima |
-|---|---|
-| `prepared` | `txn_id`, `writer`, `target_path`, `operation`, hashes/líneas/bytes de preimagen y candidato, `lock_policy_fingerprint`, `planned_at` |
-| `preimage_verified` | `observed_pre_sha256`, `observed_pre_lines` y `observed_pre_bytes` iguales a la preimagen declarada; discrepancia = `cas_conflict` |
-| `cas_conflict` | preimagen observada completa, `cas_conflict_reason` y `cas_conflict_at`; exige discrepancia real |
-| `backup_verified` | `backup_path` canónico, distinto del target y bajo `data/_backup`, `backup_txn_id` igual a `txn_id`, disposición `created` o `reused_same_txn`, y `backup_sha256`/`backup_bytes` iguales a la preimagen |
-| `temp_verified` | `temp_path` canónico, distinto de target/backup/manifiesto/pins, con `txn_id` y sufijo `.tmp`; `temp_sha256`, `temp_lines` y `temp_bytes` iguales al candidato |
-| `replaced` | `replaced_at` ISO-8601 con zona, `operation_verified=True` y la evidencia específica de la operación |
-| `post_verified` | `post_sha256`, `post_lines` y `post_bytes` iguales al candidato |
-| `manifest_pending` | `manifest_pending_at`; si el plan no exige manifiesto, `manifest_skipped_reason` |
-| `manifest_verified` | si el plan exige manifiesto, `manifest_observed_pre_sha256`, `manifest_sha256` y `manifest_verified=True`; si no, `manifest_skipped_reason` |
-| `pins_proposed` | `pins_applied=False`; si el plan exige pins, `pins_proposed_sha256`, `pins_symbols`, `pins_proposed_values` y `pins_source_sha256`; si no, `pins_skipped_reason` |
-| `committed` | `committed_at`, postimagen verificada, manifiesto resuelto y pins no aplicados |
-| `aborted` | `abort_reason` |
-| `failed` | `failure_reason` |
-| `quarantined` | `quarantine_reason` |
+## 3. Autoridad, identidad y transacciones (D1)
 
-`pins_applied=True` siempre se rechaza. `pins_proposed_sha256` no es un hash
-libre: debe ser el SHA-256 canónico de `pins_proposed_values`, que debe cubrir
-exactamente `PINS_SYMBOLS`; `HANDS_DB_SHA256`, `HANDS_DB_LINEAS` y
-`HANDS_DB_COMMIT` se contrastan con el candidato y con el formato de commit.
-`pins_expected_sha256` es obligatorio en el plan y `pins_source_sha256` debe
-coincidir con él, de modo que la propuesta quede ligada a la ruta y al
-contenido de partida. Los pins son código: su actualización es una revisión
-separada, no parte de la transacción.
+### 3.1 Identidad
 
-## 4. Destinos y contrato de writers
+Cada transacción creada por `new_transaction()` recibe:
 
-`TARGET_POLICIES` declara categorías y operaciones permitidas:
+- `authority_id`: identificador opaco de la autoridad en memoria.
+- `transaction_uid`: identidad única de la transacción, distinta de
+  `txn_id` y del fingerprint del plan.
 
-| Categoría | Destinos | Operaciones | Controles mínimos |
-|---|---|---|---|
-| base | `data/hands_db.jsonl` | `append`, `rewrite` | lock, CAS, backup, manifiesto, pins |
-| manifiesto | `data/calibration_window.json` | `rewrite` | lock, CAS, backup, manifiesto |
-| modelo | `data/profile_ranges.json`, `data/postflop_ranges.json` | `rewrite` | lock, CAS, backup, manifiesto |
-| derivado | `preflop_stats`, `player_stats`, `profiles`, `behavior`, `behavior_probs`, `observations` | `rewrite` | lock, CAS, backup, manifiesto |
+La autoridad se registra en `_AUTHORITIES` y queda ligada a:
 
-`WriterDeclaration` exige todos los controles de la política de cada destino.
-Un writer que declare un derivado con todos los controles en `False` falla; un
-destino desconocido también falla. Las operaciones no permitidas por la
-política (por ejemplo `append` sobre el manifiesto) se rechazan. El contrato
-no declara que ningún writer actual ya cumpla esto: F3 debe migrar cada uno y
-demostrarlo con sus pruebas.
+- `txn_id`;
+- fingerprint exacto del plan;
+- `transaction_uid`;
+- historial autorizado (`authorized_history`);
+- referencias fuertes a registros autorizados (`authorized_records`);
+- estado activo/inactivo.
 
-## 5. Rutas, backups y transacciones
+`_authorize_record_instance()` conserva el propio objeto
+`TransactionRecord` en `authorized_records`; `_check_authority()` exige que
+alguna referencia autorizada sea el objeto recibido (`is`). No se guarda ni se
+usa `id(record)` como capacidad: Python puede reutilizar ese entero después de
+liberar el objeto. Una autoridad de otra transacción no se acepta aunque
+coincidan `txn_id` y plan. `dataclasses.replace`, copias y reconstrucciones
+manuales con todos los campos copiados son objetos distintos y no pueden
+iniciar transiciones.
 
-- `canonical_path()` resuelve `..`, symlinks y junctions; `WritePlan` exige
-  además que la ruta declarada coincida exactamente con su forma canónica.
-- Se rechazan rutas absolutas, separadores `\`, rutas fuera del repositorio y
-  aliases de la base, el manifiesto, los pins o los destinos derivados.
-- `txn_id` solo admite letras, números, punto, guion y guion bajo; no puede
-  contener separadores.
-- `backup_path` debe incluir `txn_id`, quedar bajo `data/_backup` y no colisionar
-  con target, manifiesto, pins o snapshot de origen.
-- `temp_path` debe incluir `txn_id`, terminar en `.tmp` y no colisionar con
-  target, backup, manifiesto o pins.
-- `backup_disposition` distingue `created` de `reused_same_txn`; una copia
-  preexistente de otra transacción no es evidencia válida.
+`new_transaction()` rechaza la reutilización de `txn_id` durante toda la vida
+del proceso mediante `_USED_TXN_IDS`. No existe una operación de la API normal
+que borre ese registro. Una vez que `_register_authority()` añade un ID, una
+transición, una invalidación, un estado terminal o un fallo posterior al
+registro no lo libera. La eliminación de una autoridad tras un error de
+validación de su registro no elimina su `txn_id` usado.
 
-## 6. Semántica de operaciones
+La reproducción `new_transaction(plan) → reset_authority_registry() →
+new_transaction(plan)` queda bloqueada: `reset_authority_registry()` ya no
+existe en el módulo de producción. F0 mantiene unicidad por proceso; la
+persistencia y la unicidad entre reinicios siguen pendientes de F1.
 
-- `append`: el candidato no puede reducir líneas ni bytes; si conserva los
-  bytes, debe conservar también el hash. En `replaced` exige
-  `preimage_prefix_verified=True` y `append_boundary_verified=True`.
-- `rewrite`: en `replaced` exige `rewrite_complete_verified=True`.
-- `snapshot`: debe declarar `snapshot_of`, escribir bajo `data/_snapshot_f0/`,
-  no tocar el recurso canónico y copiar la preimagen sin cambios. En `replaced`
-  exige `snapshot_verified=True` y `canonical_target_unchanged=True`.
+### 3.2 Historial autorizado
 
-## 7. Journal y recuperación
+`_AuthorityState.authorized_history` empieza en `(prepared,)` y se amplía en
+cada transición normal exitosa. Las transiciones que avanzan exigen:
 
-El sobre de journal es versionado y encadenado:
+- autoridad existente;
+- correspondencia exacta con la transacción;
+- estado activo;
+- fingerprint del plan;
+- que el historial del registro sea exactamente el historial autorizado
+  actual.
 
-- `schema_version=2`, `contract_version`, `txn_id`, `plan_fingerprint`,
-  `sequence`, `state`, `previous_sha256`, `evidence`, `evidence_sha256` y
-  `record_sha256`;
-- `plan_fingerprint` liga cada registro a un `WritePlan` concreto;
-- `evidence_sha256` liga la evidencia serializada al registro; el journal exige
-  evidencia acumulada y no puede eliminar ni cambiar evidencia ya verificada;
-- `record_sha256` es el SHA-256 canónico del registro sin incluirse a sí mismo;
-- solo se permiten `previous_sha256`, `record_sha256` y `evidence_sha256`;
-  cualquier otro campo de hash se rechaza como tercer hash;
-- el JSON canónico rechaza claves no textuales, `NaN` e `Infinity`;
-- un journal truncado, corrupto, con secuencia discontinua, `txn_id` o
-  `plan_fingerprint` inconsistentes, evidencia vacía o transición inválida se
-  pone en cuarentena;
-- la recuperación exige el `WritePlan`; sin plan verificable no restaura aunque
-  la estructura sea válida;
-- recuperación: aborta si el último estado es anterior a `replaced`, pone en
-  cuarentena si es `replaced` o posterior, y devuelve `cas_conflict` si el CAS
-  terminó en conflicto.
+`assert_committed()` aplica las mismas restricciones. Una copia antigua del
+registro no puede continuar después de que la transacción haya avanzado; una
+copia del registro actual puede reintentar su estado actual de forma
+idempotente.
 
-## 8. Mutex
+### 3.3 Invalidación CAS incondicional
 
-`LockPolicy` fija para F1: mutex `Global\Poker.HandsDB.v1`, timeout positivo,
-sin fallback, sin multi-host, ACL y SID obligatorios, `WAIT_ABANDONED` con
-recuperación previa y fallo visible. El plan incluye `lock_policy` y su
-`lock_policy_fingerprint` queda fijado en la evidencia y en el journal. Sigue
-sin implementar el mutex real.
+En `transition()`, cuando la preimagen observada difiere de la declarada:
 
-## 9. Arnés de fallos
+1. Se invalida primero la autoridad original.
+2. Se fija su historial autorizado a `history + (cas_conflict,)`.
+3. Solo después se construyen y validan los campos descriptivos del conflicto
+   (`cas_conflict_reason`, `cas_conflict_at`, evidencia derivada).
 
-`motor/test_write_contract.py` usa una base simulada como cadena:
+Si la construcción del registro de conflicto falla por cualquier motivo, la
+autoridad original permanece invalidada. Una excepción de validación no
+reactiva la autoridad.
 
-- la preimagen solo cambia al entrar en `replaced`;
-- antes de `replaced`, cualquier fallo deja la preimagen intacta;
-- después de `replaced`, el único cierre válido es `quarantined`;
-- ningún camino de fallo puede llamar a `assert_committed()` con éxito;
-- se prueban CAS terminal, journal ligado al plan/evidencia, evidencia profunda
-  inmutable, destinos derivados, aliases de rutas, lock vinculado, operaciones,
-  pins ligados a valores, JSON canónico y timestamps con zona.
+El mismo orden se aplica a la transición directa a `cas_conflict`: primero se
+comprueba que existe una discrepancia real; si existe, se invalida antes de
+validar los campos descriptivos. Si la preimagen coincide, se rechaza sin
+invalidar.
 
-Categorías de prueba:
+### 3.4 Journal y autoridad
 
-1. Contrato puro: planes, evidencia, estados, writers, journal.
-2. Simulación de fallos: arnés y matrices antes/después de `replaced`.
-3. Integración real: pendiente de F1; F0.2 no abre archivos ni escribe `data/`.
+`journal_record_from_transaction()` incluye `authority_id` y
+`transaction_uid` en el sobre y exige:
 
-## 10. Matriz de cierre D1-D10
+- registro validado;
+- autoridad autenticable;
+- historial autorizado compatible;
+- que una autoridad inactiva solo pueda emitir los registros históricos de
+  su conflicto (`prepared` y `cas_conflict`), nunca un commit.
 
-| Defecto | Cierre F0.2 | Prueba representativa |
+`validate_journal_record(record, plan)` autentica la autoridad viva del
+proceso, el `transaction_uid`, el `txn_id`, el fingerprint del plan y el
+estado dentro del historial autorizado. Sin plan, la validación sigue siendo
+estructural y **no autoriza recuperación**.
+
+`validate_journal_chain(records, plan=...)` exige además:
+
+- una única autoridad e identidad para toda la cadena;
+- que los estados sean un prefijo exacto del historial autorizado;
+- que una autoridad inactiva solo valide la cadena completa que termina en
+  `cas_conflict`;
+- que ninguna cadena convierta una transacción invalidada en `committed`.
+
+Una cadena estructuralmente válida pero sin autoridad viva en el proceso se
+rechaza cuando se aporta plan. `recovery_action()` devuelve `QUARANTINED` en
+ese caso.
+
+### 3.5 Límites de autoridad
+
+La autoridad es en memoria, de proceso y ligada a instancias de registro. No
+hay recuperación entre reinicios ni coordinación multiproceso. F1 deberá
+persistir la identidad, la unicidad de `txn_id`, el historial y la
+autenticación de journal, o cuarentenar lo que no pueda autenticar. La
+identidad de instancia no se persiste: es una garantía de F0 en el proceso
+actual, no una capacidad reutilizable tras reiniciar.
+
+`authorized_records` conserva referencias fuertes a todos los registros
+autorizados mientras la entrada de autoridad permanezca en `_AUTHORITIES`.
+Esto evita que `id(record)` sea reutilizado para conferir autoridad a otra
+instancia y permite serializar los frames históricos del journal. F0 no elimina
+autoridades terminales durante la vida del proceso, por lo que el coste de
+memoria crece con las transacciones y sus transiciones; F1 deberá definir una
+política de persistencia/compactación que conserve la autenticación necesaria.
+Una autoridad fallida durante la creación inicial se elimina junto con su
+registro fallido.
+
+## 4. Políticas efectivas y tipos (D4)
+
+### 4.1 Política canónica
+
+`TargetPolicy` es un `NamedTuple`: no tiene `__dict__`, por lo que
+`object.__setattr__` no puede debilitar una instancia. Además, la fuente de
+verdad interna no es el objeto público `TARGET_POLICIES`, sino
+`_TARGET_POLICY_SPECS`, una representación de tuplas inmutables.
+
+`_canonical_target_policy()` y `_canonical_snapshot_policy()` reconstruyen la
+política desde esas especificaciones. `WriterDeclaration.validate()`,
+`WritePlan.validate()`, `target_policy_fingerprint()` y
+`plan_policy_fingerprint()` usan la representación canónica. Mutar o sustituir
+un objeto de política público no debilita un plan nuevo ni un fingerprint.
+
+### 4.2 Tipos aceptados
+
+En puntos críticos se exige el tipo exacto, no `isinstance` ni duck typing:
+
+- `WritePlan` exacto.
+- `WriterDeclaration` exacta.
+- `TargetPolicy` exacta.
+- `LockPolicy` exacta.
+- `TransactionRecord` exacto.
+
+Se rechazan subclases de `WritePlan`, `WriterDeclaration`, `LockPolicy` y
+`TransactionRecord` que puedan sustituir `validate()`, `as_dict()`,
+fingerprints o serializadores. `new_transaction()` comprueba el tipo exacto
+antes de llamar a `plan.validate()`, por lo que una subclase que no invoque el
+validador original no puede entrar.
+
+### 4.3 Vinculación del plan
+
+`WritePlan.validate()` revalida en cada transición:
+
+- `WriterDeclaration` exacta y validada;
+- target exacto y operación permitida;
+- política canónica efectiva;
+- requisitos obligatorios de manifiesto y pins;
+- `LockPolicy` efectiva y su fingerprint;
+- correspondencia entre plan, declaración y target.
+
+### 4.4 Manifiesto: destino de escritura declarado
+
+Se resuelve la contradicción de F0.3 declarando que
+`data/calibration_window.json` **sí es un target de escritura válido**, no solo
+un artefacto protegido. Su política `manifest` exige lock, CAS, backup y
+verificación de manifiesto, y no exige pins.
+
+Cuando `target_path == TARGET_MANIFEST`:
+
+- `manifest_path` debe ser el propio manifiesto;
+- `manifest_expected_sha256` debe coincidir con `expected_pre_sha256`;
+- `manifest_candidate_sha256` debe coincidir con `candidate_sha256`.
+
+Así la política declarada es alcanzable y no queda una regla inalcanzable en
+`TARGET_POLICIES`. Para targets que no son el manifiesto, `manifest_path` sigue
+siendo `data/calibration_window.json` y la verificación es una precondición.
+
+## 5. LockPolicy (D6)
+
+`LockPolicy` exige un tipo exacto y valida en cada entrada crítica. El timeout:
+
+- debe ser exactamente `int` o `float`, no `bool`, no subclase;
+- debe ser finito y mayor que cero;
+- para enteros, se convierte a `float` dentro de un `try` que captura
+  `OverflowError`/`ValueError` y lo convierte en `WriteContractError`.
+
+Por eso `10**1000`, `10**400`, `2**2000`, NaN, `+inf`, `-inf`, cero y negativos
+son errores contractuales, no excepciones crudas.
+
+Las subclases que anulan `validate()` o `as_dict()` se rechazan en
+`WriterDeclaration.validate()`, `WritePlan.validate()` y
+`lock_policy_fingerprint()`. El fingerprint se calcula con el `as_dict()` del
+tipo exacto. Una mutación posterior de la política se detecta al revalidar el
+plan y al comparar el fingerprint con la evidencia.
+
+Los defaults de `WriterDeclaration` y `WritePlan` usan
+`field(default_factory=LockPolicy)`, de modo que dos objetos no comparten
+accidentalmente la misma instancia mutable.
+
+## 6. Propiedad de backup y temporal (D5)
+
+El esquema es inequívoco y usa el componente de identidad completo:
+
+- Backup: `data/_backup/<txn_id>.jsonl`, directamente bajo `data/_backup/`.
+- Temporal: `<directorio_del_target>/<nombre_del_target>.<txn_id>.tmp`, en el
+  mismo directorio que el target.
+
+`_check_backup()` exige que el padre canónico sea exactamente
+`data/_backup` y que el nombre sea exactamente `txn_id + ".jsonl"`.
+`_check_temp()` exige que el padre canónico sea el del target y que el nombre
+sea exactamente `<nombre_target>.<txn_id>.tmp`.
+
+No se usa pertenencia de `txn_id` como subcadena. `txn-f0` y
+`txn-f0-other`, `txn-f0.other` o `txn-f0_other` no comparten backup ni
+temporal. Se mantienen las comprobaciones de colisión con target, backup,
+temporal, manifiesto, pins y snapshot.
+
+Límites: F0 no resuelve hardlinks, junctions, symlinks creados después de
+validar ni carreras TOCTOU. F1 debe abrir y verificar los objetos con las
+garantías del sistema operativo.
+
+## 7. Robustez contractual (D7 y D8)
+
+### 7.1 D7 — Unicode y append
+
+`append_content` debe ser exactamente `str`, no vacío, con LF y salto final.
+La codificación UTF-8 se captura: un surrogate aislado produce
+`WriteContractError`, no `UnicodeEncodeError`. Se mantienen las comprobaciones
+de hash, bytes, líneas, frontera append y delta del candidato.
+
+### 7.2 D8 — Pins literales
+
+`pins_symbols` exige símbolos de tipo exacto `str`, no vacíos, sin espacios
+iniciales ni finales y sin normalización silenciosa. Se mantienen cardinalidad
+exacta, ausencia de duplicados y cobertura completa de `PINS_SYMBOLS`.
+
+## 8. Validación parcial del journal (D2)
+
+`validate_journal_record(record)` sin plan reconoce la estructura del sobre,
+la cadena de hashes, la evidencia requerida y la coincidencia
+`evidence.txn_id`. Sigue siendo una validación parcial: no autentica plan ni
+autoridad y no autoriza recuperación.
+
+Un registro `COMMITTED` mínimo sin plan puede ser estructuralmente reconocible,
+pero:
+
+- `recovery_action(records)` sin plan devuelve `QUARANTINED`;
+- `validate_journal_record(record, plan)` rechaza la evidencia insuficiente;
+- `recovery_action(records, plan=...)` devuelve `QUARANTINED`.
+
+La validación estructural no se confunde con legitimidad de la transacción.
+
+## 9. Estado global y aislamiento
+
+`_AUTHORITIES` y `_USED_TXN_IDS` son estado de proceso. El contrato de
+producción no ofrece una función de reset. El fixture autouse del arnés
+reemplaza el comportamiento anterior de limpiar ambos registros en setup y
+teardown, que eliminaba el estado previo sin restaurarlo. Ahora el fixture
+conserva snapshots independientes (`dict` y `set`), instala contenedores
+temporales vacíos para la prueba y restaura en `finally` el contenido previo y
+las referencias a los contenedores originales. El snapshot conserva las
+mismas instancias de autoridad y copia sus campos mutables y el contenido del
+referencias a registros autorizados para restaurar la relación con `authority_id`,
+`transaction_uid` y `txn_id`. La restauración ocurre también si la prueba
+lanza una excepción. No se eliminan IDs usados al invalidar o
+terminar una transacción; la operación de aislamiento está confinada al
+arnés, no es una API de producción.
+
+`TARGET_POLICIES` es un `MappingProxyType` de `TargetPolicy` inmutables.
+`DEFAULT_LOCK_POLICY` sigue existiendo como referencia pública, pero los
+objetos contractuales usan factories y no comparten la instancia.
+
+F0 no implementa persistencia ni coordinación multiproceso.
+
+## 10. Matriz D1–D10
+
+La columna `Estado F0.7` describe la implementación y sus regresiones. No es
+un cierre formal de F0: la reauditoría independiente debe verificar el estado
+real del repositorio.
+
+| Defecto | Estado F0.7 | Evidencia |
 |---|---|---|
-| D1 CAS no terminal | `cas_conflict` terminal, `CasConflict.record`, sin transición posterior | `test_preimage_mismatch_is_terminal_cas_conflict` |
-| D2 journal sin plan/evidencia | `plan_fingerprint`, `evidence_sha256`, evidencia acumulada y recuperación con plan | `test_journal_rejects_empty_evidence_and_wrong_plan` |
-| D3 evidencia mutable | congelado profundo de mappings, listas y conjuntos | `test_evidence_is_deeply_immutable` |
-| D4 writers sin categoría | `TARGET_POLICIES` base/manifiesto/modelo/derivado y controles por categoría | `test_writer_declaration_fails_closed_for_all_target_categories` |
-| D5 rutas y backups | canonicalización estricta, colisiones, raíz de backup, `txn_id` y disposición | `test_backup_path_must_be_canonical_owned_and_under_backup_root` |
-| D6 lock no vinculado | `lock_policy` en plan/writer y `lock_policy_fingerprint` en evidencia | `test_lock_and_recovery_policy_is_fail_closed_and_bound_to_plan` |
-| D7 operaciones sin semántica | targets/operaciones declarados y evidencia específica de `append`/`rewrite`/`snapshot` | `test_append_and_snapshot_operation_semantics`, `test_operation_evidence_is_required_before_replace` |
-| D8 pins sin contenido | valores por símbolo, hash canónico, commit/líneas/hash y hash de fuente | `test_pins_are_proposed_not_applied_and_bound_to_values` |
-| D9 JSON ambiguo | rechazo de claves no textuales, `NaN`/`Infinity` y hash canónico | `test_canonical_journal_hash_rejects_ambiguous_json` |
-| D10 timestamps sin zona | validación ISO-8601 con zona en plan y evidencia | `test_timestamps_require_iso_8601_timezone` |
+| D1 — Autoridad/CAS | `PARTIAL` | Referencias fuertes a instancias comparadas con `is` reemplazan `id(record)`; D1 completo sigue pendiente de reauditoría independiente. |
+| D2 — Validador parcial | `CLOSED` | `validate_journal_record()` sin plan es estructural; `recovery_action()` sin plan cuarentena; test del `COMMITTED` mínimo. |
+| D3 — Evidencia y transiciones | `CLOSED` | `REQUIRED_EVIDENCE`, `EVIDENCE_KEYS`, `_check_state_evidence()`, `transition()`, tests de estados y fault matrix. |
+| D4 — Políticas inmutables | `CLOSED` | `TargetPolicy` `NamedTuple`, `_TARGET_POLICY_SPECS`, `_canonical_target_policy()`, tipos exactos, plan ligado a declaración/target/política/lock; manifiesto resuelto como target válido. |
+| D5 — Propiedad backup/temp | `CLOSED` | `_check_backup()` y `_check_temp()` con nombre y padre exactos; tests de `txn-f0` frente a `txn-f0-other`, `.` y `_`. |
+| D6 — LockPolicy | `CLOSED` | Validación de tipo/rango antes de conversión, `OverflowError` convertido, tipo exacto, fingerprint canónico, tests de enteros gigantes y subclases. |
+| D7 — Unicode | `CLOSED` | `_check_append_content()` captura `UnicodeEncodeError`; test de surrogate aislado. |
+| D8 — Pins literales | `CLOSED` | `_normalize_pins_symbols()` sin `strip()`; test de espacios iniciales/finales. |
+| D9 — Canonicalización JSON | `CLOSED` | `_canonical_sha256()`/`journal_record_sha256()`; requisito F1 de `object_pairs_hook` documentado. |
+| D10 — Límites y trazabilidad | `CLOSED` | Este documento, tests y restricciones explícitas; sin integración real. |
 
-## 11. Lo que F0.2 no hace
+## 11. Trazabilidad defecto → implementación → regresión
 
-- No crea `Global\Poker.HandsDB.v1`.
-- No captura `WAIT_ABANDONED`.
-- No lee ni escribe journal.
-- No calcula CAS de la base ni hashes de archivos reales.
-- No crea backups.
-- No migra `record_hand`, `recorder_live`, `hand_editor`, `save()` ni los
-  writers de `tools/`.
-- No cambia `HANDS_DB_*`, `calibration_window.json`, derivados, matrices ni
-  recomendaciones.
-- No activa ninguna fase P0/B2.
+| Defecto | Implementación | Regresiones principales |
+|---|---|---|
+| D1 reutilización de `id(record)` | Referencias fuertes en `authorized_records`; comparación de instancia con `is` | `test_d1_reconstruction_rejected_after_external_original_reference_dropped`, `test_d1_copies_and_reconstructions_are_not_authorized_instances`, `test_d1_authority_keeps_history_instances_alive_for_journal_lifecycle`, `test_d1_invalidated_authority_retains_only_real_conflict_instances` |
+| D1 evidencia CAS malformada | `transition()` invalida antes de `_merge_evidence()`/`_validate_record()` | `test_d1_malformed_cas_conflict_evidence_still_invalidates`, `test_cas_conflict_invalidates_original_and_any_copy` |
+| D1 autoridad de otra transacción | `transaction_uid` + `_check_authority()` | `test_d1_authority_from_another_transaction_cannot_be_borrowed` |
+| D1 reutilización/reset de `txn_id` | `_USED_TXN_IDS` de vida de proceso, sin reset de producción; el arnés usa snapshot y restaura ambos registros en `finally` | `test_d1_txn_reset_audit_identifier_cannot_be_reused`, `test_d1_invalidation_does_not_release_txn_id`, `test_d1_normal_transition_does_not_release_txn_id`, `test_d1_terminal_transaction_does_not_release_txn_id`, `test_d1_failed_record_validation_still_burns_txn_id` |
+| D1 journal/commit inválido | `_require_journal_authority()`, `_authenticate_journal_authority()`, `validate_journal_chain()` | `test_d1_invalidated_authority_cannot_emit_commit_journal_or_chain`, `test_d1_journal_chain_from_another_authority_is_rejected` |
+| D1 copia/reconstrucción | Solo la instancia autorizada se admite; los frames se conservan para serializar journal histórico | `test_d1_copies_and_reconstructions_are_not_authorized_instances`, `test_d1_invalidated_authority_retains_only_real_conflict_instances`, `test_cas_conflict_invalidates_original_and_any_copy` |
+| D4 mutación de `TargetPolicy` | `NamedTuple` + especificaciones canónicas | `test_d4_target_policy_is_immutable_and_canonical` |
+| D4 subclases | `_require_exact_type()` en fronteras críticas | `test_d4_writeplan_subclass_cannot_override_validation`, `test_d4_writer_declaration_subclass_cannot_weaken_validation` |
+| D4 manifiesto inalcanzable | `WritePlan.validate()` permite target manifiesto con hashes coherentes | `test_d4_manifest_target_is_writable_with_consistent_hashes` |
+| D5 subcadena de `txn_id` | nombre y padre exactos | `test_d5_backup_and_temp_names_use_the_complete_txn_identity`, `test_d5_ambiguous_txn_identifiers_do_not_share_artifacts` |
+| D6 enteros gigantes | conversión segura a `float` | `test_d6_huge_lock_timeouts_are_contract_errors_not_overflow` |
+| D6 subclase de lock | tipo exacto + fingerprint canónico | `test_d6_lock_policy_subclass_cannot_forge_validation_or_fingerprint`, `test_mutated_lock_policy_is_rejected_at_all_entry_points` |
+| D7 surrogate | captura de `UnicodeEncodeError` | `test_d7_lone_surrogates_are_contract_errors` |
+| D8 espacios en pins | comparación literal | `test_d8_pins_symbols_are_literal_and_not_stripped` |
+| D2 validador parcial | sin plan no autoriza recuperación | `test_d2_minimal_committed_record_is_partial_without_plan`, `test_journal_without_plan_is_structural_only_not_authorization` |
+| Fixture/estado global | unicidad de vida de proceso; aislamiento por snapshot/reemplazo/restauración en `finally`, sin reset de producción | `test_fixture_restores_nonempty_registry_and_authority_identity`, `test_fixture_restores_both_registries_after_exception`, `test_fixture_preserves_an_initially_empty_state`, `test_fixture_scopes_isolate_tests_without_releasing_in_scope_ids` |
 
-## 12. Prueba de F0.2
+## 12. Clasificación de pruebas
+
+1. **Contrato puro**: planes, políticas, declaraciones, lock, evidencia,
+   estados, journal, canonicalización, Unicode, pins, nombres de artefactos.
+2. **Simulación de fallos**: arnés de preimagen/postimagen, fault matrix,
+   conflictos CAS, copias, autoridades inyectadas para simular el estado
+   vulnerable anterior, cadenas de journal inválidas.
+3. **Integración real**: **no incluida**. F0 no abre ni escribe `data/`, no
+   crea mutex, journal, backup, temporal ni replace reales. No se declara
+   integración real.
+
+## 13. Comandos y resultados
+
+Comandos requeridos para F0.7:
 
 ```text
-$env:PYTHONDONTWRITEBYTECODE='1'
 python -B -m pytest motor/test_write_contract.py -q -p no:cacheprovider
+python -B -m py_compile motor/write_contract.py motor/test_write_contract.py
+git diff --check
 ```
 
-Resultado: `45 passed`.
+Resultado de la suite: **109 passed**.
 
-La prueba no debe tocar `data/hands_db.jsonl` ni sus derivados.
+## 14. Integridad de `data/`
+
+F0.7 no modifica `data/`, derivados, manifiestos, pins físicos ni
+calibraciones. La verificación final de `git status --short -- data/` y
+`git diff -- data/` debe quedar vacía; el informe de entrega registra el
+resultado exacto.
+
+## 15. Garantías reales y pendientes de F1
+
+Garantías heredadas de F0.4–F0.6 y corrección de identidad F0.7:
+
+- Ninguna ruta de la API normal alcanza `committed` con autoridad invalidada.
+- Una autoridad no se reutiliza por coincidencia de `txn_id` y plan.
+- Las transacciones nuevas no reutilizan `txn_id` dentro del proceso.
+- Las políticas efectivas se reconstruyen desde una representación canónica.
+- Las subclases críticas se rechazan.
+- Backup y temporal usan el componente de identidad completo.
+- Unicode y pins se validan literalmente.
+- El journal no se confunde con autorización de recuperación.
+
+Pendiente de F1:
+
+- Persistencia de autoridades, historial y unicidad de `txn_id`.
+- Recuperación entre reinicios y coordinación multiproceso.
+- Mutex real, CAS físico, journal en disco, backup, temporal y replace.
+- Verificación de hardlinks, junctions, symlinks y TOCTOU.
+- Parser JSON estricto con `object_pairs_hook`.
+- Integración real de writers y activación controlada.
+
+## 16. Veredicto interno
+
+`F0.7_LISTO_PARA_REAUDITORIA`
+
+No se declara `F0_CERRADO` ni D1 `CLOSED`; la reauditoría independiente debe
+confirmar el cierre. No se inicia F1.

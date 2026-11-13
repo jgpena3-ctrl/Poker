@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""F0.2: contrato de integridad para escrituras canónicas.
+"""F0.7: contrato de integridad para escrituras canónicas.
 
 Este módulo no abre archivos, no crea mutex, no escribe journal y no toca
 `data/`. Define el vocabulario, las rutas canónicas y las transiciones que
@@ -20,6 +20,20 @@ Reglas que el contrato fija:
   tercer hash se pone en cuarentena. No se restaura automáticamente.
 - Los pins son código: se proponen para revisión, no se actualizan en runtime.
 - Ninguna ausencia se convierte en cero ni en una evidencia válida.
+- La autoridad de una transacción es externa al registro y se liga a
+  `authority_id` + `transaction_uid` + `txn_id` + fingerprint del plan +
+  historial autorizado + instancia de registro autorizada. Un conflicto CAS la
+  invalida antes de validar los campos descriptivos del conflicto; cualquier
+  copia del registro que conserve los mismos campos no es una capacidad y no
+  puede continuar. Una transacción nueva no hereda esa autoridad y no puede
+  reutilizar el `txn_id` en el proceso.
+- El journal incluye la identidad de autoridad. La validez estructural no
+  autentica la transacción: con plan se exige una autoridad viva y un
+  historial autorizado. Sin plan, la validación es parcial y no autoriza
+  recuperación.
+- F0 no recibe JSON crudo. La canonicalización estricta no puede detectar
+  claves duplicadas que `json.loads` ya colapsó. F1 debe usar un parser con
+  `object_pairs_hook` (o equivalente) que rechace duplicados.
 """
 from __future__ import annotations
 
@@ -33,9 +47,9 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from types import MappingProxyType
-from typing import Any, Dict, Mapping, Optional, Tuple
+from typing import Any, Dict, Mapping, NamedTuple, Optional, Tuple
 
-CONTRACT_VERSION = 'F0.2 (2026-11-12)'
+CONTRACT_VERSION = 'F0.5 (2026-11-12)'
 ROOT = Path(__file__).resolve().parents[1]
 
 TARGET_DB = 'data/hands_db.jsonl'
@@ -134,17 +148,34 @@ SNAPSHOT = 'snapshot'
 WRITE_OPERATIONS = (APPEND, REWRITE, SNAPSHOT)
 SNAPSHOT_ROOT = 'data/_snapshot_f0'
 BACKUP_ROOT = 'data/_backup'
-BACKUP_ROOT_PREFIX = BACKUP_ROOT
+BACKUP_ROOT_PREFIX = BACKUP_ROOT + '/'
+BACKUP_SUFFIX = '.jsonl'
+TEMP_SUFFIX = '.tmp'
 BACKUP_DISPOSITIONS = ('created', 'reused_same_txn')
+
+APPEND_CONTENT_FIELDS = (
+    'append_content',
+    'append_content_sha256',
+    'append_content_bytes',
+    'append_content_lines',
+)
 
 TARGET_CATEGORY_BASE = 'base'
 TARGET_CATEGORY_MANIFEST = 'manifest'
 TARGET_CATEGORY_MODEL = 'model'
 TARGET_CATEGORY_DERIVED = 'derived'
+TARGET_CATEGORY_SNAPSHOT = 'snapshot'
 
 
-@dataclass(frozen=True)
-class TargetPolicy:
+class TargetPolicy(NamedTuple):
+    """Política canónica e inmutable de un destino.
+
+    Es un `NamedTuple` a propósito: no tiene `__dict__`, por lo que
+    `object.__setattr__` no puede debilitar una instancia. Los consumidores
+    críticos no usan el objeto público como fuente de verdad; reconstruyen la
+    política desde `_TARGET_POLICY_SPECS`.
+    """
+
     category: str
     operations: Tuple[str, ...]
     requires_lock: bool
@@ -153,66 +184,90 @@ class TargetPolicy:
     requires_manifest_verification: bool
     requires_pins_proposal: bool
 
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            'category': self.category,
+            'operations': list(self.operations),
+            'requires_lock': self.requires_lock,
+            'requires_cas': self.requires_cas,
+            'requires_backup': self.requires_backup,
+            'requires_manifest_verification':
+                self.requires_manifest_verification,
+            'requires_pins_proposal': self.requires_pins_proposal,
+        }
 
-TARGET_POLICIES: Mapping[str, TargetPolicy] = MappingProxyType({
-    TARGET_DB: TargetPolicy(
+
+_TARGET_POLICY_SPECS: Mapping[str, Tuple[Any, ...]] = MappingProxyType({
+    TARGET_DB: (
         TARGET_CATEGORY_BASE,
         (APPEND, REWRITE),
         True, True, True, True, True,
     ),
-    TARGET_MANIFEST: TargetPolicy(
+    TARGET_MANIFEST: (
         TARGET_CATEGORY_MANIFEST,
         (REWRITE,),
         True, True, True, True, False,
     ),
-    TARGET_PROFILE_RANGES: TargetPolicy(
+    TARGET_PROFILE_RANGES: (
         TARGET_CATEGORY_MODEL,
         (REWRITE,),
         True, True, True, True, False,
     ),
-    TARGET_POSTFLOP_RANGES: TargetPolicy(
+    TARGET_POSTFLOP_RANGES: (
         TARGET_CATEGORY_MODEL,
         (REWRITE,),
         True, True, True, True, False,
     ),
-    TARGET_PREFLOP_STATS: TargetPolicy(
+    TARGET_PREFLOP_STATS: (
         TARGET_CATEGORY_DERIVED,
         (REWRITE,),
         True, True, True, True, False,
     ),
-    TARGET_PLAYER_STATS: TargetPolicy(
+    TARGET_PLAYER_STATS: (
         TARGET_CATEGORY_DERIVED,
         (REWRITE,),
         True, True, True, True, False,
     ),
-    TARGET_PROFILES: TargetPolicy(
+    TARGET_PROFILES: (
         TARGET_CATEGORY_DERIVED,
         (REWRITE,),
         True, True, True, True, False,
     ),
-    TARGET_BEHAVIOR: TargetPolicy(
+    TARGET_BEHAVIOR: (
         TARGET_CATEGORY_DERIVED,
         (REWRITE,),
         True, True, True, True, False,
     ),
-    TARGET_BEHAVIOR_PROBS: TargetPolicy(
+    TARGET_BEHAVIOR_PROBS: (
         TARGET_CATEGORY_DERIVED,
         (REWRITE,),
         True, True, True, True, False,
     ),
-    TARGET_OBSERVATIONS: TargetPolicy(
+    TARGET_OBSERVATIONS: (
         TARGET_CATEGORY_DERIVED,
         (REWRITE,),
         True, True, True, True, False,
     ),
 })
 
+TARGET_POLICIES: Mapping[str, TargetPolicy] = MappingProxyType({
+    path: TargetPolicy(*spec) for path, spec in _TARGET_POLICY_SPECS.items()
+})
+
+_SNAPSHOT_POLICY_SPEC: Tuple[Any, ...] = (
+    TARGET_CATEGORY_SNAPSHOT,
+    (SNAPSHOT,),
+    True, True, True, False, False,
+)
+
+SNAPSHOT_POLICY = TargetPolicy(*_SNAPSHOT_POLICY_SPEC)
+
 REQUIRED_EVIDENCE: Mapping[str, Tuple[str, ...]] = MappingProxyType({
     PREPARED: (
         'txn_id', 'writer', 'target_path', 'operation',
         'expected_pre_sha256', 'expected_pre_lines', 'expected_pre_bytes',
         'candidate_sha256', 'candidate_lines', 'candidate_bytes',
-        'writer_declaration_fingerprint',
+        'writer_declaration_fingerprint', 'target_policy_fingerprint',
         'lock_policy_fingerprint', 'planned_at',
     ),
     PREIMAGE_VERIFIED: (
@@ -243,7 +298,7 @@ PLAN_OWNED_EVIDENCE = frozenset((
     'expected_pre_sha256', 'expected_pre_lines', 'expected_pre_bytes',
     'candidate_sha256', 'candidate_lines', 'candidate_bytes',
     'manifest_required', 'pins_required', 'writer_declaration_fingerprint',
-    'lock_policy_fingerprint',
+    'target_policy_fingerprint', 'lock_policy_fingerprint',
     'manifest_path', 'manifest_expected_sha256', 'manifest_candidate_sha256',
     'pins_path', 'pins_expected_sha256', 'snapshot_of',
 ))
@@ -260,9 +315,10 @@ EVIDENCE_KEYS = frozenset(
         'append_boundary_verified', 'rewrite_complete_verified',
         'snapshot_verified', 'canonical_target_unchanged',
     }
+    | set(APPEND_CONTENT_FIELDS)
 )
 
-JOURNAL_SCHEMA_VERSION = 2
+JOURNAL_SCHEMA_VERSION = 3
 JOURNAL_HASH_FIELDS = (
     'previous_sha256', 'record_sha256', 'evidence_sha256')
 JOURNAL_GENESIS_SHA256 = '0' * 64
@@ -274,6 +330,9 @@ JOURNAL_EVIDENCE_BINDING_POLICY = 'state_evidence_and_sha256_required'
 JOURNAL_RAW_JSON_SUPPORTED = False
 JOURNAL_JSON_PARSER_REQUIRED = True
 JOURNAL_JSON_DUPLICATE_KEYS_POLICY = 'reject_with_object_pairs_hook'
+JOURNAL_JSON_PARSER_REQUIREMENT = 'object_pairs_hook_reject_duplicate_keys'
+JOURNAL_PARTIAL_VALIDATION_POLICY = (
+    'structural_only_without_plan_not_recovery_authorization')
 RECOVERY_ACTION_BEFORE_REPLACE = ABORTED
 RECOVERY_ACTION_AFTER_REPLACE = QUARANTINED
 
@@ -291,6 +350,23 @@ class CasConflict(WriteContractError):
     def __init__(self, message: str, record: Optional['TransactionRecord'] = None):
         super().__init__(message)
         self.record = record
+
+
+def _require_exact_type(value: Any, expected: type,
+                        field_name: str) -> None:
+    """Rechaza subclases y duck typing en fronteras críticas del contrato."""
+    if type(value) is not expected:
+        raise WriteContractError(
+            '%s debe ser exactamente %s, no %s'
+            % (field_name, expected.__name__, type(value).__name__))
+
+
+def _uid_hex(value: Any, field_name: str) -> str:
+    text = _nonempty(value, field_name)
+    if len(text) != 32 or any(c not in '0123456789abcdef' for c in text):
+        raise WriteContractError(
+            '%s debe ser un identificador hex de 32 caracteres' % field_name)
+    return text
 
 
 def _nonempty(value: Any, field_name: str) -> str:
@@ -347,18 +423,27 @@ def _path_within_root(value: Any, field_name: str) -> str:
     text = _nonempty(value, field_name)
     if '\x00' in text:
         raise WriteContractError('%s contiene NUL' % field_name)
-    candidate = Path(text)
-    if not candidate.is_absolute():
-        candidate = ROOT / candidate
-    real = Path(os.path.realpath(str(candidate)))
-    rel = os.path.relpath(str(real), str(ROOT)).replace(os.sep, '/')
+    try:
+        candidate = Path(text)
+        if not candidate.is_absolute():
+            candidate = ROOT / candidate
+        real = Path(os.path.realpath(str(candidate)))
+        rel = os.path.relpath(str(real), str(ROOT)).replace(os.sep, '/')
+    except (OSError, ValueError) as exc:
+        raise WriteContractError(
+            '%s no se puede canonicalizar: %s' % (field_name, exc))
     if rel == '.' or rel == '..' or rel.startswith('../'):
         raise WriteContractError('%s queda fuera del repositorio' % field_name)
     return rel
 
 
 def canonical_path(value: Any, field_name: str = 'ruta') -> str:
-    """Devuelve la ruta relativa canónica, resolviendo aliases y symlinks."""
+    """Devuelve la ruta relativa canónica.
+
+    La canonicalización es léxica y resuelve componentes existentes con
+    `realpath`. No implementa protección contra carreras TOCTOU, junctions
+    creadas después de validar ni reemplazos del sistema operativo.
+    """
     return _path_within_root(value, field_name)
 
 
@@ -373,6 +458,13 @@ def _require_canonical_path(value: Any, field_name: str) -> str:
     return canonical
 
 
+def _is_within_dir(value: Any, root: Any,
+                   field_name: str = 'ruta') -> bool:
+    canonical = _require_canonical_path(value, field_name)
+    root_canonical = _require_canonical_path(root, 'raíz')
+    return canonical.startswith(root_canonical + '/')
+
+
 def _path_key(value: Any, field_name: str = 'ruta') -> str:
     return os.path.normcase(canonical_path(value, field_name))
 
@@ -383,12 +475,31 @@ def _same_path(left: Any, right: Any) -> bool:
     return _path_key(left) == _path_key(right)
 
 
+def _canonical_target_policy(path: str) -> TargetPolicy:
+    try:
+        spec = _TARGET_POLICY_SPECS[path]
+    except KeyError:
+        raise WriteContractError('target_path no declarado: %s' % path)
+    policy = TargetPolicy(*spec)
+    _require_exact_type(policy, TargetPolicy, 'target_policy')
+    return policy
+
+
+def _canonical_snapshot_policy() -> TargetPolicy:
+    policy = TargetPolicy(*_SNAPSHOT_POLICY_SPEC)
+    _require_exact_type(policy, TargetPolicy, 'snapshot_policy')
+    return policy
+
+
 def _target_policy(path: Any) -> TargetPolicy:
     canonical = _require_canonical_path(path, 'target_path')
-    try:
-        return TARGET_POLICIES[canonical]
-    except KeyError:
-        raise WriteContractError('target_path no declarado: %s' % canonical)
+    return _canonical_target_policy(canonical)
+
+
+def target_policy_fingerprint(path: Any) -> str:
+    """Fingerprint de la política efectiva de un destino declarado."""
+    policy = _target_policy(path)
+    return _canonical_sha256(policy.as_dict(), 'target_policy')
 
 
 def _freeze_value(value: Any, field_name: str = 'valor') -> Any:
@@ -461,7 +572,11 @@ def _canonical_sha256(value: Any, field_name: str = 'valor') -> str:
 
 
 def canonical_sha256(value: Any, field_name: str = 'valor') -> str:
-    """SHA-256 del JSON canónico; rechaza NaN, Infinity y claves no textuales."""
+    """SHA-256 del JSON canónico; rechaza NaN, Infinity y claves no textuales.
+
+    No detecta claves duplicadas en JSON crudo: F0 recibe mappings ya
+    construidos. Esa detección es requisito obligatorio de F1.
+    """
     return _canonical_sha256(value, field_name)
 
 
@@ -569,6 +684,9 @@ class LockPolicy:
     acl_required: bool = LOCK_ACL_REQUIRED
     sid_required: bool = LOCK_SID_REQUIRED
 
+    def __post_init__(self) -> None:
+        self.validate()
+
     def as_dict(self) -> Dict[str, Any]:
         return {
             'mechanism': self.mechanism,
@@ -583,14 +701,28 @@ class LockPolicy:
         }
 
     def validate(self) -> 'LockPolicy':
+        _require_exact_type(self, LockPolicy, 'lock_policy')
         if self.mechanism != LOCK_MECHANISM:
             raise WriteContractError('mecanismo de mutex no permitido')
         if self.name != LOCK_NAME:
             raise WriteContractError('nombre de mutex no permitido')
-        if isinstance(self.timeout_seconds, bool) or not isinstance(
-                self.timeout_seconds, (int, float)) or \
-                not math.isfinite(self.timeout_seconds) or \
-                self.timeout_seconds <= 0:
+        timeout = self.timeout_seconds
+        if type(timeout) is not int and type(timeout) is not float:
+            raise WriteContractError(
+                'timeout_seconds debe ser un número finito > 0')
+        if type(timeout) is int:
+            if timeout <= 0:
+                raise WriteContractError(
+                    'timeout_seconds debe ser un número finito > 0')
+            try:
+                timeout_as_float = float(timeout)
+            except (OverflowError, ValueError):
+                raise WriteContractError(
+                    'timeout_seconds no cabe en un float finito')
+            if not math.isfinite(timeout_as_float):
+                raise WriteContractError(
+                    'timeout_seconds debe ser un número finito > 0')
+        elif not math.isfinite(timeout) or timeout <= 0:
             raise WriteContractError(
                 'timeout_seconds debe ser un número finito > 0')
         if _flag(self.fallbacks_allowed, 'fallbacks_allowed'):
@@ -612,6 +744,7 @@ DEFAULT_LOCK_POLICY = LockPolicy()
 
 
 def lock_policy_fingerprint(policy: LockPolicy) -> str:
+    _require_exact_type(policy, LockPolicy, 'lock_policy')
     policy.validate()
     return _canonical_sha256(policy.as_dict(), 'lock_policy')
 
@@ -628,11 +761,12 @@ class WriterDeclaration:
     requires_backup: bool
     requires_manifest_verification: bool
     requires_pins_proposal: bool
-    lock_policy: LockPolicy = DEFAULT_LOCK_POLICY
+    lock_policy: LockPolicy = field(default_factory=LockPolicy)
 
     def __post_init__(self) -> None:
         if isinstance(self.targets, (list, tuple)):
             object.__setattr__(self, 'targets', tuple(self.targets))
+        self.validate()
 
     def as_dict(self) -> Dict[str, Any]:
         return {
@@ -649,16 +783,19 @@ class WriterDeclaration:
         }
 
     def validate(self) -> 'WriterDeclaration':
+        _require_exact_type(self, WriterDeclaration, 'writer_declaration')
         _nonempty(self.name, 'name')
         if self.operation not in WRITE_OPERATIONS:
             raise WriteContractError('operation inválida: %r' % self.operation)
+        _require_exact_type(self.lock_policy, LockPolicy, 'lock_policy')
         self.lock_policy.validate()
         for attribute in (
                 'requires_lock', 'requires_cas', 'requires_backup',
                 'requires_manifest_verification', 'requires_pins_proposal'):
             _flag(getattr(self, attribute), attribute)
-        if not isinstance(self.targets, (tuple, list)) or not self.targets:
-            raise WriteContractError('targets no puede estar vacío')
+        if type(self.targets) is not tuple or not self.targets:
+            raise WriteContractError(
+                'targets debe ser una tupla no vacía y congelada')
         normalized = []
         seen = set()
         for target in self.targets:
@@ -673,7 +810,7 @@ class WriterDeclaration:
                 raise WriteContractError(
                     'un writer snapshot debe declarar un único origen')
             source = normalized[0]
-            if source not in TARGET_POLICIES:
+            if source not in _TARGET_POLICY_SPECS:
                 raise WriteContractError(
                     '%s declara un origen snapshot no canónico: %s'
                     % (self.name, source))
@@ -686,13 +823,17 @@ class WriterDeclaration:
             if not self.requires_backup:
                 raise WriteContractError(
                     '%s escribe un snapshot sin exigir backup' % self.name)
-            if self.requires_pins_proposal and PINS_RUNTIME_UPDATE_ALLOWED:
-                raise WriteContractError('los pins no se aplican en runtime')
+            if self.requires_manifest_verification:
+                raise WriteContractError(
+                    '%s no puede exigir manifiesto en un snapshot' % self.name)
+            if self.requires_pins_proposal:
+                raise WriteContractError(
+                    '%s no puede exigir pins en un snapshot' % self.name)
             return self
         for target in normalized:
             try:
-                policy = TARGET_POLICIES[target]
-            except KeyError:
+                policy = _canonical_target_policy(target)
+            except WriteContractError:
                 raise WriteContractError(
                     '%s declara un destino no canónico: %s'
                     % (self.name, target))
@@ -721,8 +862,14 @@ class WriterDeclaration:
 
 def writer_declaration_fingerprint(
         declaration: WriterDeclaration) -> str:
+    _require_exact_type(declaration, WriterDeclaration, 'writer_declaration')
     declaration.validate()
     return _canonical_sha256(declaration.as_dict(), 'writer_declaration')
+
+
+def validate_writer_declaration(
+        declaration: WriterDeclaration) -> WriterDeclaration:
+    return declaration.validate()
 
 
 @dataclass(frozen=True)
@@ -747,7 +894,7 @@ class WritePlan:
     pins_path: Optional[str] = None
     pins_expected_sha256: Optional[str] = None
     snapshot_of: Optional[str] = None
-    lock_policy: LockPolicy = DEFAULT_LOCK_POLICY
+    lock_policy: LockPolicy = field(default_factory=LockPolicy)
     writer_declaration: Optional[WriterDeclaration] = None
 
     def as_dict(self) -> Dict[str, Any]:
@@ -777,6 +924,7 @@ class WritePlan:
         }
 
     def validate(self) -> 'WritePlan':
+        _require_exact_type(self, WritePlan, 'plan')
         txn_id = _nonempty(self.txn_id, 'txn_id')
         if TXN_ID_PATTERN.fullmatch(txn_id) is None:
             raise WriteContractError('txn_id contiene caracteres no permitidos')
@@ -785,13 +933,19 @@ class WritePlan:
             raise WriteContractError('operation inválida: %r' % self.operation)
         if self.writer_declaration is None:
             raise WriteContractError('writer_declaration es obligatoria')
+        _require_exact_type(self.writer_declaration, WriterDeclaration,
+                            'writer_declaration')
         self.writer_declaration.validate()
+        _require_exact_type(self.lock_policy, LockPolicy, 'lock_policy')
         self.lock_policy.validate()
-        _require_canonical_path(self.target_path, 'target_path')
-        if self.target_path == TARGET_MANIFEST:
+        if self.lock_policy != self.writer_declaration.lock_policy:
             raise WriteContractError(
-                'manifest_path debe declararse aparte; target_path no es el '
-                'manifiesto')
+                'lock_policy no coincide con la declaración validada')
+        if lock_policy_fingerprint(self.lock_policy) != \
+                lock_policy_fingerprint(self.writer_declaration.lock_policy):
+            raise WriteContractError(
+                'el fingerprint de lock_policy no coincide con el writer')
+        target_path = _require_canonical_path(self.target_path, 'target_path')
         _sha256(self.expected_pre_sha256, 'expected_pre_sha256')
         _lines(self.expected_pre_lines, 'expected_pre_lines')
         _bytes(self.expected_pre_bytes, 'expected_pre_bytes')
@@ -800,6 +954,26 @@ class WritePlan:
         _bytes(self.candidate_bytes, 'candidate_bytes')
         _flag(self.manifest_required, 'manifest_required')
         _flag(self.pins_required, 'pins_required')
+        if self.operation == SNAPSHOT:
+            if self.manifest_required or self.pins_required:
+                raise WriteContractError(
+                    'snapshot no exige manifiesto ni pins')
+        else:
+            policy = _target_policy(self.target_path)
+            if self.operation not in policy.operations:
+                raise WriteContractError(
+                    'operación %s no permitida para %s'
+                    % (self.operation, self.target_path))
+            if self.manifest_required is not \
+                    policy.requires_manifest_verification:
+                raise WriteContractError(
+                    'manifest_required debe ser %s para %s'
+                    % (policy.requires_manifest_verification,
+                       self.target_path))
+            if self.pins_required is not policy.requires_pins_proposal:
+                raise WriteContractError(
+                    'pins_required debe ser %s para %s'
+                    % (policy.requires_pins_proposal, self.target_path))
         if self.manifest_required:
             if self.manifest_path != TARGET_MANIFEST:
                 raise WriteContractError(
@@ -809,6 +983,15 @@ class WritePlan:
                     'manifest_expected_sha256')
             _sha256(self.manifest_candidate_sha256,
                     'manifest_candidate_sha256')
+            if target_path == TARGET_MANIFEST:
+                if self.manifest_expected_sha256 != self.expected_pre_sha256:
+                    raise WriteContractError(
+                        'manifest_expected_sha256 debe ser la preimagen del '
+                        'manifiesto cuando el target es el manifiesto')
+                if self.manifest_candidate_sha256 != self.candidate_sha256:
+                    raise WriteContractError(
+                        'manifest_candidate_sha256 debe ser el candidato del '
+                        'manifiesto cuando el target es el manifiesto')
         else:
             if self.manifest_path is not None:
                 raise WriteContractError(
@@ -842,7 +1025,7 @@ class WritePlan:
             if self.snapshot_of is None:
                 raise WriteContractError('snapshot_of es obligatorio en snapshot')
             source = _require_canonical_path(self.snapshot_of, 'snapshot_of')
-            if source not in TARGET_POLICIES:
+            if source not in _TARGET_POLICY_SPECS:
                 raise WriteContractError(
                     'snapshot_of no es un destino declarado: %s' % source)
             target = _require_canonical_path(self.target_path, 'target_path')
@@ -860,39 +1043,24 @@ class WritePlan:
             return
         if self.snapshot_of is not None:
             raise WriteContractError('snapshot_of solo pertenece a snapshot')
-        policy = _target_policy(self.target_path)
-        if self.operation not in policy.operations:
-            raise WriteContractError(
-                'operación %s no permitida para %s'
-                % (self.operation, self.target_path))
         if self.operation == APPEND:
-            if self.candidate_bytes < self.expected_pre_bytes:
+            if self.candidate_bytes <= self.expected_pre_bytes:
                 raise WriteContractError(
-                    'append no puede reducir los bytes de la preimagen')
-            if self.candidate_lines < self.expected_pre_lines:
+                    'append debe añadir bytes a la preimagen')
+            if self.candidate_lines <= self.expected_pre_lines:
                 raise WriteContractError(
-                    'append no puede reducir las líneas de la preimagen')
-            if self.candidate_bytes == self.expected_pre_bytes:
-                if self.candidate_sha256 != self.expected_pre_sha256:
-                    raise WriteContractError(
-                        'append con los mismos bytes debe conservar la '
-                        'preimagen')
-                if self.candidate_lines != self.expected_pre_lines:
-                    raise WriteContractError(
-                        'append con los mismos bytes debe conservar las líneas')
-            if self.candidate_lines > self.expected_pre_lines and \
-                    self.candidate_bytes == self.expected_pre_bytes:
+                    'append debe añadir al menos una línea completa')
+            if self.candidate_sha256 == self.expected_pre_sha256:
                 raise WriteContractError(
-                    'append con más líneas debe aumentar los bytes')
-            if self.candidate_sha256 == self.expected_pre_sha256 and \
-                    self.candidate_bytes != self.expected_pre_bytes:
-                raise WriteContractError(
-                    'append no puede cambiar bytes conservando el hash')
+                    'append no puede conservar el hash de la preimagen')
 
     def _validate_writer_binding(self) -> None:
         declaration = self.writer_declaration
         if declaration is None:
             raise WriteContractError('writer_declaration es obligatoria')
+        _require_exact_type(declaration, WriterDeclaration,
+                            'writer_declaration')
+        _require_exact_type(self.lock_policy, LockPolicy, 'lock_policy')
         if self.writer != declaration.name:
             raise WriteContractError(
                 'writer no coincide con la declaración validada')
@@ -902,6 +1070,17 @@ class WritePlan:
         if self.lock_policy != declaration.lock_policy:
             raise WriteContractError(
                 'lock_policy no coincide con la declaración validada')
+        if lock_policy_fingerprint(self.lock_policy) != \
+                lock_policy_fingerprint(declaration.lock_policy):
+            raise WriteContractError(
+                'el fingerprint de lock_policy no coincide con el writer')
+        if self.manifest_required != \
+                declaration.requires_manifest_verification:
+            raise WriteContractError(
+                'manifest_required no coincide con la declaración validada')
+        if self.pins_required != declaration.requires_pins_proposal:
+            raise WriteContractError(
+                'pins_required no coincide con la declaración validada')
         if self.operation == SNAPSHOT:
             source = _require_canonical_path(self.snapshot_of, 'snapshot_of')
             if declaration.targets != (source,):
@@ -909,9 +1088,10 @@ class WritePlan:
                     'la declaración snapshot no corresponde al origen del plan')
             return
         target = _require_canonical_path(self.target_path, 'target_path')
-        if target not in declaration.targets:
+        if declaration.targets != (target,):
             raise WriteContractError(
-                'la declaración no corresponde al target_path del plan')
+                'la declaración debe declarar exactamente el target_path '
+                'del plan')
         policy = _target_policy(target)
         if policy.requires_manifest_verification and \
                 not self.manifest_required:
@@ -922,43 +1102,120 @@ class WritePlan:
 
 
 def plan_fingerprint(plan: WritePlan) -> str:
+    _require_exact_type(plan, WritePlan, 'plan')
     plan.validate()
     return _canonical_sha256(plan.as_dict(), 'plan')
+
+
+def _effective_plan_policy(plan: WritePlan) -> TargetPolicy:
+    _require_exact_type(plan, WritePlan, 'plan')
+    if plan.operation == SNAPSHOT:
+        source = _require_canonical_path(plan.snapshot_of, 'snapshot_of')
+        if source not in _TARGET_POLICY_SPECS:
+            raise WriteContractError(
+                'snapshot_of no es un destino declarado: %s' % source)
+        return _canonical_snapshot_policy()
+    return _target_policy(plan.target_path)
+
+
+def plan_policy_fingerprint(plan: WritePlan) -> str:
+    """Fingerprint de la política efectiva que el plan aplica."""
+    return _canonical_sha256(_effective_plan_policy(plan).as_dict(),
+                             'target_policy')
 
 
 @dataclass
 class _AuthorityState:
     txn_id: str
     plan_fingerprint: str
+    transaction_uid: str
     active: bool = True
+    authorized_history: Tuple[str, ...] = (PREPARED,)
+    authorized_records: list = field(default_factory=list)
 
 
 _AUTHORITIES: Dict[str, _AuthorityState] = {}
+_USED_TXN_IDS: set = set()
 
 
-def _register_authority(plan: WritePlan) -> str:
+def _register_authority(plan: WritePlan) -> Tuple[str, str]:
+    _require_exact_type(plan, WritePlan, 'plan')
+    if plan.txn_id in _USED_TXN_IDS:
+        raise WriteContractError(
+            'txn_id ya utilizado durante este proceso: %s' % plan.txn_id)
     authority_id = uuid.uuid4().hex
+    transaction_uid = uuid.uuid4().hex
     _AUTHORITIES[authority_id] = _AuthorityState(
         txn_id=plan.txn_id,
         plan_fingerprint=plan_fingerprint(plan),
+        transaction_uid=transaction_uid,
+        authorized_history=(PREPARED,),
     )
-    return authority_id
+    _USED_TXN_IDS.add(plan.txn_id)
+    return authority_id, transaction_uid
 
 
-def _invalidate_authority(authority_id: str) -> None:
+def _invalidate_authority(
+        authority_id: str,
+        authorized_history: Optional[Tuple[str, ...]] = None) -> None:
     state = _AUTHORITIES.get(authority_id)
     if state is None:
         raise WriteContractError('autoridad de transacción desconocida')
     state.active = False
+    if authorized_history is not None:
+        state.authorized_history = tuple(authorized_history)
+
+
+def _set_authorized_history(authority_id: str,
+                            history: Tuple[str, ...]) -> None:
+    state = _AUTHORITIES.get(authority_id)
+    if state is None:
+        raise WriteContractError('autoridad de transacción desconocida')
+    if not state.active:
+        raise WriteContractError(
+            'no se puede ampliar una autoridad invalidada')
+    state.authorized_history = tuple(history)
+
+
+def _authorize_record_instance(authority_id: str,
+                               record: 'TransactionRecord') -> None:
+    _require_exact_type(record, TransactionRecord, 'record')
+    state = _AUTHORITIES.get(authority_id)
+    if state is None:
+        raise WriteContractError('autoridad de transacción desconocida')
+    if not any(authorized is record
+               for authorized in state.authorized_records):
+        state.authorized_records.append(record)
+
+
+def _forget_record_instance(authority_id: str,
+                            record: 'TransactionRecord') -> None:
+    state = _AUTHORITIES.get(authority_id)
+    if state is not None:
+        state.authorized_records[:] = [
+            authorized for authorized in state.authorized_records
+            if authorized is not record
+        ]
 
 
 def _check_authority(record: 'TransactionRecord') -> _AuthorityState:
+    _require_exact_type(record, TransactionRecord, 'record')
     if not record.authority_id:
         raise WriteContractError(
             'el registro no tiene autoridad de transacción')
+    if not record.transaction_uid:
+        raise WriteContractError(
+            'el registro no tiene identidad de transacción')
     state = _AUTHORITIES.get(record.authority_id)
     if state is None:
         raise WriteContractError('autoridad de transacción desconocida')
+    if state.transaction_uid != record.transaction_uid:
+        raise WriteContractError(
+            'la autoridad pertenece a otra identidad de transacción')
+    if not any(authorized is record
+               for authorized in state.authorized_records):
+        raise WriteContractError(
+            'el registro no es la instancia autorizada de la transacción')
     if state.txn_id != record.plan.txn_id:
         raise WriteContractError(
             'la autoridad de transacción no corresponde al txn_id')
@@ -973,6 +1230,25 @@ def _require_active_authority(record: 'TransactionRecord') -> None:
     if not state.active:
         raise WriteContractError(
             'transacción invalidada por un conflicto CAS')
+    if record.history != state.authorized_history:
+        raise WriteContractError(
+            'el historial del registro no es el historial autorizado actual')
+
+
+def _require_journal_authority(record: 'TransactionRecord') -> None:
+    state = _check_authority(record)
+    if record.history != state.authorized_history[:len(record.history)]:
+        raise WriteContractError(
+            'el registro de journal no pertenece al historial autorizado')
+    if state.active:
+        return
+    if not state.authorized_history or \
+            state.authorized_history[-1] != CAS_CONFLICT:
+        raise WriteContractError(
+            'la autoridad invalidada no autoriza este registro de journal')
+    if record.state not in (PREPARED, CAS_CONFLICT):
+        raise WriteContractError(
+            'la autoridad invalidada no autoriza evidencia de commit')
 
 
 @dataclass(frozen=True)
@@ -984,6 +1260,7 @@ class TransactionRecord:
     evidence: Mapping[str, Any] = field(default_factory=dict)
     history: Tuple[str, ...] = ()
     authority_id: str = field(default='', repr=False, compare=False)
+    transaction_uid: str = field(default='', repr=False, compare=False)
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'evidence',
@@ -1001,6 +1278,7 @@ class TransactionRecord:
 
 
 def new_transaction(plan: WritePlan, planned_at: str) -> TransactionRecord:
+    _require_exact_type(plan, WritePlan, 'plan')
     plan.validate()
     evidence = {
         'txn_id': plan.txn_id,
@@ -1017,6 +1295,7 @@ def new_transaction(plan: WritePlan, planned_at: str) -> TransactionRecord:
         'pins_required': plan.pins_required,
         'writer_declaration_fingerprint':
             writer_declaration_fingerprint(plan.writer_declaration),
+        'target_policy_fingerprint': plan_policy_fingerprint(plan),
         'lock_policy_fingerprint': lock_policy_fingerprint(plan.lock_policy),
         'planned_at': _timestamp(planned_at, 'planned_at'),
     }
@@ -1032,16 +1311,20 @@ def new_transaction(plan: WritePlan, planned_at: str) -> TransactionRecord:
         evidence['pins_expected_sha256'] = plan.pins_expected_sha256
     if plan.snapshot_of is not None:
         evidence['snapshot_of'] = plan.snapshot_of
-    authority_id = _register_authority(plan)
+    authority_id, transaction_uid = _register_authority(plan)
+    record = TransactionRecord(
+        state=PREPARED,
+        plan=plan,
+        evidence=evidence,
+        history=(PREPARED,),
+        authority_id=authority_id,
+        transaction_uid=transaction_uid,
+    )
+    _authorize_record_instance(authority_id, record)
     try:
-        return _validate_record(TransactionRecord(
-            state=PREPARED,
-            plan=plan,
-            evidence=evidence,
-            history=(PREPARED,),
-            authority_id=authority_id,
-        ))
+        return _validate_record(record)
     except Exception:
+        _forget_record_instance(authority_id, record)
         _AUTHORITIES.pop(authority_id, None)
         raise
 
@@ -1064,6 +1347,7 @@ def _check_plan_evidence(record: TransactionRecord) -> None:
         'pins_required': plan.pins_required,
         'writer_declaration_fingerprint':
             writer_declaration_fingerprint(plan.writer_declaration),
+        'target_policy_fingerprint': plan_policy_fingerprint(plan),
         'lock_policy_fingerprint': lock_policy_fingerprint(plan.lock_policy),
     }
     for name, value in expected.items():
@@ -1076,6 +1360,8 @@ def _check_plan_evidence(record: TransactionRecord) -> None:
                       'expected_pre_bytes', 'candidate_bytes'):
             observed = _nonnegative_int(evidence.get(name), name)
         elif name in ('expected_pre_sha256', 'candidate_sha256',
+                      'writer_declaration_fingerprint',
+                      'target_policy_fingerprint',
                       'lock_policy_fingerprint'):
             observed = _sha256(evidence.get(name), name)
         else:
@@ -1109,6 +1395,52 @@ def _check_plan_evidence(record: TransactionRecord) -> None:
                 'la evidencia no puede contradecir el plan: %s' % name)
 
 
+def _check_append_content(record: TransactionRecord,
+                          evidence: Mapping[str, Any]) -> None:
+    plan = record.plan
+    _require(evidence, APPEND_CONTENT_FIELDS)
+    content = evidence.get('append_content')
+    if type(content) is not str or not content:
+        raise WriteContractError(
+            'append_content debe ser una cadena no vacía')
+    if '\r' in content:
+        raise WriteContractError(
+            'append_content debe usar saltos de línea LF')
+    if not content.endswith('\n'):
+        raise WriteContractError(
+            'append_content debe terminar con un salto de línea')
+    try:
+        raw = content.encode('utf-8')
+    except UnicodeEncodeError:
+        raise WriteContractError(
+            'append_content contiene surrogates Unicode aislados')
+    if _sha256(evidence.get('append_content_sha256'),
+               'append_content_sha256') != \
+            hashlib.sha256(raw).hexdigest():
+        raise WriteContractError(
+            'append_content_sha256 no coincide con append_content')
+    if _bytes(evidence.get('append_content_bytes'),
+              'append_content_bytes') != len(raw):
+        raise WriteContractError(
+            'append_content_bytes no coincide con append_content')
+    content_lines = content.count('\n')
+    if content_lines < 1:
+        raise WriteContractError(
+            'append_content debe contener al menos una línea')
+    if _lines(evidence.get('append_content_lines'),
+              'append_content_lines') != content_lines:
+        raise WriteContractError(
+            'append_content_lines no coincide con append_content')
+    expected_bytes = plan.candidate_bytes - plan.expected_pre_bytes
+    expected_lines = plan.candidate_lines - plan.expected_pre_lines
+    if len(raw) != expected_bytes:
+        raise WriteContractError(
+            'append_content_bytes no coincide con el delta del candidato')
+    if content_lines != expected_lines:
+        raise WriteContractError(
+            'append_content_lines no coincide con el delta del candidato')
+
+
 def _check_operation(record: TransactionRecord,
                      evidence: Mapping[str, Any]) -> None:
     plan = record.plan
@@ -1124,6 +1456,7 @@ def _check_operation(record: TransactionRecord,
                  'append_boundary_verified') is not True:
             raise WriteContractError(
                 'append exige frontera de línea verificada')
+        _check_append_content(record, evidence)
     elif plan.operation == REWRITE:
         if _flag(evidence.get('rewrite_complete_verified'),
                  'rewrite_complete_verified') is not True:
@@ -1152,11 +1485,14 @@ def _check_backup(record: TransactionRecord,
             ('snapshot_of', plan.snapshot_of)):
         if other is not None and _same_path(backup_path, other):
             raise WriteContractError('backup_path no puede ser %s' % name)
-    if not backup_path.startswith(BACKUP_ROOT_PREFIX):
+    if not _same_path(str(Path(backup_path).parent), BACKUP_ROOT):
         raise WriteContractError(
-            'backup_path debe quedar bajo %s' % BACKUP_ROOT_PREFIX)
-    if plan.txn_id not in Path(backup_path).name:
-        raise WriteContractError('backup_path debe identificar el txn_id')
+            'backup_path debe quedar directamente bajo %s/' % BACKUP_ROOT)
+    expected_backup_name = plan.txn_id + BACKUP_SUFFIX
+    if Path(backup_path).name != expected_backup_name:
+        raise WriteContractError(
+            'backup_path debe ser exactamente %s/%s'
+            % (BACKUP_ROOT, expected_backup_name))
     disposition = _require_text(evidence, 'backup_disposition')
     if disposition not in BACKUP_DISPOSITIONS:
         raise WriteContractError('backup_disposition inválida: %s'
@@ -1175,10 +1511,21 @@ def _check_temp(record: TransactionRecord,
                                         'temp_path')
     if _same_path(temp_path, plan.target_path):
         raise WriteContractError('temp_path no puede ser el target')
-    if not temp_path.endswith('.tmp'):
+    if not temp_path.endswith(TEMP_SUFFIX):
         raise WriteContractError('temp_path debe terminar en .tmp')
-    if plan.txn_id not in Path(temp_path).name:
-        raise WriteContractError('temp_path debe identificar el txn_id')
+    target_parent = str(Path(plan.target_path).parent)
+    if not _same_path(str(Path(temp_path).parent), target_parent):
+        raise WriteContractError(
+            'temp_path debe quedar en el mismo directorio que el target')
+    expected_temp_name = (Path(plan.target_path).name + '.' +
+                          plan.txn_id + TEMP_SUFFIX)
+    if Path(temp_path).name != expected_temp_name:
+        raise WriteContractError(
+            'temp_path debe ser exactamente %s/%s'
+            % (target_parent, expected_temp_name))
+    if _is_within_dir(temp_path, BACKUP_ROOT, 'temp_path'):
+        raise WriteContractError(
+            'temp_path no puede quedar bajo %s/' % BACKUP_ROOT)
     for name, other in (
             ('backup_path', evidence.get('backup_path')),
             ('manifest_path', plan.manifest_path),
@@ -1240,7 +1587,21 @@ def _normalize_pins_symbols(symbols: Any) -> Tuple[str, ...]:
             symbols, (list, tuple, set, frozenset)):
         raise WriteContractError(
             'pins_symbols debe ser una colección de símbolos')
-    normalized = tuple(_nonempty(symbol, 'pins_symbols') for symbol in symbols)
+    normalized_list = []
+    for symbol in symbols:
+        if type(symbol) is not str or not symbol or \
+                symbol != symbol.strip():
+            raise WriteContractError(
+                'pins_symbols debe contener símbolos literales sin espacios '
+                'iniciales ni finales')
+        normalized_list.append(symbol)
+    normalized = tuple(normalized_list)
+    if len(normalized) != len(PINS_SYMBOLS):
+        raise WriteContractError(
+            'pins_symbols debe tener exactamente %d símbolos'
+            % len(PINS_SYMBOLS))
+    if len(set(normalized)) != len(normalized):
+        raise WriteContractError('pins_symbols no puede repetir símbolos')
     if set(normalized) != set(PINS_SYMBOLS):
         missing = sorted(set(PINS_SYMBOLS) - set(normalized))
         extra = sorted(set(normalized) - set(PINS_SYMBOLS))
@@ -1269,7 +1630,8 @@ def _check_pins(record: TransactionRecord,
     values = evidence.get('pins_proposed_values')
     if not isinstance(values, Mapping):
         raise WriteContractError('pins_proposed_values debe ser un mapping')
-    if set(values) != set(PINS_SYMBOLS):
+    if len(values) != len(PINS_SYMBOLS) or \
+            set(values) != set(PINS_SYMBOLS):
         raise WriteContractError(
             'pins_proposed_values debe cubrir exactamente %s'
             % ', '.join(PINS_SYMBOLS))
@@ -1339,6 +1701,8 @@ def _check_state_evidence(record: TransactionRecord, state: str,
 
 
 def _validate_record(record: TransactionRecord) -> TransactionRecord:
+    _require_exact_type(record, TransactionRecord, 'record')
+    _require_exact_type(record.plan, WritePlan, 'plan')
     record.plan.validate()
     if not isinstance(record.evidence, Mapping):
         raise WriteContractError('evidence debe ser un mapping')
@@ -1383,10 +1747,27 @@ def _merge_evidence(record: TransactionRecord,
     return _freeze_value(merged, 'evidence')
 
 
+def _observed_preimage(evidence: Mapping[str, Any]
+                       ) -> Tuple[str, int, int]:
+    _require(evidence, ('observed_pre_sha256', 'observed_pre_lines',
+                        'observed_pre_bytes'))
+    return (
+        _sha256(evidence.get('observed_pre_sha256'),
+                'observed_pre_sha256'),
+        _lines(evidence.get('observed_pre_lines'), 'observed_pre_lines'),
+        _bytes(evidence.get('observed_pre_bytes'), 'observed_pre_bytes'),
+    )
+
+
 def transition(record: TransactionRecord, next_state: str,
                evidence: Optional[Mapping[str, Any]] = None
                ) -> TransactionRecord:
-    """Aplica una transición permitida y exige su evidencia."""
+    """Aplica una transición permitida y exige su evidencia.
+
+    Toda transición comprueba la autoridad externa y su invalidación. Una
+    copia del registro conserva el mismo `authority_id` y, por tanto, no
+    puede continuar después de un conflicto CAS.
+    """
     _validate_record(record)
     _require_active_authority(record)
     raw = _evidence_mapping(evidence)
@@ -1408,37 +1789,49 @@ def transition(record: TransactionRecord, next_state: str,
     if next_state not in allowed:
         raise WriteContractError(
             'transición no permitida: %s -> %s' % (record.state, next_state))
+    plan = record.plan
+    expected_preimage = (
+        plan.expected_pre_sha256,
+        plan.expected_pre_lines,
+        plan.expected_pre_bytes,
+    )
     if next_state == PREIMAGE_VERIFIED:
-        _require(raw, REQUIRED_EVIDENCE[PREIMAGE_VERIFIED])
-        observed_sha = _sha256(raw.get('observed_pre_sha256'),
-                               'observed_pre_sha256')
-        observed_lines = _lines(raw.get('observed_pre_lines'),
-                                'observed_pre_lines')
-        observed_bytes = _bytes(raw.get('observed_pre_bytes'),
-                                'observed_pre_bytes')
-        plan = record.plan
-        if not (observed_sha == plan.expected_pre_sha256 and
-                observed_lines == plan.expected_pre_lines and
-                observed_bytes == plan.expected_pre_bytes):
+        observed = _observed_preimage(raw)
+        if observed != expected_preimage:
+            # La invalidación es incondicional y ocurre antes de validar
+            # campos descriptivos del conflicto. Si la construcción del
+            # registro de conflicto falla, la autoridad sigue invalidada.
+            _invalidate_authority(
+                record.authority_id, record.history + (CAS_CONFLICT,))
             conflict_evidence = dict(raw)
             conflict_evidence['cas_conflict_reason'] = \
                 'la preimagen observada difiere de la declarada'
             conflict_evidence.setdefault('cas_conflict_at', _utc_now())
             merged = _merge_evidence(record, conflict_evidence)
-            conflict = _validate_record(TransactionRecord(
+            conflict = TransactionRecord(
                 state=CAS_CONFLICT,
                 plan=plan,
                 evidence=merged,
                 history=record.history + (CAS_CONFLICT,),
                 authority_id=record.authority_id,
-            ))
-            _invalidate_authority(record.authority_id)
+                transaction_uid=record.transaction_uid,
+            )
+            _authorize_record_instance(record.authority_id, conflict)
+            try:
+                conflict = _validate_record(conflict)
+            except Exception:
+                _forget_record_instance(record.authority_id, conflict)
+                raise
             raise CasConflict(
                 'CAS rechaza la preimagen; la transacción queda terminal',
                 record=conflict)
     elif next_state == CAS_CONFLICT:
-        _require(raw, ('observed_pre_sha256', 'observed_pre_lines',
-                       'observed_pre_bytes'))
+        observed = _observed_preimage(raw)
+        if observed == expected_preimage:
+            raise WriteContractError(
+                'cas_conflict exige una discrepancia con la preimagen')
+        _invalidate_authority(
+            record.authority_id, record.history + (CAS_CONFLICT,))
         conflict_evidence = dict(raw)
         conflict_evidence.setdefault(
             'cas_conflict_reason',
@@ -1446,24 +1839,38 @@ def transition(record: TransactionRecord, next_state: str,
         conflict_evidence.setdefault('cas_conflict_at', _utc_now())
         merged = _merge_evidence(record, conflict_evidence)
         _check_state_evidence(record, CAS_CONFLICT, merged)
-        conflict = _validate_record(TransactionRecord(
+        conflict = TransactionRecord(
             state=CAS_CONFLICT,
-            plan=record.plan,
+            plan=plan,
             evidence=merged,
             history=record.history + (CAS_CONFLICT,),
             authority_id=record.authority_id,
-        ))
-        _invalidate_authority(record.authority_id)
-        return conflict
+            transaction_uid=record.transaction_uid,
+        )
+        _authorize_record_instance(record.authority_id, conflict)
+        try:
+            return _validate_record(conflict)
+        except Exception:
+            _forget_record_instance(record.authority_id, conflict)
+            raise
     merged = _merge_evidence(record, raw)
     _check_state_evidence(record, next_state, merged)
-    return _validate_record(TransactionRecord(
+    new_record = TransactionRecord(
         state=next_state,
-        plan=record.plan,
+        plan=plan,
         evidence=merged,
         history=record.history + (next_state,),
         authority_id=record.authority_id,
-    ))
+        transaction_uid=record.transaction_uid,
+    )
+    _authorize_record_instance(record.authority_id, new_record)
+    try:
+        new_record = _validate_record(new_record)
+    except Exception:
+        _forget_record_instance(record.authority_id, new_record)
+        raise
+    _set_authorized_history(record.authority_id, new_record.history)
+    return new_record
 
 
 def assert_committed(record: TransactionRecord) -> TransactionRecord:
@@ -1491,13 +1898,18 @@ def journal_record_from_transaction(record: TransactionRecord,
                                     sequence: int,
                                     previous_sha256: str) -> Dict[str, Any]:
     """Construye un registro de journal ligado al plan y a su evidencia."""
+    _require_exact_type(record, TransactionRecord, 'record')
     _validate_record(record)
+    _require_journal_authority(record)
     evidence = _to_jsonable(record.evidence, 'evidence')
     payload = {
         'schema_version': JOURNAL_SCHEMA_VERSION,
         'contract_version': CONTRACT_VERSION,
         'txn_id': record.plan.txn_id,
         'plan_fingerprint': plan_fingerprint(record.plan),
+        'authority_id': _uid_hex(record.authority_id, 'authority_id'),
+        'transaction_uid': _uid_hex(record.transaction_uid,
+                                    'transaction_uid'),
         'sequence': _lines(sequence, 'sequence'),
         'state': record.state,
         'previous_sha256': _sha256(previous_sha256, 'previous_sha256'),
@@ -1508,18 +1920,60 @@ def journal_record_from_transaction(record: TransactionRecord,
     return payload
 
 
+def _authenticate_journal_authority(
+        record: Mapping[str, Any], plan: WritePlan) -> _AuthorityState:
+    _require_exact_type(plan, WritePlan, 'plan')
+    authority_id = _uid_hex(record.get('authority_id'), 'authority_id')
+    transaction_uid = _uid_hex(record.get('transaction_uid'),
+                               'transaction_uid')
+    state = _AUTHORITIES.get(authority_id)
+    if state is None:
+        raise WriteContractError(
+            'journal sin autoridad autenticable en este proceso')
+    if state.transaction_uid != transaction_uid:
+        raise WriteContractError(
+            'journal con identidad de transacción no autenticada')
+    if state.txn_id != plan.txn_id:
+        raise WriteContractError(
+            'journal con autoridad de otro txn_id')
+    if state.plan_fingerprint != plan_fingerprint(plan):
+        raise WriteContractError(
+            'journal con autoridad de otro plan')
+    journal_state = record.get('state')
+    if journal_state not in state.authorized_history:
+        raise WriteContractError(
+            'journal con estado fuera del historial autorizado')
+    if not state.active:
+        if not state.authorized_history or \
+                state.authorized_history[-1] != CAS_CONFLICT:
+            raise WriteContractError(
+                'journal de una autoridad invalidada')
+        if journal_state not in (PREPARED, CAS_CONFLICT):
+            raise WriteContractError(
+                'journal de autoridad invalidada no puede acreditar commit')
+    return state
+
+
 def validate_journal_record(record: Mapping[str, Any],
                             plan: Optional[WritePlan] = None
                             ) -> Dict[str, Any]:
-    """Valida forma, hashes, plan, evidencia y ausencia de un tercer hash."""
+    """Valida forma, hashes y, si hay plan, su vínculo y la evidencia.
+
+    Sin `plan` el resultado es una validación estructural y de
+    autoconsistencia: comprueba el sobre, la cadena de hashes y que
+    `evidence.txn_id` coincida con el `txn_id` del sobre, pero no autentica
+    que el `plan_fingerprint` corresponda a un plan autorizado. Por tanto,
+    ese resultado no autoriza recuperación ni confirma un commit. F1 debe
+    exigir siempre el plan y la unicidad del `txn_id`.
+    """
     if not isinstance(record, Mapping):
         raise WriteContractError('el registro de journal debe ser un mapping')
     if any(not isinstance(key, str) for key in record):
         raise WriteContractError('el journal exige claves textuales')
     _require(record, (
         'schema_version', 'contract_version', 'txn_id', 'plan_fingerprint',
-        'sequence', 'state', 'previous_sha256', 'evidence', 'evidence_sha256',
-        'record_sha256',
+        'authority_id', 'transaction_uid', 'sequence', 'state',
+        'previous_sha256', 'evidence', 'evidence_sha256', 'record_sha256',
     ))
     schema_version = record.get('schema_version')
     if isinstance(schema_version, bool) or not isinstance(schema_version, int) \
@@ -1529,6 +1983,8 @@ def validate_journal_record(record: Mapping[str, Any],
         raise WriteContractError('contract_version de journal inválido')
     txn_id = _nonempty(record.get('txn_id'), 'txn_id')
     _sha256(record.get('plan_fingerprint'), 'plan_fingerprint')
+    _uid_hex(record.get('authority_id'), 'authority_id')
+    _uid_hex(record.get('transaction_uid'), 'transaction_uid')
     _lines(record.get('sequence'), 'sequence')
     state = record.get('state')
     if state not in JOURNAL_STATES:
@@ -1557,12 +2013,14 @@ def validate_journal_record(record: Mapping[str, Any],
         raise WriteContractError(
             'journal con tercer hash: %s' % ', '.join(extra_hashes))
     if plan is not None:
+        _require_exact_type(plan, WritePlan, 'plan')
         plan.validate()
         if txn_id != plan.txn_id:
             raise WriteContractError('txn_id de journal no coincide con plan')
         if record.get('plan_fingerprint') != plan_fingerprint(plan):
             raise WriteContractError(
                 'journal no está ligado al plan declarado')
+        _authenticate_journal_authority(record, plan)
         check_record = TransactionRecord(
             state=state,
             plan=plan,
@@ -1598,8 +2056,23 @@ def validate_journal_chain(records: Any,
     previous_evidence = None
     txn_id = None
     fingerprint = None
+    authority_id = None
+    transaction_uid = None
+    authority_state = None
+    states = []
     for index, raw in enumerate(records):
         record = validate_journal_record(raw, plan=plan)
+        if plan is not None:
+            current_authority = _authenticate_journal_authority(record, plan)
+            if authority_id is None:
+                authority_id = record['authority_id']
+                transaction_uid = record['transaction_uid']
+                authority_state = current_authority
+            elif record['authority_id'] != authority_id or \
+                    record['transaction_uid'] != transaction_uid:
+                raise WriteContractError(
+                    'journal mezcla autoridades de transacción')
+            states.append(record['state'])
         if record['sequence'] != index:
             raise WriteContractError('secuencia de journal discontinua')
         if txn_id is None:
@@ -1639,6 +2112,17 @@ def validate_journal_chain(records: Any,
         previous_state = record['state']
         previous_evidence = current_evidence
         chain.append(record)
+    if plan is not None:
+        if authority_state is None:
+            raise WriteContractError('journal sin autoridad autenticable')
+        authorized = list(authority_state.authorized_history)
+        if states != authorized[:len(states)]:
+            raise WriteContractError(
+                'journal no sigue el historial autorizado de la transacción')
+        if not authority_state.active:
+            if states != authorized or states[-1] != CAS_CONFLICT:
+                raise WriteContractError(
+                    'journal de autoridad invalidada no termina en conflicto')
     return tuple(chain)
 
 
@@ -1662,68 +2146,3 @@ def recovery_action(records: Any,
                  MANIFEST_VERIFIED, PINS_PROPOSED):
         return RECOVERY_ACTION_AFTER_REPLACE
     return RECOVERY_ACTION_BEFORE_REPLACE
-
-
-@dataclass(frozen=True)
-class WriterDeclaration:
-    """Contrato mínimo que F3 debe exigir a cada writer declarado."""
-
-    name: str
-    operation: str
-    targets: Tuple[str, ...]
-    requires_lock: bool
-    requires_cas: bool
-    requires_backup: bool
-    requires_manifest_verification: bool
-    requires_pins_proposal: bool
-    lock_policy: LockPolicy = DEFAULT_LOCK_POLICY
-
-    def validate(self) -> 'WriterDeclaration':
-        _nonempty(self.name, 'name')
-        if self.operation not in WRITE_OPERATIONS:
-            raise WriteContractError('operation inválida: %r' % self.operation)
-        self.lock_policy.validate()
-        if not isinstance(self.targets, (tuple, list)) or not self.targets:
-            raise WriteContractError('targets no puede estar vacío')
-        normalized = []
-        seen = set()
-        for target in self.targets:
-            canonical = _require_canonical_path(target, 'targets')
-            key = os.path.normcase(canonical)
-            if key in seen:
-                raise WriteContractError('targets no puede repetir destinos')
-            seen.add(key)
-            normalized.append(canonical)
-        for target in normalized:
-            try:
-                policy = TARGET_POLICIES[target]
-            except KeyError:
-                raise WriteContractError(
-                    '%s declara un destino no canónico: %s'
-                    % (self.name, target))
-            if self.operation not in policy.operations:
-                raise WriteContractError(
-                    '%s usa %s en un destino que no lo permite'
-                    % (self.name, self.operation))
-            requirements = (
-                ('requires_lock', policy.requires_lock, 'mutex'),
-                ('requires_cas', policy.requires_cas, 'CAS'),
-                ('requires_backup', policy.requires_backup, 'backup'),
-                ('requires_manifest_verification',
-                 policy.requires_manifest_verification, 'manifiesto'),
-                ('requires_pins_proposal',
-                 policy.requires_pins_proposal, 'propuesta de pins'),
-            )
-            for attribute, required, label in requirements:
-                if required and not getattr(self, attribute):
-                    raise WriteContractError(
-                        '%s escribe %s sin exigir %s'
-                        % (self.name, target, label))
-        if self.requires_pins_proposal and PINS_RUNTIME_UPDATE_ALLOWED:
-            raise WriteContractError('los pins no se aplican en runtime')
-        return self
-
-
-def validate_writer_declaration(
-        declaration: WriterDeclaration) -> WriterDeclaration:
-    return declaration.validate()
