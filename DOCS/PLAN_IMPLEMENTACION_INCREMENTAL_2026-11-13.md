@@ -17,9 +17,12 @@ Antes de escribir código:
 4. Aprobar `CONTRATOS_RANGO_EQUITY_EV_2026-11-13.md`.
 5. Aprobar `DISENO_TECNICO_MW_INTERFACES_2026-11-13.md`.
 6. Aprobar `MATRIZ_PRUEBAS_ACEPTACION_2026-11-13.md`.
-7. Confirmar que `MULTIWAY_SOPORTADO=False` y que no se busca una acción MW.
+7. Aprobar `MIGRACION_ROLLBACK_PREFLOP_2026-11-13.md`.
+8. Confirmar que `MULTIWAY_SOPORTADO=False` y que no se busca una acción MW.
 
-Si falta una aprobación, no se empieza el paso siguiente.
+La aprobación del plan de implementación no sustituye la aprobación del diseño
+de migración y rollback. Si falta una aprobación, no se empieza el paso
+siguiente.
 
 ## 2. Reglas de ejecución
 
@@ -36,20 +39,70 @@ Si falta una aprobación, no se empieza el paso siguiente.
 
 ```
 DOCs aprobados
-  └── PR-01 contrato canónico puro
-        ├── PR-02 resolvedor de cobertura
-        │     └── PR-03 adaptador de entrenamiento
-        │           └── PR-04 manifiesto de artefactos
-        ├── PR-05 sombra preflop (sin acción)
-        │     └── PR-06 router legacy/shadow
-        │           └── PR-07 canonical detrás de bandera
-        └── PR-08 contratos rango/equity/EV
-              └── PR-09 MW sombra (FieldState/VillainBelief)
-                    └── PR-10 JointSampler/FieldEquity
-                          └── PR-11 FieldResponse/EV
+  └── PR-00 compatibilidad read-only
+        └── PR-01 contrato canónico puro
+              ├── PR-02 resolvedor de cobertura
+              │     └── PR-03 adaptador de entrenamiento
+              │           └── PR-04 compatibilidad de artefactos
+              ├── PR-05 sombra preflop (sin acción)
+              │     └── PR-06 router legacy/shadow
+              │           └── PR-07 canonical detrás de bandera
+              └── PR-08 contratos rango/equity/EV
+                    └── PR-09 MW sombra (FieldState/VillainBelief)
+                          └── PR-10 JointSampler/FieldEquity
+                                └── PR-11 FieldResponse/EV
 ```
 
+PR-03/PR-04 y PR-05/PR-06 son ramas parcialmente independientes. No se fuerza
+una dependencia artificial entre ellas; solo comparten PR-01 como base
+común. PR-08 depende de los contratos y de la política de cobertura ya
+aprobados. PR-09…PR-11 dependen obligatoriamente de PR-08.
+
 ## 4. Pasos
+
+### PR-00 — Compatibilidad read-only
+
+**Alcance**
+
+- Contrastar los documentos aprobados con el código, las estructuras y las
+  fuentes reales del repositorio.
+- Correspondencia entre los campos del contrato y los datos que realmente
+  existen.
+- Fuentes de cada campo: acciones, importes, posiciones, ciegas, botón y orden
+  de asientos.
+- Campos que no pueden obtenerse con certeza.
+- Incompatibilidades entre el contrato propuesto y las estructuras actuales.
+- Casos que requieren `unknown`, `unresolved` o abstención.
+- Impacto sobre los consumidores existentes.
+- Especialmente `amount`, contribuciones acumuladas, posts, straddles y orden
+  de acción.
+
+**No alcance**
+
+- No implementa nada.
+- No corrige código.
+- No adapta datos.
+- No escribe en `motor/` ni en `data/`.
+
+**Tests / evidencia**
+
+- Informe de compatibilidad read-only.
+- Lista de campos no reconstruibles.
+- Casos de abstención documentados.
+- Commit de referencia.
+- Estado de Git.
+- Hashes de los documentos y datos examinados.
+- No asumir que los hashes históricos siguen vigentes.
+
+**Criterio de salida**
+
+- Existe un informe que identifica qué partes del contrato son implementables
+  con la evidencia disponible y cuáles requieren `unknown`/`unresolved`.
+- No se ha modificado código ni datos.
+
+**Rollback**
+
+- No aplica: no hay cambios.
 
 ### PR-01 — Contrato canónico puro
 
@@ -75,6 +128,9 @@ DOCs aprobados
 - Revert del PR; no hay ruta que lo use.
 
 ### PR-02 — Resolvedor de cobertura
+
+**Estado (2026-11-14):** cerrado, con PR-02B.4 aprobado. Ver
+`DOCS/CIERRE_PR_02B_2026-11-14.md`. PR-03 no iniciado.
 
 **Alcance**
 
@@ -118,26 +174,41 @@ DOCs aprobados
 
 - Volver al adaptador anterior; no hay artefacto nuevo.
 
-### PR-04 — Manifiesto de artefactos
+### PR-04 — Compatibilidad de artefactos
 
 **Alcance**
 
-- Metadatos `contract_version`, `label_schema`, `code_commit`,
-  `data_snapshot_hash`, `coverage_inventory`.
-- Lectura que rechaza o marca artefactos sin versión.
+- Lectura y validación de metadatos: `contract_version`, `label_schema`,
+  `code_commit`, `data_snapshot_hash`, `coverage_inventory`.
+- Identificar versiones, detectar incompatibilidades y rechazar o marcar
+  artefactos desconocidos.
+- Lectura que rechaza o marca artefactos sin versión como `unknown_contract`.
+- No modifica artefactos existentes ni escribe en `data/`.
+
+**No alcance**
+
+- Creación o modificación de manifiestos/sidecars.
+- Regeneración de artefactos.
+- Escritura en `data/`.
+
+Si se necesita escribir o modificar un manifiesto, eso requiere una
+autorización y un PR específico posterior.
 
 **Tests**
 
 - MIG-001…MIG-008; ART-001…ART-003.
 - Un artefacto legacy no se mezcla con canónico.
+- Un artefacto sin versión verificable queda `unknown_contract`.
 
 **Criterio de salida**
 
 - Ningún consumidor asume compatibilidad por nombre de archivo.
+- Ningún artefacto existente fue modificado.
 
 **Rollback**
 
-- El manifiesto es aditivo; se puede ignorar y volver al loader anterior.
+- La lectura de compatibilidad es aditiva; se puede ignorar y volver al
+  loader anterior.
 
 ### PR-05 — Sombra preflop
 
@@ -146,6 +217,13 @@ DOCs aprobados
 - Calcular `PreflopDecision` en paralelo a legacy.
 - Log de diferencias en memoria.
 - No cambia la acción.
+
+**Restricciones de sombra**
+
+- El registro de diferencias es temporal, acotado y no persistente por
+  defecto.
+- No alimenta entrenamiento.
+- No escribe en `hands_db.jsonl`.
 
 **Tests**
 
@@ -191,6 +269,13 @@ DOCs aprobados
 - `unsupported` con motivo; no fold.
 - La bandera no se activa en este plan.
 
+**Restricciones de bandera**
+
+- La bandera permanece desactivada por defecto.
+- No puede habilitarse accidentalmente mediante configuración ordinaria.
+- El código puede existir y probarse en condiciones controladas, pero no debe
+  cambiar la ruta efectiva de decisiones.
+
 **Tests**
 
 - MIG-005; SHW-005; fixtures de cobertura.
@@ -210,15 +295,35 @@ DOCs aprobados
 **Alcance**
 
 - Tipos `ObservedRange`, `EstimatedRange`, `GenericPrior`,
-  `CurrentEquity`, `ShowdownEquity`, `EvByAction`.
-- Cálculo HU con method/seed/CI.
+  `CurrentBoardStrength`, `EquityToShowdown`, `EvByAction`.
+- `EquityToShowdown` es el tipo canónico para la probabilidad de ganar, empatar
+  o perder hasta showdown. `ShowdownEquity` no es un tipo independiente; solo
+  designa una realización de `EquityToShowdown` con un método concreto.
+- Cálculo HU con método declarado; seed e intervalo de confianza solo cuando
+  el método de cálculo los requiera.
 - Sin integración live.
+
+**Nomenclatura y métodos**
+
+- `CurrentBoardStrength`: evaluación de la fuerza de la mano en el board
+  actual.
+- `EquityToShowdown`: probabilidad de ganar, empatar o perder considerando
+  runouts hasta showdown.
+- `ShowdownEquity` solo se usa si el contrato la define explícitamente como
+  estimación de esa equity mediante un método determinado; no se confunde con
+  la fuerza actual del board.
+- Enumeración exacta: método, espacio evaluado y número de combinaciones; no
+  necesita seed ni intervalo de confianza de muestreo.
+- Monte Carlo: método, muestras, seed e intervalo de confianza.
+- Rango vacío: debe llevar una razón explícita (`no_range`,
+  `unsupported`, `empty_after_filter`, `blockers_exhausted`, `parse_error`,
+  etc.). No basta con `unknown`.
 
 **Tests**
 
 - RNG-001…RNG-007; EQ-001…EQ-008; EV-001…EV-008.
 - Exacto vs MC dentro del CI.
-- Rango vacío → `unknown`.
+- Rango vacío con razón explícita.
 
 **Criterio de salida**
 
@@ -236,6 +341,13 @@ DOCs aprobados
 - Construir `FieldState` y `MultiwayRangeSet` por rival.
 - No usar `union()` como campo.
 - No recomendar.
+
+**Distinción de elegibilidad**
+
+- Distinguir jugadores que pueden actuar de jugadores que siguen siendo
+  elegibles para el bote.
+- Un jugador all-in no puede actuar, pero continúa participando en los botes
+  a los que tiene derecho.
 
 **Tests**
 
@@ -259,6 +371,25 @@ DOCs aprobados
 - Independencia como baseline etiquetado.
 - Side pots, ties y all-ins.
 
+**Requisitos formales del muestreo**
+
+- Declarar distribución objetivo y distribución propuesta.
+- Aportar evidencia de que el estimador corresponde a la distribución objetivo
+  declarada.
+- Establecer antes de evaluar resultados los criterios de rechazo e
+  insuficiencia estadística.
+- Declarar política de muestreo: independencia, correlación o
+  condicionamiento.
+- Definir tratamiento de colisiones y normalización.
+- Declarar pesos de las muestras, si corresponden.
+- Calcular ESS (tamaño efectivo de muestra).
+- Reportar tasa de rechazo y criterios para declarar el resultado no fiable.
+- Definir comportamiento cuando no se puede obtener una distribución conjunta
+  válida.
+- La independencia es un baseline etiquetado, no una verdad sobre los rivales.
+- `RangeState.union()` sigue prohibido como sustituto de una distribución
+  conjunta.
+
 **Tests**
 
 - MW-003…MW-006, MW-008, MW-009, MW-011, MW-013.
@@ -278,13 +409,23 @@ DOCs aprobados
 **Alcance**
 
 - Respuesta por rival y EV por acción.
-- `tree_depth`, `n`, seed y CI.
+- `tree_depth`, `n`, seed y CI cuando el método lo requiera.
 - Sin activación live.
+
+**Criterio de EV**
+
+- Toda rama de EV debe modelar las respuestas necesarias para esa acción.
+- Las acciones sin respuesta posterior necesaria (por ejemplo, fold en el nodo
+  actual) no deben rechazarse por carecer de un modelo de respuesta.
+- Si una rama requiere respuestas y no hay modelo válido, su EV será
+  `unsupported` o no disponible; nunca se sustituirá por cero.
+- `tree_depth`, `n`, seed e intervalo de confianza no son obligatorios
+  indiscriminadamente: el método exacto y el método de muestreo tienen
+  requisitos distintos.
 
 **Tests**
 
 - MW-012, MW-014; EV multiway.
-- EV sin respuesta inválido.
 - `unsupported` no es fold.
 
 **Criterio de salida**
@@ -304,6 +445,22 @@ DOCs aprobados
 - Curvas, CI y EV held-out.
 - Decisión de activación separada.
 
+**Requisitos del dataset**
+
+- SHA-256 del snapshot.
+- Versión del dataset.
+- Identificación de manos y sesiones.
+- Separación verificable entre entrenamiento y evaluación.
+- Registro de exclusiones y duplicados.
+- Invalidación de resultados cuando cambie la fuente de datos.
+
+**Restricciones**
+
+- La evaluación estratégica requiere aprobación propia.
+- Dataset congelado y separado por sesiones o manos para evitar contaminación
+  entre entrenamiento y evaluación.
+- Pasar tests mecánicos o estadísticos no autoriza activación.
+
 **No se ejecuta en este plan.** No se activa `canonical` ni MW solo por este
 documento.
 
@@ -311,12 +468,12 @@ documento.
 
 | Hito | Contenido | Condición |
 |---|---|---|
-| H0 | Diseño aprobado | 8 docs revisados |
+| H0 | Diseño aprobado | documentos de diseño revisados, incluida migración/rollback |
 | H1 | Contrato zócalo | PR-01/02 verdes |
-| H2 | Sombra preflop | PR-03…PR-06; acción intacta |
-| H3 | HU rango/equity/EV | PR-08; sin live |
-| H4 | MW sombra | PR-09…PR-11; sin recomendación |
-| H5 | Evaluación | dataset y test no visto |
+| H2 | Sombra preflop | PR-03…PR-06; acción intacta. PR-03/04 y PR-05/06 son ramas parcialmente independientes; no se fuerza dependencia artificial entre ellas |
+| H3 | HU rango/equity/EV | PR-08; sin live; respeta contratos y cobertura aprobados |
+| H4 | MW sombra | PR-09…PR-11; sin recomendación; dependencia obligatoria de PR-08 |
+| H5 | Preparación de evaluación | dataset y test no visto; no se ejecuta validación estratégica ni se declara aptitud para serving |
 | H6 | Activación | aprobación separada |
 
 ## 6. Criterios de “no implementado”
@@ -345,5 +502,6 @@ Cada PR debe adjuntar:
 
 ## 8. Definición de terminado
 
-La fase de diseño termina cuando los 8 documentos están revisados y aprobados.
-La fase de implementación empieza solo con PR-01, no con una activación.
+La fase de diseño termina cuando los documentos de diseño están revisados y
+aprobados, incluida migración y rollback. La fase de implementación empieza
+solo con PR-00, no con una activación.

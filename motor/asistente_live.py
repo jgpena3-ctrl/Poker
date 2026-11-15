@@ -44,6 +44,7 @@ from .player_ranges import ProfileRangeModel
 from .postflop_ranges import PostflopRangeModel
 from .preflop import (classify_missing_table, load_tables, lookup_table,
                       table_key)
+from .preflop_coverage import CoverageRequest, resolve_coverage
 from .preflop_contract import (ShadowPreflopLog, actions_of, first_decision,
                                table_plan)
 from .profile import PEZ, Profiles, TIBURON, STACK_FISH_BB
@@ -344,23 +345,54 @@ def _combo_index(hero_codes):
     return int(hits[0]) if len(hits) else None
 
 
+def _pf_coverage_lookup(base, hero_pos='', vs_pos='',
+                        source_context=None):
+    """Resolvedor de cobertura integrado con el formato histórico.
+
+    Devuelve (vector, clave_usada, estado, CoverageResolution).
+    """
+    if source_context is None:
+        # El lookup histórico no dispone de una secuencia validada. No se
+        # declara una imposibilidad demostrada ni se activa fallback: la
+        # ausencia dependiente del orden queda como unknown.
+        source_context = {'sequence_status': 'not_evaluated'}
+    request = CoverageRequest(
+        requested_key=table_key(base, hero_pos, vs_pos),
+        action=base,
+        pos=hero_pos,
+        vs=vs_pos,
+        source_context=source_context,
+    )
+    tables = load_tables()
+    resolution = resolve_coverage(request, tables=tables)
+
+    probs = None
+    source = resolution.source_key
+    if resolution.coverage_state == 'exact':
+        status = 'exact'
+    elif resolution.coverage_state == 'alias':
+        status = 'alias'
+    elif resolution.coverage_state == 'coverage_gap' and resolution.fallback_used:
+        status = 'fallback_other_vs'
+    else:
+        status = 'missing'
+
+    if source is not None:
+        table = tables.get(source)
+        if table is not None:
+            probs = table['probs']
+
+    return probs, source, status, resolution
+
+
 def _pf_table_lookup(base, hero_pos='', vs_pos=''):
     """(vector, clave_usada, estado) de la matriz más específica disponible.
 
-    Orden: exacta (o alias declarado) → misma acción y posición con OTRO
-    rival → ausente. El fallback por posición se conserva por compatibilidad,
-    pero ahora devuelve su clave de origen y se registra como
-    ``fallback_other_vs``: nunca vuelve a ser indistinguible de una tabla
-    exacta.
+    Conserva la firma y el retorno histórico de tres elementos.
     """
-    if hero_pos:
-        table, source, status = lookup_table(base, hero_pos, vs_pos)
-        if table is not None:
-            return table['probs'], source, status
-        for key, candidate in sorted(load_tables().items()):
-            if candidate['action'] == base and candidate['pos'] == hero_pos:
-                return candidate['probs'], key, 'fallback_other_vs'
-    return None, None, 'missing'
+    probs, source, status, _resolution = _pf_coverage_lookup(
+        base, hero_pos, vs_pos)
+    return probs, source, status
 
 
 def _pf_table_probs(base, hero_pos='', vs_pos=''):
@@ -415,7 +447,7 @@ def _pf_table_audit(queries):
     """
     audit = []
     for base, pos, vs in queries:
-        _probs, source, status = _pf_table_lookup(base, pos, vs)
+        _probs, source, status, resolution = _pf_coverage_lookup(base, pos, vs)
         item = {
             'key': table_key(base, pos, vs),
             'action': base,
@@ -423,11 +455,25 @@ def _pf_table_audit(queries):
             'vs': vs,
             'source': source,
             'status': status,
+            'coverage_state': resolution.coverage_state,
+            'source_key': resolution.source_key,
+            'fallback_used': resolution.fallback_used,
+            'fallback_reason': resolution.fallback_reason,
+            'approximation_used': resolution.approximation_used,
         }
         if status in ('missing', 'fallback_other_vs'):
-            item['classification'] = classify_missing_table(base, pos, vs)
+            # La causa estructural se conserva aparte: nunca sustituye al
+            # estado realmente resuelto (unknown/impossible/coverage_gap).
+            item['structural_classification'] = classify_missing_table(
+                base, pos, vs)
+            if resolution.coverage_state == 'unknown':
+                item['classification'] = 'unknown'
+            elif resolution.coverage_state == 'impossible':
+                item['classification'] = resolution.reason
+            else:
+                item['classification'] = 'coverage_gap'
         if status == 'missing':
-            item['reason'] = item['classification']
+            item['reason'] = resolution.reason
         elif status == 'fallback_other_vs':
             item['reason'] = 'fallback_to_other_vs'
         audit.append(item)

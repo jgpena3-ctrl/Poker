@@ -126,10 +126,33 @@ class PreflopAction:
     action: str
     amount: Optional[float]
     is_blind: bool
+    player_id: Optional[str] = None
+    raw_action: str = ''
+    event_type: Optional[str] = None
+    pot_contribution_delta: Optional[float] = None
+    amount_source: Optional[str] = None
+    amount_exactness: str = 'unknown'
+    source_event_id: Optional[str] = None
+    metadata: Dict[str, Any] = field(default_factory=dict)
     raw_amount: Any = None
     amount_evidence: AmountEvidence = field(
         default_factory=lambda: classify_amount({}))
 
+    def __post_init__(self):
+        if self.amount_exactness not in ('exact', 'quantized_exact',
+                                         'rounded', 'unknown'):
+            raise ValueError('amount_exactness inválido')
+        if self.event_type is not None and self.event_type not in (
+                'voluntary_action', 'small_blind', 'big_blind', 'ante',
+                'straddle', 'dead_blind', 'unknown_post', 'unknown_event'):
+            raise ValueError('event_type inválido')
+        if self.metadata is None or not isinstance(self.metadata, dict):
+            raise ValueError('metadata debe ser un objeto')
+        if self.amount is not None and not isinstance(self.amount, (int, float)):
+            raise ValueError('amount debe ser numérico o None')
+        if (self.pot_contribution_delta is not None
+                and not isinstance(self.pot_contribution_delta, (int, float))):
+            raise ValueError('pot_contribution_delta debe ser numérico o None')
 
 @dataclass(frozen=True)
 class PreflopContext:
@@ -155,9 +178,12 @@ class PreflopContext:
                    raises_before=0, limps_before=0, callers_before=0)
 
     @property
+    def state_valid(self) -> bool:
+        return self.tainted_reason is None
+
+    @property
     def last_aggressor(self) -> str:
         return self.aggressors[-1] if self.aggressors else ''
-
     @property
     def last_aggressor_amount(self) -> float:
         return self.aggressor_amounts[-1] if self.aggressor_amounts else 0.0
@@ -306,6 +332,56 @@ class PreflopTablePlan:
         }
 
 
+@dataclass(frozen=True)
+class RangeQuery:
+    """Consulta de rango independiente del plan de decisión."""
+    query_id: str
+    player_position: Optional[str]
+    decision_category: str
+    table_key: str
+    status: str
+    source: Optional[str] = None
+    reason: Optional[str] = None
+    approximation_used: bool = False
+
+    def __post_init__(self):
+        if self.status not in ('available', 'no_range', 'no_table',
+                               'unresolved', 'not_applicable'):
+            raise ValueError('status de RangeQuery inválido')
+        if not isinstance(self.approximation_used, bool):
+            raise ValueError('approximation_used debe ser bool')
+
+@dataclass(frozen=True)
+class PreflopDecision:
+    """Decisión preflop canónica del héroe."""
+    status: str
+    hero_id: Optional[str] = None
+    hero_position: Optional[str] = None
+    hero_action_index: Optional[int] = None
+    prior_actions: Tuple[PreflopAction, ...] = ()
+    decision_plan: Any = None
+    range_query: Optional[RangeQuery] = None
+    sequence_status: str = 'not_evaluated'
+    unresolved_reasons: Tuple[str, ...] = ()
+    context: Optional[PreflopContext] = None
+
+    def __post_init__(self):
+        if self.status not in ('resolved', 'unresolved', 'no_decision'):
+            raise ValueError('status de PreflopDecision inválido')
+        if self.status == 'no_decision':
+            if self.decision_plan is not None or self.range_query is not None:
+                raise ValueError('no_decision no produce plan ni range_query')
+        if self.status == 'unresolved':
+            if self.decision_plan is not None or self.range_query is not None:
+                raise ValueError('unresolved no produce plan ni range_query')
+        if self.sequence_status not in ('valid', 'tainted', 'not_evaluated',
+                                       'incomplete'):
+            raise ValueError('sequence_status inválido')
+    @property
+    def resolved(self) -> bool:
+        return self.status == 'resolved'
+
+
 # ---------------------------------------------------------------------------
 # Normalización y estado
 # ---------------------------------------------------------------------------
@@ -338,7 +414,21 @@ def normalize_actions(source: Any, *, keep_invalid: bool = False) -> List[Preflo
     el camino estricto las declare `unresolved`. El camino legado las descarta,
     igual que `learn._preflop_sequence`, para no mover los eventos históricos.
     """
+    # Mapa posición -> id interno, cuando la fuente es una mano.
+    players = None
+    if isinstance(source, dict):
+        players = source.get('players') or []
+    pos_to_player = {}
+    if isinstance(players, list):
+        for idx, p in enumerate(players):
+            if isinstance(p, dict) and p.get('pos'):
+                # ids internos fijos del contrato de asientos
+                pid = ('hero' if idx == 0 else 'p%d' % idx)
+                pos_to_player[str(p.get('pos'))] = pid
+
     out: List[PreflopAction] = []
+    voluntary_seen = False
+    live_contribution: Dict[str, float] = {}
     for i, a in enumerate(_coerce_source(source)):
         if isinstance(a, dict):
             pos = a.get('pos') or ''
@@ -346,6 +436,11 @@ def normalize_actions(source: Any, *, keep_invalid: bool = False) -> List[Preflo
             raw_amount = a.get('amount')
             is_blind = bool(a.get('blind') or a.get('is_blind'))
             amount_evidence = classify_amount(a)
+            amount_source = (a.get('amount_type') or a.get('amount_semantics'))
+            amount_exactness = a.get('amount_exactness', 'unknown')
+            source_event_id = a.get('source_event_id') or a.get('event_id')
+            metadata = dict(a)
+            semantics = a.get('amount_semantics')
         else:
             try:
                 pos, act = a[0], a[1]
@@ -355,17 +450,72 @@ def normalize_actions(source: Any, *, keep_invalid: bool = False) -> List[Preflo
                 pos, act, raw_amount = '', '', None
                 is_blind = False
                 amount_evidence = classify_amount({})
+                amount_source = None
+                amount_exactness = 'unknown'
+                source_event_id = None
+                metadata = {}
+                semantics = None
             else:
                 raw_amount = a[2] if len(a) > 2 else None
                 is_blind = bool(a[3]) if len(a) > 3 else False
                 amount_evidence = classify_amount(raw_amount)
+                amount_source = None
+                amount_exactness = 'unknown'
+                source_event_id = None
+                metadata = {'raw': list(a)}
+                semantics = None
         if (not pos or not act) and not keep_invalid:
             continue
         amount = amount_evidence.value
-        out.append(PreflopAction(index=i, pos=str(pos or ''), action=str(act or ''),
-                                 amount=amount, is_blind=is_blind,
-                                 raw_amount=raw_amount,
-                                 amount_evidence=amount_evidence))
+
+        # Tipo de evento por evidencia estructural, sin inferir ante/straddle.
+        event_type = 'voluntary_action'
+        if is_blind and pos in ('SB', 'BB'):
+            event_type = 'small_blind' if pos == 'SB' else 'big_blind'
+        elif act == 'p':
+            if pos in ('SB', 'BB') and not voluntary_seen:
+                event_type = 'small_blind' if pos == 'SB' else 'big_blind'
+            else:
+                event_type = 'unknown_post'
+        elif act == 'b' and pos in ('SB', 'BB') and not voluntary_seen:
+            event_type = 'small_blind' if pos == 'SB' else 'big_blind'
+        # pot_contribution_delta solo si la semántica está demostrada.
+        prev_live = live_contribution.get(str(pos or ''), 0.0)
+        pot_delta = None
+        if amount is not None:
+            if semantics in ('absoluta', 'cumulative', 'cumulative_after_event',
+                             'observed'):
+                # Solo si la fuente declara explícitamente acumulado.
+                if semantics in ('absoluta', 'cumulative', 'cumulative_after_event'):
+                    pot_delta = amount - prev_live
+                    live_contribution[str(pos or '')] = amount
+            elif semantics in ('parcial', 'increment_for_event', 'increment'):
+                pot_delta = amount
+                live_contribution[str(pos or '')] = prev_live + amount
+
+        if act not in ('p',) or event_type == 'unknown_post':
+            # Un evento voluntary_action se marca tras clasificar.
+            if act in ('f', 'x', 'c', 'b', 'r'):
+                voluntary_seen = True
+
+        out.append(PreflopAction(
+            index=i,
+            pos=str(pos or ''),
+            action=str(act or ''),
+            amount=amount,
+            is_blind=is_blind,
+            player_id=pos_to_player.get(str(pos or '')),
+            raw_action=str(act or ''),
+            event_type=event_type,
+            pot_contribution_delta=pot_delta,
+            amount_source=amount_source,
+            amount_exactness=amount_exactness if amount_exactness in (
+                'exact', 'quantized_exact', 'rounded', 'unknown') else 'unknown',
+            source_event_id=source_event_id,
+            metadata=metadata,
+            raw_amount=raw_amount,
+            amount_evidence=amount_evidence,
+        ))
     return out
 
 
@@ -688,6 +838,97 @@ def final_context(source: Any, *, bb: float = BB_NOMINAL,
         return steps[-1].after
     return PreflopContext.initial(bb)
 
+
+def _hero_id_for(source: Any, hero_pos: str) -> Optional[str]:
+    if isinstance(source, dict):
+        for idx, p in enumerate(source.get('players') or []):
+            if isinstance(p, dict) and p.get('pos') == hero_pos:
+                return 'hero' if idx == 0 else 'p%d' % idx
+    return 'hero' if hero_pos else None
+
+
+def preflop_decision(source: Any, hero_pos: str, *, bb: float = BB_NOMINAL,
+                     legacy: bool = False) -> PreflopDecision:
+    """Construye `PreflopDecision` canónica para el héroe indicado."""
+    steps = walk_preflop(source, bb=bb, legacy=legacy)
+    found = None
+    for step in steps:
+        if (step.raw.pos == hero_pos
+                and step.classification.status != 'non_decision'):
+            found = step
+            break
+
+    if found is None:
+        prior = tuple(s.raw for s in steps)
+        return PreflopDecision(
+            status='no_decision',
+            hero_id=_hero_id_for(source, hero_pos),
+            hero_position=hero_pos or None,
+            hero_action_index=None,
+            prior_actions=prior,
+            decision_plan=None,
+            range_query=None,
+            sequence_status='tainted' if any(
+                s.classification.context.tainted_reason for s in steps) else 'not_evaluated',
+            unresolved_reasons=(),
+            context=(steps[-1].after if steps else PreflopContext.initial(bb)),
+        )
+
+    prior = tuple(s.raw for s in steps if s.raw.index < found.raw.index)
+    cls = found.classification
+    status = 'resolved' if cls.status == 'resolved' else 'unresolved'
+    reasons = ()
+    if cls.status != 'resolved' and cls.reason:
+        reasons = (cls.reason,)
+    if cls.context.tainted_reason:
+        reasons = reasons + (cls.context.tainted_reason,)
+
+    rq = None
+    if status == 'resolved':
+        rqs = cls.range_query_status
+        rq_status = {
+            'available': 'available',
+            'no_range': 'no_range',
+            'no_table': 'no_table',
+        }.get(rqs, 'not_applicable')
+        if rq_status == 'available':
+            rq = RangeQuery(
+                query_id='rq:%s:%s' % (getattr(source, 'get', lambda _:
+                      '')('hand_id') if isinstance(source, dict) else '',
+                      found.raw.index),
+                player_position=hero_pos or None,
+                decision_category=cls.category,
+                table_key=str(cls.range_query) if cls.range_query else '',
+                status='available',
+                source='preflop_matrices',
+                reason=None,
+                approximation_used=False,
+            )
+        elif rqs in ('no_range', 'no_table'):
+            rq = RangeQuery(
+                query_id='rq:%s' % found.raw.index,
+                player_position=hero_pos or None,
+                decision_category=cls.category,
+                table_key=str(cls.range_query) if cls.range_query else '',
+                status=rq_status,
+                source='preflop_matrices',
+                reason=cls.reason,
+                approximation_used=False,
+            )
+
+    seq_status = 'tainted' if cls.context.tainted_reason else 'not_evaluated'
+    return PreflopDecision(
+        status=status,
+        hero_id=_hero_id_for(source, hero_pos),
+        hero_position=hero_pos or None,
+        hero_action_index=found.raw.index,
+        prior_actions=prior,
+        decision_plan=cls if status == 'resolved' else None,
+        range_query=rq,
+        sequence_status=seq_status,
+        unresolved_reasons=reasons,
+        context=cls.context,
+    )
 
 def classify_action(action: str, amount: Optional[float],
                     raises_before: int = 0, limps_before: int = 0,
