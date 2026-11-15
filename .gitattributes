@@ -29,3 +29,8 @@ data/hands_db.jsonl -text
 
 # Los derivados se comparan por hash igual que la base. Mismo motivo.
 data/*.json -text
+
+# Los snapshots historicos se comparan por SHA-256: son BYTES, no texto.
+# Sin `-text`, un checkout en Windows podria convertir sus saltos de linea y
+# romper el hash declarado en `tests/data/snapshots.json`.
+tests/data/snapshots/*.jsonl -text

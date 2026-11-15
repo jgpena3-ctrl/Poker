@@ -434,7 +434,13 @@ def normalize_actions(source: Any, *, keep_invalid: bool = False) -> List[Preflo
             pos = a.get('pos') or ''
             act = a.get('action') or ''
             raw_amount = a.get('amount')
-            is_blind = bool(a.get('blind') or a.get('is_blind'))
+            declared_event = a.get('event_type')
+            if declared_event not in (
+                    'voluntary_action', 'small_blind', 'big_blind', 'ante',
+                    'straddle', 'dead_blind', 'unknown_post', 'unknown_event'):
+                declared_event = None
+            is_blind = bool(a.get('blind') or a.get('is_blind')
+                            or declared_event in ('small_blind', 'big_blind'))
             amount_evidence = classify_amount(a)
             amount_source = (a.get('amount_type') or a.get('amount_semantics'))
             amount_exactness = a.get('amount_exactness', 'unknown')
@@ -464,21 +470,25 @@ def normalize_actions(source: Any, *, keep_invalid: bool = False) -> List[Preflo
                 source_event_id = None
                 metadata = {'raw': list(a)}
                 semantics = None
+                declared_event = None
         if (not pos or not act) and not keep_invalid:
             continue
         amount = amount_evidence.value
 
-        # Tipo de evento por evidencia estructural, sin inferir ante/straddle.
-        event_type = 'voluntary_action'
-        if is_blind and pos in ('SB', 'BB'):
-            event_type = 'small_blind' if pos == 'SB' else 'big_blind'
-        elif act == 'p':
-            if pos in ('SB', 'BB') and not voluntary_seen:
+        # Tipo de evento: una marca explicita de la fuente manda; solo se
+        # infiere la estructura cuando el evento no viene declarado. Asi una
+        # accion voluntaria nunca se reclasifica como ciega.
+        event_type = declared_event or 'voluntary_action'
+        if declared_event is None:
+            if is_blind and pos in ('SB', 'BB'):
                 event_type = 'small_blind' if pos == 'SB' else 'big_blind'
-            else:
-                event_type = 'unknown_post'
-        elif act == 'b' and pos in ('SB', 'BB') and not voluntary_seen:
-            event_type = 'small_blind' if pos == 'SB' else 'big_blind'
+            elif act == 'p':
+                if pos in ('SB', 'BB') and not voluntary_seen:
+                    event_type = 'small_blind' if pos == 'SB' else 'big_blind'
+                else:
+                    event_type = 'unknown_post'
+            elif act == 'b' and pos in ('SB', 'BB') and not voluntary_seen:
+                event_type = 'small_blind' if pos == 'SB' else 'big_blind'
         # pot_contribution_delta solo si la semántica está demostrada.
         prev_live = live_contribution.get(str(pos or ''), 0.0)
         pot_delta = None
@@ -493,16 +503,27 @@ def normalize_actions(source: Any, *, keep_invalid: bool = False) -> List[Preflo
                 pot_delta = amount
                 live_contribution[str(pos or '')] = prev_live + amount
 
-        if act not in ('p',) or event_type == 'unknown_post':
-            # Un evento voluntary_action se marca tras clasificar.
-            if act in ('f', 'x', 'c', 'b', 'r'):
-                voluntary_seen = True
+        if (event_type == 'voluntary_action'
+                and act in ('c', 'b', 'r')):
+            # Un fold no pone dinero: no impide reconocer la ciega estructural
+            # del SB/BB que venga despues. Solo las acciones con dinero marcan
+            # que la ciega ya no puede ser la posta inicial.
+            voluntary_seen = True
+
+        canonical_amount = amount
+        if amount is not None and semantics in (
+                'parcial', 'increment_for_event', 'increment'):
+            canonical_amount = prev_live + amount
+            live_contribution[str(pos or '')] = canonical_amount
+        elif amount is not None and semantics in (
+                'absoluta', 'cumulative', 'cumulative_after_event'):
+            live_contribution[str(pos or '')] = amount
 
         out.append(PreflopAction(
             index=i,
             pos=str(pos or ''),
             action=str(act or ''),
-            amount=amount,
+            amount=canonical_amount,
             is_blind=is_blind,
             player_id=pos_to_player.get(str(pos or '')),
             raw_action=str(act or ''),
@@ -519,24 +540,83 @@ def normalize_actions(source: Any, *, keep_invalid: bool = False) -> List[Preflo
     return out
 
 
-def is_blind_post(action: PreflopAction, voluntary_before: bool) -> bool:
-    """La ciega del BB, con la misma prioridad que `learn._es_ciega_bb`.
+def is_blind_post(action: PreflopAction, voluntary_before: bool, *,
+                  positions: Tuple[str, ...] = ('BB',)) -> bool:
+    """Ciega estructural con la misma prioridad que `learn._es_ciega_bb`.
 
-    1. Marca explícita del recorder.
-    2. BB + `b`/`p` + ninguna acción voluntaria anterior.
+    1. Marca explícita del recorder o evento `small_blind`/`big_blind`.
+    2. Posición estructural + `b`/`p` + ninguna acción con dinero antes.
+
+    El adaptador historico llama con `positions=('BB',)`; el camino estricto
+    reconoce tambien la ciega del SB.
 
     `amount` e `i` NO deciden: una ciega real puede tener cualquier importe y
     no depende de su posición en la lista.
     """
     if action.is_blind:
         return True
-    return (action.pos == 'BB' and action.action in ('b', 'p')
+    if action.event_type in ('small_blind', 'big_blind'):
+        return True
+    if action.event_type == 'voluntary_action':
+        return False
+    return (action.pos in positions and action.action in ('b', 'p')
             and not voluntary_before)
 
 
 def _legacy_amount(action: PreflopAction) -> Optional[float]:
     """Valor numérico disponible; no rellena una ausencia con cero."""
     return None if action.amount is None else float(action.amount)
+
+
+def _short_call_all_in_ok(action: PreflopAction, amount: float) -> bool:
+    """Un call corto solo es legible con evidencia explicita de all-in.
+
+    La marca de all-in debe venir en la accion. Ademas se exige un stack
+    disponible coherente: si se declara, el importe no puede superarlo y, si
+    se declara el remanente, debe quedar a cero. Sin esa evidencia no se
+    convierte un undercall en un call legitimo.
+    """
+    metadata = action.metadata or {}
+    marked = any(bool(metadata.get(key)) for key in
+                 ('all_in', 'allin', 'is_all_in'))
+    if not marked:
+        return False
+    stack = None
+    for key in ('stack_before', 'stack_available', 'stack'):
+        value = metadata.get(key)
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            stack = float(value)
+            break
+    if stack is None or amount > stack + TOL:
+        return False
+    remaining = None
+    for key in ('stack_after', 'remaining_stack', 'stack_remaining'):
+        value = metadata.get(key)
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            remaining = float(value)
+            break
+    if remaining is not None and remaining > TOL:
+        return False
+    return True
+
+
+def _call_error(context: PreflopContext, action: PreflopAction
+                ) -> Optional[str]:
+    """Motivo por el que un call no iguala el nivel vigente, o None."""
+    amount = action.amount
+    if amount is None:
+        return ('importe_ausente'
+                if action.amount_evidence.value_status == AMOUNT_ABSENT
+                else 'importe_invalido')
+    if amount <= TOL and context.current_level > TOL:
+        return 'importe_cero'
+    if amount > context.current_level + TOL:
+        return 'call_excede_nivel'
+    if amount < context.current_level - TOL:
+        if _short_call_all_in_ok(action, amount):
+            return None
+        return 'call_incompleto_sin_allin'
+    return None
 
 
 def _classify(context: PreflopContext, action: PreflopAction,
@@ -627,6 +707,12 @@ def _classify(context: PreflopContext, action: PreflopAction,
             reason=None, context=context)
 
     if act == 'c':
+        if not legacy:
+            call_error = _call_error(context, action)
+            if call_error is not None:
+                return PreflopClassification(
+                    raw=action, category='unknown', denom=None,
+                    status='unresolved', reason=call_error, context=context)
         if context.raises_before == 0:
             category = 'limp' if context.limps_before == 0 else 'call_limp'
         elif context.raises_before == 1:
@@ -794,6 +880,8 @@ def _advance(context: PreflopContext, action: PreflopAction,
             limps += 1
         else:
             callers += 1
+    elif action.action in ('f', 'x'):
+        voluntary += 1
 
     return replace(
         context, current_level=level, raises_before=raises,
@@ -822,8 +910,18 @@ def walk_preflop(source: Any, *, bb: float = BB_NOMINAL,
                                      and (action.amount is None
                                           or action.amount <=
                                           context.current_level + TOL))))
-        blind = (False if repeated_bb_post else
-                 is_blind_post(action, bool(context.voluntary_actions)))
+        if legacy:
+            # El adaptador historico conserva la regla que ya usaba `learn`:
+            # solo el BB puede ser ciega estructural. El camino estricto usa
+            # la regla completa SB/BB y los eventos explicitos.
+            blind = (False if repeated_bb_post else
+                     action.is_blind
+                     or (action.pos == 'BB' and action.action in ('b', 'p')
+                         and not context.voluntary_actions))
+        else:
+            blind = (False if repeated_bb_post else
+                     is_blind_post(action, bool(context.voluntary_actions),
+                                   positions=('SB', 'BB')))
         cls = _classify(context, action, is_blind=blind, legacy=legacy)
         after = _advance(context, action, cls, is_blind=blind, legacy=legacy)
         steps.append(PreflopStep(raw=action, classification=cls, after=after))
@@ -837,6 +935,33 @@ def final_context(source: Any, *, bb: float = BB_NOMINAL,
     if steps:
         return steps[-1].after
     return PreflopContext.initial(bb)
+
+
+def actions_before(source: Any,
+                   action_index: Optional[int] = None) -> Tuple[Any, ...]:
+    """Prefijo crudo de acciones anteriores a `action_index` (exclusiva)."""
+    raw = _coerce_source(source)
+    if action_index is None:
+        return tuple(raw)
+    if isinstance(action_index, bool) or not isinstance(action_index, int):
+        raise TypeError('action_index debe ser entero o None')
+    if action_index < 0:
+        raise ValueError('action_index no puede ser negativo')
+    return tuple(raw[:action_index])
+
+
+def context_at(source: Any, action_index: Optional[int] = None, *,
+               bb: float = BB_NOMINAL,
+               legacy: bool = False) -> PreflopContext:
+    """Estado ANTES de la acción `action_index` (exclusiva).
+
+    El índice se refiere a la lista cruda de acciones preflop. `None` usa todas
+    las acciones observadas. Es la primitiva para reconstruir un nodo de
+    decisión sin mirar la última acción global ni acciones posteriores del
+    héroe.
+    """
+    return final_context(actions_before(source, action_index), bb=bb,
+                         legacy=legacy)
 
 
 def _hero_id_for(source: Any, hero_pos: str) -> Optional[str]:
@@ -989,10 +1114,12 @@ def last_decision(source: Any, pos: str, *, bb: float = BB_NOMINAL,
         reason='sin_decision', context=context)
 
 
-def table_plan(source: Any, hero_pos: str = '', *,
-               bb: float = BB_NOMINAL) -> PreflopTablePlan:
-    """Plan de tablas del héroe a partir del estado estricto (shadow)."""
-    context = final_context(source, bb=bb, legacy=False)
+def plan_from_context(context: PreflopContext) -> PreflopTablePlan:
+    """Plan de tablas derivado del estado estricto ya construido.
+
+    No mira la acción del héroe ni la última acción global: sólo los contadores
+    y los agresores acumulados en `context`.
+    """
     raises = context.raises_before
     limps = context.limps_before
     vs_pos = context.last_aggressor if raises else ''
@@ -1032,6 +1159,59 @@ def table_plan(source: Any, hero_pos: str = '', *,
         raises, limps, context.callers_before, vs_pos, vs_amount,
         None, None, 'vs multi-raise', 'unsupported',
         'sin_tabla_para_%d_raises' % raises, context)
+
+
+def table_plan(source: Any, hero_pos: str = '', *,
+               bb: float = BB_NOMINAL,
+               at_index: Optional[int] = None) -> PreflopTablePlan:
+    """Plan de tablas del héroe a partir del estado estricto (shadow).
+
+    - `at_index` explícito: plan del nodo previo a ese índice.
+    - `hero_pos` con una decisión histórica: plan previo a la PRIMERA acción
+      del héroe, no al final de la mano.
+    - sin decisión del héroe: no se inventa plan; queda `unresolved`
+      con razón `sin_decision`.
+
+    Si la decisión del héroe existe pero no se pudo leer, el plan queda
+    `unresolved` y no se consultan tablas.
+    """
+    if at_index is not None:
+        return plan_from_context(context_at(source, at_index, bb=bb))
+
+    steps = walk_preflop(source, bb=bb, legacy=False)
+    found = None
+    if hero_pos:
+        for step in steps:
+            if (step.raw.pos == hero_pos
+                    and step.classification.status != 'non_decision'):
+                found = step
+                break
+    if found is not None:
+        if found.classification.status != 'resolved':
+            reason = found.classification.reason or 'decision_unresolved'
+            if found.classification.context.tainted_reason:
+                reason = found.classification.context.tainted_reason
+            return PreflopTablePlan(
+                found.classification.context.raises_before,
+                found.classification.context.limps_before,
+                found.classification.context.callers_before,
+                (found.classification.context.last_aggressor
+                 if found.classification.context.raises_before else ''),
+                (found.classification.context.last_aggressor_amount
+                 if found.classification.context.raises_before else 0.0),
+                None, None, 'secuencia ambigua', 'unresolved', reason,
+                found.classification.context)
+        return plan_from_context(found.classification.context)
+    if hero_pos:
+        context = steps[-1].after if steps else PreflopContext.initial(bb)
+        return PreflopTablePlan(
+            context.raises_before, context.limps_before,
+            context.callers_before,
+            (context.last_aggressor if context.raises_before else ''),
+            (context.last_aggressor_amount if context.raises_before else 0.0),
+            None, None, 'sin decision', 'unresolved', 'sin_decision', context)
+    return plan_from_context(steps[-1].after if steps
+                             else PreflopContext.initial(bb))
 
 
 def legacy_training_category(action: str, amount: Optional[float],

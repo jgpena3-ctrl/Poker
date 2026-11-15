@@ -12,9 +12,10 @@ import pytest
 from motor.asistente_live import (Asistente, _preflop_raises, _preflop_spot)
 from motor.learn import (classify_first_action, load_hands, preflop_events)
 from motor.preflop_contract import (ShadowPreflopLog, actions_of,
-                                    classify_action, first_decision,
-                                    legacy_training_category, table_plan,
-                                    walk_preflop)
+                                    classify_action, context_at,
+                                    first_decision,
+                                    legacy_training_category, plan_from_context,
+                                    table_plan, walk_preflop)
 
 
 def _hand(actions, hand_id='H_CONTRATO'):
@@ -277,14 +278,18 @@ def test_deuda_legada_y_restricciones_p02_quedan_visibles(hands_877):
                 diffs.append((ev.category, got.training_category))
             else:
                 same += 1
-    assert same == 4512
+    # Dos calls de la fuente no declaran all-in ni semantica incremental.
+    # El contrato estricto no los convierte en calls completos: H_0589 y
+    # H_0740 quedan unresolved y se restan de los estados "same".
+    assert same == 4510
     assert len(diffs) == 49
-    assert len(unresolved) == 33
+    assert len(unresolved) == 35
     assert collections.Counter(unresolved) == {
         ('bb_check', 'check_non_bb'): 29,
         ('fold', 'unknown'): 2,
         ('open', 'unknown'): 1,
         ('fold_vs_open', 'unknown'): 1,
+        ('call_open', 'unknown'): 2,
     }
     assert collections.Counter(diffs) == {
         ('fold_vs_open', 'fold'): 14,
@@ -333,7 +338,7 @@ def test_serving_viejo_y_contrato_nuevo_difieren_en_3967_estados(hands_877):
                 diff += 1
             else:
                 same += 1
-    assert (same, diff, unresolved) == (594, 3967, 33)
+    assert (same, diff, unresolved) == (592, 3967, 35)
 
 
 @pytest.mark.xfail(strict=True,
@@ -378,7 +383,7 @@ def test_estado_de_tablas_del_heroe_difiere_en_208_estados(hands_877):
                     raise_seen = True
                 elif a.get('action') == 'c' and not raise_seen:
                     old_limp = True
-            plan = table_plan(prefix, ev.pos)
+            plan = plan_from_context(context_at(prefix))
             if plan.status != 'resolved':
                 unresolved += 1
             elif (old_n, bool(old_limp), old_vs) != \
@@ -424,7 +429,8 @@ def test_sombra_de_spot_registra_viejo_nuevo_contexto_y_diferencia():
 
 
 def test_sombra_de_heroe_registra_el_estado_de_las_tablas():
-    hand = _hand([('BB', 'p', 1.0), ('UTG', 'b', 2.5)])
+    hand = _hand([('BB', 'p', 1.0), ('UTG', 'b', 2.5),
+                  ('MP', 'c', 2.5)])
     a = _asis(hand)
     a._preflop_shadow_hero(actions_of(hand), 'MP')
     rec = a._preflop_shadow_log_obj.records[-1]

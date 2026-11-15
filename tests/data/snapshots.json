@@ -1,0 +1,16 @@
+{
+  "snapshots": [
+    {
+      "id": "s1253-51a6fb9",
+      "path": "tests/data/snapshots/hands_1253_51a6fb9.jsonl",
+      "source_path": "data/hands_db.jsonl",
+      "commit": "51a6fb9f05394fcfecd3b3ee4fb9479ed4e9600f",
+      "sha256": "c3172a147423d12a652767586dd76c36f24347c9dd503959dbea019e64944a09",
+      "lineas": 1253,
+      "purpose": "Expectativas historicas de los 22 tests",
+      "created": "2026-11-15",
+      "owner": "propietario del repositorio",
+      "metrics_version": "v1"
+    }
+  ]
+}

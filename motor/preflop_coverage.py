@@ -7,7 +7,8 @@ from __future__ import annotations
 
 import copy
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from types import MappingProxyType
+from typing import Any, Dict, Mapping, Optional, Tuple
 
 from .preflop import (
     TABLE_ALIASES,
@@ -98,6 +99,118 @@ class CoverageResolution:
                     and self.source_key is not None):
                 raise ValueError(
                     'coverage_gap sin fallback requiere source_key null')
+
+
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            'requested_key': self.requested_key,
+            'coverage_state': self.coverage_state,
+            'source_key': self.source_key,
+            'reason': self.reason,
+            'alias_of': self.alias_of,
+            'fallback_key': self.fallback_key,
+            'fallback_reason': self.fallback_reason,
+            'action': self.action,
+            'pos': self.pos,
+            'vs': self.vs,
+            'resolved_by': self.resolved_by,
+            'fallback_used': self.fallback_used,
+            'approximation_used': self.approximation_used,
+        }
+
+
+@dataclass(frozen=True)
+class CoverageAggregate:
+    """Resumen de varias resoluciones sin borrar los estados individuales.
+
+    Estados:
+      complete_exact     -> todas las consultas aplicables son exactas
+      complete_with_alias-> no hay huecos; al menos una consulta usa alias
+      partial            -> hay huecos o incertidumbre junto a alguna consulta válida
+      unknown            -> no hay ninguna consulta válida y hay incertidumbre
+      none_applicable    -> todas las consultas son estructuralmente imposibles
+      unresolved         -> no se aportó ninguna consulta
+    """
+    coverage_state: str
+    counts: Mapping[str, int]
+    resolutions: Tuple[CoverageResolution, ...]
+
+    def __post_init__(self):
+        allowed = ('exact', 'alias', 'coverage_gap', 'impossible', 'unknown')
+        if self.coverage_state not in (
+                'complete_exact', 'complete_with_alias', 'partial', 'unknown',
+                'none_applicable', 'unresolved'):
+            raise ValueError('coverage_state agregado inválido')
+        if not isinstance(self.resolutions, tuple):
+            raise TypeError('resolutions debe ser una tupla')
+        if any(not isinstance(r, CoverageResolution) for r in self.resolutions):
+            raise TypeError('resolutions debe contener CoverageResolution')
+        counts = dict(self.counts)
+        if any(k not in allowed for k in counts):
+            raise ValueError('counts contiene un estado inválido')
+        if any(v < 0 for v in counts.values()):
+            raise ValueError('counts no puede ser negativo')
+        derived_counts = _derive_counts(self.resolutions)
+        if counts != derived_counts:
+            raise ValueError(
+                'counts debe coincidir exactamente con resolutions')
+        derived_state = _derive_state(self.resolutions)
+        if self.coverage_state != derived_state:
+            raise ValueError(
+                'coverage_state agregado no coincide con resolutions')
+        object.__setattr__(self, 'counts', MappingProxyType(counts))
+
+    @property
+    def complete(self) -> bool:
+        return self.coverage_state in ('complete_exact', 'complete_with_alias')
+
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            'coverage_state': self.coverage_state,
+            'counts': dict(self.counts),
+            'queries': [r.as_dict() for r in self.resolutions],
+        }
+
+
+def _derive_counts(resolutions: Tuple[CoverageResolution, ...]
+                   ) -> Dict[str, int]:
+    counts: Dict[str, int] = {}
+    for resolution in resolutions:
+        counts[resolution.coverage_state] = (
+            counts.get(resolution.coverage_state, 0) + 1)
+    return counts
+
+
+def _derive_state(resolutions: Tuple[CoverageResolution, ...]) -> str:
+    if not resolutions:
+        return 'unresolved'
+    if all(r.coverage_state == 'impossible' for r in resolutions):
+        return 'none_applicable'
+    if any(r.coverage_state in ('exact', 'alias') for r in resolutions):
+        return ('partial'
+                if any(r.coverage_state in ('coverage_gap', 'unknown')
+                       for r in resolutions)
+                else ('complete_with_alias'
+                      if any(r.coverage_state == 'alias'
+                             for r in resolutions)
+                      else 'complete_exact'))
+    if any(r.coverage_state in ('coverage_gap', 'unknown')
+           for r in resolutions):
+        return ('partial'
+                if any(r.coverage_state in ('coverage_gap', 'impossible')
+                       for r in resolutions)
+                else 'unknown')
+    return 'none_applicable'
+
+
+def aggregate_coverage(
+        resolutions: Tuple[CoverageResolution, ...]) -> CoverageAggregate:
+    """Agrega estados individuales preservando huecos e incertidumbre."""
+    if not isinstance(resolutions, tuple):
+        resolutions = tuple(resolutions)
+    return CoverageAggregate(
+        coverage_state=_derive_state(resolutions),
+        counts=_derive_counts(resolutions), resolutions=resolutions)
 
 
 def _find_fallback_table(tables: Dict[str, Any], action: str, pos: str,
