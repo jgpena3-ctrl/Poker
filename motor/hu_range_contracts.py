@@ -559,7 +559,7 @@ class CurrentBoardStrength:
     method: str
     coverage: str
     n_combos: int
-    result_definition: str = 'equity_wins_plus_half_ties'
+    result_definition: str = 'wins + 0.5 * ties'
     reason: Optional[str] = None
     evaluator_version: str = CONTRACT
 

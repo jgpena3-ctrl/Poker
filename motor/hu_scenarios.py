@@ -55,6 +55,9 @@ class PreflopScenario:
         if self.source_kind == 'real':
             if not self.hand_id or not self.data_snapshot_hash:
                 raise ValueError('escenario real exige hand_id y snapshot hash')
+            if self.data_snapshot_hash != DATA_SNAPSHOT_SHA256:
+                raise ValueError(
+                    'escenario real exige el SHA-256 completo del snapshot')
         else:
             if self.hand_id is not None or self.data_snapshot_hash is not None:
                 raise ValueError('escenario sintético no lleva identidad real')

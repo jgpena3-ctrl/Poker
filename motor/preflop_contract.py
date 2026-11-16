@@ -428,6 +428,7 @@ def normalize_actions(source: Any, *, keep_invalid: bool = False) -> List[Preflo
 
     out: List[PreflopAction] = []
     voluntary_seen = False
+    seen_positions: set = set()
     live_contribution: Dict[str, float] = {}
     for i, a in enumerate(_coerce_source(source)):
         if isinstance(a, dict):
@@ -480,14 +481,19 @@ def normalize_actions(source: Any, *, keep_invalid: bool = False) -> List[Preflo
         # accion voluntaria nunca se reclasifica como ciega.
         event_type = declared_event or 'voluntary_action'
         if declared_event is None:
+            # Una ciega estructural solo puede ser la PRIMERA aparicion de esa
+            # posicion en la secuencia. Asi un SB/BB que ya actuo (aunque sea
+            # con folds entre medias) no se reinterpreta como ciega al volver.
             if is_blind and pos in ('SB', 'BB'):
                 event_type = 'small_blind' if pos == 'SB' else 'big_blind'
             elif act == 'p':
-                if pos in ('SB', 'BB') and not voluntary_seen:
+                if (pos in ('SB', 'BB') and not voluntary_seen
+                        and pos not in seen_positions):
                     event_type = 'small_blind' if pos == 'SB' else 'big_blind'
                 else:
                     event_type = 'unknown_post'
-            elif act == 'b' and pos in ('SB', 'BB') and not voluntary_seen:
+            elif (act == 'b' and pos in ('SB', 'BB') and not voluntary_seen
+                  and pos not in seen_positions):
                 event_type = 'small_blind' if pos == 'SB' else 'big_blind'
         # pot_contribution_delta solo si la semántica está demostrada.
         prev_live = live_contribution.get(str(pos or ''), 0.0)
@@ -502,6 +508,8 @@ def normalize_actions(source: Any, *, keep_invalid: bool = False) -> List[Preflo
             elif semantics in ('parcial', 'increment_for_event', 'increment'):
                 pot_delta = amount
                 live_contribution[str(pos or '')] = prev_live + amount
+
+        seen_positions.add(str(pos or ''))
 
         if (event_type == 'voluntary_action'
                 and act in ('c', 'b', 'r')):

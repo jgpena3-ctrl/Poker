@@ -281,8 +281,8 @@ def test_deuda_legada_y_restricciones_p02_quedan_visibles(hands_877):
     # Dos calls de la fuente no declaran all-in ni semantica incremental.
     # El contrato estricto no los convierte en calls completos: H_0589 y
     # H_0740 quedan unresolved y se restan de los estados "same".
-    assert same == 4510
-    assert len(diffs) == 49
+    assert same == 4499
+    assert len(diffs) == 60
     assert len(unresolved) == 35
     assert collections.Counter(unresolved) == {
         ('bb_check', 'check_non_bb'): 29,
@@ -298,6 +298,11 @@ def test_deuda_legada_y_restricciones_p02_quedan_visibles(hands_877):
         ('3bet', 'rol'): 4,
         ('call_3bet', 'call_open'): 3,
         ('squeeze', 'rol'): 2,
+        ('fold', 'fold_vs_open'): 4,
+        ('open', '3bet'): 2,
+        ('fold_vs_open', 'open'): 2,
+        ('fold_vs_open', 'fold_vs_3bet'): 2,
+        ('call_open', 'call_3bet'): 1,
     }
 
 
@@ -317,7 +322,7 @@ def test_las_162_b_mayor_1bb_y_las_15_b_menor_igual_1bb(hands_877):
     assert cats == {
         ('>1', 'open', 'resolved'): 115,
         ('>1', 'rol', 'resolved'): 44,
-        ('>1', 'blind', 'non_decision'): 2,
+        ('>1', '3bet', 'resolved'): 2,
         ('<=1', 'limp', 'resolved'): 14,
         ('<=1', 'unknown', 'unresolved'): 1,
         ('>1', 'unknown', 'unresolved'): 1,
@@ -338,7 +343,7 @@ def test_serving_viejo_y_contrato_nuevo_difieren_en_3967_estados(hands_877):
                 diff += 1
             else:
                 same += 1
-    assert (same, diff, unresolved) == (592, 3967, 35)
+    assert (same, diff, unresolved) == (591, 3968, 35)
 
 
 @pytest.mark.xfail(strict=True,
@@ -391,7 +396,7 @@ def test_estado_de_tablas_del_heroe_difiere_en_208_estados(hands_877):
                 diff += 1
             else:
                 same += 1
-    assert (same, diff, unresolved) == (4384, 208, 2)
+    assert (same, diff, unresolved) == (4379, 213, 2)
 
 
 # ---------------------------------------------------------------------------
