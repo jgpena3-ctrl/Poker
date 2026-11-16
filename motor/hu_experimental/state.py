@@ -16,6 +16,7 @@ INACTIVE_LABELS = frozenset({
     'retirarse', 'ausente', 'inactivo', 'sin jugador', 'fuera', 'folded',
     'inactive', 'empty',
 })
+ACTIVE_LABELS = frozenset({'activo', 'apostar todo', 'all in', 'all-in', 'allin'})
 RANKS = frozenset('23456789TJQKA')
 SUITS = frozenset('shdc')
 
@@ -184,19 +185,40 @@ def interpret_state(state: Mapping[str, Any], *,
     observed = []
 
     active = []
+    unknown_states = []
     for seat in SEATS:
         state_key = '%s_state' % seat
         if state_key not in state:
+            unknown_states.append('%s_state_not_observed' % seat)
             continue
         value = state.get(state_key)
         if isinstance(value, str):
             text = value.strip().lower()
-            if text and text not in INACTIVE_LABELS:
+            if text in ACTIVE_LABELS:
                 active.append(seat)
-            observed.append('%s_state' % seat)
+            elif text not in INACTIVE_LABELS:
+                unknown_states.append('%s_state_unrecognized' % seat)
+            observed.append(state_key)
         elif value is None:
-            reasons.append('%s_state_unknown' % seat)
+            unknown_states.append('%s_state_unknown' % seat)
+        else:
+            unknown_states.append('%s_state_invalid' % seat)
     active_seats = tuple(active)
+
+    if unknown_states:
+        reasons.extend(unknown_states)
+        villain = next((seat for seat in active_seats if seat != hero_seat), None)
+        return HUState(
+            status='unresolved', reason='active_player_count_uncertain',
+            hero_seat=hero_seat, villain_seat=villain,
+            hero_position=None, villain_position=None,
+            active_seats=active_seats, street='preflop', hero_cards=(),
+            board=(), pot=None, to_call=None, hero_stack=None,
+            villain_stack=None, hero_bet=None, villain_bet=None,
+            button_seat=state.get('btn') if isinstance(state.get('btn'), str)
+            else None, uncertainty_reasons=tuple(reasons),
+            observed_fields=tuple(observed), raw_state=dict(state),
+        )
 
     if hero_seat not in active_seats:
         return HUState(
@@ -228,6 +250,7 @@ def interpret_state(state: Mapping[str, Any], *,
 
     villain_seat = active_seats[0] if active_seats[0] != hero_seat else active_seats[1]
 
+    board_observed = 'community' in state or 'board' in state
     try:
         hero_cards = _cards(state.get('hero_cards'), 'hero_cards')
         board = _cards(state.get('community', state.get('board')), 'board')
@@ -276,6 +299,8 @@ def interpret_state(state: Mapping[str, Any], *,
 
     if len(hero_cards) != 2:
         reasons.append('hero_cards_not_observed')
+    if not board_observed:
+        reasons.append('board_not_observed')
     if len(board) >= 3:
         observed.append('community')
     observed.append('hero_cards')
@@ -329,6 +354,9 @@ def interpret_state(state: Mapping[str, Any], *,
     if len(hero_cards) != 2:
         status = 'unresolved'
         reason = 'hero_cards_not_observed'
+    elif not board_observed:
+        status = 'unresolved'
+        reason = 'board_not_observed'
     elif hero_position is None or villain_position is None:
         status = 'unresolved'
         reason = 'position_not_observed'

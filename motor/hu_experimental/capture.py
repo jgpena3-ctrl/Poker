@@ -28,6 +28,9 @@ class CapturedFrame:
     capture_ms: Optional[float] = None
     ocr_ms: Optional[float] = None
     metadata: Mapping[str, Any] = field(default_factory=dict)
+    # La imagen PIL se conserva para que el motor live pueda reutilizar su
+    # deteccion de turno (StateMatcher). No se serializa ni se persiste.
+    pil: Any = None
 
 
 def _now_iso() -> str:
@@ -69,18 +72,21 @@ class HUCaptureAdapter:
                 capture_ms=(time.perf_counter() - started) * 1000.0,
                 ocr_ms=frame.ocr_ms,
                 metadata=frame.metadata,
+                pil=frame.pil,
             )
 
-        state, image, ocr_ms = self._default_capture()
+        state, image, pil, ocr_ms, captured_at = self._default_capture()
         return CapturedFrame(
             state=state,
-            captured_at=self._clock(),
+            # La edad se mide desde el screenshot, no desde el final del OCR.
+            captured_at=captured_at,
             image=image,
             source='screen',
             warnings=self._capture_warnings(state),
             capture_ms=(time.perf_counter() - started) * 1000.0,
             ocr_ms=ocr_ms,
             metadata={'reader': 'lector_estado+lector_unificado'},
+            pil=pil,
         )
 
     def _coerce_frame(self, raw: Any) -> CapturedFrame:
@@ -89,24 +95,35 @@ class HUCaptureAdapter:
         if isinstance(raw, Mapping):
             state = dict(raw)
             image = state.pop('_image', None)
+            pil = state.pop('_pil', None)
             captured_at = state.pop('_captured_at', None) or self._clock()
             warnings = tuple(state.pop('_warnings', ()) or ())
             return CapturedFrame(state=state, captured_at=captured_at,
                                  image=image, source='injected',
-                                 warnings=warnings)
+                                 warnings=warnings, pil=pil)
         if isinstance(raw, (tuple, list)):
             if len(raw) < 1:
                 raise CaptureError('captura inyectada vacia')
             state = raw[0]
             image = raw[1] if len(raw) > 1 else None
+            pil = None
+            ocr_ms = None
+            if len(raw) > 2:
+                # Compatibilidad con capture_live.capture(): (state, img, pil).
+                # Si el tercer valor es numerico se interpreta como ocr_ms.
+                if isinstance(raw[2], (int, float)) and not isinstance(raw[2], bool):
+                    ocr_ms = float(raw[2])
+                else:
+                    pil = raw[2]
             if not isinstance(state, Mapping):
                 raise CaptureError('estado inyectado no es mapping')
             return CapturedFrame(state=dict(state), captured_at=self._clock(),
                                  image=image, source='injected',
-                                 warnings=self._capture_warnings(state))
+                                 warnings=self._capture_warnings(state),
+                                 pil=pil, ocr_ms=ocr_ms)
         raise CaptureError('captura inyectada con formato no soportado')
 
-    def _default_capture(self) -> Tuple[dict, Any, float]:
+    def _default_capture(self) -> Tuple[dict, Any, Any, float, str]:
         try:
             tools = str(_tools_root())
             for path in (tools,):
@@ -132,6 +149,7 @@ class HUCaptureAdapter:
 
         try:
             pil = ImageGrab.grab()
+            captured_at = self._clock()
             img_arr = np.array(pil.convert('RGB'))
         except Exception as exc:  # pragma: no cover - entorno real
             raise CaptureError('pantalla no disponible: %s' % exc) from exc
@@ -151,7 +169,7 @@ class HUCaptureAdapter:
         if community is not None:
             state['community'] = community
         state['_capture_source'] = 'screen'
-        return state, img_arr, ocr_ms
+        return state, img_arr, pil, ocr_ms, captured_at
 
     @staticmethod
     def _capture_warnings(state: Mapping[str, Any]) -> Tuple[str, ...]:

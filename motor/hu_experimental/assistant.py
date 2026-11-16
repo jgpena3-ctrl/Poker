@@ -427,11 +427,17 @@ class HUExperimentalAssistant:
             metadata=metadata,
         )
 
-    def predict_and_register(self, source: Any = None, *,
-                             prediction_id: Optional[str] = None,
-                             emitted_at: Optional[str] = None
-                             ) -> PredictionRegistration:
-        analysis = self.analyze(source)
+    def register_analysis(self, analysis: ExperimentalAnalysis, *,
+                          prediction_id: Optional[str] = None,
+                          emitted_at: Optional[str] = None
+                          ) -> PredictionRegistration:
+        """Persiste una analisis ya calculado, sin volver a capturar.
+
+        Permite que la GUI congele la prediccion mostrada y la registre despues
+        sin recalcularla (importante en preflop, donde el motor live muestrea).
+        """
+        if not isinstance(analysis, ExperimentalAnalysis):
+            raise TypeError('analysis debe ser ExperimentalAnalysis')
         prediction = self.build_prediction(
             analysis, prediction_id=prediction_id, emitted_at=emitted_at)
         event = self.registry.register_prediction(prediction)
@@ -441,6 +447,14 @@ class HUExperimentalAssistant:
             event=event,
             registry_path=str(self.registry_path),
         )
+
+    def predict_and_register(self, source: Any = None, *,
+                             prediction_id: Optional[str] = None,
+                             emitted_at: Optional[str] = None
+                             ) -> PredictionRegistration:
+        analysis = self.analyze(source)
+        return self.register_analysis(
+            analysis, prediction_id=prediction_id, emitted_at=emitted_at)
 
     def record_outcome(self, prediction_id: str, *,
                        outcome_id: Optional[str] = None,

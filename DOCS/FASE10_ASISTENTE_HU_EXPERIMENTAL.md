@@ -2,6 +2,12 @@
 
 Fecha: 2026-11-15
 
+> Continuacion: la capa de paridad y automatizacion de Fase 10.1 vive en
+> `motor/hu_parity/` y se documenta en
+> `DOCS/FASE10_1_PARIDAD_AUTOMATIZACION.md`. La GUI aislada de Fase 10
+> (`python -m motor.hu_experimental_gui`) se conserva; la GUI de paridad es
+> `python -m motor.hu_experimental_parity_gui`.
+
 ## 1. Alcance y resultado
 
 Se ha creado un asistente experimental HU independiente que:

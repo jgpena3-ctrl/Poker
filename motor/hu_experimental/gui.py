@@ -161,7 +161,12 @@ class HUExperimentalGUI:
                     % (analysis.range_kind, analysis.range_source))
         text.insert(tk.END, '  Cobertura: %s | secuencia: %s\n'
                     % (analysis.coverage_state, analysis.sequence_status))
-        text.insert(tk.END, '  Nota: el prior es plano; no describe al rival.\n')
+        if analysis.range_kind == 'prior' or 'flat_prior' in (
+                analysis.range_source or ''):
+            text.insert(tk.END, '  Nota: el prior es plano; no describe al rival.\n')
+        else:
+            text.insert(tk.END, '  Nota: el rango/modelo proviene del motor '
+                                'live; no es una validacion HU.\n')
         text.insert(tk.END, '\nDESCONOCIDO / LIMITACIONES\n', 'unknown')
         for reason in analysis.uncertainty_reasons or ('sin motivos',):
             text.insert(tk.END, '  - %s\n' % reason)
