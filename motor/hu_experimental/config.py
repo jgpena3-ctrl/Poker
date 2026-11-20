@@ -27,15 +27,19 @@ class ExperimentalConfig:
     equity_n_combos: int = 8
     equity_seed: int = 7
     # --- Fase 10.1: modo paridad con el motor live ---
-    # 'hu_sb_bb': modo operativo; fuerza SB/BB en HU mediante
+    # 'hu_in_6max': modo operativo para mesas 6-max. Usa las posiciones y el
+    # orden live de la mesa y solo recomienda cuando quedan exactamente 2
+    # jugadores activos en la mano (situacion HU dentro de una mano 6-max).
+    # 'hu_sb_bb': fuerza SB/BB en una mesa realmente HU mediante
     # MANUAL_POSITIONS y adapta el orden postflop del recorder por instancia.
-    # 'live_default' solo sirve como referencia diagnóstica y no es paridad HU.
-    parity_position_mode: str = 'hu_sb_bb'
-    # Ruta donde el recorder de paridad escribe las manos. Por defecto queda
-    # aislada en trabajo/hu_experimental; para el piloto autorizado se puede
-    # apuntar a data/hands_db.jsonl con parity_allow_historical_hand_db=True.
+    # 'live_default' solo sirve como referencia diagnostica y no se persiste.
+    parity_position_mode: str = 'hu_in_6max'
+    # Ruta aislada que conserva el contrato/configuracion del recorder.
+    # Fase 10.5 redirige las escrituras de finalizacion a os.devnull en modo
+    # diagnostico; esta ruta no habilita persistencia historica.
     parity_hands_path: Optional[Path] = None
     parity_allow_historical_hand_db: bool = False
+    # Compatibilidad de configuracion: Fase 10.5 desactiva siempre el writer.
     parity_enable_live_decision_log: bool = False
     parity_enable_shadow_logs: bool = False
     auto_poll_s: float = 0.5
@@ -54,7 +58,8 @@ class ExperimentalConfig:
             raise ValueError('bb debe ser positivo')
         if self.equity_n_runouts < 0 or self.equity_n_combos < 0:
             raise ValueError('los parametros de equity no pueden ser negativos')
-        if self.parity_position_mode not in ('live_default', 'hu_sb_bb'):
+        if self.parity_position_mode not in (
+                'live_default', 'hu_sb_bb', 'hu_in_6max'):
             raise ValueError('parity_position_mode invalido')
         if self.parity_enable_shadow_logs:
             raise ValueError(

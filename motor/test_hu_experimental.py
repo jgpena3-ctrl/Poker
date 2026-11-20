@@ -217,20 +217,31 @@ def test_prediction_rejects_posterior_fields_in_metadata(tmp_path):
         assistant.registry.register_prediction(payload)
 
 
-def test_experimental_package_has_no_live_or_recorder_imports():
+def test_experimental_package_reuses_only_the_capture_pipeline():
+    """El unico modulo live permitido es capture_live (lectura de pantalla).
+
+    El motor, el recorder y la GUI originales siguen prohibidos: el asistente
+    experimental no debe poder escribir manos/decisiones ni ejecutar acciones.
+    """
     forbidden = {
         'asistente_live', 'asistente_live_gui', 'recommend_loop',
-        'serving', 'recorder_live', 'capture_live', 'hands_db',
+        'serving', 'recorder_live', 'hands_db',
     }
+    capture_imports = []
     for path in PACKAGE.glob('*.py'):
         tree = ast.parse(path.read_text(encoding='utf-8'))
         for node in ast.walk(tree):
+            names = []
             if isinstance(node, ast.Import):
-                for alias in node.names:
-                    assert not (set(alias.name.split('.')) & forbidden), path
+                names = [alias.name for alias in node.names]
             elif isinstance(node, ast.ImportFrom):
-                module = node.module or ''
-                assert not (set(module.split('.')) & forbidden), path
+                names = [node.module or '']
+            for name in names:
+                parts = set(name.split('.'))
+                assert not (parts & forbidden), path
+                if 'capture_live' in parts:
+                    capture_imports.append(path.name)
+    assert set(capture_imports) == {'capture.py'}
 
 
 def test_gui_module_does_not_define_action_buttons():

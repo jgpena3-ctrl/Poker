@@ -47,6 +47,14 @@ class HUState:
     uncertainty_reasons: Tuple[str, ...] = ()
     observed_fields: Tuple[str, ...] = ()
     raw_state: Mapping[str, Any] = field(default_factory=dict)
+    # Fase 10.5: trazabilidad del puente sobre el recorder original. Estos
+    # campos no alteran el contrato previo; ``interpret_state`` los deja vacios.
+    contradictions: Tuple[str, ...] = ()
+    provenance: Mapping[str, str] = field(default_factory=dict)
+    actions: Tuple[Mapping[str, Any], ...] = ()
+    hand_id: Optional[str] = None
+    recorder_snapshot_sha256: Optional[str] = None
+    interpretation_source: str = 'raw_state'
 
     def __post_init__(self):
         if self.status not in ('ready', 'unresolved', 'no_decision'):
@@ -97,6 +105,12 @@ class HUState:
             'button_seat': self.button_seat,
             'uncertainty_reasons': list(self.uncertainty_reasons),
             'observed_fields': list(self.observed_fields),
+            'contradictions': list(self.contradictions),
+            'provenance': dict(self.provenance),
+            'actions': [dict(action) for action in self.actions],
+            'hand_id': self.hand_id,
+            'recorder_snapshot_sha256': self.recorder_snapshot_sha256,
+            'interpretation_source': self.interpretation_source,
         }
 
 

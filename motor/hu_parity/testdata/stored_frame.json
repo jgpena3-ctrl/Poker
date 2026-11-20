@@ -1,0 +1,17 @@
+{
+  "btn": "hero",
+  "hero_state": "activo",
+  "p1_state": "activo",
+  "p2_state": "sin jugador",
+  "p3_state": "sin jugador",
+  "p4_state": "sin jugador",
+  "p5_state": "sin jugador",
+  "hero_stake": 100.0,
+  "p1_stake": 100.0,
+  "hero_bet": 0.5,
+  "p1_bet": 1.0,
+  "pot": 1.5,
+  "hero_cards": ["As", "Kd"],
+  "community": [],
+  "hand_state": "in_progress"
+}

@@ -1,12 +1,14 @@
 """Adaptador de captura aislado para el asistente HU experimental.
 
-Reutiliza los lectores existentes sin pasar por ``asistente_live`` ni por el
-recorder. El adaptador no escribe archivos: solo devuelve estado e imagen.
+Delega en ``tools/capture_live.py``, el mismo pipeline que usa
+``asistente_live`` (screenshot, StateReader y CardReader). El adaptador no
+escribe archivos: solo devuelve estado e imagen. La inicializacion pesada de los
+lectores se hace en ``prepare()`` y no se imputa al frame capturado.
 """
 from __future__ import annotations
 
-import os
 import sys
+import threading
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -27,6 +29,7 @@ class CapturedFrame:
     warnings: Tuple[str, ...] = ()
     capture_ms: Optional[float] = None
     ocr_ms: Optional[float] = None
+    setup_ms: Optional[float] = None
     metadata: Mapping[str, Any] = field(default_factory=dict)
     # La imagen PIL se conserva para que el motor live pueda reutilizar su
     # deteccion de turno (StateMatcher). No se serializa ni se persiste.
@@ -52,12 +55,42 @@ class HUCaptureAdapter:
                  clock: Optional[Callable[[], str]] = None):
         self._capture_fn = capture_fn
         self._clock = clock or _now_iso
-        self._reader = None
-        self._card_reader = None
+        self._prepared = False
+        self._last_setup_ms: Optional[float] = None
+        self._prepare_lock = threading.Lock()
+
+    def prepare(self) -> float:
+        """Inicializa los lectores originales fuera del presupuesto de captura.
+
+        ``capture_live.init_reader()`` entrena plantillas OCR y tarda varios
+        segundos en el primer uso. Ese coste de arranque no debe contarse como
+        latencia de un frame: la captura empieza despues.
+        """
+        if self._capture_fn is not None or self._prepared:
+            return 0.0
+        with self._prepare_lock:
+            if self._prepared:
+                return 0.0
+            tools = str(_tools_root())
+            if tools not in sys.path:
+                sys.path.insert(0, tools)
+            try:
+                import capture_live
+            except Exception as exc:  # pragma: no cover - depende del entorno
+                raise CaptureError('lectores no disponibles: %s' % exc) from exc
+            started = time.perf_counter()
+            try:
+                capture_live.init_reader()
+            except Exception as exc:  # pragma: no cover - entorno real
+                raise CaptureError(
+                    'no se pudieron inicializar los lectores: %s' % exc) from exc
+            self._prepared = True
+            self._last_setup_ms = (time.perf_counter() - started) * 1000.0
+            return self._last_setup_ms
 
     def capture(self) -> CapturedFrame:
-        started = time.perf_counter()
         if self._capture_fn is not None:
+            started = time.perf_counter()
             try:
                 raw = self._capture_fn()
             except Exception as exc:  # noqa: BLE001 - se expone como error de captura
@@ -71,11 +104,14 @@ class HUCaptureAdapter:
                 warnings=frame.warnings,
                 capture_ms=(time.perf_counter() - started) * 1000.0,
                 ocr_ms=frame.ocr_ms,
+                setup_ms=frame.setup_ms,
                 metadata=frame.metadata,
                 pil=frame.pil,
             )
 
-        state, image, pil, ocr_ms, captured_at = self._default_capture()
+        self.prepare()
+        started = time.perf_counter()
+        state, image, pil, captured_at = self._default_capture()
         return CapturedFrame(
             state=state,
             # La edad se mide desde el screenshot, no desde el final del OCR.
@@ -84,8 +120,15 @@ class HUCaptureAdapter:
             source='screen',
             warnings=self._capture_warnings(state),
             capture_ms=(time.perf_counter() - started) * 1000.0,
-            ocr_ms=ocr_ms,
-            metadata={'reader': 'lector_estado+lector_unificado'},
+            # capture_live no separa screenshot de OCR. El total posterior al
+            # screenshot se conserva en capture_ms; no se inventa un OCR_ms.
+            ocr_ms=None,
+            setup_ms=self._last_setup_ms,
+            metadata={
+                'reader': 'capture_live.StateReader+CardReader',
+                'capture_backend': 'tools.capture_live.capture',
+                'reader_setup_ms': self._last_setup_ms,
+            },
             pil=pil,
         )
 
@@ -98,9 +141,10 @@ class HUCaptureAdapter:
             pil = state.pop('_pil', None)
             captured_at = state.pop('_captured_at', None) or self._clock()
             warnings = tuple(state.pop('_warnings', ()) or ())
+            setup_ms = state.pop('_setup_ms', None)
             return CapturedFrame(state=state, captured_at=captured_at,
                                  image=image, source='injected',
-                                 warnings=warnings, pil=pil)
+                                 warnings=warnings, setup_ms=setup_ms, pil=pil)
         if isinstance(raw, (tuple, list)):
             if len(raw) < 1:
                 raise CaptureError('captura inyectada vacia')
@@ -123,59 +167,40 @@ class HUCaptureAdapter:
                                  pil=pil, ocr_ms=ocr_ms)
         raise CaptureError('captura inyectada con formato no soportado')
 
-    def _default_capture(self) -> Tuple[dict, Any, Any, float, str]:
+    def _default_capture(self) -> Tuple[dict, Any, Any, str]:
+        """Delega en el pipeline original ``tools/capture_live.py``.
+
+        No se reimplementa la lectura: se usa exactamente la misma funcion que
+        ``asistente_live``. El timestamp se toma inmediatamente antes de la
+        llamada (screenshot) y no despues del OCR.
+        """
+        tools = str(_tools_root())
+        if tools not in sys.path:
+            sys.path.insert(0, tools)
         try:
-            tools = str(_tools_root())
-            for path in (tools,):
-                if path not in sys.path:
-                    sys.path.insert(0, path)
-            import numpy as np
-            from PIL import ImageGrab
-            from lector_estado import StateReader
-            from lector_unificado import CardReader
+            import capture_live
         except Exception as exc:  # pragma: no cover - depende del entorno
             raise CaptureError('lectores no disponibles: %s' % exc) from exc
 
-        if self._reader is None:
-            try:
-                self._reader = StateReader()
-            except Exception as exc:  # pragma: no cover - entorno real
-                raise CaptureError('StateReader no inicializado: %s' % exc) from exc
-        if self._card_reader is None:
-            try:
-                self._card_reader = CardReader()
-            except Exception as exc:  # pragma: no cover - entorno real
-                raise CaptureError('CardReader no inicializado: %s' % exc) from exc
-
+        captured_at = self._clock()
         try:
-            pil = ImageGrab.grab()
-            captured_at = self._clock()
-            img_arr = np.array(pil.convert('RGB'))
+            state, image, pil = capture_live.capture()
         except Exception as exc:  # pragma: no cover - entorno real
-            raise CaptureError('pantalla no disponible: %s' % exc) from exc
-
-        started = time.perf_counter()
-        try:
-            state = dict(self._reader.read_all(pil))
-            cards = self._card_reader.read_all(img_arr)
-        except Exception as exc:  # pragma: no cover - entorno real
-            raise CaptureError('fallo de OCR/interpretacion: %s' % exc) from exc
-        ocr_ms = (time.perf_counter() - started) * 1000.0
-
-        hero = cards.get('hero') if isinstance(cards, Mapping) else None
-        if hero:
-            state['hero_cards'] = hero
-        community = cards.get('community') if isinstance(cards, Mapping) else None
-        if community is not None:
-            state['community'] = community
-        state['_capture_source'] = 'screen'
-        return state, img_arr, pil, ocr_ms, captured_at
+            raise CaptureError('fallo de captura/OCR original: %s' % exc) from exc
+        if not isinstance(state, Mapping):
+            raise CaptureError('capture_live devolvio un estado no interpretable')
+        return dict(state), image, pil, captured_at
 
     @staticmethod
     def _capture_warnings(state: Mapping[str, Any]) -> Tuple[str, ...]:
         warnings = []
+        if not state:
+            warnings.append('state_empty')
         if not state.get('hero_cards'):
             warnings.append('hero_cards_not_observed')
+        if not any('%s_state' % seat in state
+                   for seat in ('hero', 'p1', 'p2', 'p3', 'p4', 'p5')):
+            warnings.append('state_keys_missing')
         for seat in ('hero', 'p1', 'p2', 'p3', 'p4', 'p5'):
             if state.get(f'{seat}_state') is None:
                 warnings.append('%s_state_unknown' % seat)

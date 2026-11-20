@@ -9,10 +9,14 @@ Modos de posicion:
 
 - ``live_default``: replica exactamente las posiciones que asigna el recorder
   original (en HU suele dar BTN/BB). Es paridad con el defecto live, no una
-  correccion estrategica.
-- ``hu_sb_bb``: fuerza SB/BB en la mesa HU mediante ``MANUAL_POSITIONS``. Usa
-  el mismo motor, pero corrige la posicion HU de forma explicita. La diferencia
-  se declara en la prediccion.
+  correccion estrategica, y no se persiste (solo diagnostico).
+- ``hu_in_6max``: modo operativo para mesas 6-max. Usa las posiciones y el
+  orden live de la mesa, y solo recomienda cuando quedan exactamente 2
+  jugadores activos en la mano. No fuerza SB/BB: la situacion HU se define por
+  los jugadores activos, no por el tipo de mesa.
+- ``hu_sb_bb``: fuerza SB/BB en una mesa realmente HU mediante
+  ``MANUAL_POSITIONS``. Usa el mismo motor, pero corrige la posicion HU de
+  forma explicita. La diferencia se declara en la prediccion.
 
 Nada de esto autoriza un piloto real ni escribe en ``data/`` por defecto.
 """
@@ -24,7 +28,6 @@ import math
 import threading
 import time
 import uuid
-from collections import Counter
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from pathlib import Path
@@ -42,7 +45,12 @@ from ..hu_experimental.config import ExperimentalConfig
 from ..hu_experimental.state import (
     HUState,
     StateInterpretationError,
-    interpret_state,
+)
+from .recorder_bridge import (
+    RecorderSnapshot,
+    SnapshotLiveRecorder,
+    build_unprocessed_snapshot,
+    interpret_recorder_snapshot,
 )
 
 
@@ -195,6 +203,7 @@ class ParityAnalysis:
     capture_source: str
     captured_at: str
     elapsed_ms: Mapping[str, float] = field(default_factory=dict)
+    recorder_snapshot: Optional[RecorderSnapshot] = None
 
     @property
     def has_decision(self) -> bool:
@@ -229,6 +238,9 @@ class ParityAnalysis:
             'capture_source': self.capture_source,
             'captured_at': self.captured_at,
             'elapsed_ms': dict(self.elapsed_ms),
+            'recorder_snapshot': (
+                self.recorder_snapshot.as_dict()
+                if self.recorder_snapshot is not None else None),
         }
 
 
@@ -264,6 +276,7 @@ class LiveParityAssistant:
         self.capture_guard = capture_guard
         self._engine = None
         self._lock = threading.RLock()
+        self._capture_lock = threading.Lock()
         self._collector = SnapshotCollector()
         self._last_frame: Optional[CapturedFrame] = None
         self._last_analysis: Optional[ParityAnalysis] = None
@@ -282,22 +295,93 @@ class LiveParityAssistant:
     def registry_path(self) -> Path:
         return self.registry.storage_path
 
+    def pending_outcome_ids(self) -> tuple:
+        """Predicciones de una ejecucion previa aun sin outcome observado.
+
+        Solo lectura. La GUI las presenta al operador para que registre la
+        accion observada antes de iniciar una captura nueva. No modifica el
+        bloqueo de reinicio: ``_assert_restart_clear`` sigue siendo la unica
+        puerta que lo levanta.
+        """
+        return tuple(sorted(self._startup_pending_ids))
+
+    def pending_outcomes(self) -> tuple:
+        """Metadatos legibles de las predicciones previas sin outcome.
+
+        Solo lectura. Devuelve ``prediction_id``, ``hand_id``, ``street``,
+        ``hu_position``, ``action`` y ``emitted_at`` para que la GUI pida el
+        resultado sin mostrar unicamente un identificador hexadecimal.
+        """
+        ids = set(self._startup_pending_ids)
+        if not ids:
+            return ()
+        entries = {}
+        try:
+            events = self.registry.read_events()
+        except Exception:  # registro ilegible: la GUI mostrara el id
+            events = ()
+        for event in events:
+            if event.get('event_type') != 'HU_PREDICTION':
+                continue
+            payload = event.get('payload') or {}
+            prediction_id = payload.get('prediction_id')
+            if prediction_id not in ids:
+                continue
+            metadata = payload.get('metadata') or {}
+            entries[prediction_id] = {
+                'prediction_id': prediction_id,
+                'hand_id': metadata.get('hand_id'),
+                'street': metadata.get('street'),
+                'hu_position': metadata.get('hu_position'),
+                'action': payload.get('provisional_selected_action'),
+                'emitted_at': payload.get('emitted_at'),
+            }
+        return tuple(
+            entries.get(prediction_id)
+            or {'prediction_id': prediction_id}
+            for prediction_id in sorted(ids))
+
+    def startup_registry_error(self) -> Optional[str]:
+        """Error de verificacion del registro al iniciar, si lo hubo."""
+        return self._startup_registry_error
+
     @property
     def engine(self):
         return self._engine
 
     def capture(self) -> CapturedFrame:
-        self._assert_restart_clear()
-        guard_warning = None
-        if self.capture_guard is not None:
-            guard_warning = self.capture_guard.acquire()
-        frame = self.capture_adapter.capture()
-        if guard_warning:
-            frame = replace(frame, warnings=tuple(dict.fromkeys(
-                tuple(frame.warnings) + (guard_warning,))))
-        self._last_frame = frame
-        self._last_analysis = None
-        return frame
+        # Manual y polling automatico comparten adapter/lectores; una segunda
+        # captura concurrente podria reutilizar buffers o mezclar frames.
+        with self._capture_lock:
+            self._assert_restart_clear()
+            guard_warning = None
+            if self.capture_guard is not None:
+                guard_warning = self.capture_guard.acquire()
+            frame = self.capture_adapter.capture()
+            if guard_warning:
+                frame = replace(frame, warnings=tuple(dict.fromkeys(
+                    tuple(frame.warnings) + (guard_warning,))))
+            self._last_frame = frame
+            self._last_analysis = None
+            return frame
+
+    def prepare(self) -> float:
+        """Inicializa los lectores originales sin capturar ni analizar.
+
+        Se expone para que la GUI pueda pagar el arranque de plantillas OCR
+        (~5-8 s la primera vez) antes de la primera captura y mostrar el coste
+        como ``setup_ms``, nunca como latencia del frame.
+        """
+        prepare = getattr(self.capture_adapter, 'prepare', None)
+        if prepare is None:
+            return 0.0
+        with self._capture_lock:
+            return prepare() or 0.0
+
+    def prepare_engine(self):
+        """Construye el motor original y sus salidas aisladas sin capturar."""
+        with self._lock:
+            return self.ensure_engine()
 
     def set_capture_guard(self, guard) -> None:
         """Inyecta la guardia de sesion usada por la GUI independiente."""
@@ -381,20 +465,25 @@ class LiveParityAssistant:
         return None
 
     def ensure_engine(self):
-        """Construye el motor live una sola vez, con salidas aisladas."""
+        """Construye el motor live una sola vez, con salidas aisladas.
+
+        El recorder es ``SnapshotLiveRecorder`` en modo diagnostico estricto:
+        no escribe el hand DB, no guarda frames/ambiguedades, no ejecuta el
+        callback persistente de ``DecisionLog`` y no registra outcomes de
+        manos reales. El motor original sigue recibiendo el estado bruto.
+        """
         if self._engine is not None:
             return self._engine
         from .. import asistente_live as live
-        from ..decision_log import DecisionLog
-        import recorder_live
 
         models = self.models or live.build_models(verbose=False)
         engine = live.Asistente(models=models, hero_name=self.config.hero_name,
                                 verbose=False)
         runtime = Path(self.config.runtime_dir)
-        recorder = recorder_live.LiveRecorder(
+        recorder = SnapshotLiveRecorder(
             output_path=str(self.config.parity_hands_path),
             ambiguity_capture_dir=str(runtime / 'ambiguedades'),
+            diagnostic_mode=True,
         )
         # En HU el SB/button actua primero preflop y segundo postflop. El
         # recorder original conserva el orden de 6-max ['SB','BB',...] en
@@ -408,16 +497,22 @@ class LiveParityAssistant:
                 return ['BB', 'SB', 'UTG', 'MP', 'CO', 'BTN']
             recorder._get_street_order = MethodType(hu_street_order, recorder)
         engine.rec = recorder
+        # ``hu_in_6max`` conserva el orden y las posiciones 6-max del motor
+        # original; la puerta solo exige 2 jugadores activos. No se reemplazan
+        # ``_next_to_act``/``_hero_act`` porque eso impondria el orden HU.
         if self.config.parity_position_mode == 'hu_sb_bb':
             engine._next_to_act = MethodType(_hu_next_to_act, engine)
             engine._hero_act = MethodType(_hu_hero_act, engine)
-        engine.rec.on_hand_finalized = self._on_hand_finalized
-        secondary = None
-        if self.config.parity_enable_live_decision_log:
-            secondary = DecisionLog(path=str(runtime / 'decisions_parity.jsonl'))
-        self._collector = SnapshotCollector(secondary=secondary)
+        # Sin callback persistente: las manos finalizadas se recogen en
+        # memoria mediante ``take_finalized_hands``. No se convierten en
+        # outcomes automaticamente; ``record_outcome`` es la unica operacion
+        # de escritura posterior explicita.
+        engine.rec.on_hand_finalized = None
+        # La configuracion historica de DecisionLog se ignora en diagnostico.
+        # ``SnapshotCollector`` no escribe ni abre rutas persistentes.
+        self._collector = SnapshotCollector(secondary=None)
         engine.decision_log = self._collector
-        engine.shadow = bool(self.config.parity_enable_shadow_logs)
+        engine.shadow = False
         self._engine = engine
         return engine
 
@@ -448,92 +543,188 @@ class LiveParityAssistant:
         else:
             raise TypeError('source debe ser None, CapturedFrame o mapping')
 
+        # Snapshot de diagnostico sin ejecutar el recorder. Conserva lo que el
+        # OCR mostro para que un rechazo temporal no aparezca como estado vacio.
+        # No es un snapshot procesado y nunca se usa como puerta operativa.
+        recorder = getattr(self._engine, 'rec', None)
+        pre_snapshot = build_unprocessed_snapshot(
+            recorder, frame.state, sequence=0,
+            captured_at=frame.captured_at, capture_source=frame.source,
+            image=frame.image)
+        try:
+            pre_hu = interpret_recorder_snapshot(
+                pre_snapshot, hero_seat=self.config.hero_seat,
+                require_processed=False)
+            invalid_reason = None
+        except (StateInterpretationError, ValueError) as exc:
+            pre_hu = None
+            invalid_reason = 'invalid_state:%s' % exc
+
+        diagnostic_reasons = (list(pre_hu.uncertainty_reasons)
+                              if pre_hu else [])
         temporal_reason = self._temporal_rejection(frame)
         if temporal_reason:
+            observed = (replace(pre_hu, status='unresolved',
+                                reason=temporal_reason)
+                        if pre_hu is not None else None)
             return self._blocked_analysis(
-                frame, None, temporal_reason, started,
-                warnings=frame.warnings)
+                frame, observed, temporal_reason, started,
+                reasons=diagnostic_reasons, warnings=frame.warnings,
+                recorder_snapshot=pre_snapshot)
         sequence_reason = self._capture_sequence_rejection(frame)
         if sequence_reason:
+            observed = (replace(pre_hu, status='unresolved',
+                                reason=sequence_reason)
+                        if pre_hu is not None else None)
             return self._blocked_analysis(
-                frame, None, sequence_reason, started,
-                warnings=frame.warnings)
-
-        try:
-            hu = interpret_state(frame.state, hero_seat=self.config.hero_seat)
-        except StateInterpretationError as exc:
+                frame, observed, sequence_reason, started,
+                reasons=diagnostic_reasons, warnings=frame.warnings,
+                recorder_snapshot=pre_snapshot)
+        if invalid_reason is not None:
             return self._blocked_analysis(
-                frame, None, 'invalid_state:%s' % exc, started,
-                warnings=frame.warnings)
-
-        reasons = list(hu.uncertainty_reasons)
-        warnings = list(frame.warnings)
-        if hu.status != 'ready':
-            return self._blocked_analysis(
-                frame, hu, hu.reason or hu.status, started,
-                reasons=reasons, warnings=warnings)
-        if len(hu.active_seats) != 2:
-            return self._blocked_analysis(
-                frame, hu, 'not_heads_up:%d_active' % len(hu.active_seats),
-                started, reasons=reasons, warnings=warnings)
-        if len(hu.hero_cards) != 2:
-            return self._blocked_analysis(
-                frame, hu, 'hero_cards_not_observed', started,
-                reasons=reasons, warnings=warnings)
+                frame, None, invalid_reason, started,
+                warnings=frame.warnings, recorder_snapshot=pre_snapshot)
 
         self.ensure_engine()
+        recorder = self._engine.rec
+        self._drain_recorder_finalized()
         self._collector.clear()
         captured = {}
         finalized_before = len(self._finalized_hands)
-        restore_positions = self._apply_position_mode(hu)
-        try:
-            def on_reco(text, evs, sit, label):
-                captured['text'] = text
-                captured['evs'] = evs
-                captured['sit'] = sit
-                captured['label'] = label
 
-            result = self._engine.step(
-                frame.state, frame.image, frame.pil,
-                log=self._logger, on_reco=on_reco,
-                require_turn=(True if self.config.parity_position_mode ==
-                              'hu_sb_bb' else require_turn),
-                force_reco=force_reco,
-            )
+        # El modo operativo 6-max no debe iniciar una mano incompleta si la
+        # GUI/polling se abre cuando el board ya tiene flop/turn/river. Sin la
+        # historia preflop el ledger no puede reconciliar el bote observado;
+        # se espera a una mano nueva, empezando por preflop, en vez de procesar
+        # y conservar una reconstruccion parcial.
+        if (self.config.parity_position_mode == 'hu_in_6max'
+                and recorder.hand is None
+                and pre_hu is not None
+                and pre_hu.street in ('flop', 'turn', 'river')):
+            return self._blocked_analysis(
+                frame, pre_hu, 'awaiting_preflop_after_midhand_start', started,
+                reasons=diagnostic_reasons, warnings=frame.warnings,
+                recorder_snapshot=pre_snapshot)
+
+        # El recorder procesa la captura exactamente una vez. Se le entrega
+        # una copia para que ninguna mutacion interna (p.ej. reasignacion de
+        # cartas) altere el estado bruto que recibira el motor original.
+        restore_positions = (self._apply_position_mode(pre_hu)
+                             if pre_hu is not None else None)
+        try:
+            try:
+                recorder.process_frame(
+                    frame.state, frame.image, log=self._logger,
+                    captured_at=frame.captured_at,
+                    capture_source=frame.source)
+            except Exception as exc:
+                snapshot = recorder.last_snapshot
+                self._drain_recorder_finalized()
+                return self._blocked_analysis(
+                    frame, None, 'recorder_error:%s' % exc, started,
+                    reasons=list(frame.warnings), warnings=frame.warnings,
+                    recorder_snapshot=snapshot)
+            snapshot = recorder.last_snapshot
+            self._drain_recorder_finalized()
         finally:
             self._restore_positions(restore_positions)
+
+        if snapshot is None:
+            return self._blocked_analysis(
+                frame, None, 'recorder_snapshot_unavailable', started,
+                reasons=list(frame.warnings), warnings=frame.warnings)
+        hu = interpret_recorder_snapshot(
+            snapshot, hero_seat=self.config.hero_seat)
+        reasons = list(hu.uncertainty_reasons)
+        warnings = list(frame.warnings)
 
         if len(self._finalized_hands) > finalized_before:
             return self._blocked_analysis(
                 frame, hu, 'hand_finalized_during_capture_cycle', started,
-                reasons=reasons, warnings=warnings)
+                reasons=reasons, warnings=warnings,
+                recorder_snapshot=snapshot)
+        if hu.status != 'ready':
+            return self._blocked_analysis(
+                frame, hu, hu.reason or hu.status, started,
+                reasons=reasons, warnings=warnings,
+                recorder_snapshot=snapshot)
+        if len(hu.active_seats) != 2:
+            return self._blocked_analysis(
+                frame, hu, 'not_heads_up:%d_active' % len(hu.active_seats),
+                started, reasons=reasons, warnings=warnings,
+                recorder_snapshot=snapshot)
+        if len(hu.hero_cards) != 2:
+            return self._blocked_analysis(
+                frame, hu, 'hero_cards_not_observed', started,
+                reasons=reasons, warnings=warnings,
+                recorder_snapshot=snapshot)
 
-        if self.config.parity_position_mode == 'hu_sb_bb':
+        if self.config.parity_position_mode in ('hu_sb_bb', 'hu_in_6max'):
             if self._engine._hero_pid() != hu.hero_seat:
                 return self._blocked_analysis(
                     frame, hu, 'hero_identity_mismatch', started,
-                    reasons=reasons, warnings=warnings)
+                    reasons=reasons, warnings=warnings,
+                    recorder_snapshot=snapshot)
+        if self.config.parity_position_mode == 'hu_sb_bb':
             if not _hu_next_to_act(self._engine, frame.state, hu.hero_seat):
                 return self._blocked_analysis(
                     frame, hu, 'no_hu_decision_pending', started,
-                    reasons=reasons, warnings=warnings)
+                    reasons=reasons, warnings=warnings,
+                    recorder_snapshot=snapshot)
 
+        # En ``hu_in_6max`` el turno lo decide el motor live con las posiciones
+        # y el orden 6-max de la mano. No se aplica el corrector HU de
+        # ``hu_sb_bb`` ni la puerta de orden postflop HU: la situacion HU se
+        # define por los 2 jugadores activos, no por el tipo de mesa.
         if (self.config.parity_position_mode == 'hu_sb_bb'
                 and hu.street != 'preflop'):
             order_reason = self._postflop_order_rejection()
             if order_reason:
                 return self._blocked_analysis(
                     frame, hu, order_reason, started, reasons=reasons,
-                    warnings=warnings)
+                    warnings=warnings, recorder_snapshot=snapshot)
+
+        # La unica ejecucion real de ``process_frame`` ya ocurrio. ``step``
+        # recibe el estado bruto y no vuelve a procesar el frame; su llamada
+        # interna queda registrada como suprimida, no como segunda ejecucion.
+        try:
+            with recorder.suppress_processing():
+                def on_reco(text, evs, sit, label):
+                    captured['text'] = text
+                    captured['evs'] = evs
+                    captured['sit'] = sit
+                    captured['label'] = label
+
+                result = self._engine.step(
+                    frame.state, frame.image, frame.pil,
+                    log=self._logger, on_reco=on_reco,
+                    require_turn=(True if self.config.parity_position_mode in
+                                  ('hu_sb_bb', 'hu_in_6max') else require_turn),
+                    force_reco=force_reco,
+                )
+        except Exception as exc:  # el fallo no puede saltarse la puerta
+            return self._blocked_analysis(
+                frame, hu, 'live_engine_error:%s' % exc, started,
+                reasons=reasons, warnings=warnings,
+                recorder_snapshot=snapshot)
 
         if result is None or not captured or self._collector.snapshot is None:
             reason = getattr(self._engine, 'last_reco_reason', None) \
                 or 'live_engine_no_recommendation'
             return self._blocked_analysis(
                 frame, hu, reason, started, reasons=reasons,
-                warnings=warnings)
-        return self._build_analysis(frame, hu, captured, started, reasons,
-                                    warnings)
+                warnings=warnings, recorder_snapshot=snapshot)
+        return self._build_analysis(
+            frame, hu, captured, started, reasons, warnings,
+            recorder_snapshot=snapshot)
+
+    def _drain_recorder_finalized(self) -> None:
+        recorder = getattr(self._engine, 'rec', None)
+        taker = getattr(recorder, 'take_finalized_hands', None)
+        if taker is None:
+            return
+        self._finalized_hands.extend(
+            _json_safe(hand) for hand in taker())
 
     def _postflop_order_rejection(self) -> Optional[str]:
         """No predice si el modelo live no dispone del primer turno HU real."""
@@ -572,7 +763,9 @@ class LiveParityAssistant:
     def _apply_position_mode(self, hu: HUState):
         if self.config.parity_position_mode != 'hu_sb_bb':
             return None
-        if hu.button_seat not in hu.active_seats:
+        if (len(hu.active_seats) != 2
+                or hu.button_seat not in hu.active_seats
+                or hu.contradictions):
             return None
         import recorder_live
 
@@ -595,7 +788,9 @@ class LiveParityAssistant:
 
     def _build_analysis(self, frame: CapturedFrame, hu: HUState,
                         captured: Mapping[str, Any], started: float,
-                        reasons: list, warnings: list) -> ParityAnalysis:
+                        reasons: list, warnings: list, *,
+                        recorder_snapshot: Optional[RecorderSnapshot] = None
+                        ) -> ParityAnalysis:
         snapshot = dict(self._collector.snapshot or {})
         # El snapshot de DecisionLog puede no repetir estos campos, pero el
         # colector los recibe por separado. Se congelan junto con la decision.
@@ -621,6 +816,8 @@ class LiveParityAssistant:
                 reasons.append('position_mapping_live_vs_hu')
         if self.config.parity_position_mode == 'hu_sb_bb':
             reasons.append('position_mode_hu_correction_not_exact_live_parity')
+        elif self.config.parity_position_mode == 'hu_in_6max':
+            reasons.append('position_mode_live_6max_situation_hu')
         if preflop:
             reasons.append('preflop_action_is_sampled')
             reasons.append('preflop_equity_not_computed')
@@ -670,12 +867,28 @@ class LiveParityAssistant:
                 'position_correction': (
                     'button_is_sb_and_hu_postflop_order_overridden'
                     if self.config.parity_position_mode == 'hu_sb_bb'
-                    else 'none_diagnostic_live_default'),
+                    else ('none_live_6max_positions'
+                          if self.config.parity_position_mode == 'hu_in_6max'
+                          else 'none_diagnostic_live_default')),
                 'position_mismatch': position_mismatch,
                 'villain_range': snapshot.get('villain_range'),
                 'reproducibility': snapshot.get('reproducibility'),
                 'preflop_table_audit': snapshot.get('preflop_table_audit'),
                 'model_evidence': snapshot.get('model_evidence'),
+                'recorder_snapshot_fingerprint': (
+                    recorder_snapshot.fingerprint
+                    if recorder_snapshot is not None else None),
+                'recorder_snapshot_sequence': (
+                    recorder_snapshot.sequence
+                    if recorder_snapshot is not None else None),
+                'recorder_snapshot_sha256': hu.recorder_snapshot_sha256,
+                'pot_read': (
+                    recorder_snapshot.pot_read
+                    if recorder_snapshot is not None else None),
+                'pot_recorded': (
+                    recorder_snapshot.pot_live_calculated
+                    if recorder_snapshot is not None else None),
+                'to_call_source': hu.provenance.get('to_call'),
             },
             equity=equity,
             equity_method=('situation_engine_vs_profile_range'
@@ -691,21 +904,35 @@ class LiveParityAssistant:
                 'La recomendacion live no se reclasifica como demostrada.',
                 'La equity preflop no se calcula: las tablas devuelven frecuencias.',
                 'El resultado posterior se registra como evento separado.',
-                'hu_sb_bb corrige deliberadamente el BTN/SB y el orden HU; '
-                'no es paridad exacta con live_default.',
+                ('hu_sb_bb corrige deliberadamente el BTN/SB y el orden HU; '
+                 'no es paridad exacta con live_default.'
+                 if self.config.parity_position_mode == 'hu_sb_bb' else
+                 'La recomendacion usa las posiciones y el orden 6-max de la '
+                 'mesa; la situacion HU se define por los 2 jugadores activos.'
+                 if self.config.parity_position_mode == 'hu_in_6max' else
+                 'live_default es solo referencia diagnostica; no se persiste.'),
                 'La recomendacion no se presenta como decision validada.',
+                'La capa HU interpreta el RecorderSnapshot; el motor recibe '
+                'el estado bruto original sin mutarlo.',
+                'El recorder se ejecuto una sola vez; la llamada interna de '
+                'step quedo suprimida y no reproceso el frame.',
             ),
             warnings=tuple(dict.fromkeys(warnings)),
             capture_source=frame.source,
             captured_at=frame.captured_at,
             elapsed_ms={'analysis': elapsed},
+            recorder_snapshot=recorder_snapshot,
         )
 
     def _blocked_analysis(self, frame: CapturedFrame, hu: Optional[HUState],
                           reason: str, started: float, *,
-                          reasons=None, warnings=None) -> ParityAnalysis:
+                          reasons=None, warnings=None,
+                          recorder_snapshot: Optional[RecorderSnapshot] = None
+                          ) -> ParityAnalysis:
         elapsed = (datetime.now(timezone.utc).timestamp() - started) * 1000.0
         if hu is None:
+            raw_state = (recorder_snapshot.as_dict()['raw_state']
+                         if recorder_snapshot is not None else dict(frame.state))
             hu = HUState(
                 status='unresolved', reason=reason,
                 hero_seat=self.config.hero_seat,
@@ -714,7 +941,13 @@ class LiveParityAssistant:
                 pot=None, to_call=None, hero_stack=None, villain_stack=None,
                 hero_bet=None, villain_bet=None, button_seat=None,
                 uncertainty_reasons=tuple(reasons or ()),
-                observed_fields=(), raw_state=dict(frame.state),
+                observed_fields=(), raw_state=raw_state,
+                recorder_snapshot_sha256=(
+                    recorder_snapshot.fingerprint
+                    if recorder_snapshot is not None else None),
+                interpretation_source=(
+                    'recorder_snapshot' if recorder_snapshot is not None
+                    else 'raw_state'),
             )
         return ParityAnalysis(
             state=hu,
@@ -746,6 +979,7 @@ class LiveParityAssistant:
             capture_source=frame.source,
             captured_at=frame.captured_at,
             elapsed_ms={'analysis': elapsed},
+            recorder_snapshot=recorder_snapshot,
         )
 
     @staticmethod
@@ -846,6 +1080,8 @@ class LiveParityAssistant:
         if self.config.parity_position_mode == 'hu_sb_bb':
             uncertainty.append(
                 'position_mode_hu_correction_not_exact_live_parity')
+        elif self.config.parity_position_mode == 'hu_in_6max':
+            uncertainty.append('position_mode_live_6max_situation_hu')
         uncertainty.append('live_engine_recommendation_not_certified')
         metadata = {
             'source': 'asistente_live',
@@ -863,7 +1099,9 @@ class LiveParityAssistant:
             'position_correction': (
                 'button_is_sb_and_hu_postflop_order_overridden'
                 if self.config.parity_position_mode == 'hu_sb_bb'
-                else 'none_diagnostic_live_default'),
+                else ('none_live_6max_positions'
+                      if self.config.parity_position_mode == 'hu_in_6max'
+                      else 'none_diagnostic_live_default')),
             'position_mismatch': bool(position_mismatch),
             'preflop': bool(preflop),
             'action_values_kind': 'frequency' if preflop else 'ev',
@@ -876,9 +1114,16 @@ class LiveParityAssistant:
                 'multiway_soportado'),
             'hand_db_path': str(self.config.parity_hands_path),
             'hand_db_snapshot_sha256': self._data_snapshot_id,
-            'live_decision_log_enabled':
-                bool(self.config.parity_enable_live_decision_log),
-            'shadow_logs_enabled': bool(self.config.parity_enable_shadow_logs),
+            # En Fase 10.5 el modo diagnostico ignora estas rutas: siempre
+            # quedan desactivadas para no persistir decisiones/artefactos.
+            'live_decision_log_enabled': False,
+            'shadow_logs_enabled': False,
+            'recorder_diagnostic_mode': True,
+            'auto_outcomes_enabled': False,
+            'recorder_snapshot_fingerprint': hu.recorder_snapshot_sha256,
+            'hu_interpretation_source': hu.interpretation_source,
+            'hu_contradictions': list(hu.contradictions),
+            'hu_provenance': dict(hu.provenance),
             'preflop_sampling': snapshot.get('preflop_sampling'),
             'preflop_table_audit': snapshot.get('preflop_table_audit'),
             'model_evidence': snapshot.get('model_evidence'),
@@ -962,7 +1207,8 @@ class LiveParityAssistant:
         if prediction is None:
             raise ValueError('la analisis no contiene prediccion')
         self._assert_registry_integrity()
-        if prediction.metadata.get('position_mode') != 'hu_sb_bb':
+        if prediction.metadata.get('position_mode') not in (
+                'hu_sb_bb', 'hu_in_6max'):
             raise ValueError(
                 'live_default es solo diagnostico; no se persiste prediccion')
         recorder_hand = (self._engine.rec.hand
@@ -1078,7 +1324,8 @@ class LiveParityAssistant:
                                         force_reco=False)
                 analysis_ms = (time.perf_counter() - phase_started) * 1000.0
                 registration = None
-                if self.config.parity_position_mode != 'hu_sb_bb':
+                if self.config.parity_position_mode not in (
+                        'hu_sb_bb', 'hu_in_6max'):
                     return PollEvent(
                         analysis=analysis,
                         error=('live_default es solo diagnostico; '
@@ -1095,7 +1342,7 @@ class LiveParityAssistant:
                         persist_ms = (time.perf_counter() - phase_started) * 1000.0
                 phase_started = time.perf_counter()
                 self._flush_post_capture_observations()
-                outcome_ms = (time.perf_counter() - phase_started) * 1000.0
+                cleanup_ms = (time.perf_counter() - phase_started) * 1000.0
                 total_ms = (time.perf_counter() - cycle_started) * 1000.0
                 return PollEvent(
                     analysis=analysis, registration=registration,
@@ -1103,133 +1350,22 @@ class LiveParityAssistant:
                     phase_times_ms={
                         'capture_and_analysis': analysis_ms,
                         'prediction_persistence': persist_ms,
-                        'posterior_observation_and_persistence': outcome_ms,
+                        'post_capture_cleanup': cleanup_ms,
                         'total': total_ms,
                     })
             except Exception as exc:  # noqa: BLE001
                 total_ms = (time.perf_counter() - cycle_started) * 1000.0
                 return PollEvent(error=str(exc), elapsed_ms=total_ms)
 
-    def _record_observed_outcomes(self) -> None:
-        engine = self._engine
-        if engine is None:
-            return
-        hand = getattr(engine.rec, 'hand', None)
-        if not hand:
-            return
-        hand_id = hand.get('hand_id')
-        for prediction_id, item in list(self._pending.items()):
-            if not item.get('hand_id') or item.get('hand_id') != hand_id:
-                continue
-            street = item.get('street')
-            record = ((hand.get('streets') or {}).get(street) or {})
-            actions = record.get('actions') or []
-            seen = Counter(_signature(a) for a in item.get('actions_seen') or [])
-            new_actions = []
-            for candidate in actions:
-                key = _signature(candidate)
-                if seen[key]:
-                    seen[key] -= 1
-                else:
-                    new_actions.append(candidate)
-            hero_action = next(
-                (a for a in new_actions
-                 if a.get('pos') == item.get('hero_position')), None)
-            if hero_action is not None:
-                self._register_auto_outcome(
-                    prediction_id,
-                    observed_action=hero_action.get('action'),
-                    new_information={
-                        'hand_id': hand_id,
-                        'street': street,
-                        'actions': _json_safe(new_actions),
-                    },
-                )
-
     def _flush_post_capture_observations(self) -> None:
-        """Persiste posterior solo despues de capturar/calcular/persistir."""
-        finalized, self._finalized_hands = self._finalized_hands, []
-        for hand in finalized:
-            self._record_finalized_hand(hand)
-        self._expire_pending_after_hand_change()
-        self._record_observed_outcomes()
+        """Descarta el buffer operacional sin registrar outcomes reales.
 
-    def _expire_pending_after_hand_change(self) -> None:
-        hand = getattr(getattr(self._engine, 'rec', None), 'hand', None)
-        if not hand or not hand.get('hand_id'):
-            return
-        current_hand_id = hand.get('hand_id')
-        for prediction_id, item in list(self._pending.items()):
-            expected = item.get('hand_id')
-            if expected and expected != current_hand_id:
-                self._register_auto_outcome(
-                    prediction_id,
-                    exclusion_reason='hand_id_changed_before_outcome',
-                    new_information={
-                        'expected_hand_id': expected,
-                        'observed_hand_id': current_hand_id,
-                        'association': 'excluded_not_joined_across_hands',
-                    },
-                )
-
-    def _on_hand_finalized(self, hand) -> None:
-        # El callback ocurre dentro de process_frame, antes de que el ciclo
-        # automatico pueda persistir la prediccion actual. Se difiere cualquier
-        # escritura/outcome hasta _flush_post_capture_observations().
-        self._finalized_hands.append(_json_safe(hand))
-
-    def _record_finalized_hand(self, hand) -> None:
-        if self._collector.secondary is not None:
-            try:
-                self._collector.secondary.resolve_hand(hand)
-            except Exception:
-                pass
-        hand_id = hand.get('hand_id')
-        revealed = {
-            p.get('pos'): p.get('cards') for p in hand.get('players') or []
-            if p.get('cards')
-        }
-        for prediction_id, item in list(self._pending.items()):
-            if not item.get('hand_id') or item.get('hand_id') != hand_id:
-                continue
-            hero_action = _last_hero_action(
-                hand, item.get('hero_position'))
-            self._register_auto_outcome(
-                prediction_id,
-                observed_action=hero_action,
-                new_information={
-                    'hand_id': hand_id,
-                    'streets': _json_safe(hand.get('streets') or {}),
-                },
-                result={
-                    'final_pot': hand.get('final_pot'),
-                    'winner_ids': _json_safe(hand.get('winner')),
-                    'showdown': _json_safe(hand.get('showdown')),
-                    'revealed_cards': _json_safe(revealed),
-                },
-            )
-
-    def _register_auto_outcome(self, prediction_id: str, *,
-                               observed_action: Optional[str] = None,
-                               new_information: Optional[Mapping[str, Any]] = None,
-                               result: Optional[Mapping[str, Any]] = None,
-                               exclusion_reason: Optional[str] = None,
-                               ) -> Optional[Mapping[str, Any]]:
-        try:
-            event = self.record_outcome(
-                prediction_id,
-                observed_action=observed_action,
-                new_information=new_information,
-                result=result,
-                exclusion_reason=exclusion_reason,
-                notes='auto_observed_by_hu_parity',
-            )
-        except Exception as exc:  # noqa: BLE001 - no romper el polling
-            self._logger('[parity] no se pudo registrar outcome %s: %s'
-                         % (prediction_id, exc))
-            return None
-        self._pending.pop(prediction_id, None)
-        return event
+        En Fase 10.5 no se registran outcomes de manos reales automaticamente.
+        El ledger solo recibe eventos por ``register_analysis``/``record_outcome``
+        explicitos. Las finalizaciones se descartan de la cola operativa, no de
+        los snapshots ni de la auditoria en memoria del recorder.
+        """
+        self._finalized_hands = []
 
     def record_outcome(self, prediction_id: str, *,
                        outcome_id: Optional[str] = None,
@@ -1265,7 +1401,13 @@ class LiveParityAssistant:
             exclusion_reason=exclusion_reason,
             notes=notes,
         )
-        return self.registry.register_outcome(outcome)
+        event = self.registry.register_outcome(outcome)
+        self._pending.pop(prediction_id, None)
+        # Un outcome explicito reconcilia tambien la prediccion de una
+        # ejecucion anterior. ``_assert_restart_clear`` lo vuelve a verificar
+        # contra el registro antes de capturar.
+        self._startup_pending_ids.discard(prediction_id)
+        return event
 
     def verify(self) -> VerificationResult:
         return self.registry.verify_integrity()
@@ -1329,21 +1471,3 @@ def _hu_next_to_act(self, state, hero_pid=None):
 def _hu_hero_act(self, state, _pil=None):
     """El frame visual no sustituye la puerta HU de turno/acción pendiente."""
     return _hu_next_to_act(self, state, self._hero_pid())
-
-
-def _signature(action: Mapping[str, Any]):
-    return (action.get('pos'), action.get('action'),
-            action.get('amount'), action.get('amount_type'))
-
-
-def _last_hero_action(hand: Mapping[str, Any],
-                      hero_position: Optional[str]) -> Optional[str]:
-    if not hero_position:
-        return None
-    for street in ('river', 'turn', 'flop', 'preflop'):
-        actions = ((hand.get('streets') or {}).get(street) or {}).get(
-            'actions') or []
-        for action in reversed(actions):
-            if action.get('pos') == hero_position:
-                return action.get('action')
-    return None

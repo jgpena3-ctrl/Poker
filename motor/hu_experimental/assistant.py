@@ -132,6 +132,13 @@ class HUExperimentalAssistant:
     def capture(self) -> CapturedFrame:
         return self.capture_adapter.capture()
 
+    def prepare(self) -> float:
+        """Inicializa los lectores originales fuera del coste de captura."""
+        prepare = getattr(self.capture_adapter, 'prepare', None)
+        if prepare is None:
+            return 0.0
+        return prepare() or 0.0
+
     def analyze(self, source: Any = None) -> ExperimentalAnalysis:
         started = time.perf_counter()
         if source is None:

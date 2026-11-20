@@ -30,6 +30,7 @@ from motor.hu_parity.concurrency import CaptureSessionGuard, ConcurrencyError
 from motor.hu_parity.fixtures import hu_state_fixtures
 from motor.hu_parity.gui_parity import HUParityGUI, PARITY_WARNING
 from motor.hu_parity.parity import LiveParityAssistant, SnapshotCollector
+from motor.hu_parity.recorder_bridge import SnapshotLiveRecorder
 from motor.rules import MULTIWAY_SOPORTADO
 
 
@@ -60,6 +61,9 @@ def _config(tmp_path: Path, **overrides) -> ExperimentalConfig:
         'runtime_dir': tmp_path,
         'registry_name': 'registro_parity.jsonl',
         'parity_hands_path': tmp_path / 'hands_parity.jsonl',
+        # Los tests historicos cubren la mesa realmente HU (SB/BB). El modo
+        # operativo por defecto para mesas 6-max se prueba por separado.
+        'parity_position_mode': 'hu_sb_bb',
     }
     kwargs.update(overrides)
     return ExperimentalConfig.default().with_paths(**kwargs)
@@ -126,7 +130,11 @@ def test_parity_outcome_is_a_separate_posterior_event(tmp_path):
     assistant.capture_adapter = HUCaptureAdapter(capture_fn=lambda: after)
     event = assistant.poll_once()
     assert event.error is None
-    assert not assistant._pending
+    # Observar cambios de la mano no registra outcomes reales automaticamente.
+    assert [e['event_type'] for e in assistant.registry.read_events()] == [
+        'HU_PREDICTION']
+    assert first.prediction_id in assistant._pending
+    assistant.record_outcome(first.prediction_id, observed_action='c')
 
     events = assistant.registry.read_events()
     assert [e['event_type'] for e in events] == [
@@ -150,14 +158,88 @@ def test_hu_sb_bb_mode_uses_sb_table_and_declares_no_mismatch(tmp_path):
     assert analysis.prediction.hero_position == 'SB'
 
 
-def test_hu_gate_blocks_three_active_players_without_building_engine(tmp_path):
-    state = _state(p2_state='activo')
-    assistant = _assistant(tmp_path, state=state)
+def test_hu_in_6max_recommends_with_two_active_and_live_positions(tmp_path):
+    assistant = _assistant(tmp_path, parity_position_mode='hu_in_6max')
+    analysis = assistant.analyze()
+
+    # La mesa es 6-max: el motor usa las posiciones y el orden live (BTN),
+    # y solo la situacion con exactamente 2 activos habilita la recomendacion.
+    assert analysis.has_decision
+    assert analysis.prediction is not None
+    assert analysis.live_recommendation in ('retirar', 'subir', 'igualar')
+    assert analysis.snapshot['hero_position'] == 'BTN'
+    assert analysis.snapshot['preflop_table_audit'][0]['key'] == 'OR_BTN'
+    assert analysis.prediction.metadata['position_mode'] == 'hu_in_6max'
+    assert analysis.prediction.metadata['position_correction'] == (
+        'none_live_6max_positions')
+    assert 'position_mode_live_6max_situation_hu' in (
+        analysis.uncertainty_reasons)
+    assert 'position_mode_hu_correction_not_exact_live_parity' not in (
+        analysis.uncertainty_reasons)
+    # La posicion HU (SB) y la live (BTN) se declaran sin corregir la mesa.
+    assert analysis.state.hero_position == 'SB'
+    assert analysis.prediction.metadata['live_position'] == 'BTN'
+    assert analysis.prediction.metadata['hu_position'] == 'SB'
+    assert 'position_mapping_live_btn_vs_hu_sb' in analysis.uncertainty_reasons
+
+    registration = assistant.register_analysis(analysis)
+    assert registration.prediction_id == analysis.prediction.prediction_id
+    assert assistant.verify().ok
+
+
+def test_hu_in_6max_blocks_until_exactly_two_active(tmp_path):
+    state = _state(p2_state='activo', p2_stake=100.0)
+    assistant = _assistant(
+        tmp_path, state=state, parity_position_mode='hu_in_6max')
     analysis = assistant.analyze()
     assert analysis.prediction is None
     assert analysis.canonical_status == 'no_decision'
     assert analysis.canonical_reason.startswith('not_heads_up')
-    assert assistant.engine is None
+    assert analysis.state.active_seats == ('hero', 'p1', 'p2')
+
+
+def test_hu_in_6max_does_not_apply_manual_position_override(tmp_path):
+    recorder_live = __import__('recorder_live')
+    previous = dict(recorder_live.MANUAL_POSITIONS)
+    recorder_live.MANUAL_POSITIONS.clear()
+    try:
+        assistant = _assistant(tmp_path, parity_position_mode='hu_in_6max')
+        analysis = assistant.analyze()
+        assert recorder_live.MANUAL_POSITIONS == {}
+        assert analysis.snapshot['hero_position'] == 'BTN'
+        assert analysis.prediction.metadata['position_mode'] == 'hu_in_6max'
+        assert analysis.prediction.metadata['position_correction'] == (
+            'none_live_6max_positions')
+    finally:
+        recorder_live.MANUAL_POSITIONS.clear()
+        recorder_live.MANUAL_POSITIONS.update(previous)
+
+
+def test_poll_once_persists_hu_in_6max_prediction(tmp_path):
+    assistant = _assistant(tmp_path, parity_position_mode='hu_in_6max')
+    event = assistant.poll_once()
+    assert event.error is None
+    assert event.analysis is not None and event.analysis.has_decision
+    assert event.registration is not None
+    assert assistant.verify().event_count == 1
+
+
+def test_hu_gate_blocks_three_active_after_one_recorder_execution(
+        tmp_path, monkeypatch):
+    state = _state(p2_state='activo', p2_stake=100.0)
+    assistant = _assistant(tmp_path, state=state)
+    recommendations = []
+    monkeypatch.setattr(
+        live.Asistente, 'recomendacion',
+        lambda *_args, **_kwargs: recommendations.append(True))
+    analysis = assistant.analyze()
+    assert analysis.prediction is None
+    assert analysis.canonical_status == 'no_decision'
+    assert analysis.canonical_reason.startswith('not_heads_up')
+    assert assistant.engine.rec.process_frame_executions == 1
+    assert analysis.recorder_snapshot.processed is True
+    assert analysis.recorder_snapshot.active_seats == ('hero', 'p1', 'p2')
+    assert recommendations == []
 
 
 def test_hu_gate_blocks_less_than_two_and_ignores_live_multiway_flag(tmp_path):
@@ -166,7 +248,7 @@ def test_hu_gate_blocks_less_than_two_and_ignores_live_multiway_flag(tmp_path):
     analysis = assistant.analyze()
     assert analysis.prediction is None
     assert analysis.canonical_status == 'no_decision'
-    assert assistant.engine is None
+    assert assistant.engine.rec.process_frame_executions == 1
 
 
 def test_comparison_reports_live_btn_vs_hu_sb_and_manual_override(tmp_path):
@@ -272,45 +354,68 @@ def test_capture_preserves_pil_for_live_turn_detection():
     assert frame.pil is marker
 
 
-def test_default_capture_timestamp_is_taken_before_ocr(monkeypatch):
-    from PIL import Image, ImageGrab
-
+def test_default_capture_delegates_to_original_capture_live(monkeypatch):
     events = []
     captured_at = '2026-11-16T12:00:00+00:00'
-    monkeypatch.setattr(ImageGrab, 'grab', lambda: events.append('grab') or
-                        Image.new('RGB', (1, 1)))
-    state_reader_module = ModuleType('lector_estado')
-    card_reader_module = ModuleType('lector_unificado')
+    module = ModuleType('capture_live')
 
-    class StateReader:
-        def __init__(self):
-            pass
+    def init_reader():
+        events.append('init_reader')
 
-        def read_all(self, _pil):
-            events.append('state_ocr')
-            return _state()
+    def capture():
+        events.append('capture')
+        return _state(), 'image-array', 'pil-marker'
 
-    class CardReader:
-        def __init__(self):
-            pass
-
-        def read_all(self, _image):
-            events.append('card_ocr')
-            return {}
-
-    state_reader_module.StateReader = StateReader
-    card_reader_module.CardReader = CardReader
-    monkeypatch.setitem(sys.modules, 'lector_estado', state_reader_module)
-    monkeypatch.setitem(sys.modules, 'lector_unificado', card_reader_module)
+    module.init_reader = init_reader
+    module.capture = capture
+    monkeypatch.setitem(sys.modules, 'capture_live', module)
 
     def clock():
         events.append('screenshot_timestamp')
         return captured_at
 
-    frame = HUCaptureAdapter(clock=clock).capture()
+    adapter = HUCaptureAdapter(clock=clock)
+    frame = adapter.capture()
     assert frame.captured_at == captured_at
-    assert events.index('screenshot_timestamp') < events.index('state_ocr')
-    assert events.index('screenshot_timestamp') < events.index('card_ocr')
+    # El arranque de lectores se paga antes del screenshot; no es latencia del
+    # frame y no debe provocar capture_delay en la primera captura.
+    assert events == ['init_reader', 'screenshot_timestamp', 'capture']
+    assert frame.state['hero_cards'] == ['As', 'Kd']
+    assert frame.image == 'image-array'
+    assert frame.pil == 'pil-marker'
+    assert frame.capture_ms is not None
+    assert frame.setup_ms is not None
+    assert frame.ocr_ms is None
+    assert frame.metadata['capture_backend'] == 'tools.capture_live.capture'
+
+    # Una segunda captura reutiliza los singletons: no reinicializa lectores.
+    adapter.capture()
+    assert events.count('init_reader') == 1
+    assert events.count('capture') == 2
+
+
+def test_prepare_initializes_readers_without_capturing(tmp_path):
+    assistant = _assistant(tmp_path)
+    calls = []
+
+    class Adapter:
+        def prepare(self):
+            calls.append('prepare')
+            return 12.5
+
+    assistant.capture_adapter = Adapter()
+    assert assistant.prepare() == 12.5
+    assert calls == ['prepare']
+    assert assistant._last_frame is None
+
+
+def test_prepare_engine_builds_isolated_engine_without_capture(tmp_path):
+    assistant = _assistant(tmp_path)
+    engine = assistant.prepare_engine()
+    assert engine is assistant.engine
+    assert assistant._last_frame is None
+    assert engine.rec.output_path == str(tmp_path / 'hands_parity.jsonl')
+    assert engine.decision_log is assistant._collector
 
 
 def test_parity_hand_db_requires_explicit_authorization():
@@ -397,8 +502,31 @@ def test_postflop_prediction_abstains_without_order_evidence(tmp_path):
     assistant = _assistant(tmp_path, state=state)
     analysis = assistant.analyze()
     assert analysis.prediction is None
+    # El fixture no trae la historia de contribuciones de flop: el recorder
+    # calcula 2.0 y el OCR declara 6.0. La abstencion es ahora mas fuerte que
+    # la mera ausencia de evidencia de orden; no se corrige el bote en silencio.
     assert analysis.canonical_reason.startswith(
-        'postflop_position_order_unverified')
+        'contradiction:pot_read_vs_calculated')
+
+
+def test_hu_in_6max_waits_for_preflop_when_started_mid_hand(tmp_path):
+    state = hu_state_fixtures()['turn_hero_facing_bet']
+    current = {'state': state}
+    assistant = LiveParityAssistant(
+        _config(tmp_path, parity_position_mode='hu_in_6max'),
+        capture=HUCaptureAdapter(capture_fn=lambda: current['state']),
+        models=SimpleNamespace(oracle=None),
+    )
+
+    blocked = assistant.analyze()
+    assert blocked.canonical_reason == 'awaiting_preflop_after_midhand_start'
+    assert blocked.prediction is None
+    assert assistant.engine.rec.hand is None
+
+    current['state'] = hu_state_fixtures()['preflop_sb_to_act']
+    resumed = assistant.analyze()
+    assert resumed.canonical_reason != 'awaiting_preflop_after_midhand_start'
+    assert assistant.engine.rec.hand is not None
 
 
 def test_live_default_is_diagnostic_only_and_discrepancy_is_explicit(tmp_path):
@@ -485,21 +613,27 @@ def test_comparison_card_normalization_and_missing_data_are_not_equivalent(tmp_p
     assert villain_cards.status == NOT_COMPARABLE
 
 
-def test_unknown_seat_state_abstains_before_engine(tmp_path):
+def test_unknown_seat_state_abstains_after_recorder_snapshot(tmp_path):
     state = _state()
     state.pop('p5_state')
-    analysis = _assistant(tmp_path, state=state).analyze()
+    assistant = _assistant(tmp_path, state=state)
+    analysis = assistant.analyze()
     assert analysis.prediction is None
     assert analysis.state.status == 'unresolved'
     assert analysis.canonical_reason == 'active_player_count_uncertain'
+    assert analysis.recorder_snapshot.processed is True
+    assert assistant.engine.rec.process_frame_executions == 1
 
 
 def test_missing_board_observation_abstains(tmp_path):
     state = _state()
     state.pop('community')
-    analysis = _assistant(tmp_path, state=state).analyze()
+    assistant = _assistant(tmp_path, state=state)
+    analysis = assistant.analyze()
     assert analysis.prediction is None
     assert analysis.canonical_reason == 'board_not_observed'
+    assert analysis.recorder_snapshot.processed is True
+    assert assistant.engine.rec.process_frame_executions == 1
 
 
 def test_stale_and_slow_frames_are_rejected_before_engine(tmp_path):
@@ -509,6 +643,11 @@ def test_stale_and_slow_frames_are_rejected_before_engine(tmp_path):
     stale_result = assistant.analyze(stale)
     assert stale_result.prediction is None
     assert stale_result.canonical_reason.startswith('stale_capture')
+    # El rechazo temporal no debe borrar lo observado: antes la GUI mostraba
+    # asientos/cartas/pot vacios y ocultaba que el frame si se habia leido.
+    assert stale_result.state.active_seats == ('hero', 'p1')
+    assert 'hero_state' in stale_result.state.observed_fields
+    assert stale_result.state.hero_cards == ('As', 'Kd')
     assert assistant.engine is None
 
     slow_ocr = CapturedFrame(
@@ -517,30 +656,18 @@ def test_stale_and_slow_frames_are_rejected_before_engine(tmp_path):
     slow_result = assistant.analyze(slow_ocr)
     assert slow_result.prediction is None
     assert slow_result.canonical_reason.startswith('ocr_delay')
+    assert slow_result.state.active_seats == ('hero', 'p1')
     assert assistant.engine is None
 
 
-def test_poll_persists_before_observing_post_capture_actions(tmp_path, monkeypatch):
+def test_poll_does_not_automatically_register_real_hand_outcomes(tmp_path):
     assistant = _assistant(tmp_path)
-    order = []
-    original_register = assistant.registry.register_prediction
-    original_observe = assistant._record_observed_outcomes
-
-    def register(prediction):
-        order.append('persist_prediction')
-        return original_register(prediction)
-
-    def observe():
-        order.append('observe_posterior')
-        return original_observe()
-
-    monkeypatch.setattr(assistant.registry, 'register_prediction', register)
-    monkeypatch.setattr(assistant, '_record_observed_outcomes', observe)
     event = assistant.poll_once()
     assert event.error is None
-    assert 'persist_prediction' in order
-    assert 'observe_posterior' in order
-    assert order.index('persist_prediction') < order.index('observe_posterior')
+    assistant.engine.rec.finalize_hand(_state())
+    assistant._flush_post_capture_observations()
+    assert [item['event_type'] for item in assistant.registry.read_events()] == [
+        'HU_PREDICTION']
 
 
 def test_no_pending_hu_action_is_checked_before_live_recommendation(
@@ -585,13 +712,17 @@ def test_full_prediction_to_final_outcome_lifecycle_is_ordered(tmp_path):
     assert [event['event_type'] for event in assistant.registry.read_events()] == [
         'HU_PREDICTION']
 
-    # LiveRecorder finaliza la mano en runtime; el callback solo encola el
-    # resultado hasta el siguiente ciclo posterior a la prediccion durable.
+    # La finalizacion queda en memoria y no escribe en el ledger.
     assistant.engine.rec.finalize_hand(_state())
     assert [event['event_type'] for event in assistant.registry.read_events()] == [
         'HU_PREDICTION']
     next_event = assistant.poll_once()
     assert next_event.error is None
+    assert [event['event_type'] for event in assistant.registry.read_events()] == [
+        'HU_PREDICTION']
+    assistant.record_outcome(
+        prediction_id, result={'winner': 'hero'},
+        notes='registro posterior explicito')
     events = assistant.registry.read_events()
     assert [event['event_type'] for event in events] == [
         'HU_PREDICTION', 'HU_OUTCOME']
@@ -656,6 +787,26 @@ def test_restart_with_unresolved_prediction_fails_closed_and_dedupes(
         'HU_PREDICTION', 'HU_OUTCOME']
 
 
+def test_pending_outcome_ids_lists_and_reconciles_startup_predictions(
+        tmp_path):
+    first = _assistant(tmp_path)
+    event = first.poll_once()
+    prediction_id = event.registration.prediction_id
+
+    restarted = LiveParityAssistant(
+        _config(tmp_path),
+        capture=HUCaptureAdapter(capture_fn=lambda: _state()),
+        models=SimpleNamespace(oracle=None))
+    assert restarted.pending_outcome_ids() == (prediction_id,)
+    assert restarted.startup_registry_error() is None
+
+    restarted.record_outcome(
+        prediction_id, observed_action='c',
+        exclusion_reason='controlled_restart_reconciliation')
+    assert restarted.pending_outcome_ids() == ()
+    assert restarted.verify().event_count == 2
+
+
 def test_hand_change_expires_pending_prediction_without_cross_hand_join(
         tmp_path):
     assistant = _assistant(tmp_path)
@@ -663,6 +814,11 @@ def test_hand_change_expires_pending_prediction_without_cross_hand_join(
     prediction_id = event.registration.prediction_id
     assistant.engine.rec.hand['hand_id'] = 'H_DIFFERENT'
     assistant._flush_post_capture_observations()
+    assert [item['event_type'] for item in assistant.registry.read_events()] == [
+        'HU_PREDICTION']
+    assistant.record_outcome(
+        prediction_id, exclusion_reason='hand_id_changed_before_outcome',
+        new_information={'association': 'excluded_not_joined_across_hands'})
     outcome = assistant.registry.read_events()[-1]['payload']
     assert outcome['prediction_id'] == prediction_id
     assert outcome['observed_action'] is None
@@ -723,7 +879,10 @@ def test_persistence_and_recorder_outputs_are_experimental_only(
     analysis = assistant.analyze()
     assistant.register_analysis(analysis)
     recorder = assistant.engine.rec
+    assert isinstance(recorder, SnapshotLiveRecorder)
+    assert recorder.diagnostic_mode is True
     assert isinstance(assistant.engine.decision_log, SnapshotCollector)
+    assert assistant.engine.decision_log.secondary is None
     assert assistant.engine.shadow is False
     assert recorder.output_path == str(tmp_path / 'hands_parity.jsonl')
     assert Path(recorder.ambiguity_capture_dir).is_relative_to(tmp_path)
@@ -732,12 +891,21 @@ def test_persistence_and_recorder_outputs_are_experimental_only(
     assert not assistant.config.parity_enable_live_decision_log
     assert not assistant.config.parity_enable_shadow_logs
     assert Path(assistant.registry_path).is_relative_to(tmp_path)
-    # Fuerza una finalizacion sintetica para verificar el unico output del
-    # recorder; el path, las ambigüedades y sus indices permanecen en runtime.
+    # La finalizacion sintetica conserva la mano en memoria, pero no crea el
+    # hand DB, decisiones, frames ni evidencias de ambiguedad.
+    callbacks = []
+    recorder.on_hand_finalized = lambda _hand: callbacks.append('finalized')
+    recorder.on_hand_saved = lambda: callbacks.append('saved')
     recorder.finalize_hand(_state())
-    assert Path(recorder.output_path).is_file()
-    assert Path(recorder.output_path).is_relative_to(tmp_path)
-    assert Path(recorder.ambiguity_index_path).is_relative_to(tmp_path)
+    assert recorder.finalized_hands
+    assert callbacks == []
+    assert not Path(recorder.output_path).exists()
+    assert not (tmp_path / 'decisions_parity.jsonl').exists()
+    assert not (tmp_path / 'ambiguedades').exists()
+    assert recorder.suppressed_write_attempts
+    assert all(path in (None, recorder.output_path,
+                        recorder.ambiguity_capture_dir)
+               for _, path in recorder.suppressed_write_attempts)
     assert {path: hashlib.sha256(path.read_bytes()).hexdigest()
             for path in before} == before
 
@@ -848,7 +1016,8 @@ def test_polling_gui_integration_keeps_action_provisional(tmp_path):
                  'action_status_var', 'persist_status_var',
                  'outcome_prediction_var', 'auto_status_var'):
         setattr(gui, name, Var())
-    gui._set_detail = lambda _analysis: None
+    gui._present_analysis = lambda analysis: gui._present_status(analysis)
+    gui._add_pending_prediction = lambda _prediction_id, label=None: None
     gui._refresh_registry_status = lambda: None
     gui._handle_event(PollEvent(error='fallo transitorio', elapsed_ms=12.0))
     assert 'ERROR: fallo transitorio' in gui.auto_status_var.value
@@ -860,7 +1029,7 @@ def test_polling_gui_integration_keeps_action_provisional(tmp_path):
 
 
 def test_default_config_is_hu_mode_and_rejects_external_hand_output(tmp_path):
-    assert ExperimentalConfig.default().parity_position_mode == 'hu_sb_bb'
+    assert ExperimentalConfig.default().parity_position_mode == 'hu_in_6max'
     with pytest.raises(ValueError, match='dentro de runtime_dir'):
         ExperimentalConfig.default().with_paths(
             runtime_dir=str(tmp_path),
