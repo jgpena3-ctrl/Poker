@@ -282,6 +282,11 @@ def test_poll_once_persists_prediction_and_no_duplicate(tmp_path):
     assert event2.error is None
     # El motor live deduplica por estado: no se persiste otra prediccion.
     assert assistant.verify().event_count == 1
+    # ...pero la prediccion vigente sigue visible: no se degrada a "sin
+    # recomendacion" en el siguiente ciclo de polling.
+    assert event2.analysis is not None and event2.analysis.has_decision
+    assert (event2.analysis.prediction.prediction_id
+            == event.analysis.prediction.prediction_id)
 
 
 def test_automation_controller_reports_errors():

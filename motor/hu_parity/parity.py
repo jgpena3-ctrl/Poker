@@ -280,6 +280,7 @@ class LiveParityAssistant:
         self._collector = SnapshotCollector()
         self._last_frame: Optional[CapturedFrame] = None
         self._last_analysis: Optional[ParityAnalysis] = None
+        self._last_decision_analysis: Optional[ParityAnalysis] = None
         self._registrations: dict = {}
         self._pending: dict = {}
         self._finalized_hands: list = []
@@ -709,14 +710,55 @@ class LiveParityAssistant:
                 recorder_snapshot=snapshot)
 
         if result is None or not captured or self._collector.snapshot is None:
+            cached = self._dedupe_cached_analysis(frame, started)
+            if cached is not None:
+                return cached
             reason = getattr(self._engine, 'last_reco_reason', None) \
                 or 'live_engine_no_recommendation'
             return self._blocked_analysis(
                 frame, hu, reason, started, reasons=reasons,
                 warnings=warnings, recorder_snapshot=snapshot)
-        return self._build_analysis(
+        analysis = self._build_analysis(
             frame, hu, captured, started, reasons, warnings,
             recorder_snapshot=snapshot)
+        self._last_decision_analysis = analysis
+        return analysis
+
+    def _dedupe_cached_analysis(self, frame: CapturedFrame,
+                                started: float) -> Optional[ParityAnalysis]:
+        """Reusa la prediccion vigente cuando el motor omite recalcular.
+
+        ``asistente_live.step`` deduplica por firma de estado: si el polling
+        vuelve a leer la misma situacion no emite una nueva recomendacion
+        (``force_reco=False``). Sin reutilizar el analisis anterior la GUI
+        reemplazaria la prediccion visible por "sin recomendacion" en el
+        siguiente ciclo, mostrandola solo un instante.
+        """
+        engine = self._engine
+        if engine is None:
+            return None
+        if getattr(engine, 'last_reco_reason', None) is not None:
+            return None
+        last_key = getattr(engine, 'last_reco_key', None)
+        if last_key is None:
+            return None
+        try:
+            current_key = engine._state_key(frame.state)
+        except Exception:  # noqa: BLE001 - sin firma no se reutiliza nada
+            return None
+        if current_key != last_key:
+            return None
+        previous = self._last_decision_analysis
+        if previous is None or previous.prediction is None:
+            return None
+        elapsed = (datetime.now(timezone.utc).timestamp() - started) * 1000.0
+        return replace(
+            previous,
+            capture_source=frame.source,
+            captured_at=frame.captured_at,
+            warnings=tuple(dict.fromkeys(
+                tuple(previous.warnings) + tuple(frame.warnings))),
+            elapsed_ms={'analysis': elapsed})
 
     def _drain_recorder_finalized(self) -> None:
         recorder = getattr(self._engine, 'rec', None)
