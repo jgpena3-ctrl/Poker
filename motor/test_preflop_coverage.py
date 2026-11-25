@@ -109,6 +109,62 @@ def test_order_dependent_unknown_with_not_evaluated_sequence():
     assert r.coverage_state == 'unknown'
 
 
+def test_prior_hero_raise_makes_4bet_order_possible():
+    # BTN abre, SB 3-betea y BTN vuelve a actuar: el 4-bet es válido aunque
+    # el último agresor (SB) esté después del héroe en el orden.
+    req = CoverageRequest(requested_key=table_key('4B', 'BTN', 'SB'),
+                         action='4B', pos='BTN', vs='SB',
+                         source_context={'sequence_status': 'valid',
+                                         'raises_before': 2,
+                                         'hero_prior_aggressor': True})
+    r = resolve_coverage(req, fallback_policy_permits=False)
+    assert r.coverage_state == 'exact'
+    assert r.reason == 'exact_table'
+
+
+def test_without_prior_hero_raise_same_4bet_is_impossible():
+    req = CoverageRequest(requested_key=table_key('4B', 'BTN', 'SB'),
+                         action='4B', pos='BTN', vs='SB',
+                         source_context={'sequence_status': 'valid',
+                                         'raises_before': 2,
+                                         'hero_prior_aggressor': False})
+    r = resolve_coverage(req, fallback_policy_permits=False)
+    assert r.coverage_state == 'impossible'
+    assert r.reason == 'impossible_action_order'
+
+
+def test_prior_hero_raise_missing_5bet_es_hueco_no_imposible():
+    req = CoverageRequest(requested_key=table_key('5B', 'UTG', 'MP'),
+                         action='5B', pos='UTG', vs='MP',
+                         source_context={'sequence_status': 'valid',
+                                         'raises_before': 3,
+                                         'hero_prior_aggressor': True})
+    r = resolve_coverage(req, fallback_policy_permits=False)
+    assert r.coverage_state == 'coverage_gap'
+    assert r.fallback_used is False
+
+
+def test_hero_already_acted_puede_responder_a_un_5bet_posterior():
+    # CO ya había igualado; la acción vuelve a él tras el 5-bet de SB.
+    req = CoverageRequest(requested_key=table_key('Call_5B', 'CO', 'SB'),
+                         action='Call_5B', pos='CO', vs='SB',
+                         source_context={'sequence_status': 'valid',
+                                         'raises_before': 4,
+                                         'hero_already_acted': True})
+    r = resolve_coverage(req, fallback_policy_permits=False)
+    assert r.coverage_state == 'exact'
+
+
+def test_sin_hero_already_acted_el_5bet_posterior_es_imposible():
+    req = CoverageRequest(requested_key=table_key('Call_5B', 'CO', 'SB'),
+                         action='Call_5B', pos='CO', vs='SB',
+                         source_context={'sequence_status': 'valid',
+                                         'raises_before': 4,
+                                         'hero_already_acted': False})
+    r = resolve_coverage(req, fallback_policy_permits=False)
+    assert r.coverage_state == 'impossible'
+
+
 def test_unknown_no_fallback_even_if_alternative_exists():
     # UNK-FB-01
     req = CoverageRequest(requested_key='WRONG_KEY',

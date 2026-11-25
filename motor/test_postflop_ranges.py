@@ -57,10 +57,12 @@ def test_from_hands_buckets_y_oportunidades():
 def test_p_action_sin_datos_prior_oracle():
     hands = [_hand('x', 'f') for _ in range(8)]
     m = pf.PostflopRangeModel.from_hands(hands, labels={'Rival': 'Timmy'})
-    prior = m._prior('Timmy', 'flop', 'bet')
+    prior = m._prior('Timmy', 'flop', 'cbet')
     assert prior is not None
     for a in ('x', 'b', 'c', 'f', 'r'):
-        assert 0.0 <= m.p_action('Timmy', 'flop', 'bet', 1, a) <= 1.0
+        assert 0.0 <= m.p_action('Timmy', 'flop', 'cbet', 1, a) <= 1.0
+    # `bet` es otro facing y no toma el agregado de las celdas cbet.
+    assert m._prior('Timmy', 'flop', 'bet') is None
 
 
 def test_board_ids_carta_duplicada_es_none():

@@ -859,16 +859,17 @@ def _advance(context: PreflopContext, action: PreflopAction,
         # La acción no se pudo leer. El estado posterior ya no es fiable; se
         # marca para que las acciones siguientes no hereden una categoría
         # inventada. Un check inválido no mueve dinero, así que no contamina
-        # el estado: solo la acción agresiva/desconocida lo hace.
-        if classification.reason in ('subida_sin_incremento',
-                                     'importe_ausente', 'importe_invalido',
-                                     'importe_cero', 'posta_repetida',
-                                     'accion_desconocida',
-                                     'accion_ausente',
-                                     'pos_ausente'):
+        # el estado. Cualquier acción voluntaria que mueve fichas (subida o
+        # call) sí lo hace: si el importe no cuadra con el nivel, el nodo
+        # siguiente no es resoluble.
+        if action.action in ('b', 'r', 'c'):
+            tainted = classification.reason or 'accion_no_resuelta'
+            voluntary += 1
+        elif classification.reason in ('posta_repetida',
+                                       'accion_desconocida',
+                                       'accion_ausente',
+                                       'pos_ausente'):
             tainted = classification.reason
-            if action.action in ('b', 'r', 'c'):
-                voluntary += 1
     elif action.action in ('b', 'r'):
         voluntary += 1
         if classification.short_limp:

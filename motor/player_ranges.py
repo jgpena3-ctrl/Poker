@@ -171,8 +171,8 @@ class ProfileRangeModel:
         """Prior base de `action` como grid 13×13.
 
         Orden de selección **explícito y observable** (revision_1/2):
-          1) tabla exacta por posición simple  (`OR_UTG`, `OR_MP`, …)
-          2) tabla exacta por par de posiciones (`3B_BB_vs_CO`, …)
+          1) tabla exacta por par de posiciones (`3B_BB_vs_CO`, …)
+          2) tabla exacta por posición simple  (`OR_UTG`, `OR_MP`, …)
           3) prior plano FLAT_PRIOR + `warnings.warn` (nunca otra tabla)
 
         Ya no se elige "la primera tabla de esa acción": eso usaba el prior de
@@ -187,14 +187,25 @@ class ProfileRangeModel:
             return np.full((13, 13), FLAT_PRIOR, dtype=np.float32)
         tables = _load_tables()
         chosen, source = None, None
-        if pos:
-            exact = tables.get(f'{prefix}_{pos}')
-            if exact is not None:
-                chosen, source = exact, f'{prefix}_{pos}'
         if chosen is None and pos and villain_pos:
             pair = tables.get(f'{prefix}_{pos}_vs_{villain_pos}')
             if pair is not None:
                 chosen, source = pair, f'{prefix}_{pos}_vs_{villain_pos}'
+            else:
+                # Los aliases son cobertura declarada por preflop.py; usar el
+                # mismo alias que reporta `lookup_table`, sin convertirlo en
+                # un fallback silencioso a otra posición.
+                from .preflop import TABLE_ALIASES
+                alias = TABLE_ALIASES.get((prefix, pos, villain_pos))
+                if alias and tables.get(alias) is not None:
+                    chosen, source = tables[alias], alias
+        # Cuando el nodo trae agresor, su tabla por par es la consulta exacta.
+        # La tabla solo por posición es un agregado distinto y no debe
+        # ocultar/sustituir una respuesta específica del rival.
+        if chosen is None and pos:
+            exact = tables.get(f'{prefix}_{pos}')
+            if exact is not None:
+                chosen, source = exact, f'{prefix}_{pos}'
         if chosen is None:
             warnings.warn(
                 f'_prior_grid: sin tabla para action={action!r} '
@@ -292,6 +303,14 @@ class ProfileRangeModel:
         freq = prof.stats.get(stat)
         if freq is None:
             return 1.0
+        # Fade-in debe medir las oportunidades de ESTE stat, no manos/VPIP
+        # globales del jugador. Para b3/b4 esas cantidades pueden diferir
+        # mucho; usar `prof.n` hacía parecer madura una estimación basada en
+        # muy pocas respuestas a una subida.
+        stat_counts = prof.counts.get(stat, (0, 0))
+        stat_opp = stat_counts[0] if stat_counts else 0
+        if stat_opp <= 0:
+            return 1.0
         peers = [s for s in (
             p.stats.get(stat)
             for p in self.profiles.profiles.values()
@@ -304,7 +323,7 @@ class ProfileRangeModel:
         if base <= 0:
             return 1.0
         w = max(0.25, min(4.0, freq / base))
-        alpha = min(1.0, prof.n / fade)
+        alpha = min(1.0, stat_opp / fade)
         return 1.0 + alpha * (w - 1.0)
 
     def p_player(self, player: str, spot: str, action: str,

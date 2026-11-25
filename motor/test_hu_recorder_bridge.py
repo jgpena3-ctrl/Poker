@@ -347,6 +347,73 @@ def test_postflop_hero_without_action_uses_recorder_action_ledger_zero(
     assert 'to_call_not_observed' not in hu.uncertainty_reasons
 
 
+def test_allin_missing_stack_is_inferred_and_pot_reconciled(tmp_path):
+    assistant = _assistant(tmp_path)
+    assistant.analyze()
+    recorder = assistant.engine.rec
+    hand = recorder.hand
+    assert hand is not None
+
+    # Caso H_1368 captura 48: el badge All-in tapa el stack (None), la apuesta
+    # viva es 13.5 y el recorder no llego a incorporarla al ledger de flop.
+    hand['current_street'] = 'flop'
+    hand['streets']['flop']['board'] = ['9c', 'Ts', 'Th']
+    hand['streets']['flop']['actions'] = []
+    # Stack inicial 14.5 = 1.0 preflop + 13.5 all-in de flop.
+    next(player for player in hand['players']
+         if player.get('_id') == 'p1')['stack'] = 14.5
+    flop_state = _state(
+        community=[
+            {'rank': '9', 'suit': 'c'},
+            {'rank': 'T', 'suit': 's'},
+            {'rank': 'T', 'suit': 'h'},
+        ],
+        hero_bet=None,
+        p1_stake=None,
+        p1_bet=13.5,
+        pot=15.0,
+    )
+    snapshot = build_recorder_snapshot(
+        recorder, raw_state=flop_state, recorder_state=flop_state,
+        sequence=2, processed=True)
+    hu = interpret_recorder_snapshot(snapshot)
+
+    assert snapshot.allin_seats == ('p1',)
+    # El None bruto del OCR se conserva; solo la vista efectiva usa 0.0.
+    assert snapshot.stacks_read['p1'] is None
+    assert snapshot.decision_view.villain_stack == pytest.approx(0.0)
+    assert snapshot.to_call == pytest.approx(13.5)
+    assert snapshot.to_call_source == 'allin_bet_reconciled'
+    assert snapshot.pot_read == pytest.approx(15.0)
+    assert snapshot.pot_live_calculated == pytest.approx(1.5)
+    assert not snapshot.contradictions
+    assert any(str(a).startswith('allin_inferred_from_unreadable_stack')
+               for a in snapshot.decision_view.ambiguities)
+    assert any(str(a).startswith('pot_reconciled_inferred_allin')
+               for a in snapshot.decision_view.ambiguities)
+    assert hu.status == 'ready'
+    assert hu.pot == pytest.approx(15.0)
+    assert hu.to_call == pytest.approx(13.5)
+    assert hu.hero_stack == pytest.approx(100.0)
+    assert hu.villain_stack == pytest.approx(0.0)
+    assert hu.provenance['stacks'] == 'ocr+allin_inferred'
+    assert hu.raw_state['p1_stake'] is None
+    assert hu.raw_state['p1_bet'] == pytest.approx(13.5)
+
+    # Sin la confirmacion aritmetica del stack inicial, la misma ausencia no
+    # se convierte en all-in ni corrige el mismatch del bote.
+    next(player for player in hand['players']
+         if player.get('_id') == 'p1')['stack'] = 100.0
+    unconfirmed = build_recorder_snapshot(
+        recorder, raw_state=flop_state, recorder_state=flop_state,
+        sequence=3, processed=True)
+    unconfirmed_hu = interpret_recorder_snapshot(unconfirmed)
+    assert unconfirmed.allin_seats == ()
+    assert any(item.startswith('pot_read_vs_calculated')
+               for item in unconfirmed.contradictions)
+    assert unconfirmed_hu.status == 'unresolved'
+
+
 def test_ledger_zero_requires_hand_and_absence_of_player_action():
     hand = {'streets': {'flop': {'actions': [
         {'pos': 'BB', 'action': 'b', 'amount': 6.7},

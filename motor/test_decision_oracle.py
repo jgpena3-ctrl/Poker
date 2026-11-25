@@ -45,8 +45,10 @@ def _oracle(n=20):
 def test_alpha_cero_con_perfil_sin_celda():
     oracle, _ = _oracle()
     resp = OracleResponse(oracle, 'Otro', ('flop', 'cbet', 'two_tone'))
-    assert resp.source == 'poblacion'          # desconocido -> población
+    assert resp.source == 'poblacion_facing'   # prior poblacional contextual
     assert resp.alpha == 0.0                   # sin n -> heurística pura
+    assert resp.evidence['support_observations'] > 0
+    assert not resp.evidence['response_uses_oracle_distribution']
     pf, pc, pr = resp([0.5], 50.0, 100.0)
     pf_d, pc_d, pr_d = default_response(0.5, 50.0, 100.0)
     assert pf == pytest.approx(pf_d)

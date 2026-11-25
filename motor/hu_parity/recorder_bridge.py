@@ -975,13 +975,10 @@ def build_recorder_snapshot(recorder, *, raw_state: Mapping[str, Any],
     pot_for_view = pot_read
     if pot_read is None and pot_live is not None:
         pot_for_view = pot_live
-    if pot_read is not None and pot_live is not None:
-        difference = abs(pot_read - pot_live)
-        if difference > _pot_tolerance(pot_read):
-            contradictions.append(
-                'pot_read_vs_calculated:read=%s,recorded=%s,diff=%.2f'
-                % (_fmt_number(pot_read), _fmt_number(pot_live), difference))
-            pot_for_view = None
+
+    # La comparacion pot_read/pot_live se difiere hasta conocer los aportes
+    # all-in inferidos: el visor de la mesa incluye la apuesta viva y el
+    # recorder puede no haberla incorporado al ledger en ese frame.
 
     stacks_read = {}
     observed_fields = list(observed)
@@ -1053,11 +1050,94 @@ def build_recorder_snapshot(recorder, *, raw_state: Mapping[str, Any],
             for street_name in ('preflop', 'flop', 'turn', 'river')
         }
 
-    allin_seats = tuple(
-        seat for seat in SEATS
-        if processed and recorded_hand_present
-        and seat in set(getattr(recorder, '_allin_players', set()) or set())
-        and seat in active_seats)
+    # El badge "All-in" tapa el stack y el OCR no puede leer un cero: el
+    # stack queda ``None``. Solo se infiere all-in si, además de una apuesta
+    # positiva, el ledger confirma que el aporte total iguala el stack inicial.
+    # Se conserva el ``None`` bruto y se declara la inferencia.
+    recorder_allin = set(getattr(recorder, '_allin_players', set()) or set())
+
+    def ledger_confirms_allin(seat):
+        """Confirma que el stack inicial ya se agoto con los aportes."""
+        player_pos = positions.get(seat)
+        initial = next(
+            (player.get('stack') for player in (hand or {}).get('players') or ()
+             if player.get('pos') == player_pos), None)
+        if initial is None:
+            return False
+        total = 0.0
+        for street_name in ('preflop', 'flop', 'turn', 'river'):
+            value = (contributions_by_street.get(street_name) or {}).get(seat)
+            if street_name == street:
+                value = max(value or 0.0, bets_read.get(seat) or 0.0)
+            total += float(value or 0.0)
+        return abs(float(initial) - total) <= _CARD_TOLERANCE
+
+    inferred_allin = set()
+    if processed and recorded_hand_present and hand:
+        for seat in active_seats:
+            if seat in folded_seats or seat in recorder_allin:
+                continue
+            bet = bets_read.get(seat)
+            if (stacks_read.get(seat) is None and bet is not None
+                    and bet > 0.0 and ledger_confirms_allin(seat)):
+                inferred_allin.add(seat)
+                ambiguities.append(
+                    'allin_inferred_from_unreadable_stack:%s' % seat)
+                observed_fields.append('allin_inferred:%s' % seat)
+
+    inferred_allin_contrib = {}
+    for seat in inferred_allin:
+        if contributions.get(seat) is None and bets_read.get(seat) is not None:
+            amount = float(bets_read[seat])
+            contributions[seat] = amount
+            if street in contributions_by_street:
+                contributions_by_street[street][seat] = amount
+            inferred_allin_contrib[seat] = amount
+            observed_fields.append(
+                'allin_contribution_from_ocr_bet:%s' % seat)
+
+    allin_set = set()
+    if processed and recorded_hand_present:
+        allin_set.update(
+            seat for seat in SEATS
+            if seat in recorder_allin and seat in active_seats)
+    allin_set.update(inferred_allin)
+    allin_seats = tuple(seat for seat in SEATS if seat in allin_set)
+    if allin_seats:
+        observed_fields.append('allin_seats')
+
+    effective_stacks = dict(stacks_read)
+    for seat in allin_seats:
+        if effective_stacks.get(seat) is None:
+            effective_stacks[seat] = 0.0
+            observed_fields.append('allin_stack_zero:%s' % seat)
+
+    # El visor de la mesa incluye la apuesta viva de la calle. Si el ledger
+    # aun no la incorporo, el pot leido solo cuadra al sumar el aporte all-in
+    # observado. Se reconcilia de forma explicita, nunca en silencio.
+    if pot_read is not None and pot_live is not None:
+        difference = abs(pot_read - pot_live)
+        tolerance = _pot_tolerance(pot_read)
+        if difference <= tolerance:
+            pot_for_view = pot_read
+        else:
+            inferred_total = sum(inferred_allin_contrib.values())
+            reconciled = pot_live + inferred_total
+            if (inferred_total > 0.0
+                    and abs(pot_read - reconciled) <= tolerance):
+                pot_for_view = pot_read
+                ambiguities.append(
+                    'pot_reconciled_inferred_allin:read=%s,recorded=%s,'
+                    'inferred=%s'
+                    % (_fmt_number(pot_read), _fmt_number(pot_live),
+                       _fmt_number(inferred_total)))
+                observed_fields.append('pot_reconciled_inferred_allin')
+            else:
+                contradictions.append(
+                    'pot_read_vs_calculated:read=%s,recorded=%s,diff=%.2f'
+                    % (_fmt_number(pot_read), _fmt_number(pot_live),
+                       difference))
+                pot_for_view = None
 
     # Un jugador activo sin accion postflop tiene contribucion 0.0 en el
     # ledger del recorder. Se declara con procedencia propia; no se deduce de
@@ -1072,6 +1152,15 @@ def build_recorder_snapshot(recorder, *, raw_state: Mapping[str, Any],
     if ledger_zero:
         observed_fields.append('recorder_action_ledger_zero')
 
+    # Un asiento all-in no puede aportar en una calle posterior. Su ausencia
+    # en el ledger no es un campo desconocido: el aporte de esa calle es 0.0.
+    for seat in allin_seats:
+        if contributions.get(seat) is None and bets_read.get(seat) is None:
+            contributions[seat] = 0.0
+            if street in contributions_by_street:
+                contributions_by_street[street][seat] = 0.0
+            observed_fields.append('allin_contribution_zero:%s' % seat)
+
     # -- to_call ------------------------------------------------------------
     explicit_to_call, explicit_observed = _read_number(raw, 'to_call')
     if explicit_observed:
@@ -1082,9 +1171,42 @@ def build_recorder_snapshot(recorder, *, raw_state: Mapping[str, Any],
     hero_contrib = contributions.get('hero') if recorded_hand_present else None
     villain_contrib = (contributions.get(villain)
                        if recorded_hand_present and villain else None)
+
+    raw_hero_bet = bets_read.get('hero')
+    raw_villain_bet = bets_read.get(villain) if villain else None
+
+    # La apuesta OCR es por calle. Si el recorder dispone de una contribucion
+    # independiente para esa misma calle, no se escoge una silenciosamente.
+    for seat, raw_bet in (('hero', raw_hero_bet),
+                          (villain, raw_villain_bet)):
+        if not seat:
+            continue
+        recorded_bet = (contributions.get(seat)
+                        if recorded_hand_present else None)
+        if (raw_bet is not None and recorded_bet is not None
+                and abs(raw_bet - recorded_bet) > _CARD_TOLERANCE):
+            contradictions.append(
+                'bet_vs_contribution:%s:ocr=%s,recorded=%s'
+                % (seat, _fmt_number(raw_bet), _fmt_number(recorded_bet)))
+
+    hero_bet = raw_hero_bet
+    villain_bet = raw_villain_bet
+    hero_bet_source = 'ocr_bet' if hero_bet is not None else 'unknown'
+    villain_bet_source = ('ocr_bet' if villain_bet is not None
+                          else 'unknown')
+    if hero_bet is None and hero_contrib is not None:
+        hero_bet = hero_contrib
+        hero_bet_source = ('recorder_action_ledger_zero'
+                           if 'hero' in ledger_zero
+                           else 'recorder_contribution')
+    if villain_bet is None and villain_contrib is not None:
+        villain_bet = villain_contrib
+        villain_bet_source = ('recorder_action_ledger_zero'
+                              if villain in ledger_zero
+                              else 'recorder_contribution')
+
     contribution_to_call = _derive_to_call((hero_contrib, villain_contrib))
-    bets_to_call = _derive_to_call(
-        (bets_read.get('hero'), bets_read.get(villain) if villain else None))
+    bets_to_call = _derive_to_call((hero_bet, villain_bet))
 
     to_call = None
     to_call_source = 'unknown'
@@ -1093,8 +1215,11 @@ def build_recorder_snapshot(recorder, *, raw_state: Mapping[str, Any],
         to_call_source = 'explicit'
     elif contribution_to_call is not None:
         to_call = contribution_to_call
-        to_call_source = ('recorder_action_ledger'
-                          if ledger_zero else 'recorder_contributions')
+        if inferred_allin_contrib:
+            to_call_source = 'allin_bet_reconciled'
+        else:
+            to_call_source = ('recorder_action_ledger'
+                              if ledger_zero else 'recorder_contributions')
     elif bets_to_call is not None:
         to_call = bets_to_call
         to_call_source = 'bets'
@@ -1119,36 +1244,6 @@ def build_recorder_snapshot(recorder, *, raw_state: Mapping[str, Any],
             to_call_source = 'contradiction'
     if to_call is None and to_call_source == 'unknown':
         unknown.append('to_call_not_observed')
-
-    # La apuesta OCR es por calle. Si el recorder dispone de una contribucion
-    # independiente para esa misma calle, no se escoge una silenciosamente.
-    for seat in ('hero', villain):
-        if not seat:
-            continue
-        raw_bet = bets_read.get(seat)
-        recorded_bet = (contributions.get(seat)
-                        if recorded_hand_present else None)
-        if (raw_bet is not None and recorded_bet is not None
-                and abs(raw_bet - recorded_bet) > _CARD_TOLERANCE):
-            contradictions.append(
-                'bet_vs_contribution:%s:ocr=%s,recorded=%s'
-                % (seat, _fmt_number(raw_bet), _fmt_number(recorded_bet)))
-
-    hero_bet = bets_read.get('hero')
-    villain_bet = bets_read.get(villain) if villain else None
-    hero_bet_source = 'ocr_bet' if hero_bet is not None else 'unknown'
-    villain_bet_source = ('ocr_bet' if villain_bet is not None
-                          else 'unknown')
-    if hero_bet is None and hero_contrib is not None:
-        hero_bet = hero_contrib
-        hero_bet_source = ('recorder_action_ledger_zero'
-                           if 'hero' in ledger_zero
-                           else 'recorder_contribution')
-    if villain_bet is None and villain_contrib is not None:
-        villain_bet = villain_contrib
-        villain_bet_source = ('recorder_action_ledger_zero'
-                              if villain in ledger_zero
-                              else 'recorder_contribution')
 
     # -- posiciones HU y contradicciones de boton ---------------------------
     hu_positions = _hu_position_view(active_seats, positions, button)
@@ -1208,7 +1303,8 @@ def build_recorder_snapshot(recorder, *, raw_state: Mapping[str, Any],
         'button': ('recorded+ocr' if button_read and button_recorded else
                    'ocr' if button_read else
                    'recorded' if button_recorded else 'unknown'),
-        'stacks': 'ocr',
+        'stacks': ('ocr+allin_inferred' if inferred_allin else
+                   'ocr+recorder_allin' if allin_seats else 'ocr'),
         'hero_bet': hero_bet_source,
         'villain_bet': villain_bet_source,
         'street': 'recorded_hand' if hand_street in (
@@ -1236,8 +1332,8 @@ def build_recorder_snapshot(recorder, *, raw_state: Mapping[str, Any],
         pot_read=pot_read,
         pot_recorded=pot_live,
         to_call=to_call,
-        hero_stack=stacks_read.get('hero'),
-        villain_stack=stacks_read.get(villain) if villain else None,
+        hero_stack=effective_stacks.get('hero'),
+        villain_stack=effective_stacks.get(villain) if villain else None,
         hero_bet=hero_bet,
         villain_bet=villain_bet,
         hero_contribution=hero_contrib,
@@ -1345,7 +1441,9 @@ def build_unprocessed_snapshot(recorder, state: Mapping[str, Any], *,
 
 def interpret_recorder_snapshot(snapshot: RecorderSnapshot, *,
                                 hero_seat: str = 'hero',
-                                require_processed: bool = True) -> HUState:
+                                require_processed: bool = True,
+                                hu_positions_override: Optional[Mapping[str, str]] = None,
+                                ignored_contradictions: Iterable[str] = ()) -> HUState:
     """Convierte el snapshot del recorder en el contrato HU normalizado.
 
     ``require_processed=False`` solo se usa para mostrar el estado observado
@@ -1371,6 +1469,14 @@ def interpret_recorder_snapshot(snapshot: RecorderSnapshot, *,
         reasons.append('board_not_observed')
 
     contradictions = tuple(view.contradictions)
+    blocking_contradictions = tuple(
+        item for item in contradictions
+        if not any(item.startswith(prefix)
+                   for prefix in ignored_contradictions))
+    if hu_positions_override is None:
+        positions_for_state = view.hu_positions
+    else:
+        positions_for_state = MappingProxyType(dict(hu_positions_override))
     status = 'ready'
     reason = None
 
@@ -1420,8 +1526,8 @@ def interpret_recorder_snapshot(snapshot: RecorderSnapshot, *,
     if len(active_seats) != 2:
         reasons.append('not_heads_up:%d_active' % len(active_seats))
         return finish('no_decision', 'not_heads_up')
-    if contradictions:
-        first = contradictions[0]
+    if blocking_contradictions:
+        first = blocking_contradictions[0]
         if first.startswith('active_player_count_uncertain'):
             return finish('unresolved', 'active_player_count_uncertain')
         return finish('unresolved', 'contradiction:%s' % first.split(':', 1)[0])
@@ -1434,7 +1540,7 @@ def interpret_recorder_snapshot(snapshot: RecorderSnapshot, *,
         return finish('unresolved', 'hero_cards_not_observed')
     if not view.board_observed:
         return finish('unresolved', 'board_not_observed')
-    if not view.hu_positions:
+    if not positions_for_state:
         reasons.append('position_not_observed')
         return finish('unresolved', 'position_not_observed')
     if view.pot is None:
@@ -1447,7 +1553,7 @@ def interpret_recorder_snapshot(snapshot: RecorderSnapshot, *,
         reasons.append('to_call_not_observed')
         return finish('unresolved', 'to_call_not_observed')
 
-    return finish('ready', None, positions=view.hu_positions)
+    return finish('ready', None, positions=positions_for_state)
 
 
 __all__ = [

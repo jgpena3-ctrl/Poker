@@ -178,14 +178,17 @@ def test_recommendation_step_writes_sidecar_and_deduplicates_repeated_frame(
     assistant.last_state = None
     assistant.last_img = None
 
-    state = {'pot': 4.0, 'btn': 'hero', 'hero_cards': [
+    # Con dos jugadores el BTN (p1) abre primero y el BB (hero) responde.
+    # BTN hero + una subida del BB antes de que el BTN actúe sería una
+    # secuencia imposible y ahora se abstiene correctamente.
+    state = {'pot': 4.0, 'btn': 'p1', 'hero_cards': [
         {'rank': 'A', 'suit': 's'}, {'rank': 'K', 'suit': 's'}],
         'community': []}
     for pid in ('hero', 'p1', 'p2', 'p3', 'p4', 'p5'):
         state[f'{pid}_state'] = 'sin jugador'
         state[f'{pid}_stake'] = 100.0
         state[f'{pid}_bet'] = 0.0
-    state.update(hero_state='activo', p1_state='activo', hero_bet=0.0,
+    state.update(hero_state='activo', p1_state='activo', hero_bet=1.0,
                  p1_bet=2.5)
 
     first = assistant.step(state, None, None, log=lambda _msg: None,
@@ -217,7 +220,7 @@ def test_recommendation_step_writes_sidecar_and_deduplicates_repeated_frame(
     # Replay the player's observed call and finalize the hand through the real
     # recorder hook. The decision-time row remains unchanged.
     rec.hand['streets']['preflop']['actions'].append({
-        'pos': 'BTN', 'action': 'c', 'amount': 2.5,
+        'pos': 'BB', 'action': 'c', 'amount': 2.5,
         'amount_type': 'observed',
     })
     rec.on_hand_finalized = log.resolve_hand

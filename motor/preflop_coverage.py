@@ -223,6 +223,23 @@ def _find_fallback_table(tables: Dict[str, Any], action: str, pos: str,
     return None
 
 
+def _hero_can_face_later_aggressor(source_context: Dict[str, Any]) -> bool:
+    """True si la secuencia validada permite al héroe responder a un raise
+    de un asiento posterior en el orden.
+
+    - El héroe ya actuó (call/raise/check): la acción vuelve a él tras la
+      subida de cualquier asiento.
+    - El héroe ya subió y vuelve a decidir frente a un 3-bet/4-bet.
+    """
+    if source_context.get('hero_already_acted'):
+        return True
+    try:
+        raises = int(source_context.get('raises_before') or 0)
+    except (TypeError, ValueError):
+        raises = 0
+    return bool(source_context.get('hero_prior_aggressor')) and raises >= 2
+
+
 def _is_structurally_impossible(action: str, pos: str, vs: str,
                                 source_context: Dict[str, Any]) -> bool:
     # Imposibilidades definicionales independientes del orden.
@@ -230,7 +247,16 @@ def _is_structurally_impossible(action: str, pos: str, vs: str,
         return True
     reason = classify_missing_table(action, pos, vs)
     if reason == 'impossible_action_order':
-        return source_context.get('sequence_status') == 'valid'
+        if source_context.get('sequence_status') != 'valid':
+            return False
+        # La regla estática supone que el héroe actúa después del último
+        # agresor. En un 4-bet/5-bet el héroe ya subió antes y vuelve a
+        # actuar después del 3-bet/4-bet: si la secuencia validada confirma
+        # esa subida previa, el spot es posible y la tabla exacta (si existe)
+        # debe usarse.
+        if _hero_can_face_later_aggressor(source_context):
+            return False
+        return True
     if reason.startswith('intentional_'):
         return True
     return False
@@ -256,6 +282,10 @@ def _classify_absence(action: str, pos: str, vs: str,
     if reason == 'impossible_action_order':
         if source_context.get('sequence_status') != 'valid':
             return 'unknown'
+        if _hero_can_face_later_aggressor(source_context):
+            # El orden sí permite la respuesta, pero falta la tabla: es un
+            # hueco real, no una imposibilidad demostrada.
+            return 'coverage_gap'
         return 'impossible'
     if reason.startswith('intentional_'):
         return 'impossible'

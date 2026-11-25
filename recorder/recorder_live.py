@@ -343,11 +343,9 @@ class LiveRecorder:
     def _get_seated(self, state):
         """Jugadores con asiento en la mesa.
 
-        El OCR 'inactivo' NO excluye: si el usuario no marcó al jugador como
-        inactivo (MANUAL_INACTIVE), ese asiento jugó la mano. Al iniciar
-        recibirá posición y, si su estado es 'inactivo', se registrará su fold
-        en preflop. Solo las sillas vacías ('sin jugador'/'fuera') quedan
-        fuera; quién "no jugó la mano" lo declara el usuario, no el estado."""
+        El estado 'inactivo' se resuelve al asignar posiciones: si aparece al
+        iniciar la mano sin una ciega visible en su bet, no entra en la mano.
+        Las sillas vacías ('sin jugador'/'fuera') quedan fuera directamente."""
         return [p for p in PLAYER_IDS if state.get(f'{p}_state') not in ('sin jugador', 'fuera')]
 
 
@@ -694,8 +692,22 @@ class LiveRecorder:
         if btn is None or btn not in SCREEN_SEATS:
             return {}
         seated = self._get_seated(state)
-        # Skip manual inactives for position assignment (except BTN itself)
-        active = [p for p in seated if p not in MANUAL_INACTIVE or p == btn]
+        # Una silla que ya aparece inactiva al iniciar no recibe posición ni
+        # ciega inferida, salvo que su bet muestre una ciega. Así no se desplaza
+        # el BB real cuando una silla vacía/sit-out conserva un stack visual.
+        # El botón sigue identificado aunque aparezca inactivo.
+        active = []
+        for pid in seated:
+            if pid in MANUAL_INACTIVE and pid != btn:
+                continue
+            if pid != btn and state.get(f'{pid}_state') == 'inactivo':
+                bet = state.get(f'{pid}_bet')
+                blind_visible = (
+                    self._near(bet, self._blind_sb, tol=0.05)
+                    or self._near(bet, self._blind_bb, tol=0.05))
+                if not blind_visible:
+                    continue
+            active.append(pid)
         n = len(SCREEN_SEATS)
         positions = {}
         btn_idx = SCREEN_SEATS.index(btn)

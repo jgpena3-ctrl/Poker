@@ -50,7 +50,18 @@ class _ProbVec:
 class _Modelos:
     def __init__(self, prob=None, postflop=None):
         self.range_model = SimpleNamespace(prob_vec=prob or _ProbVec())
-        self.postflop_model = SimpleNamespace(prob_vec=postflop or _ProbVec())
+        action_model = postflop or _ProbVec()
+
+        def evidence_for_vector(profile, street, facing, board, action):
+            return {'buckets': [
+                {'bucket': i, 'observation_count': 0,
+                 'prior_evidence': {'source': 'por_facing',
+                                    'distribution_available': True,
+                                    'support_observations': 5}}
+                for i in range(5)]}
+
+        self.postflop_model = SimpleNamespace(
+            prob_vec=action_model, evidence_for_vector=evidence_for_vector)
 
 
 def _asistente(hand=None):
@@ -66,7 +77,8 @@ def _asistente(hand=None):
 def _hand(acts):
     return {
         'hand_id': 'H_EQ', 'streets': {
-            'preflop': {'actions': []},
+            'preflop': {'actions': [
+                {'pos': 'CO', 'action': 'b', 'amount': 2.5}]},
             'flop': {'actions': acts, 'board': BOARD},
             'turn': {'actions': [], 'board': []},
             'river': {'actions': [], 'board': []}},
@@ -231,8 +243,7 @@ def test_rango_vacio_despues_de_blockers():
     asis._equity_main_sombra(state, _jer('CO'), 'p1', HERO, BOARD, [], rs, reg)
     assert reg['equity_main_available'] is False
     assert reg['equity_main_note'] == 'empty_range_after_blockers', reg
-    assert reg['equity_main_note_detail'] is None, \
-        'sin detalle variable, el detalle debe ser None'
+    assert reg['equity_main_note_detail'] == 'sin combos legales'
 
 
 def test_excepcion_al_calcular_no_tumba_nada(monkeypatch):
@@ -377,7 +388,9 @@ FLOP_AGRESOR = [{'pos': 'MP', 'action': 'b', 'amount': 8.0}]
 
 
 def _estado_postflop(bets=None):
-    bets = bets or {'p1': ('activo', 8.0), 'p2': ('activo', 0.0)}
+    # Solo hero y p1 siguen en la mano (HU); p2 inactivo no bloquea el caso
+    # de paridad de equity_main con una evaluación multiway incompleta.
+    bets = bets or {'p1': ('activo', 8.0), 'p2': ('inactivo', 0.0)}
     st = {
         'hero_cards': _cards('As', 'Kd'),
         'community': _cards('Qh', '9d', '3c'),
@@ -396,7 +409,8 @@ def _estado_postflop(bets=None):
 def _hand_agresor(acts=None):
     return {
         'hand_id': 'H_EQE', 'streets': {
-            'preflop': {'actions': []},
+            'preflop': {'actions': [
+                {'pos': 'MP', 'action': 'b', 'amount': 2.5}]},
             'flop': {'actions': list(acts or FLOP_AGRESOR), 'board': []},
             'turn': {'actions': [], 'board': []},
             'river': {'actions': [], 'board': []}},

@@ -72,6 +72,44 @@ def test_sb_y_bb_saltan_asiento_vacio():
     assert pos['p3'] == 'BB'
 
 
+def test_inactivo_sin_ciega_visible_no_recibe_posicion_ni_post():
+    st = _state(
+        btn='p5',
+        bets={'hero': 0.5, 'p2': 1.0},
+        states={'p1': 'inactivo', 'p3': 'inactivo'},
+    )
+    r = LiveRecorder()
+    r.hand_id = 0
+
+    positions = r._assign_positions(st)
+    r.start_hand(st)
+
+    assert 'p1' not in positions
+    assert positions['p2'] == 'BB'
+    p1 = next(player for player in r.hand['players']
+              if player['_id'] == 'p1')
+    assert p1['active'] is False
+    assert p1['pos'] == ''
+    preflop = r.hand['streets']['preflop']['actions']
+    assert _acts(preflop) == [('SB', 'p', 0.5), ('BB', 'p', 1.0)]
+
+
+def test_inactivo_con_ciega_visible_conserva_posicion_y_post():
+    st = _state(
+        btn='p5',
+        bets={'hero': 0.5, 'p1': 1.0},
+        states={'p1': 'inactivo'},
+    )
+    r = LiveRecorder()
+    r.hand_id = 0
+
+    positions = r._assign_positions(st)
+    r.start_hand(st)
+
+    assert positions['p1'] == 'BB'
+    assert ('BB', 'p', 1.0) in _acts(r.hand['streets']['preflop']['actions'])
+
+
 
 def _acts(actions):
     return [(a['pos'], a['action'], a['amount']) for a in actions]

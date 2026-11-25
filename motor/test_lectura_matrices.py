@@ -227,28 +227,18 @@ def test_el_fichero_real_esta_entero():
         'que pasar, y si pasa hay que decirlo.' % malas[:10])
 
 # ---------------------------------------------------------------------------
-# 5. H3: LOS SITIOS DONDE LA AUSENCIA SE CONVIERTE EN CERO
+# 5. H3: LA AUSENCIA NO SE CONVIERTE EN CERO
 # ---------------------------------------------------------------------------
 
-def test_los_sitios_que_convierten_la_ausencia_en_cero_estan_fijados():
-    """Y H3, que NO se arregla: se DECLARA, y se cuenta.
+def test_la_decision_preflop_no_convierte_la_ausencia_en_cero():
+    """H3 corregido: la ausencia de tabla no se convierte en fold.
 
-    Y el defecto, MEDIDO: `asistente_live._recom_preflop` convierte la
-    AUSENCIA de una tabla en una frecuencia CERO con un `or 0.0`. Y la
-    consecuencia medida: `ROL_UTG` NO existe en el fichero, y un UTG con un
-    limp delante se leia como «over-limp 0 %», o sea «retirar 100 %» — una
-    certeza INVENTADA a partir de una tabla que no existe.
-
-    Y no se arregla, y el motivo esta en los tests que ya lo fijan:
-    `test_recom_preflop_sb_no_pide_call_sin_tabla` dice, literalmente, «no se
-    inventa un call (lo mas apegado a las tablas): igualar queda en 0». De
-    modo que la CONVENCION esta declarada, y una excepcion declarada no se
-    toca: se documenta.
-
-    Y lo que este test hace es CONTAR los sitios, para que un sitio nuevo
-    aparezca en la lista y sea una decision y no un descuido. Y el numero
-    esta MEDIDO, y se vuelve a medir si el numero cambia: y entonces hay que
-    revisar la convencion, porque eso ya no seria lo mismo.
+    Antes `_recom_preflop` usaba `or 0.0` en 8 sitios: una tabla ausente se
+    leia como frecuencia cero y, por el residuo, como fold 100 %. Ahora el
+    nodo se reconstruye con `plan_from_context(final_context(...))` y la
+    cobertura se valida antes de muestrear; si falta, `_abstain_preflop`
+    devuelve None y conserva el motivo. No queda ningun `or 0.0` en la
+    funcion, y los tests que fijaban el cero ahora fijan la abstencion.
     """
     import ast
     ruta = os.path.join(os.path.dirname(os.path.dirname(
@@ -264,11 +254,22 @@ def test_los_sitios_que_convierten_la_ausencia_en_cero_estan_fijados():
             src = ast.unparse(n)
             if 'or 0.0' in src:
                 sitios.append(src)
-    assert len(sitios) == 8, (
-        'hay %d sitios donde la AUSENCIA se convierte en un cero, y eran 8. '
-        'Y si se ha anadido uno, es una decision y hay que declararla; y si '
-        'se ha quitado uno, hay que revisar la convencion.\n   %r'
-        % (len(sitios), sitios))
+    assert sitios == [], (
+        'la ausencia de tabla no puede convertirse en cero: %r. El motor '
+        'debe abstenerse con `_abstain_preflop`.' % sitios)
+
+    llamadas = set()
+    for n in ast.walk(fn):
+        if not isinstance(n, ast.Call):
+            continue
+        if isinstance(n.func, ast.Name):
+            llamadas.add(n.func.id)
+        elif isinstance(n.func, ast.Attribute):
+            llamadas.add(n.func.attr)
+    assert {'final_context', 'plan_from_context',
+            '_abstain_preflop'} <= llamadas, (
+        'el nodo debe venir del contrato y la ausencia debe abstenerse; '
+        'llamadas encontradas: %r' % sorted(llamadas))
 
 
 def test_el_lector_sigue_distinguendo_una_frecuencia_nula_de_una_desconocida():
@@ -367,4 +368,3 @@ def test_el_inventario_distingue_los_estados_que_el_lector_no():
     # y las dos preguntas dan respuestas distintas para los dos estados
     assert _hay_alguna_tabla_de('ROL') is True
     assert _hay_alguna_tabla_de('LIMP') is False
-

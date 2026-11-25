@@ -3,7 +3,7 @@
 Pipeline en cada pantallazo (polling ~0.5 s):
     capture_live.capture()
         → lectores (cartas hero + community, stacks, bets, bote, BTN, estados)
-        → RANGO RIVAL por perfil en vivo (PEZ si stack < 50 BB, si no TIBURON):
+        → rango rival por identidad histórica exacta o prior general:
             rango preflop (grid 13×13 por perfil) + blockers (hero+board)
             + actualizaciones postflop con P(A|H, street, facing) del rival
         → Situation (equity, SPR, pot-odds, textura)
@@ -40,14 +40,15 @@ from .hierarchy import (ShadowLog, classify_villains, shadow_equity,
 from .learn import load_hands
 from .observations import _texture_class, lead_label
 from .panel import format_insight
-from .player_ranges import ProfileRangeModel
+from .player_ranges import ProfileRangeModel, SPOT_STAT
 from .postflop_ranges import PostflopRangeModel
 from .preflop import (classify_missing_table, load_tables, lookup_table,
                       table_key)
 from .preflop_coverage import CoverageRequest, resolve_coverage
-from .preflop_contract import (ShadowPreflopLog, actions_of, first_decision,
-                               table_plan)
-from .profile import PEZ, Profiles, TIBURON, STACK_FISH_BB
+from .preflop_contract import (ShadowPreflopLog, actions_of, final_context,
+                               first_decision, plan_from_context, table_plan,
+                               walk_preflop)
+from .profile import PEZ, Profiles, TIBURON, simple_label
 from .ranges import COMBO0, COMBO1, RangeState
 from .rules import plan as rules_plan
 from .rules import select_best as rules_select_best
@@ -61,6 +62,7 @@ HERO_NAME_DEFAULT = 'Jarduan'
 
 HERO_PID = 'hero'
 PLAYER_IDS = ['hero', 'p1', 'p2', 'p3', 'p4', 'p5']
+UNKNOWN_PROFILE = '__unknown__'
 
 # Vocabulario de `equity_main_note`. Es lo que hace ese campo AGREGABLE: si
 # `_equity_vs_rival` devolviera un motivo fuera de aqui, el productor lo marca
@@ -140,28 +142,108 @@ def _street_of(n_coms):
 # ---------------------------------------------------------------------------
 
 def _preflop_spot(hand, villain_pos):
-    """(spot, action) del rango inicial del rival según lo que hizo preflop.
+    """Compatibilidad: devuelve (denom, categoría) solo si el nodo se resuelve.
 
-    'b' → open (no_raise/open); 'r' → 3bet (facing_open/3bet);
-    'c' → call a open (facing_open/call_open); 'x' → BB check (no_raise/limp);
-    sin acción → open por posición (no_raise/open).
+    La interpretación viene de `walk_preflop`, nunca del carácter aislado de
+    la acción. Sin historia suficiente no se inventa una apertura.
     """
-    if hand is not None:
-        acts = (hand.get('streets', {}).get('preflop', {}) or {})
-        for a in reversed(acts.get('actions', [])):
-            if a.get('pos') != villain_pos:
-                continue
-            action = a.get('action')
-            if action == 'b':
-                return 'no_raise', 'open'
-            if action == 'r':
-                return 'facing_open', '3bet'
-            if action == 'c':
-                return 'facing_open', 'call_open'
-            if action == 'x':
-                return 'no_raise', 'limp'
-            return 'no_raise', 'open'
-    return 'no_raise', 'open'
+    if not isinstance(hand, dict):
+        return None, None
+    steps = walk_preflop(hand)
+    decisions = [step for step in steps
+                 if step.raw.pos == villain_pos
+                 and step.classification.status != 'non_decision']
+    if not decisions or not decisions[0].classification.resolved:
+        return None, None
+    cls = decisions[0].classification
+    return cls.denom, cls.category
+
+
+_RANGE_TABLE_PREFIX = {
+    'open': 'OR', 'limp': 'LIMP', 'call_open': 'Call_OR',
+    '3bet': '3B', 'squeeze': 'SQUEEZE', '4bet': '4B',
+    'call_3bet': 'Call_3B',
+    # No se equiparan a otra familia del modelo. Si no existe tabla con esta
+    # clave semántica, el nodo queda sin cobertura y se abstiene.
+    'rol': 'ROL', 'call_limp': 'Call_LIMP',
+}
+
+
+def _strict_preflop_range_query(hand, villain_pos):
+    """Resuelve la última decisión preflop del rival con contexto estricto."""
+    if not isinstance(hand, dict):
+        return {'status': 'unresolved', 'reason': 'preflop_history_missing'}
+    streets = hand.get('streets') or {}
+    actions = (streets.get('preflop') or {}).get('actions') or []
+    if not actions:
+        return {'status': 'unresolved', 'reason': 'preflop_history_missing'}
+
+    steps = walk_preflop(hand)
+    decisions = [step for step in steps
+                 if step.raw.pos == villain_pos
+                 and step.classification.status != 'non_decision']
+    if not decisions:
+        return {'status': 'unresolved', 'reason': 'villain_preflop_action_missing'}
+    # ProfileRangeModel fue entrenado con la primera decisión voluntaria de
+    # cada jugador. Si el recorder muestra más decisiones del mismo asiento
+    # (p. ej. una acción reabierta), el modelo no contiene el likelihood
+    # secuencial necesario para condicionarlas: no elegir una categoría a ojo.
+    if len(decisions) > 1:
+        return {
+            'status': 'unresolved',
+            'reason': 'multiple_preflop_decisions_unmodeled',
+            'sequence': [
+                {'pos': s.raw.pos, 'action': s.raw.action,
+                 'amount': s.raw.amount, 'index': s.raw.index,
+                 'category': s.classification.category,
+                 'status': s.classification.status}
+                for s in decisions
+            ],
+        }
+    step = decisions[0]
+    cls = step.classification
+    if not cls.resolved or cls.context.tainted_reason:
+        return {
+            'status': 'unresolved',
+            'reason': cls.reason or cls.context.tainted_reason
+                      or 'preflop_node_ambiguous',
+            'classification': cls.as_dict(),
+        }
+    if cls.range_query_status != 'available':
+        return {
+            'status': 'unresolved',
+            'reason': 'preflop_range_query_%s' % cls.range_query_status,
+            'classification': cls.as_dict(),
+        }
+    prefix = _RANGE_TABLE_PREFIX.get(cls.category)
+    if not prefix:
+        return {
+            'status': 'unresolved', 'reason': 'preflop_category_unsupported',
+            'classification': cls.as_dict(),
+        }
+    context = cls.context
+    if cls.denom == 'facing_open':
+        villain_pos_for_prior = context.aggressors[0] if context.aggressors else ''
+    elif cls.denom == 'facing_3bet':
+        villain_pos_for_prior = context.aggressors[1] \
+            if len(context.aggressors) >= 2 else ''
+    else:
+        villain_pos_for_prior = ''
+    return {
+        'status': 'resolved', 'reason': None,
+        'denom': cls.denom, 'category': cls.category,
+        'table_action': prefix, 'pos': villain_pos,
+        'villain_pos': villain_pos_for_prior,
+        'action_index': step.raw.index,
+        'sequence': [
+            {'pos': s.raw.pos, 'action': s.raw.action,
+             'amount': s.raw.amount, 'index': s.raw.index,
+             'category': s.classification.category,
+             'status': s.classification.status}
+            for s in steps
+        ],
+        'classification': cls.as_dict(),
+    }
 
 
 # Cegia nominal del juego. La usan tanto `_es_limpe_corto` como el resto de
@@ -235,7 +317,7 @@ def _pf_rival_pos(hand, pos_name, spot=''):
     return ''
 
 
-def _villain_postflop_actions(hand, villain_pos):
+def _villain_postflop_actions(hand, villain_pos, *, with_metadata=False):
     """[(street, facing, action, board)] de acciones ya observadas del rival
     por calle (formato que consume postflop.prob_vec), para actualizar su rango.
 
@@ -251,6 +333,7 @@ def _villain_postflop_actions(hand, villain_pos):
     pf_initiator = next((a.get('pos') for a in reversed(pf_acts)
                          if a.get('action') in ('b', 'r')), '')
     pot_raised = bool(pf_initiator)
+    seen = set()
     for street in ('flop', 'turn', 'river'):
         acts = (streets.get(street, {}) or {}).get('actions', [])
         board = streets.get(street, {}).get('board', [])
@@ -258,10 +341,25 @@ def _villain_postflop_actions(hand, villain_pos):
         facing = ''
         for a in acts:
             pos, action = a.get('pos'), a.get('action')
-            if action == 'x':
+            if (a.get('pending') or a.get('is_pending')
+                    or a.get('status') == 'pending'):
                 continue
-            if pos == villain_pos and action in ('b', 'c', 'r', 'f'):
-                out.append((street, facing or 'none', action, board_str))
+            if pos == villain_pos and ('action' in a or action):
+                amount = a.get('amount')
+                event_id = a.get('source_event_id') or a.get('event_id')
+                identity = ((street, event_id) if event_id is not None else
+                            (street, pos, action, amount, board_str))
+                if identity not in seen:
+                    seen.add(identity)
+                    item = (street, facing or 'none', action or '?', board_str)
+                    if with_metadata:
+                        item += ({
+                            'provenance': ('inferred' if a.get('inferred')
+                                           else 'observed'),
+                            'event_id': event_id,
+                            'action_index': len(out),
+                        },)
+                    out.append(item)
             if action in ('b', 'r'):
                 facing = ('raise' if facing else
                           lead_label(street, pos, pf_initiator, pot_raised))
@@ -410,7 +508,12 @@ def _pf_freq(base, hero_pos, vs_pos, hand_idx):
 
 def _preflop_raises(actions, hero_pos):
     """(n_raises, vs_pos, vs_amount) de los raises que el hero aún debe
-    enfrentar: acciones 'r' (el blind BB se registra como 'b' y se ignora)"""
+    enfrentar: acciones 'r' (el blind BB se registra como 'b' y se ignora).
+
+    LEGADO: se conserva para la sombra histórica, pero NO decide el nodo
+    actual. El motor usa `plan_from_context(final_context(actions))`, que
+    cuenta también las subidas del héroe y valida la secuencia.
+    """
     n, vs_pos, vs_amount = 0, '', 0.0
     for a in actions:
         if a.get('pos') == hero_pos:
@@ -429,25 +532,30 @@ def _pf_evs(f_raise, f_call):
     misma mano puede quedar por encima del 100% en ambas; en ese caso se
     escalan proporcionalmente para que subir + igualar + retirar = 1 (el
     fold queda en 0). Nunca se muestra una suma > 100%. El argmax = la
-    acción más jugada = recomendación."""
-    fr = f_raise or 0.0
-    fc = f_call or 0.0
+    acción más jugada = recomendación. Una tabla ausente no tiene frecuencia:
+    quien llama debe abstenerse antes, nunca convertir None en cero."""
+    if f_raise is None or f_call is None:
+        raise ValueError('frecuencia preflop ausente; no se puede calcular EV')
+    fr = float(f_raise)
+    fc = float(f_call)
     total = fr + fc
     if total > 1.0:
         fr, fc = fr / total, fc / total
     return {'retirar': 1.0 - fr - fc, 'igualar': fc, 'subir': fr}
 
 
-def _pf_table_audit(queries):
+def _pf_table_audit(queries, source_context=None):
     """Audita las consultas de tabla de un spot preflop.
 
     Cada entrada dice qué clave se pidió, de dónde salió el vector y, si no
     había tabla exacta, por qué. Una ausencia no se convierte en un fold
-    estratégico invisible: queda registrada con su clase.
+    estratégico invisible: queda registrada con su clase. `source_context`
+    debe ser el mismo que usó la decisión para no auditar con otra secuencia.
     """
     audit = []
     for base, pos, vs in queries:
-        _probs, source, status, resolution = _pf_coverage_lookup(base, pos, vs)
+        _probs, source, status, resolution = _pf_coverage_lookup(
+            base, pos, vs, source_context=source_context)
         item = {
             'key': table_key(base, pos, vs),
             'action': base,
@@ -525,7 +633,8 @@ def _format_preflop(hero, hero_pos, label_spot, pot, to_call, ev, action,
 def build_models(verbose=True, eligibility_shadow=None):
     """Construye los modelos de 2 perfiles desde data/hands_db.jsonl.
 
-    labels          {jugador: 'PEZ'|'TIBURON'}   (regla stack < 50 BB)
+    labels          {jugador: 'PEZ'|'TIBURON'}   (etiqueta histórica de grupo;
+                                                  puede usar stack histórico)
     range_model     ProfileRangeModel  (P(A|H) preflop por perfil)
     oracle          Oracle             (P(A|C) postflop por perfil)
     postflop_model  PostflopRangeModel (P(A|H) postflop por perfil)
@@ -593,13 +702,15 @@ class Asistente:
 
         self.last_reco_key = None
         self.last_reco_reason = None
+        self.last_reco_abstention = None
+        # Abstención preflop explícita (cobertura ausente/no resoluble). No es
+        # una recomendación y no se convierte en fold en ningún consumidor.
+        self.last_preflop_abstention = None
         self._last_reco_log = None
         self.last_state = None
         self.last_img = None
         self.runout = True
-        # Perfilado en vivo: stacks observados por jugador durante la sesión
-        # (para "juega mayoritariamente por debajo de 50 ciegas", sin necesitar
-        # coincidencia de nombres con el dataset).
+        # Telemetría legacy de stacks observados; ya no clasifica el perfil.
         self.live_stacks = {}        # pid -> [stacks observados]
         self._last_seen_stake = {}   # pid -> último stack visto (dedup frames)
 
@@ -710,8 +821,7 @@ class Asistente:
         return []
 
     def _observe_stacks(self, state):
-        """Acumula los stacks visibles por jugador (un registro por cambio)
-        para el perfilado en vivo por media de la sesión."""
+        """Acumula stacks visibles para diagnóstico; no intervienen en perfiles."""
         for pid in PLAYER_IDS:
             s = state.get(f'{pid}_stake')
             if s is None or state.get(f'{pid}_state') != 'activo':
@@ -728,16 +838,51 @@ class Asistente:
         return sum(stacks) / len(stacks)
 
     def _perfil_for(self, player_id, state):
-        """PEZ si juega MAYORITARIAMENTE por debajo de 50 BB:
-        1) con historial de la sesión → media de stacks; 2) sin historial →
-        stack actual; 3) sin información → TIBURON."""
-        mean = self._live_mean(player_id)
-        if mean is None:
-            stake = state.get(f'{player_id}_stake')
-            if stake is None:
-                return TIBURON
-            return PEZ if stake < STACK_FISH_BB else TIBURON
-        return PEZ if mean < STACK_FISH_BB else TIBURON
+        """Etiqueta de grupo por nombre exacto y VPIP/PFR; nunca por stack.
+
+        La etiqueta PEZ/TIBURON solo se acepta si hay denominadores para ambas
+        estadísticas y coincide con la clasificación estadística sin stack.
+        Si falta evidencia o la etiqueta histórica dependía del stack, se usa
+        el perfil desconocido/prior general. El grupo sigue siendo un prior,
+        no una probabilidad individual.
+        """
+        name = self._stable_player_name(player_id)
+        if name is None:
+            return UNKNOWN_PROFILE
+        range_model = getattr(getattr(self, 'models', None), 'range_model', None)
+        player_profiles = getattr(range_model, 'profiles', None)
+        player_profile = (player_profiles.profiles.get(name)
+                          if player_profiles is not None else None)
+        if player_profile is None:
+            return UNKNOWN_PROFILE
+        counts = player_profile.counts
+        if (counts.get('vpip', (0, 0))[0] <= 0
+                or counts.get('pfr', (0, 0))[0] <= 0):
+            return UNKNOWN_PROFILE
+        stats_label = simple_label(
+            player_profile.stats.get('vpip'),
+            player_profile.stats.get('pfr'), stack_mean=None)
+        return (stats_label if stats_label in (PEZ, TIBURON)
+                and player_profile.label == stats_label else UNKNOWN_PROFILE)
+
+    def _stable_player_name(self, player_id):
+        """Nombre configurado que puede enlazarse sin ambigüedad al historial."""
+        if not player_id:
+            return None
+        name = self._villain_name(player_id)
+        if not isinstance(name, str) or not name.strip():
+            return None
+        name = name.strip()
+        generic_names = {value.casefold() for value in _DEFAULT_NAMES.values()}
+        generic_names.update({str(player_id).casefold(),
+                              str(player_id).upper().casefold()})
+        if name.casefold() in generic_names:
+            return None
+        models = getattr(self, 'models', None)
+        labels = getattr(models, 'labels', {}) or {}
+        range_model = getattr(models, 'range_model', None)
+        known = set(labels) | set(getattr(range_model, 'perfil', {}) or {})
+        return name if name in known else None
 
     def _villain_name(self, villain_id):
         """Nombre configurado en la GUI (si lo hay) para la etiqueta del rival."""
@@ -769,11 +914,19 @@ class Asistente:
             hero_pid = self._hero_pid()
         hero_bet = state.get(f'{hero_pid}_bet') or 0.0
         excluded = set(known_pids) | {hero_pid}
+        folded = self._recorded_folds()
+
+        def eligible(pid):
+            if pid in excluded or state.get(f'{pid}_state') != 'activo':
+                return False
+            try:
+                return self._pos_of(pid, state) not in folded
+            except Exception:
+                return True
+
         max_bet, aggressor = 0.0, None
         for pid in PLAYER_IDS:
-            if pid in excluded:
-                continue
-            if state.get(f'{pid}_state') != 'activo':
+            if not eligible(pid):
                 continue
             bet = state.get(f'{pid}_bet') or 0.0
             if bet > max_bet:
@@ -782,9 +935,7 @@ class Asistente:
             return aggressor
         best, best_stack = None, -1
         for pid in PLAYER_IDS:
-            if pid in excluded:
-                continue
-            if state.get(f'{pid}_state') != 'activo':
+            if not eligible(pid):
                 continue
             stake = state.get(f'{pid}_stake')
             if stake is None:
@@ -978,6 +1129,287 @@ class Asistente:
                 if action.get('action') == 'f' and action.get('pos'):
                     folds.add(action['pos'])
         return folds
+
+    def _active_contenders(self, state):
+        """Jugadores que siguen en la mano en este frame, incluidos all-in.
+
+        Un fold registrado prevalece sobre un estado OCR `activo` atrasado.
+        Si el lector marca inactivo pero la mano registra inversión y no hay
+        fold, se conserva como rival (p. ej. all-in); así no se reduce un spot
+        MW a HU por una etiqueta de asiento incompleta.
+        """
+        folded = self._recorded_folds()
+        hand = getattr(getattr(self, 'rec', None), 'hand', None) or {}
+        recorded_in_hand = set()
+        for street_data in (hand.get('streets') or {}).values():
+            for action in (street_data or {}).get('actions') or []:
+                if action.get('action') in ('p', 'x', 'b', 'c', 'r') \
+                        and action.get('pos'):
+                    recorded_in_hand.add(action['pos'])
+        contenders = []
+        for pid in PLAYER_IDS:
+            pos = None
+            try:
+                pos = self._pos_of(pid, state)
+            except Exception:
+                pass
+            if pos in folded:
+                continue
+            if (state.get(f'{pid}_state') == 'activo'
+                    or (pos and pos in recorded_in_hand)):
+                contenders.append(pid)
+        return contenders
+
+    def _abstain_postflop(self, reason, *, details=None):
+        """Abstención que no produce EV, acción ni callback estratégico."""
+        self.last_reco_reason = reason
+        self.last_reco_abstention = {
+            'status': 'no_recommendation', 'reason': reason,
+            'details': details or {},
+        }
+        return None
+
+    def _initial_range_for_villain(self, profile, villain_pos, player_id=None):
+        """Consulta únicamente la categoría estricta y tabla de ese nodo."""
+        hand = getattr(getattr(self, 'rec', None), 'hand', None)
+        query = _strict_preflop_range_query(hand, villain_pos)
+        if query.get('status') != 'resolved':
+            return None, {
+                'status': 'initial_range_unresolved',
+                'reason': query.get('reason'), 'query': query,
+            }
+        table, source_key, coverage = lookup_table(
+            query['table_action'], villain_pos, query['villain_pos'])
+        prior = {
+            'requested_key': table_key(query['table_action'], villain_pos,
+                                       query['villain_pos']),
+            'source_key': source_key, 'coverage': coverage,
+            'fallback_used': False,
+            'classification': 'exact' if coverage == 'exact' else
+                              'alias' if coverage == 'alias' else 'missing',
+            'matrix_provenance': 'unknown',
+            'strategic_validation': 'not_established',
+        }
+        if table is None or coverage not in ('exact', 'alias'):
+            return None, {
+                'status': 'coverage_insufficient',
+                'reason': 'preflop_table_missing_for_resolved_node',
+                'query': query, 'prior': prior,
+            }
+        range_model = self.models.range_model
+        player_name = self._stable_player_name(player_id)
+        player_profile = None
+        if player_name:
+            player_profile = (getattr(range_model, 'profiles', None)
+                              and range_model.profiles.profiles.get(player_name))
+        stat = SPOT_STAT.get(query['denom'])
+        stat_opp, stat_act = ((player_profile.counts.get(stat, (0, 0)))
+                              if player_profile is not None and stat else (0, 0))
+        personalized = bool(
+            player_profile is not None and player_profile.label == profile
+            and profile in (PEZ, TIBURON) and stat_opp > 0
+            and callable(getattr(range_model, 'prob_vec_player', None)))
+        if personalized:
+            reach = range_model.prob_vec_player(
+                player_name, query['denom'], query['category'],
+                pos=villain_pos, villain_pos=query['villain_pos'])
+            omega = range_model.player_omega(player_name, query['denom'])
+            source = 'profile_range:individual_omega:%s:prior_%s:%s' % (
+                player_name, coverage, source_key)
+        else:
+            reach = range_model.prob_vec(
+                profile, query['denom'], query['category'], pos=villain_pos,
+                villain_pos=query['villain_pos'])
+            omega = None
+            source = 'profile_range:prior_%s:%s' % (coverage, source_key)
+        rs = RangeState(reach=reach, position=villain_pos, source=source)
+        prior['model_range_source'] = source
+        prior['range_formula'] = (
+            'ProfileRangeModel per-player omega over group counts and declared '
+            'table prior' if personalized else
+            'ProfileRangeModel group counts shrinkage over the declared table prior')
+        prior['player_identity'] = player_name
+        prior['identity_resolution'] = (
+            'exact_configured_name' if player_name else 'no_exact_history_match')
+        prior['individual_stat'] = stat
+        prior['individual_opportunities'] = int(stat_opp)
+        prior['individual_actions'] = int(stat_act)
+        prior['individual_omega'] = omega
+        prior['individual_range_used'] = personalized
+        if player_profile is not None:
+            prior['historical_group_label'] = player_profile.label
+            prior['profile_hand_denominator'] = player_profile.n
+            reliability_fn = getattr(player_profile, 'reliability', None)
+            prior['profile_reliability_band'] = (
+                reliability_fn() if callable(reliability_fn) else 'unavailable')
+            prior['profile_posterior_confidence'] = getattr(
+                player_profile, 'confidence', None)
+            prior['profile_stack_mean'] = getattr(
+                player_profile, 'stack_mean', None)
+            prior['profile_label_role'] = 'historical_group_prior_not_individual_probability'
+            prior['profile_label_caveat'] = (
+                'serving accepts the group only when VPIP/PFR denominators '
+                'support the same no-stack label; it remains a group prior')
+            prior['profile_stat_denominators'] = {
+                k: int(v[0]) for k, v in player_profile.counts.items()}
+        return rs, {
+            'status': 'valid', 'query': query, 'prior': prior,
+            'profile': profile,
+            'profile_resolution': (
+                'matched_name_individual_preflop_omega' if personalized else
+                ('matched_historical_group_prior'
+                 if player_name and profile in (PEZ, TIBURON) else
+                 ('matched_identity_rejected_to_general_prior'
+                  if player_name else 'unknown_profile_general_prior'))),
+        }
+
+    @staticmethod
+    def _postflop_likelihood_coverage(model, profile, street, facing,
+                                      board, action, vector,
+                                      active_buckets=None):
+        """Comprueba que cada bucket tenga likelihood respaldado, sin plano."""
+        evidence_fn = getattr(model, 'evidence_for_vector', None)
+        if not callable(evidence_fn):
+            return False, {
+                'status': 'unavailable',
+                'reason': 'postflop_likelihood_provenance_unavailable',
+            }
+        try:
+            evidence = evidence_fn(profile, street, facing, board, action)
+        except Exception as exc:
+            return False, {
+                'status': 'unavailable',
+                'reason': 'postflop_likelihood_evidence_error:%s' % exc,
+            }
+        buckets = evidence.get('buckets')
+        if not isinstance(buckets, list) or not buckets:
+            return False, {
+                'status': 'unavailable',
+                'reason': 'postflop_bucket_evidence_missing',
+                'evidence': evidence,
+            }
+        unsupported = []
+        no_action_support = []
+        covered_buckets = set(active_buckets or
+                              evidence.get('bucket_ids_present_on_board', []))
+        for item in buckets:
+            prior = item.get('prior_evidence') or {}
+            source = prior.get('source')
+            prior_source = item.get('model_prior_source')
+            if (item.get('bucket') in covered_buckets
+                    and item.get('estimate') == 0.0
+                    and item.get('action_observation_count', 0) == 0):
+                no_action_support.append(item.get('bucket'))
+            backed_by_observations = (
+                item.get('observation_count', 0) > 0
+                and prior_source not in ('flat_no_oracle',
+                                         'flat_oracle_no_cell',
+                                         'empirical_no_compatible_prior'))
+            backed_by_context_prior = (
+                prior.get('distribution_available')
+                and source in ('granular', 'por_facing', 'poblacion_facing')
+                and prior.get('support_observations', 0) > 0)
+            if not (backed_by_observations or backed_by_context_prior):
+                unsupported.append({
+                    'bucket': item.get('bucket'),
+                    'observation_count': item.get('observation_count', 0),
+                    'prior_source': source or prior_source,
+                    'support_observations': prior.get('support_observations', 0),
+                })
+        if unsupported:
+            return False, {
+                'status': 'incomplete',
+                'reason': 'postflop_action_without_supported_likelihood',
+                'unsupported_buckets': unsupported,
+                'evidence': evidence,
+            }
+        if no_action_support:
+            return False, {
+                'status': 'incomplete',
+                'reason': 'zero_likelihood_without_action_observations',
+                'unsupported_buckets': no_action_support,
+                'evidence': evidence,
+            }
+        values = np.asarray(vector, dtype=np.float64)
+        if (values.shape != (1326,) or not np.all(np.isfinite(values))
+                or np.any(values < 0.0) or np.any(values > 1.0 + 1e-6)):
+            return False, {
+                'status': 'unavailable',
+                'reason': 'postflop_likelihood_invalid_vector',
+                'evidence': evidence,
+            }
+        return True, {'status': 'usable', 'evidence': evidence}
+
+    def _replay_postflop_range(self, rs, profile, villain_pos):
+        """Replay chronológico; cualquier acción sin likelihood invalida uso."""
+        model = self.models.postflop_model
+        trace = []
+        records = _villain_postflop_actions(
+            getattr(getattr(self, 'rec', None), 'hand', None), villain_pos,
+            with_metadata=True)
+        seen = set()
+        for event in records:
+            street, facing, action, board_str, metadata = event
+            identity = (street, metadata.get('event_id')) if metadata.get(
+                'event_id') is not None else (
+                    street, facing, action, board_str, metadata.get('provenance'))
+            if identity in seen:
+                continue
+            seen.add(identity)
+            entry = {
+                'street': street, 'facing': facing, 'action': action,
+                'board': board_str, 'provenance': metadata.get('provenance'),
+                'event_id': metadata.get('event_id'), 'applied': False,
+            }
+            if action not in ('x', 'b', 'c', 'r', 'f'):
+                entry.update(status='unincorporated',
+                             reason='postflop_action_unrecognized')
+                trace.append(entry)
+                return False, trace, entry['reason']
+            board = [c.strip() for c in board_str.split(',') if c.strip()] \
+                if board_str else []
+            try:
+                vector = model.prob_vec(profile, street, facing, board, action)
+            except Exception as exc:
+                entry.update(status='unincorporated',
+                             reason='postflop_likelihood_error:%s' % exc)
+                trace.append(entry)
+                return False, trace, entry['reason']
+            active_buckets = None
+            try:
+                from .cards import card_id
+                board_ids = np.asarray([card_id(c) for c in board],
+                                       dtype=np.intp)
+                _scores, bucket_ids = model._board_buckets(board_ids)
+                legal_reach = (rs.legal_mask & (rs.reach > 0.0))
+                active_buckets = set(int(b) for b in
+                                     bucket_ids[legal_reach].tolist())
+            except (AttributeError, ValueError):
+                # Los modelos reales tienen buckets; un adapter de test puede
+                # omitirlos. Sin máscara de reach, la evidencia considera
+                # todos los buckets legales del board.
+                active_buckets = None
+            usable, coverage = self._postflop_likelihood_coverage(
+                model, profile, street, facing, board, action, vector,
+                active_buckets=active_buckets)
+            entry['likelihood'] = coverage
+            if not usable:
+                entry.update(status='unincorporated',
+                             reason=coverage.get('reason'))
+                trace.append(entry)
+                return False, trace, entry['reason']
+            before = rs.reach.copy()
+            rs.update(vector)
+            rs.nullify_blocked()
+            if rs.is_empty:
+                entry.update(status='unincorporated',
+                             reason='empty_posterior_after_observed_action')
+                trace.append(entry)
+                rs.reach = before
+                return False, trace, entry['reason']
+            entry.update(status='applied', applied=True)
+            trace.append(entry)
+        return True, trace, None
 
     def _pos_map(self, state):
         """pid -> posición de mesa en la mano en curso (None si no se sabe)."""
@@ -1231,22 +1663,20 @@ class Asistente:
             return rs_villain, None, pid
 
         perfil = self._perfil_for(pid, state)
-        spot, action = _preflop_spot(self.rec.hand, main_pos)
-        self._preflop_shadow_spot('equity_main', main_pos, spot, action)
-        reach = self.models.range_model.prob_vec(
-            perfil, spot, action, pos=main_pos,
-            villain_pos=_pf_rival_pos(self.rec.hand, main_pos, spot))
-        rs = RangeState(reach=reach)
+        rs, range_info = self._initial_range_for_villain(
+            perfil, main_pos, player_id=pid)
+        if rs is None:
+            return None, 'main_range_unavailable', range_info.get('reason')
         # Sin esto, `_equity_vs_rival` devuelve `getattr(rs,'position','') or
         # 'main'` y `equity_main_source` valía siempre 'main'. MEDIDO: así era.
         rs.position = main_pos
         rs.set_known_cards(list(hero) + list(board) + list(blockers))
-        for st_v, facing, act, board_str in _villain_postflop_actions(
-                self.rec.hand, main_pos):
-            board_v = ([c.strip() for c in board_str.split(',')]
-                       if board_str else [])
-            rs.update(self.models.postflop_model.prob_vec(
-                perfil, st_v, facing, board_v, act))
+        if rs.is_empty:
+            return None, 'empty_range_after_blockers', 'sin combos legales'
+        usable, _trace, reason = self._replay_postflop_range(
+            rs, perfil, main_pos)
+        if not usable:
+            return None, 'main_range_unavailable', reason
         return rs, None, pid
 
     def _equity_main_sombra(self, state, jer, villain, hero, board, blockers,
@@ -1385,19 +1815,42 @@ class Asistente:
         s = (h.get('streets', {}) or {}).get(st, {}) or {}
         return [c for c in _cards_to_codes(s.get('board', [])) if c][:5]
 
+    def _abstain_preflop(self, reason, *, plan=None, coverage=None):
+        """Abstención preflop explícita: no crea EvTable ni muestrea.
+
+        Se registra en `last_reco_reason` (lo consume la GUI/paridad) y en
+        `last_preflop_abstention` (detalle inspeccionable). Devolver None es
+        deliberado: ningún selector puede convertir esta ausencia en fold.
+        """
+        self.last_reco_reason = reason
+        self.last_preflop_abstention = {
+            'reason': reason,
+            'plan': plan.as_dict() if plan is not None else None,
+            'coverage': list(coverage or ()),
+        }
+        return None
+
     def _recom_preflop(self, state, hero, hero_pos, hero_bet, pot, to_call,
                        perfil, name, on_reco, verbose, seed=None,
                        hero_pid=HERO_PID, villain_pid=None,
                        effective_stack=None):
         """Recomendación PREFLOP desde las matrices (data/preflop_matrices.json).
 
-        Spot por las acciones previas: OR si nadie abrió, ROL si hay limp
-        delante (fold implícito), 3B/Call_OR/4B/Call_3B/5B/Call_4B/Call_5B
-        vs el último raiser. La acción se SORTEA con las frecuencias de la
-        matriz (incluido el fold implícito del residuo 1 − Σ), no un argmax
-        seco: ante "subir 40% / igualar 35% / fold 25%" puede sugerir las tres
-        con esos pesos. Devuelve un EvTable con `preflop=True`, la acción
-        sorteada en `evs.chosen` y las frecuencias en `ev` para el panel."""
+        El nodo se reconstruye con el contrato estricto
+        (`preflop_contract.final_context`) a partir de TODAS las acciones
+        previas, incluidas las subidas del propio héroe. No se usa el conteo
+        antiguo que ignoraba al héroe.
+
+        Antes de muestrear se resuelve la cobertura. Si falta una tabla
+        necesaria (missing/unknown/impossible o coverage_gap sin fallback
+        autorizado), el motor se abstiene: no crea EvTable, no muestrea y deja
+        el motivo en `last_reco_reason`/`last_preflop_abstention`. Una
+        ausencia de tabla NUNCA se convierte en fold 100%.
+
+        La acción se SORTEA con las frecuencias de la matriz (incluido el fold
+        implícito del residuo 1 − Σ), no un argmax seco. Devuelve un EvTable
+        con `preflop=True`, la acción sorteada en `evs.chosen` y las
+        frecuencias en `ev` para el panel."""
         actions = []
         if self.rec.hand is not None:
             actions = (self.rec.hand.get('streets', {}).get('preflop', {})
@@ -1405,84 +1858,192 @@ class Asistente:
         # Contrato en sombra: compara el estado que van a leer las tablas con
         # la lectura contextual. No se usa para elegir tabla ni acción.
         self._preflop_shadow_hero(actions, hero_pos)
-        n_raises, vs_pos, vs_amount = _preflop_raises(actions, hero_pos)
+        self.last_preflop_abstention = None
+
+        # Nodo de decisión reconstruido desde TODAS las acciones previas,
+        # incluidas las subidas del propio héroe. `final_context` usa el
+        # contrato estricto (`walk_preflop`): no es un conteo de caracteres.
+        preflop_steps = walk_preflop(actions)
+        context = (preflop_steps[-1].after if preflop_steps
+                   else final_context(actions))
+        plan = plan_from_context(context)
         hand_idx = _combo_index(hero)
         if hand_idx is None:
             return None
+        if plan.status != 'resolved':
+            return self._abstain_preflop(
+                'preflop_sequence_unresolved:%s'
+                % (plan.reason or 'unknown'), plan=plan)
 
-        limp = False
-        raise_seen = False
-        for a in actions:
-            if a.get('pos') == hero_pos:
-                continue
-            if a.get('action') == 'r':
-                raise_seen = True
-            elif a.get('action') == 'c' and not raise_seen:
-                limp = True
+        squeeze_in_history = any(
+            step.classification.category == 'squeeze'
+            for step in preflop_steps)
+        if squeeze_in_history and plan.raises_before == 2:
+            return self._abstain_preflop(
+                'preflop_distribution_unavailable:'
+                'response_after_squeeze', plan=plan)
 
-        table_queries = []
-        if n_raises == 0 and limp:
-            # Limp delante → tabla ROL de la posición (el fold es el residuo)
-            table_queries = [('ROL', hero_pos, '')]
-            f_rol = _pf_freq('ROL', hero_pos, '', hand_idx) or 0.0
-            if hero_pos == 'BB':
-                ev = {'pasar': f_rol, 'subir': max(0.0, 1.0 - f_rol)}
-                label_spot = f'vs limp (BB: pasar {f_rol:.0%} / subir {1 - f_rol:.0%})'
-            else:
-                ev = {'igualar': f_rol,
-                      'retirar': max(0.0, 1.0 - f_rol)}
-                label_spot = f'vs limp (over-limp {f_rol:.0%}, fold resto)'
-        elif n_raises == 0:
-            table_queries = [('OR', hero_pos, '')]
-            f_open = _pf_freq('OR', hero_pos, '', hand_idx)
-            if f_open is None:
-                # No hay tabla OR para la posición (p.ej. BB: nadie abrió y la
-                # opción es pasar). No se inventa la tabla de otra posición.
-                if hero_pos == 'BB' and to_call <= 0:
-                    f_open = 0.0
+        # Con un raise y caller(es) previos el nodo es squeeze/over-call, no
+        # un 3-bet heads-up ordinario. Aunque hay tablas SQUEEZE/Over_Call,
+        # este camino no tiene una distribución completa por la combinación
+        # de caller(es) ni un split de raise/call/fold: abstenerse evita usar
+        # 3B/Call_OR como si describieran ese nodo.
+        if plan.raises_before == 1 and plan.callers_before > 0:
+            return self._abstain_preflop(
+                'preflop_distribution_unavailable:'
+                'squeeze_or_overcall_node', plan=plan)
+
+        # BB sin apuesta: la tabla OR_BB no existe por contrato
+        # (`intentional_check_option`). No es un fold: la única acción
+        # modelada es pasar. Se declara la razón estructural.
+        structural_bb_check = (
+            plan.raises_before == 0
+            and plan.limps_before == 0
+            and hero_pos == 'BB'
+            and to_call <= 0
+        )
+        queries = [(q, hero_pos, plan.vs_pos)
+                   for q in (plan.table_raise, plan.table_call) if q]
+        source_context = {
+            'sequence_status': ('valid' if plan.context.state_valid
+                                else 'incomplete'),
+            'raises_before': plan.raises_before,
+            'limps_before': plan.limps_before,
+            'callers_before': plan.callers_before,
+            'aggressors': list(plan.context.aggressors),
+            'aggressor_amounts': list(plan.context.aggressor_amounts),
+            # Evidencia de secuencia: el héroe ya subió y vuelve a decidir
+            # frente a un 3-bet/4-bet. Sin esto, el clasificador estático
+            # marcaría como imposible un 4-bet válido (BTN abre, SB 3-betea).
+            'hero_prior_aggressor': bool(
+                hero_pos and hero_pos in plan.context.aggressors),
+            # El héroe ya actuó (call/raise/check): puede volver a decidir
+            # frente a una subida de un asiento posterior en el orden.
+            'hero_already_acted': bool(
+                hero_pos and hero_pos in plan.context.players_acted),
+        }
+        coverage = []
+        if not structural_bb_check:
+            for base, _pos, _vs in queries:
+                _probs, _source, _status, resolution = _pf_coverage_lookup(
+                    base, hero_pos, plan.vs_pos,
+                    source_context=source_context)
+                usable = (
+                    resolution.coverage_state in ('exact', 'alias')
+                    or (resolution.coverage_state == 'coverage_gap'
+                        and resolution.fallback_used))
+                coverage.append({
+                    'key': table_key(base, hero_pos, plan.vs_pos),
+                    'action': base,
+                    'coverage_state': resolution.coverage_state,
+                    'source_key': resolution.source_key,
+                    'reason': resolution.reason,
+                    'fallback_used': resolution.fallback_used,
+                    'approximation_used': resolution.approximation_used,
+                    'usable': bool(usable),
+                })
+            unusable = [item for item in coverage if not item['usable']]
+            if unusable:
+                detail = ','.join(
+                    '%s=%s%s' % (
+                        item['key'], item['coverage_state'],
+                        ('/' + item['reason'])
+                        if item['reason']
+                        and item['reason'] != item['coverage_state'] else '')
+                    for item in unusable)
+                return self._abstain_preflop(
+                    'preflop_coverage_unusable:' + detail,
+                    plan=plan, coverage=coverage)
+
+        # Las frecuencias se construyen SOLO con cobertura usable. Nunca se
+        # sustituye una tabla ausente por 0.0: si falta, se abstiene arriba.
+        if plan.raises_before == 0:
+            if structural_bb_check:
+                ev = {'pasar': 1.0, 'subir': 0.0}
+                label_spot = 'opcion de pasar (BB sin apuesta)'
+            elif plan.limps_before > 0:
+                f_rol = _pf_freq('ROL', hero_pos, '', hand_idx)
+                if f_rol is None:
+                    return self._abstain_preflop(
+                        'preflop_coverage_unusable:ROL_%s' % hero_pos,
+                        plan=plan, coverage=coverage)
+                if hero_pos == 'BB':
+                    # ROL representa el raise over limpers, no la frecuencia
+                    # de pasar. En BB, la masa restante es la opción de check.
+                    ev = {'pasar': max(0.0, 1.0 - f_rol), 'subir': f_rol}
+                    label_spot = ('vs limp (BB: subir %.0f%% / pasar %.0f%%)'
+                                  % (100 * f_rol, 100 * (1.0 - f_rol)))
                 else:
-                    return None
-            if hero_pos == 'BB' and to_call <= 0:
-                ev = {'pasar': max(0.0, 1.0 - f_open), 'subir': f_open}
+                    # ROL solo respalda la frecuencia de subir. Sin una tabla
+                    # Call_Limp/fold no se puede repartir el residuo entre
+                    # over-limp y fold; solo p=1 define una distribución
+                    # completa. Para el resto, abstenerse explícitamente.
+                    if f_rol < 1.0:
+                        return self._abstain_preflop(
+                            'preflop_distribution_incomplete:'
+                            'ROL_%s_missing_call_limp_fold_split' % hero_pos,
+                            plan=plan, coverage=coverage)
+                    ev = {'subir': 1.0}
+                    label_spot = 'vs limp (raise over limpers 100%)'
             else:
-                ev = {'retirar': max(0.0, 1.0 - f_open), 'subir': f_open}
-            label_spot = 'apertura (sin raise previo)'
-        elif n_raises == 1:
-            table_queries = [('3B', hero_pos, vs_pos),
-                             ('Call_OR', hero_pos, vs_pos)]
-            f_r = _pf_freq('3B', hero_pos, vs_pos, hand_idx) or 0.0
-            f_c = _pf_freq('Call_OR', hero_pos, vs_pos, hand_idx) or 0.0
+                f_open = _pf_freq('OR', hero_pos, '', hand_idx)
+                if f_open is None:
+                    return self._abstain_preflop(
+                        'preflop_coverage_unusable:OR_%s' % hero_pos,
+                        plan=plan, coverage=coverage)
+                ev = {'retirar': max(0.0, 1.0 - f_open),
+                      'subir': f_open}
+                label_spot = 'apertura (sin raise previo)'
+        elif plan.raises_before == 1:
+            f_r = _pf_freq('3B', hero_pos, plan.vs_pos, hand_idx)
+            f_c = _pf_freq('Call_OR', hero_pos, plan.vs_pos, hand_idx)
+            if f_r is None or f_c is None:
+                return self._abstain_preflop(
+                    'preflop_coverage_unusable:3B/Call_OR_%s_vs_%s'
+                    % (hero_pos, plan.vs_pos), plan=plan, coverage=coverage)
             ev = _pf_evs(f_r, f_c)
-            label_spot = f'vs apertura {vs_pos} ({vs_amount:.1f})'
-        elif n_raises == 2:
-            table_queries = [('4B', hero_pos, vs_pos),
-                             ('Call_3B', hero_pos, vs_pos)]
-            f_r = _pf_freq('4B', hero_pos, vs_pos, hand_idx) or 0.0
-            f_c = _pf_freq('Call_3B', hero_pos, vs_pos, hand_idx) or 0.0
+            label_spot = 'vs apertura %s (%.1f)' % (
+                plan.vs_pos, plan.vs_amount)
+        elif plan.raises_before == 2:
+            f_r = _pf_freq('4B', hero_pos, plan.vs_pos, hand_idx)
+            f_c = _pf_freq('Call_3B', hero_pos, plan.vs_pos, hand_idx)
+            if f_r is None or f_c is None:
+                return self._abstain_preflop(
+                    'preflop_coverage_unusable:4B/Call_3B_%s_vs_%s'
+                    % (hero_pos, plan.vs_pos), plan=plan, coverage=coverage)
             ev = _pf_evs(f_r, f_c)
-            label_spot = f'vs 3-bet {vs_pos} ({vs_amount:.1f})'
-        elif n_raises == 3:
-            table_queries = [('5B', hero_pos, vs_pos),
-                             ('Call_4B', hero_pos, vs_pos)]
-            f_r = _pf_freq('5B', hero_pos, vs_pos, hand_idx) or 0.0
-            f_c = _pf_freq('Call_4B', hero_pos, vs_pos, hand_idx) or 0.0
+            label_spot = 'vs 3-bet %s (%.1f)' % (
+                plan.vs_pos, plan.vs_amount)
+        elif plan.raises_before == 3:
+            f_r = _pf_freq('5B', hero_pos, plan.vs_pos, hand_idx)
+            f_c = _pf_freq('Call_4B', hero_pos, plan.vs_pos, hand_idx)
+            if f_r is None or f_c is None:
+                return self._abstain_preflop(
+                    'preflop_coverage_unusable:5B/Call_4B_%s_vs_%s'
+                    % (hero_pos, plan.vs_pos), plan=plan, coverage=coverage)
             ev = _pf_evs(f_r, f_c)
-            label_spot = f'vs 4-bet {vs_pos} ({vs_amount:.1f})'
-        elif n_raises == 4:
-            table_queries = [('Call_5B', hero_pos, vs_pos)]
-            f_c = _pf_freq('Call_5B', hero_pos, vs_pos, hand_idx) or 0.0
+            label_spot = 'vs 4-bet %s (%.1f)' % (
+                plan.vs_pos, plan.vs_amount)
+        elif plan.raises_before == 4:
+            f_c = _pf_freq('Call_5B', hero_pos, plan.vs_pos, hand_idx)
+            if f_c is None:
+                return self._abstain_preflop(
+                    'preflop_coverage_unusable:Call_5B_%s_vs_%s'
+                    % (hero_pos, plan.vs_pos), plan=plan, coverage=coverage)
             ev = {'igualar': f_c, 'retirar': max(0.0, 1.0 - f_c)}
-            label_spot = f'vs 5-bet {vs_pos} ({vs_amount:.1f})'
+            label_spot = 'vs 5-bet %s (%.1f)' % (
+                plan.vs_pos, plan.vs_amount)
         else:
-            ev = {'retirar': 1.0, 'igualar': 0.0, 'subir': 0.0}
-            label_spot = f'vs multi-raise {vs_pos}'
+            return self._abstain_preflop(
+                'preflop_sequence_unresolved:unsupported_%d_raises'
+                % plan.raises_before, plan=plan, coverage=coverage)
 
         # Sorteo ponderado por las frecuencias de la matriz (incluye el fold
         # implícito del residuo): la recomendación sigue la distribución del
         # spot, no el argmax seco. La semilla se registra para poder repetir
         # la decisión sin convertir la estrategia en determinista.
         action, sampling = _sample_preflop_action(ev, seed)
-        table_audit = _pf_table_audit(table_queries)
+        table_audit = _pf_table_audit(queries, source_context=source_context)
         problematic = [
             item for item in table_audit
             if item['status'] == 'fallback_other_vs'
@@ -1501,7 +2062,9 @@ class Asistente:
         evs.candidate_actions = sampling['candidates'] or ['retirar']
         evs.preflop_sampling = sampling
         evs.preflop_table_audit = table_audit
-        label = f'{perfil} {name}'
+        profile_display = ('prior general (sin match histórico)'
+                           if perfil == UNKNOWN_PROFILE else perfil)
+        label = f'{profile_display} {name}'
         text = _format_preflop(' '.join(hero), hero_pos, label_spot, pot,
                                to_call, ev, action, label)
         sit = Situation(hero_codes=tuple(hero), board_codes=(),
@@ -1567,6 +2130,8 @@ class Asistente:
         han folded o la mano terminó) siguen bloqueando los rangos: son
         manos imposibles para cualquier villano, recomendada o no.
         """
+        self.last_reco_reason = None
+        self.last_reco_abstention = None
         heroes = self._heroes_conocidos(state)
         if not heroes:
             self.last_reco_reason = 'sin héroes activos con cartas'
@@ -1605,7 +2170,9 @@ class Asistente:
         segundo hero). Se añaden a las del propio hero y al board para
         estimar el rango del rival.
         """
-        # Perfil PEZ/TIBURON del rival (por STACK, sin coincidencia de nombres)
+        contenders = self._active_contenders(state)
+        rivals_in_hand = [pid for pid in contenders if pid != hero_pid]
+        # Grupo histórico por identidad exacta; rival no enlazado → prior general.
         perfil = self._perfil_for(villain, state)
         villain_pos = self._pos_of(villain, state) or 'UTG'
 
@@ -1631,41 +2198,82 @@ class Asistente:
                                        villain_pid=villain,
                                        effective_stack=effective_stack)
 
+        if len(rivals_in_hand) > 1 and not MULTIWAY_SOPORTADO:
+            reason = ('multiway_no_soportado: %d rivales siguen en la mano; '
+                      'se bloquea evaluación HU contra %s' %
+                      (len(rivals_in_hand), villain))
+            hand = getattr(getattr(self, 'rec', None), 'hand', None) or {}
+            recorded_positions = {
+                action.get('pos')
+                for street_data in (hand.get('streets') or {}).values()
+                for action in (street_data or {}).get('actions') or []
+                if action.get('action') in ('p', 'x', 'b', 'c', 'r')
+            }
+            invested_positions = {
+                action.get('pos')
+                for street_data in (hand.get('streets') or {}).values()
+                for action in (street_data or {}).get('actions') or []
+                if action.get('action') in ('p', 'b', 'c', 'r')
+            }
+            return self._abstain_postflop(reason, details={
+                'hero': hero_pid, 'selected_villain': villain,
+                'active_contenders': [
+                    {'pid': pid, 'position': self._pos_of(pid, state),
+                     'state': state.get(f'{pid}_state'),
+                     'bet': state.get(f'{pid}_bet'),
+                     'stake': state.get(f'{pid}_stake'),
+                     'recorded_action_or_blind':
+                         self._pos_of(pid, state) in recorded_positions,
+                     'recorded_investment':
+                         self._pos_of(pid, state) in invested_positions}
+                    for pid in contenders
+                ],
+                'rivals_in_hand': list(rivals_in_hand),
+                'rivals_can_act': [
+                    pid for pid in rivals_in_hand
+                    if state.get(f'{pid}_state') == 'activo'],
+                'rivals_with_recorded_investment': [
+                    pid for pid in rivals_in_hand
+                    if self._pos_of(pid, state) in invested_positions],
+                'multiway_supported': MULTIWAY_SOPORTADO,
+                'selection_blocked_before': 'range/equity/compute_evs/select_best',
+            })
+
         # Rango inicial del rival según su preflop + blockers de todos los
         # heroes conocidos (no solo el propio: el segundo hero tampoco puede
         # estar en el rango de nadie).
-        spot, action = _preflop_spot(self.rec.hand, villain_pos)
-        self._preflop_shadow_spot('rango_rival_produccion', villain_pos,
-                                  spot, action)
-        reach = self.models.range_model.prob_vec(
-            perfil, spot, action, pos=villain_pos,
-            villain_pos=_pf_rival_pos(self.rec.hand, villain_pos, spot))
-        rs = RangeState(reach=reach)
+        rs, _initial_range_info = self._initial_range_for_villain(
+            perfil, villain_pos, player_id=villain)
+        if rs is None:
+            return self._abstain_postflop(
+                'initial_range_unresolved_or_uncovered:%s' %
+                _initial_range_info.get('reason'),
+                details={'initial_range': _initial_range_info})
+        spot = _initial_range_info['query']['denom']
+        action = _initial_range_info['query']['category']
         rs.set_known_cards(list(hero) + list(board) + list(blockers))
+        if rs.is_empty:
+            _initial_range_info['status'] = 'distribution_unavailable'
+            return self._abstain_postflop(
+                'initial_range_empty_after_blockers',
+                details={'initial_range': _initial_range_info,
+                         'blockers': list(hero) + list(board) + list(blockers)})
 
         # Refina el rango con las acciones postflop ya observadas del rival.
         # Ojo: `street` y `board` NO se reasignan aquí; antes este bucle los
         # sobrescribía y la situación/EV se calculaban sobre el board de la
         # última acción del rival en vez del board real.
         postflop = self.models.postflop_model
-        _postflop_evidence = []
-        for st_v, facing, act, board_str in _villain_postflop_actions(
-                self.rec.hand, villain_pos):
-            board_v = [c.strip() for c in board_str.split(',')] if board_str else []
-            vec = postflop.prob_vec(perfil, st_v, facing, board_v, act)
-            rs.update(vec)
-            # P0-3: evidencia informativa después de obtener el vector actual.
-            # No participa en RangeState ni en la recomendación.
-            try:
-                if hasattr(postflop, 'evidence_for_vector'):
-                    _postflop_evidence.append(
-                        postflop.evidence_for_vector(
-                            perfil, st_v, facing, board_v, act))
-            except Exception as exc:
-                _postflop_evidence.append({
-                    'contract': 'postflop_vector_evidence_v1',
-                    'status': 'unavailable', 'reason': str(exc),
-                    'confidence': 'not_quantified'})
+        replay_complete, _postflop_evidence, replay_reason = \
+            self._replay_postflop_range(rs, perfil, villain_pos)
+        if not replay_complete:
+            return self._abstain_postflop(
+                'postflop_range_incomplete:%s' % replay_reason,
+                details={
+                    'initial_range': _initial_range_info,
+                    'range_status': 'observed_action_without_usable_likelihood',
+                    'postflop_actions': _postflop_evidence,
+                })
 
         sit = situation(hero, board, villain_reach=rs,
                         pot_before_call=pot, to_call=to_call,
@@ -1693,8 +2301,7 @@ class Asistente:
         }
         # Reglas postflop (pegar.txt §2-§22): la situación fija los
         # candidatos y sizings; el EV solo se considera sobre ellos (§21).
-        n_players = sum(1 for pid in PLAYER_IDS
-                        if state.get(f'{pid}_state') == 'activo')
+        n_players = len(contenders)
         acts_this = ((self.rec.hand or {}).get('streets', {}).get(street, {})
                      or {}).get('actions', []) or []
         villain_here = [a for a in acts_this if a.get('pos') == villain_pos]
@@ -1732,7 +2339,9 @@ class Asistente:
                           bet_sizes=rp.bet_sizes,
                           raise_to=rp.raise_to,
                           candidates=rp.candidates)
-        label = f'{perfil} {name}'
+        profile_display = ('prior general (sin match histórico)'
+                           if perfil == UNKNOWN_PROFILE else perfil)
+        label = f'{profile_display} {name}'
 
         # Modo sombra: se CALCULA antes (no depende de la acción) pero se
         # REGISTRA después, cuando ya existe `action`. Persistir antes
@@ -1848,21 +2457,25 @@ class Asistente:
             'spot': spot,
             'action': action,
             'pos': villain_pos,
-            'villain_pos_for_prior': _pf_rival_pos(self.rec.hand, villain_pos, spot),
+            'villain_pos_for_prior': _initial_range_info['query']['villain_pos'],
+            'initial_range': _initial_range_info,
             'blockers': list(hero) + list(board) + list(blockers),
             'postflop_actions': [
-                [st_v, facing, act, board_str]
-                for st_v, facing, act, board_str in _villain_postflop_actions(
-                    self.rec.hand, villain_pos)
+                {key: event.get(key) for key in
+                 ('street', 'facing', 'action', 'board', 'provenance',
+                  'event_id', 'status', 'applied', 'reason')}
+                for event in _postflop_evidence
             ],
             'range_model_params': {
                 'alpha': getattr(self.models.postflop_model, 'alpha', 2.0),
-                'flat_prior': 0.2,
-                'note': 'PostflopRangeModel fallback only when Oracle unavailable',
+                'flat_prior': None,
+                'note': 'compatible facing prior or empirical exact-bucket rate; no uniform substitute',
+                'live_fallback_policy': 'blocked_without_supported_likelihood',
             },
             'preflop_range_params': {
                 'flat_prior': 0.15,
                 'note': 'ProfileRangeModel; distinct from postflop fallback',
+                'live_fallback_policy': 'blocked_without_exact_or_declared_alias_table',
             },
             'postflop_evidence': _postflop_evidence,
         }
@@ -1906,6 +2519,9 @@ class Asistente:
         # se usa para formatear, calcular EV ni seleccionar la acción.
         evs.model_evidence = {
             'contract': 'live_model_evidence_v1',
+            'range_status': ('valid_updated' if _postflop_evidence else
+                             'valid_initial_no_postflop_observations'),
+            'initial_range': _initial_range_info,
             'postflop_range_queries': _postflop_evidence,
             'oracle_response': _oracle_response_state.get('evidence'),
             'confidence': 'not_quantified',
@@ -2082,6 +2698,9 @@ class Asistente:
         `on_reco(texto, evs, sit, label)` se invoca con el panel formateado;
         si no, se imprime en consola (según `verbose`). `seed` fijo →
         determinista el sorteo preflop (tests)."""
+        self.last_reco_reason = None
+        self.last_reco_abstention = None
+        self.last_preflop_abstention = None
         hero_pid = self._hero_pid()
         if self._hero_folded(state, hero_pid):
             self.last_reco_reason = 'el héroe ya se retiró'

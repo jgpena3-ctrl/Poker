@@ -106,11 +106,14 @@ def test_oracle_granular():
 
 def test_oracle_fallback_a_por_facing():
     oracle, _ = _oracle()
-    # Regular nunca se enfrenta a cbet en flop (su tablero es su propia
-    # apuesta); la celda por-facing tampoco existe -> label -> poblacion
+    # No hay celda de perfil para cbet; el fallback compatible conserva facing
+    # y mezcla perfiles, no situaciones.
     p = oracle.p_action('Regular', 'flop', 'cbet')
     assert p is not None
-    assert p['source'] in ('label', 'poblacion')
+    assert p['source'] == 'poblacion_facing'
+    assert p['n'] == 0  # no representar el agregado como evidencia individual
+    evidence = oracle.evidence('Regular', 'flop', 'cbet', distribution=p)
+    assert evidence['support_observations'] > 0
 
 
 def test_oracle_label_level_para_lag():
@@ -120,11 +123,34 @@ def test_oracle_label_level_para_lag():
     assert p['source'] == 'label' or p['source'] == 'por_facing'
 
 
-def test_oracle_perfil_desconocido_usa_poblacion():
+def test_oracle_perfil_desconocido_usa_poblacion_contextual():
     oracle, _ = _oracle()
     p = oracle.p_action('NUEVO', 'flop', 'none')
-    assert p['source'] == 'poblacion'
+    assert p['source'] == 'poblacion_facing'
     assert sum(p['actions'].values()) == pytest.approx(1.0, abs=1e-6)
+
+
+def test_prior_poblacional_mantiene_facing_y_no_importa_otros_nodos():
+    cells = {
+        ('PEZ', 'flop', 'cbet'): {'b': 1.0, 'x': 0.0, 'c': 0.0,
+                                 'f': 0.0, 'r': 0.0, 'n': 4},
+        ('TIBURON', 'flop', 'cbet'): {'b': 0.0, 'x': 0.0, 'c': 0.0,
+                                      'f': 1.0, 'r': 0.0, 'n': 6},
+        # Una gran muestra en otro facing no debe alterar el prior cbet.
+        ('PEZ', 'flop', 'bet'): {'b': 0.0, 'x': 1.0, 'c': 0.0,
+                                 'f': 0.0, 'r': 0.0, 'n': 100},
+    }
+    oracle = Oracle({'profiles': {}, 'granular': {}, 'por_facing': cells})
+    dist = oracle.p_action('NEW_PLAYER', 'flop', 'cbet')
+    assert dist['source'] == 'poblacion_facing'
+    assert dist['n'] == 0
+    assert dist['actions']['b'] == pytest.approx(0.4)
+    assert dist['actions']['f'] == pytest.approx(0.6)
+    assert dist['actions']['x'] == 0.0
+    evidence = oracle.evidence(
+        'NEW_PLAYER', 'flop', 'cbet', distribution=dist)
+    assert evidence['returned_n'] == 0
+    assert evidence['support_observations'] == 10
 
 
 def test_oracle_normaliza_siempre():

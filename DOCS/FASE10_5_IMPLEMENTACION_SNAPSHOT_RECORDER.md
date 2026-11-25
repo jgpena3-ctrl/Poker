@@ -122,7 +122,7 @@ La GUI de paridad (`motor/hu_parity/gui_parity.py`, entrada
 - Panel "Mesa": calle, mano, posiciones, cartas, board, bote, `to_call`,
   stacks y apuestas. Panel "Recomendación": acción provisional y equity/estado.
   Panel "Necesito de ti": motivos de bloqueo en lenguaje operativo y registro
-  de la acción observada del rival. Pestañas "Detalle" (estado bruto,
+  de la acción observada del héroe. Pestañas "Detalle" (estado bruto,
   snapshot, contradicciones) y "Avanzado" (control manual, integridad, backup).
 - La GUI no corrige el estado, no reemplaza el snapshot y no ejecuta acciones.
 
@@ -133,8 +133,8 @@ La GUI de paridad (`motor/hu_parity/gui_parity.py`, entrada
 3. Jugar la mano: la GUI muestra la lectura y la recomendación sin pedir nada.
 4. Si aparece una pregunta en "Necesito de ti", resolverla antes de seguir. Para
    un resultado pendiente: elegir la predicción (muestra mano/calle/acción),
-   marcar la acción observada del rival con los botones rápidos o el
-   desplegable y pulsar `Registrar`. `unknown` y la exclusión de la pestaña
+   marcar la acción observada del héroe (haya seguido o no la recomendación)
+   con los botones rápidos o el desplegable y pulsar `Registrar`. `unknown` y la exclusión de la pestaña
    "Avanzado" son registros explícitos, no inferencias.
 5. `Detener` termina el polling; `✕` cierra. El título se puede arrastrar para
    mover la ventana; `HU_GUI_X`/`HU_GUI_Y` fijan otra posición.

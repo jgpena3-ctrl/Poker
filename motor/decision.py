@@ -145,6 +145,10 @@ class OracleResponse:
             'fade_n': fade_n,
             'profile_exponent': self.alpha,
             'fade_rule': 'min(1, returned_n/fade_n); exponent, not mixture weight',
+            'response_uses_oracle_distribution': bool(self.alpha > 0),
+            'response_source_state': (
+                'heuristic_only' if self.alpha <= 0 else
+                'heuristic_modulated_by_selected_oracle_cell'),
             'profile_response': {
                 'fold': self.pf_p, 'call': self.pc_p, 'raise': self.pr_p},
         })

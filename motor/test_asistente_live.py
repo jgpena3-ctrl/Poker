@@ -183,7 +183,7 @@ def test_hero_oop_posicion_mesa_real():
 
 
 # ---------------------------------------------------------------------------
-# clasificación en vivo PEZ/TIBURON
+# selección live por identidad histórica, no por stack actual
 # ---------------------------------------------------------------------------
 
 _DEFAULT = {'hero': 'Hero', 'p1': 'Player1', 'p2': 'Player2',
@@ -218,32 +218,38 @@ def asis():
     return a
 
 
-def test_perfil_pez_bajo_50bb(asis):
-    assert asis._perfil_for('p1', {'p1_stake': 49.9}) == 'PEZ'
+def test_perfil_sin_identidad_historica_es_desconocido_independiente_del_stack(asis):
+    assert asis._perfil_for('p1', {'p1_stake': 20.0}) == '__unknown__'
+    assert asis._perfil_for('p1', {'p1_stake': 200.0}) == '__unknown__'
 
 
-def test_perfil_tiburon_sobre_50bb(asis):
-    assert asis._perfil_for('p1', {'p1_stake': 50.0}) == 'TIBURON'
+def test_perfil_historico_se_resuelve_por_nombre_y_no_cambia_con_stack(asis):
+    profile = SimpleNamespace(
+        label='PEZ', stats={'vpip': 0.45, 'pfr': 0.05},
+        counts={'vpip': (20, 9), 'pfr': (20, 1)},
+        n=20, stack_mean=20.0)
+    asis.models = SimpleNamespace(
+        labels={'RivalStable': 'PEZ'},
+        range_model=SimpleNamespace(
+            perfil={'RivalStable': 'PEZ'},
+            profiles=SimpleNamespace(profiles={'RivalStable': profile})))
+    asis._villain_name = lambda _pid: 'RivalStable'
+    assert asis._perfil_for('p1', {'p1_stake': 20.0}) == 'PEZ'
+    assert asis._perfil_for('p1', {'p1_stake': 200.0}) == 'PEZ'
 
 
-def test_perfil_sin_stack_default_tiburon(asis):
-    assert asis._perfil_for('p1', {}) == 'TIBURON'
-
-
-def test_perfil_media_sesion_baja_pez(asis):
-    # stack actual alto (ganó el bote) pero media de la sesión < 50 → PEZ
-    asis.live_stacks['p1'] = [40.0, 45.0, 30.0]
-    assert asis._perfil_for('p1', {'p1_stake': 90.0}) == 'PEZ'
-
-
-def test_perfil_media_sesion_alta_tiburon(asis):
-    asis.live_stacks['p1'] = [60.0, 70.0]
-    assert asis._perfil_for('p1', {'p1_stake': 48.0}) == 'TIBURON'
-
-
-def test_perfil_con_solo_media_tiburon(asis):
-    asis.live_stacks['p1'] = [60.0]
-    assert asis._perfil_for('p1', {}) == 'TIBURON'
+def test_perfil_no_reutiliza_etiqueta_historica_sostenida_solo_por_stack(asis):
+    profile = SimpleNamespace(
+        label='TIBURON', stats={'vpip': 0.45, 'pfr': 0.05},
+        counts={'vpip': (20, 9), 'pfr': (20, 1)},
+        n=20, stack_mean=150.0)
+    asis.models = SimpleNamespace(
+        labels={'RivalStack': 'TIBURON'},
+        range_model=SimpleNamespace(
+            perfil={'RivalStack': 'TIBURON'},
+            profiles=SimpleNamespace(profiles={'RivalStack': profile})))
+    asis._villain_name = lambda _pid: 'RivalStack'
+    assert asis._perfil_for('p1', {'p1_stake': 40.0}) == '__unknown__'
 
 
 def test_observe_stacks_dedup(asis):
@@ -479,6 +485,25 @@ def test_step_marca_estado_cuando_hay_recomendacion(asis):
     assert asis.last_reco_key == 'K'
 
 
+def test_step_conserva_abstencion_preflop_sin_convertirla_en_fold(asis):
+    _step_fixture(asis, None)
+    asis.rec.hand = _pf_hand([
+        {'pos': 'BB', 'action': 'b', 'amount': 1.0},
+        {'pos': 'BTN', 'action': 'r', 'amount': 2.5},
+    ])
+    asis.recomendacion = lambda *a, **k: asis._recom_preflop(
+        _pf_state(), ['As', 'Ks'], 'SB', 0.0, 2.0, 2.5,
+        'TIBURON', 'x', None, False)
+
+    res = asis.step(_live_state(), None, None, log=lambda _m: None,
+                    require_turn=False)
+
+    assert res is None
+    assert asis.last_reco_key is None
+    assert asis.last_reco_reason.startswith('preflop_coverage_unusable:')
+    assert 'Call_OR_SB_vs_BTN' in asis.last_reco_reason
+
+
 # ---------------------------------------------------------------------------
 # recomendación PREFLOP (matrices data/preflop_matrices.json)
 # ---------------------------------------------------------------------------
@@ -532,29 +557,46 @@ def _pf_hand(actions):
 
 
 def test_recom_preflop_vs_limp_rol(asis):
-    # UTG limpa → hero MP consulta la tabla ROL_MP (AKs: over-limp 100%)
+    # ROL significa raise over limpers: AKs en ROL_MP tiene frecuencia 100%
+    # de subir, no de over-limpear.
     asis.rec.hand = _pf_hand([
         {'pos': 'BB', 'action': 'b', 'amount': 1.0},
         {'pos': 'UTG', 'action': 'c', 'amount': 1.0},
     ])
     evs = asis._recom_preflop(_pf_state(), ['As', 'Ks'], 'MP', 0.0, 1.0,
                               1.0, 'PEZ', 'x', None, False)
-    assert evs.best()[0] == 'igualar'
-    assert evs.ev['igualar'] == 1.0
+    assert evs.best()[0] == 'subir'
+    assert evs.ev == {'subir': 1.0}
 
 
 def test_recom_preflop_limp_bb_check_o_subir(asis):
-    # Limp delante y hero en BB: ROL_BB 87o=0 → subir (iso); JTs=1 → pasar
+    # Limp delante y hero en BB: ROL_BB 87o=0 → pasar; JTs=1 → subir (iso).
     asis.rec.hand = _pf_hand([
         {'pos': 'BB', 'action': 'b', 'amount': 1.0},
         {'pos': 'UTG', 'action': 'c', 'amount': 1.0},
     ])
     evs = asis._recom_preflop(_pf_state(), ['8c', '7h'], 'BB', 1.0, 1.0,
                               0.0, 'PEZ', 'x', None, False)
-    assert evs.best()[0] == 'subir'
+    assert evs.best()[0] == 'pasar'
     evs2 = asis._recom_preflop(_pf_state(), ['Jc', 'Ts'], 'BB', 1.0, 1.0,
                                0.0, 'PEZ', 'x', None, False)
-    assert evs2.best()[0] == 'pasar'
+    assert evs2.best()[0] == 'subir'
+
+
+def test_recom_preflop_rol_no_inventa_call_limp_o_fold(asis):
+    # La tabla ROL_MP indica 0% de raise para 87o, pero no separa over-limp
+    # de fold; sin Call_Limp/fold no se inventa una distribución pasiva.
+    asis.rec.hand = _pf_hand([
+        {'pos': 'BB', 'action': 'b', 'amount': 1.0},
+        {'pos': 'UTG', 'action': 'c', 'amount': 1.0},
+    ])
+    evs = asis._recom_preflop(_pf_state(), ['8c', '7h'], 'MP', 0.0, 1.0,
+                              1.0, 'PEZ', 'x', None, False)
+    assert evs is None
+    assert asis.last_reco_reason == (
+        'preflop_distribution_incomplete:'
+        'ROL_MP_missing_call_limp_fold_split')
+    assert asis.last_preflop_abstention is not None
 
 
 def test_recom_preflop_vs_5bet_call(asis):
@@ -562,6 +604,8 @@ def test_recom_preflop_vs_5bet_call(asis):
     asis.rec.hand = _pf_hand([
         {'pos': 'BB', 'action': 'b', 'amount': 1.0},
         {'pos': 'UTG', 'action': 'r', 'amount': 2.5},
+        # CO ya actuó: la acción vuelve a él tras las subidas de UTG/SB.
+        {'pos': 'CO', 'action': 'c', 'amount': 2.5},
         {'pos': 'SB', 'action': 'r', 'amount': 8.0},
         {'pos': 'UTG', 'action': 'r', 'amount': 20.0},
         {'pos': 'SB', 'action': 'r', 'amount': 65.0},
@@ -571,22 +615,25 @@ def test_recom_preflop_vs_5bet_call(asis):
     assert evs.best()[0] == 'igualar'
 
 
-def test_recom_preflop_sb_no_pide_call_sin_tabla(asis):
-    # SB vs apertura: NO existe tabla Call_OR_SB_* → no se inventa un call
-    # (lo más apegado a las tablas): igualar queda en 0.
+def test_recom_preflop_sb_sin_call_or_se_abstiene(asis):
+    # SB vs apertura: falta Call_OR_SB_* → cobertura incompleta. No se
+    # inventa un call 0 ni se convierte la ausencia en fold: se abstiene.
     asis.rec.hand = _pf_hand([
         {'pos': 'BB', 'action': 'b', 'amount': 1.0},
         {'pos': 'BTN', 'action': 'r', 'amount': 2.5},
     ])
     evs = asis._recom_preflop(_pf_state(), ['As', 'Ks'], 'SB', 0.0, 2.0,
                               2.5, 'TIBURON', 'x', None, False)
-    assert evs is not None
-    assert evs.ev['igualar'] == 0.0
-    assert evs.best()[0] in ('subir', 'retirar')
+    assert evs is None
+    assert asis.last_reco_reason.startswith('preflop_coverage_unusable:')
+    assert 'Call_OR_SB_vs_BTN' in asis.last_reco_reason
+    assert asis.last_preflop_abstention is not None
+    assert any(not item['usable']
+               for item in asis.last_preflop_abstention['coverage'])
 
 
-def test_recom_preflop_bb_no_call_3bet(asis):
-    # BB frente a un 3-bet: no existe Call_3B_BB_* (4B-or-fold) → igualar 0.
+def test_recom_preflop_bb_sin_call_3bet_se_abstiene(asis):
+    # BB frente a un 3-bet: faltan 4B_BB_* y Call_3B_BB_* → se abstiene.
     asis.rec.hand = _pf_hand([
         {'pos': 'BB', 'action': 'b', 'amount': 1.0},
         {'pos': 'UTG', 'action': 'r', 'amount': 2.5},
@@ -594,8 +641,10 @@ def test_recom_preflop_bb_no_call_3bet(asis):
     ])
     evs = asis._recom_preflop(_pf_state(), ['As', 'Ks'], 'BB', 1.0, 5.0,
                               8.0, 'TIBURON', 'x', None, False)
-    assert evs is not None
-    assert evs.ev['igualar'] == 0.0
+    assert evs is None
+    assert asis.last_reco_reason.startswith('preflop_coverage_unusable:')
+    assert 'Call_3B_BB_vs_SB' in asis.last_reco_reason
+    assert '4B_BB_vs_SB' in asis.last_reco_reason
 
 
 def test_recom_preflop_suma_100(asis):
@@ -754,22 +803,26 @@ def test_preflop_spot_open():
 
 
 def test_preflop_spot_call():
-    h = _hand_with_preflop([{'pos': 'MP', 'action': 'c', 'amount': 1.0}])
+    h = _hand_with_preflop([
+        {'pos': 'UTG', 'action': 'r', 'amount': 2.5},
+        {'pos': 'MP', 'action': 'c', 'amount': 2.5}])
     assert _preflop_spot(h, 'MP') == ('facing_open', 'call_open')
 
 
 def test_preflop_spot_3bet():
-    h = _hand_with_preflop([{'pos': 'CO', 'action': 'r', 'amount': 9.0}])
+    h = _hand_with_preflop([
+        {'pos': 'UTG', 'action': 'r', 'amount': 2.5},
+        {'pos': 'CO', 'action': 'r', 'amount': 9.0}])
     assert _preflop_spot(h, 'CO') == ('facing_open', '3bet')
 
 
 def test_preflop_spot_bb_check():
     h = _hand_with_preflop([{'pos': 'BB', 'action': 'x', 'amount': 0.0}])
-    assert _preflop_spot(h, 'BB') == ('no_raise', 'limp')
+    assert _preflop_spot(h, 'BB') == ('no_raise', 'bb_check')
 
 
 def test_preflop_spot_sin_accion_open():
-    assert _preflop_spot(None, 'UTG') == ('no_raise', 'open')
+    assert _preflop_spot(None, 'UTG') == (None, None)
 
 
 # ---------------------------------------------------------------------------
@@ -870,7 +923,7 @@ def _obs_pairs(hand, pos):
     from motor.observations import extract_hand
     out = []
     for o in extract_hand(hand):
-        if o.pos != pos or o.street == 'preflop' or o.action == 'x':
+        if o.pos != pos or o.street == 'preflop':
             continue
         # Usar el board de la calle del hand, no el acumulado
         streets = hand.get('streets', {})
@@ -932,6 +985,14 @@ def test_recomendacion_postflop_filtra_por_reglas():
         def prob_vec(self, *a, **k):
             return np.ones(1326, dtype=np.float32)
 
+        def evidence_for_vector(self, profile, street, facing, board, action):
+            return {'buckets': [
+                {'bucket': i, 'observation_count': 0,
+                 'prior_evidence': {'source': 'por_facing',
+                                    'distribution_available': True,
+                                    'support_observations': 5}}
+                for i in range(5)]}
+
     a = Asistente.__new__(Asistente)
     a.models = SimpleNamespace(range_model=_Rng(), postflop_model=_Pf())
     a.oracle = _Ora()
@@ -948,15 +1009,15 @@ def test_recomendacion_postflop_filtra_por_reglas():
         'hand_id': 'H_X', 'btn_player': 'p3',
         'streets': {
             'preflop': {'actions': [
-                {'pos': 'hero', 'action': 'b', 'amount': 3.0},
-                {'pos': 'p1', 'action': 'c', 'amount': 3.0}]},
+                {'pos': 'UTG', 'action': 'r', 'amount': 2.5},
+                {'pos': 'BB', 'action': 'c', 'amount': 2.5}]},
             'flop': {'actions': []},
             'turn': {'actions': []},
             'river': {'actions': []},
         },
         'current_street': 'flop',
     }
-    a.rec._hand_positions = {'hero': 'BB', 'p1': 'UTG',
+    a.rec._hand_positions = {'hero': 'UTG', 'p1': 'BB',
                              'p2': 'BTN', 'p3': 'BTN', 'p4': 'BTN', 'p5': 'BTN'}
     state = {
         'hero_cards': [{'rank': 'A', 'suit': 's'}, {'rank': 'K', 'suit': 'd'}],
@@ -1031,6 +1092,14 @@ def _asis_postflop(asis):
         def prob_vec(self, *a, **k):
             return np.ones(1326, dtype=np.float32)
 
+        def evidence_for_vector(self, profile, street, facing, board, action):
+            return {'buckets': [
+                {'bucket': i, 'observation_count': 0,
+                 'prior_evidence': {'source': 'por_facing',
+                                    'distribution_available': True,
+                                    'support_observations': 5}}
+                for i in range(5)]}
+
     class _Ora:
         def p_action(self, *a, **k):
             return None
@@ -1042,8 +1111,8 @@ def _asis_postflop(asis):
         'hand_id': 'H_Y', 'btn_player': 'p2',
         'streets': {
             'preflop': {'actions': [
-                {'pos': 'hero', 'action': 'b', 'amount': 3.0},
-                {'pos': 'p2', 'action': 'c', 'amount': 3.0}]},
+                {'pos': 'UTG', 'action': 'b', 'amount': 2.5},
+                {'pos': 'BTN', 'action': 'c', 'amount': 2.5}]},
             'flop': {'actions': []},
             'turn': {'actions': []},
             'river': {'actions': []},
@@ -1070,14 +1139,12 @@ def _estado_dos_heroes():
 
 
 def test_recomendaciones_dos_heroes(asis):
-    """Con dos manos conocidas hay una recomendación por hero."""
+    """Dos heroes conocidos y un tercer activo requieren MW no soportado."""
     _asis_postflop(asis)
     res = asis.recomendaciones(_estado_dos_heroes(), verbose=False)
-    pids = [p for p, _ in res]
-    assert pids == [asis._hero_pid(), 'p1']
-    for _pid, evs in res:
-        assert evs is not None
-        assert evs.chosen
+    assert res == []
+    assert asis.last_reco_abstention['status'] == 'no_recommendation'
+    assert 'multiway_no_soportado' in asis.last_reco_reason
 
 
 def test_recomendaciones_bloquea_cartas_del_otro_hero(asis):
@@ -1088,11 +1155,11 @@ def test_recomendaciones_bloquea_cartas_del_otro_hero(asis):
 
 
 def test_recomendacion_simple_no_recomienda_al_villano(asis):
-    """`recomendacion()` sigue devolviendo una sola EvTable (compat)."""
+    """`recomendacion()` bloquea la falsa EvTable HU en un spot MW."""
     _asis_postflop(asis)
     evs = asis.recomendacion(_estado_dos_heroes(), verbose=False)
-    assert evs is not None
-    assert hasattr(evs, 'ev')
+    assert evs is None
+    assert 'multiway_no_soportado' in asis.last_reco_reason
 
 
 # ---------------------------------------------------------------------------

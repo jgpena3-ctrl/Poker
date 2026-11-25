@@ -74,10 +74,16 @@ class Oracle:
     Consulta `p_action(label, street, facing, texture=None)` y devuelve la
     distribución de acciones normalizada. Niveles de evidencia:
 
-      1. granular   : (label, street, texture, facing) — contexto completo
-      2. por_facing : (label, street, facing)          — sin textura
-      3. label      : agregado de la etiqueta por street (cualquier facing)
-      4. poblacion  : agregado de todas las etiquetas (perfil nuevo/descon.)
+      1. granular          : (label, street, texture, facing)
+      2. por_facing        : (label, street, facing)
+      3. poblacion_facing  : todos los perfiles, mismo street y facing
+      4. label             : etiqueta y calle, mezcla facings (legacy)
+      5. poblacion         : todos los perfiles y facings (legacy)
+
+    Los dos últimos se mantienen visibles para diagnóstico y compatibilidad,
+    pero no son priors contextuales para actualizar un rango. `n=0` en
+    agregados impide que `OracleResponse` los trate como observaciones del
+    jugador/celda consultada.
 
     `sizing` = sizing medio de las b/r de la celda ganadora (None si no
     hay). Pensado para alimentar `P(A|C)` del rival en la capa postflop de
@@ -116,6 +122,17 @@ class Oracle:
             self._poblacion[street] = agg
         return self._poblacion[street]
 
+    def _population_for_facing(self, street, facing):
+        """Frecuencia general del mismo nodo (calle + facing), todos perfiles."""
+        key = (street, facing)
+        agg = {a: 0.0 for a in ACTIONS}
+        for (_label, st, fac), cell in self.facing.items():
+            if (st, fac) != key:
+                continue
+            for action in ACTIONS:
+                agg[action] += cell.get(action, 0.0) * cell['n']
+        return agg
+
     @staticmethod
     def _norm(agg, source, sizing=None, n=0):
         total = sum(agg[a] for a in ACTIONS)
@@ -135,6 +152,19 @@ class Oracle:
         if cell:
             return self._norm({a: cell.get(a, 0.0) for a in ACTIONS},
                               'por_facing', cell.get('sizing_mean'), cell['n'])
+        # Fallback general pero contextual: comparte calle y facing; no mezcla
+        # checks, calls y respuestas a apuestas distintas como hacía el nivel
+        # agregado por calle. `n=0` mantiene su naturaleza de prior poblacional
+        # y evita presentarlo como muestra individual en OracleResponse.
+        agg = self._population_for_facing(street, facing)
+        support_n = sum(
+            cell.get('n', 0)
+            for (_label, st, fac), cell in self.facing.items()
+            if (st, fac) == (street, facing))
+        if support_n > 0:
+            dist = self._norm(agg, 'poblacion_facing')
+            dist['support_n'] = support_n
+            return dist
         agg = self._by_label(label, street)
         if any(agg.values()):
             return self._norm(agg, 'label')
@@ -147,16 +177,17 @@ class Oracle:
                  distribution=None):
         """Metadatos de soporte de `p_action`, sin cambiar su distribución.
 
-        `distribution['n']` es el n que el consumidor histórico realmente
-        recibió (y que OracleResponse usa para su fade). En los fallbacks
-        `label`/`poblacion` ese n es 0; `support_observations` hace visible el
-        soporte agregado real sin retroalimentarlo a la regla existente.
+        `distribution['n']` es el n de la celda que OracleResponse usa para su
+        fade. Los agregados pooled mantienen `returned_n=0`; `support_observations`
+        deja visible su soporte sin presentarlo como evidencia individual.
         """
         dist = (self.p_action(label, street, facing, texture)
                 if distribution is None else distribution)
         source = dist.get('source') if dist else 'no_prior'
         if source in ('granular', 'por_facing'):
             support_n = dist.get('n', 0)
+        elif source == 'poblacion_facing':
+            support_n = dist.get('support_n', 0)
         elif source == 'label':
             support_n = sum(
                 cell.get('n', 0)
@@ -178,19 +209,26 @@ class Oracle:
             'texture': texture or '-',
             'returned_n': returned_n,
             'support_observations': support_n,
-            'support_basis': ('retained Oracle facing cells (behavior min_n)'
-                              if source in ('label', 'poblacion') else
-                              'selected Oracle cell'),
+            'support_basis': (
+                'retained population cells with same street/facing'
+                if source == 'poblacion_facing' else
+                ('retained Oracle facing cells (behavior min_n)'
+                 if source in ('label', 'poblacion') else
+                 'selected Oracle cell')),
             'distribution_available': dist is not None,
             'minimum_cell_n': DEFAULT_MIN_N,
             'confidence': 'not_quantified',
             'uncertainty_reason': (
-                'fallback agregado; OracleResponse conserva returned_n=0'
-                if source in ('label', 'poblacion') else
+                'prior pooled across profiles for same street/facing; '
+                'OracleResponse conserves returned_n=0'
+                if source == 'poblacion_facing' else
+                ('fallback agregado entre facings; OracleResponse conserva '
+                 'returned_n=0'
+                 if source in ('label', 'poblacion') else
                 ('sin distribución de prior' if dist is None else
                  ('menos de 20 observaciones en la celda'
                   if returned_n < 20 else
-                  'sin intervalo de incertidumbre calibrado'))),
+                  'sin intervalo de incertidumbre calibrado')))),
         }
 
     def to_dict(self):

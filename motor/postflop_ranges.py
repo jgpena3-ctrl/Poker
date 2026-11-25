@@ -24,12 +24,14 @@ MÉTODO — FUERZA → BUCKETS + SHRINKAGE AL ORACLE:
 2. Las observaciones postflop con mano conocida se agrupan por
    (perfil, street, facing, bucket): el denominador `opp` cuenta las manos
    que llegaron a ese spot; `cnt` las que ejecutaron la acción A.
-3. La estimación por bucket es shrinkage hacia el **prior del Oracle**
-   (P(A|C) del perfil, con sus fallbacks):
+3. La estimación por bucket hace shrinkage hacia un prior del Oracle solo si
+   comparte calle/facing (perfil o población):
 
-       P(A|H,bucket) = (cnt_bucket + alpha·prior) / (opp_bucket + alpha)
+        P(A|H,bucket) = (cnt_bucket + alpha·prior) / (opp_bucket + alpha)
 
-   Con n→0 manda el Oracle; con n grande manda la evidencia de la mano.
+   Si no hay prior contextualmente compatible, usa cnt/opp de esa celda; sin
+   prior ni observaciones devuelve 0 y serving se abstiene. No inventa un
+   prior plano ni usa agregados que mezclan distintos facings.
 
 La cantidad de manos, observaciones y celdas se audita por separado en
 `tools/auditar_muestra_postflop.py`. `opp` cuenta observaciones, no manos
@@ -213,11 +215,16 @@ class PostflopRangeModel:
     # ------------------------------------------------------------------
 
     def _prior(self, perfil: str, street: str, facing: str):
-        """P(A|C) del Oracle para el perfil (o población si no hay celda)."""
+        """P(A|C) solo de una celda contextualmente compatible.
+
+        `label`/`poblacion` agregan facings distintos y no se usan como
+        likelihood del facing observado. El Oracle ofrece un prior general
+        por población para el mismo street/facing cuando existe.
+        """
         if self._oracle is None:
             return None
         res = self._oracle.p_action(perfil, street, facing)
-        if res:
+        if res and res.get('source') in ('por_facing', 'poblacion_facing'):
             return res['actions']
         return None
 
@@ -228,10 +235,12 @@ class PostflopRangeModel:
         opp = self.opp.get(key, 0)
         prior = self._prior(perfil, street, facing)
         if prior is None:
-            # sin Oracle (construcción manual): prior plano
-            prior = {a: 0.2 for a in ACTIONS} if opp else None
-            if prior is None:
+            # Sin prior compatible, el único likelihood justificable es la
+            # frecuencia empírica de ESTA celda; sin observaciones tampoco hay
+            # distribución. No sustituir por 0.2 uniforme.
+            if opp <= 0:
                 return 0.0
+            return self.cnt.get(key + (action,), 0) / opp
         p0 = prior.get(action, 0.0)
         if opp == 0:
             return p0
@@ -252,31 +261,40 @@ class PostflopRangeModel:
         action_n = self.cnt.get(key + (action,), 0)
         hand_n = (self._cell_hand_counts.get(key)
                   if self._evidence_counts_known else None)
+        oracle_result = None
         prior_result = None
         oracle_evidence = None
         if self._oracle is not None:
-            prior_result = self._oracle.p_action(perfil, street, facing)
+            oracle_result = self._oracle.p_action(perfil, street, facing)
             if hasattr(self._oracle, 'evidence'):
                 oracle_evidence = self._oracle.evidence(
-                    perfil, street, facing, distribution=prior_result)
+                    perfil, street, facing, distribution=oracle_result)
+            if (oracle_result and oracle_result.get('source') in
+                    ('por_facing', 'poblacion_facing')):
+                prior_result = oracle_result
         if prior_result is not None:
             prior_source = prior_result.get('source', 'oracle')
             prior_probability = prior_result['actions'].get(action, 0.0)
             prior_used = True
         elif n > 0:
-            prior_source = ('flat_no_oracle' if self._oracle is None else
-                            'flat_oracle_no_cell')
-            prior_probability = 0.2
-            prior_used = True
+            prior_source = 'empirical_no_compatible_prior'
+            prior_probability = 'not_available'
+            prior_used = False
         else:
-            prior_source = ('no_prior_model' if self._oracle is None else
-                            'oracle_no_distribution')
-            prior_probability = 0.0
+            oracle_source = (oracle_result.get('source')
+                             if oracle_result else None)
+            prior_source = ('incompatible_oracle_fallback:%s' % oracle_source
+                            if oracle_source else 'no_prior_model')
+            prior_probability = 'not_available'
             prior_used = False
         if prior_used:
             prior_weight = self.alpha / (n + self.alpha)
             observation_weight = n / (n + self.alpha)
             prior_dominated = prior_weight >= 0.5
+        elif n > 0:
+            prior_weight = 0.0
+            observation_weight = 1.0
+            prior_dominated = False
         else:
             prior_weight = None
             observation_weight = 0.0
@@ -299,6 +317,8 @@ class PostflopRangeModel:
             reasons.append('all evidence comes from one hand')
         if prior_dominated:
             reasons.append('prior algebraic weight is at least 50%')
+        if n > 0 and not prior_used:
+            reasons.append('empirical exact bucket; no compatible context prior')
         if not reasons:
             reasons.append('no calibrated uncertainty interval is available')
         return {
@@ -417,11 +437,12 @@ class PostflopRangeModel:
             'observation_provenance': 'hands_db.jsonl via extract_hands',
             'prior_provenance': self._oracle_injection_source,
             'oracle_injected': self._oracle is not None,
-            'prior_formula': '(action_count + alpha*prior_probability) / '
-                             '(observation_count + alpha)',
-            'flat_prior_probability': 0.2,
-            'flat_prior_condition':
-                'used only if Oracle is unavailable and bucket observation_count > 0',
+            'prior_formula': (
+                '(action_count + alpha*compatible_prior) / '
+                '(observation_count + alpha); empirical action_count/n '
+                'when no compatible prior and n>0'),
+            'flat_prior_probability': None,
+            'flat_prior_condition': 'not used; unsupported cells have no estimate',
             'eligibility_policy': {
                 'mode': 'shadow_only',
                 'effective_filtering': False,

@@ -43,8 +43,8 @@ def test_r_como_apertura_no_es_3bet():
     c = _cls(acts, 'UTG')
     assert c.category == 'open'
     assert (c.denom, c.context.raises_before) == ('no_raise', 0)
-    # El parser live viejo decide por el carácter: `r` -> 3bet.
-    assert _preflop_spot(_hand(acts), 'UTG') == ('facing_open', '3bet')
+    # Live y contrato comparten el contexto: `r` sin raise previo es OR.
+    assert _preflop_spot(_hand(acts), 'UTG') == ('no_raise', 'open')
 
 
 def test_r_como_resubida_si_es_3bet():
@@ -100,9 +100,9 @@ def test_b_menor_igual_1bb_es_limpe_corto():
     assert (c.category, c.context.limps_before) == ('call_limp', 1)
     c = _cls([('UTG', 'b', 1.0), ('MP', 'b', 3.0)], 'MP')
     assert (c.category, c.context.limps_before) == ('rol', 1)
-    # El parser viejo lo llama open; el contrato no.
+    # La categoría estricta conserva el limp; no se normaliza a open.
     assert _preflop_spot(_hand([('UTG', 'b', 1.0)]), 'UTG') == \
-        ('no_raise', 'open')
+        ('no_raise', 'limp')
 
 
 def test_c_tras_limpe_y_c_contra_open_son_distintos():
@@ -343,16 +343,11 @@ def test_serving_viejo_y_contrato_nuevo_difieren_en_3967_estados(hands_877):
                 diff += 1
             else:
                 same += 1
-    assert (same, diff, unresolved) == (591, 3968, 35)
+    assert (same, diff, unresolved) == (4559, 0, 35)
 
 
-@pytest.mark.xfail(strict=True,
-                   reason='La desalineación actual se mantiene en sombra: '
-                          '_preflop_spot sigue leyendo el último carácter. '
-                          'Cuando se active el contrato, este xfail pasará a '
-                          'XPASS y exigirá actualizar el test.')
-def test_xfail_paridad_serving_viejo_877(hands_877):
-    """Demuestra, de forma ejecutable, que HOY no hay paridad live."""
+def test_paridad_serving_contextual_877(hands_877):
+    """Serving resuelve la misma primera acción que el contrato estricto."""
     for hand in hands_877:
         for ev in preflop_events(hand):
             old = _preflop_spot(hand, ev.pos)

@@ -37,6 +37,20 @@ def test_register_outcome(tmp_path):
     assert len(reg.read_events()) == 2
 
 
+def test_register_na_outcome_when_prediction_was_not_applicable(tmp_path):
+    path = tmp_path / "pilot.jsonl"
+    reg = ProspectiveHURegistry(path)
+    reg.register_prediction(HUPrediction(
+        prediction_id="p1", emitted_at="2026-01-01T10:00:00",
+        hero_position="BTN", canonical_status="unresolved"))
+
+    event = reg.register_outcome(HUOutcome(
+        outcome_id="o1", prediction_id="p1",
+        observed_at="2026-01-01T10:05:00", observed_action="n/a"))
+
+    assert event["payload"]["observed_action"] == "n/a"
+
+
 def test_outcome_requires_prediction(tmp_path):
     path = tmp_path / "pilot.jsonl"
     reg = ProspectiveHURegistry(path)

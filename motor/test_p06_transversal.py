@@ -243,16 +243,18 @@ def test_p06_preserves_effective_model_fingerprints_and_labels():
         result = label_audit()
     fingerprints = model_fingerprint(
         models.range_model, models.oracle, models.postflop_model)
+    # Expected semantic changes: omega fade now uses the spot denominator;
+    # postflop cells no longer shrink toward incompatible/flat action priors.
     assert fingerprints == {
-        'profile_range': (
-            '1070d92669a90818b50a940ac4202ecb796ec27e06aa129db5d83849c425e7f9'),
-        'oracle': (
-            '50b254d7cce40ad3b9a97dc156505624aeeb3745d312335fd43b6e3f73f6edf5'),
-        'postflop_range': (
-            '0369560a2da2f4b1a2c9eb75ff3306d8ddfd24360354c7f5ec36434b5829d413'),
-        'oracle_inside_postflop': (
-            '50b254d7cce40ad3b9a97dc156505624aeeb3745d312335fd43b6e3f73f6edf5'),
-    }
+            'profile_range': (
+                'cd4142d000e608db5563e19cd72f646c5734fcd40f2d6c50c814d6ee6dec78a4'),
+            'oracle': (
+                '50b254d7cce40ad3b9a97dc156505624aeeb3745d312335fd43b6e3f73f6edf5'),
+            'postflop_range': (
+                'c0e812207041c587399c90c70157702f4f3267b5941f0e1caeda5e66bf96f0d4'),
+            'oracle_inside_postflop': (
+                '50b254d7cce40ad3b9a97dc156505624aeeb3745d312335fd43b6e3f73f6edf5'),
+        }
     assert result['training']['labels'] == {TIBURON: 60, PEZ: 78}
     assert result['training']['labels_sha256'] == \
         'dca28d2607e817b8794b4579602bbe8cedf456754377d17dfa5b9e39cb8e6060'

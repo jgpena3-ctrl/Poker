@@ -88,18 +88,18 @@ def test_evidence_decomposes_current_shrinkage_without_changing_p_action():
     assert _table_fingerprint(model) == before
 
 
-def test_empty_bucket_and_flat_prior_none_oracle_contract():
+def test_empty_bucket_uses_empirical_frequency_without_uniform_prior():
     model = PostflopRangeModel(alpha=2.0)
     key = ('Timmy', 'flop', 'bet', 2)
     model.opp[key] = 2
     model.cnt[key + ('f',)] = 2
-    # Existing fallback: (2 + 2*0.2)/(2+2) = .6.
-    assert model.p_action(*key, 'f') == pytest.approx(0.6)
+    assert model.p_action(*key, 'f') == pytest.approx(1.0)
     ev = model.evidence_for(*key, 'f')
-    assert ev['model_prior_source'] == 'flat_no_oracle'
-    assert ev['prior_probability'] == 0.2
-    assert ev['prior_weight'] == pytest.approx(0.5)
-    assert ev['prior_dominated']
+    assert ev['model_prior_source'] == 'empirical_no_compatible_prior'
+    assert ev['prior_probability'] == 'not_available'
+    assert ev['prior_weight'] == 0.0
+    assert ev['observation_weight'] == 1.0
+    assert not ev['prior_dominated']
     assert ev['coverage'] == 'thin_observations_n_lt_3'
 
     empty_key = ('Timmy', 'flop', 'bet', 4)
@@ -138,6 +138,43 @@ def test_oracle_evidence_reports_real_support_but_preserves_returned_n():
     assert prior_only['prior_weight'] == 1.0
     assert prior_only['estimate'] == pytest.approx(
         oracle.p_action('P', 'flop', 'bet')['actions']['f'])
+
+
+def test_population_facing_es_prior_general_y_label_no_es_prior_de_rango():
+    actions = {'x': 0.1, 'b': 0.2, 'c': 0.3, 'f': 0.3, 'r': 0.1}
+    oracle = Oracle({'profiles': {}, 'granular': {}, 'por_facing': {
+        ('A', 'flop', 'cbet'): dict(actions, n=12),
+        ('B', 'flop', 'cbet'): dict(actions, n=8),
+        ('A', 'flop', 'bet'): dict(actions, n=40),
+    }})
+    model = PostflopRangeModel(alpha=2.0)
+    model._oracle = oracle
+
+    general = model.evidence_for('UNKNOWN', 'flop', 'cbet', 2, 'c')
+    assert general['estimate'] == pytest.approx(actions['c'])
+    assert general['model_prior_source'] == 'poblacion_facing'
+    assert general['prior_returned_n'] == 0
+    assert general['prior_support_observations'] == 20
+    assert general['prior_weight'] == 1.0
+
+    # El fallback de perfil mezcla otros facings y queda fuera del likelihood.
+    key = ('A', 'flop', 'cbet', 2)
+    model.opp[key] = 4
+    model.cnt[key + ('c',)] = 1
+    # Hay pool poblacional del mismo facing en el caso de perfil desconocido.
+
+    only_other_facing = Oracle({'profiles': {}, 'granular': {}, 'por_facing': {
+        ('A', 'flop', 'bet'): dict(actions, n=40),
+        ('A', 'flop', 'none'): dict(actions, n=10),
+    }})
+    model._oracle = only_other_facing
+    empirical = model.evidence_for('A', 'flop', 'cbet', 2, 'c')
+    assert empirical['estimate'] == pytest.approx(0.25)
+    assert empirical['model_prior_source'] == 'empirical_no_compatible_prior'
+    assert empirical['prior_probability'] == 'not_available'
+    assert empirical['prior_weight'] == 0.0
+    assert empirical['observation_weight'] == 1.0
+    assert empirical['prior_evidence']['source'] == 'label'
 
 
 def test_oracle_response_metadata_does_not_change_response_vector():
@@ -197,9 +234,12 @@ def test_load_reports_lost_oracle_injection_without_restoring_it(tmp_path):
     assert loaded._evidence_counts_known
     assert loaded.n_hands_input == model.n_hands_input
     assert loaded.n_observations_used == model.n_observations_used
-    # No se corrige la pérdida de inyección en P0-3: hacerlo cambiaría la
-    # probabilidad histórica de load(). Solo queda expuesta como limitación.
-    assert loaded.p_action(*key, action) != before
+    # La instancia cargada deja visible que perdió el Oracle, pero ahora usa
+    # la frecuencia exacta de bucket si existe, no un prior plano implícito.
+    assert loaded.p_action(*key, action) == pytest.approx(before)
+    assert loaded.evidence_for(*key, action)['model_prior_source'] == \
+        'empirical_no_compatible_prior'
+    assert model._oracle is not None
 
 
 def test_legacy_load_does_not_confuse_observations_with_distinct_hands(tmp_path):
@@ -249,7 +289,7 @@ def test_p03_audit_recounts_window_and_p02_shadow_rows():
         'a16b0572bbac94efcbf58572d692e1dd8789dab4b52ede5bebcc82045f3b975c'
 
 
-def test_live_recommendation_output_unchanged_by_evidence_sidecar():
+def test_live_abstiene_si_no_puede_verificar_likelihood_del_sidecar():
     from motor.asistente_live import Asistente
 
     hands = [_hand('live%d' % i, 'f' if i % 2 else 'c',
@@ -313,7 +353,8 @@ def test_live_recommendation_output_unchanged_by_evidence_sidecar():
         state, 'hero', ['As', 'Kd'], ['Qh', '7s', '2c'], 'p1', [],
         verbose=False, on_reco=capture_b, seed=19)
     postflop.evidence_for_vector = original
-    assert reco_b is not None
-    assert visible_a == visible_b
-    assert reco_a.ev == reco_b.ev
-    assert reco_a.chosen == reco_b.chosen
+    assert reco_b is None
+    assert visible_a and not visible_b
+    assert assistant.last_reco_reason == (
+        'postflop_range_incomplete:'
+        'postflop_likelihood_evidence_error:sidecar disabled')

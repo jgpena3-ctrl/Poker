@@ -72,6 +72,15 @@ def test_prior_grid_flat_y_warning_sin_tabla_exacta():
     assert not np.allclose(got3b, flat)
 
 
+def test_prior_grid_usa_alias_declarado_para_4bet_utg_vs_mp():
+    """La cobertura alias reportada también es la que consume el rango."""
+    m = pr.ProfileRangeModel()
+    alias = np.asarray(pr._load_tables()['4B_UTG_vs_HJ']['matrix'],
+                       dtype=np.float32)
+    got = m._prior_grid('4bet', 'UTG', 'MP')
+    assert np.allclose(got, alias)
+
+
 def test_save_load_conserva_omega(tmp_path):
     """`omega` se escribe en to_json y load() debe restaurarlo.
 
@@ -161,9 +170,12 @@ def test_player_omega_desviacion_por_jugador():
     profs = Profiles()
     base = {'vpip': 0.45, 'pfr': 0.15, 'b3': 0.04}
     profs.profiles = {
-        'Alfa': PlayerProfile('Alfa', n=60, stats=base),
-        'Beta': PlayerProfile('Beta', n=60, stats=dict(base, pfr=0.30)),
-        'Gamma': PlayerProfile('Gamma', n=60, stats=dict(base, pfr=0.10)),
+        'Alfa': PlayerProfile('Alfa', n=60, stats=base,
+                              counts={'pfr': (60, 9)}),
+        'Beta': PlayerProfile('Beta', n=60, stats=dict(base, pfr=0.30),
+                              counts={'pfr': (60, 18)}),
+        'Gamma': PlayerProfile('Gamma', n=60, stats=dict(base, pfr=0.10),
+                               counts={'pfr': (60, 6)}),
     }
     labels = {name: prof.label for name, prof in profs.profiles.items()}
     m = pr.ProfileRangeModel.from_hands([], labels=labels)
@@ -182,9 +194,12 @@ def test_player_omega_fade_in():
     profs = Profiles()
     base = {'vpip': 0.45, 'pfr': 0.15, 'b3': 0.04}
     profs.profiles = {
-        'A': PlayerProfile('A', n=5, stats=dict(base, pfr=0.60)),
-        'B': PlayerProfile('B', n=5, stats=dict(base, pfr=0.15)),
-        'C': PlayerProfile('C', n=5, stats=dict(base, pfr=0.15)),
+        'A': PlayerProfile('A', n=5, stats=dict(base, pfr=0.60),
+                           counts={'pfr': (5, 3)}),
+        'B': PlayerProfile('B', n=5, stats=dict(base, pfr=0.15),
+                           counts={'pfr': (5, 1)}),
+        'C': PlayerProfile('C', n=5, stats=dict(base, pfr=0.15),
+                           counts={'pfr': (5, 1)}),
     }
     labels = {n: p.label for n, p in profs.profiles.items()}
     m = pr.ProfileRangeModel.from_hands([], labels=labels)
@@ -193,6 +208,28 @@ def test_player_omega_fade_in():
     assert 1.0 < w < 4.0               # ratio enorme → fade aprieta a 1
     w2 = m.player_omega('A', 'no_raise', fade=100.0)
     assert 1.0 < w2 < w               # más fade → más cerca de 1
+
+
+def test_player_omega_fade_usa_denominador_del_spot_no_total_manos():
+    """Un n global grande no vuelve madura una tasa b3 con dos oportunidades."""
+    from motor.profile import PlayerProfile, Profiles
+
+    profs = Profiles()
+    profs.profiles = {
+        'A': PlayerProfile('A', n=100, stats={'b3': 0.5},
+                           counts={'b3': (2, 1)}),
+        'B': PlayerProfile('B', n=100, stats={'b3': 0.1},
+                           counts={'b3': (100, 10)}),
+        'C': PlayerProfile('C', n=100, stats={'b3': 0.1},
+                           counts={'b3': (100, 10)}),
+    }
+    labels = {name: profile.label
+              for name, profile in profs.profiles.items()}
+    model = pr.ProfileRangeModel.from_hands([], labels=labels)
+    model.profiles = profs
+
+    # Ratio clampado=4; fade correcto usa 2/20, no n global=100/20.
+    assert model.player_omega('A', 'facing_open') == pytest.approx(1.3)
 
 
 def test_p_player_escala_con_omega():
@@ -214,9 +251,12 @@ def test_p_player_omega_bajo_no_deja_masa_a_la_mitad():
     from motor.profile import PlayerProfile, Profiles
     profs = Profiles()
     profs.profiles = {
-        'Baja': PlayerProfile('Baja', n=40, stats={'pfr': 0.02}),
-        'P1': PlayerProfile('P1', n=40, stats={'pfr': 0.30}),
-        'P2': PlayerProfile('P2', n=40, stats={'pfr': 0.30}),
+        'Baja': PlayerProfile('Baja', n=40, stats={'pfr': 0.02},
+                              counts={'pfr': (40, 1)}),
+        'P1': PlayerProfile('P1', n=40, stats={'pfr': 0.30},
+                            counts={'pfr': (40, 12)}),
+        'P2': PlayerProfile('P2', n=40, stats={'pfr': 0.30},
+                            counts={'pfr': (40, 12)}),
     }
     labels = {n: p.label for n, p in profs.profiles.items()}
     m = pr.ProfileRangeModel.from_hands([], labels=labels)

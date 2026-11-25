@@ -499,8 +499,13 @@ class LiveParityAssistant:
             recorder._get_street_order = MethodType(hu_street_order, recorder)
         engine.rec = recorder
         # ``hu_in_6max`` conserva el orden y las posiciones 6-max del motor
-        # original; la puerta solo exige 2 jugadores activos. No se reemplazan
-        # ``_next_to_act``/``_hero_act`` porque eso impondria el orden HU.
+        # original. No se reemplazan ``_next_to_act``/``_hero_act`` porque eso
+        # impondria el orden HU, pero tampoco se delega el turno en
+        # ``_hero_act``: esa funcion considera que el hero actua solo porque
+        # debe fichas aunque CO/BTN/SB sigan por actuar (H_1372 captura 36), y
+        # el OCR del boton puede seguir visible despues de que el hero aposto
+        # (H_1372 captura 40). La puerta estricta de orden 6-max se aplica en
+        # ``_analyze`` antes de llamar a ``step``.
         if self.config.parity_position_mode == 'hu_sb_bb':
             engine._next_to_act = MethodType(_hu_next_to_act, engine)
             engine._hero_act = MethodType(_hu_hero_act, engine)
@@ -634,8 +639,28 @@ class LiveParityAssistant:
             return self._blocked_analysis(
                 frame, None, 'recorder_snapshot_unavailable', started,
                 reasons=list(frame.warnings), warnings=frame.warnings)
+        if self.config.parity_position_mode == 'hu_in_6max':
+            button_seat = (snapshot.button_recorded
+                           or snapshot.button_read)
+            if button_seat not in (snapshot.active_seats or ()):
+                hu_positions_override = {
+                    seat: pos for seat, pos in (snapshot.positions or {}).items()
+                    if pos
+                }
+                ignored_contradictions = (
+                    'button_not_in_active',
+                    'hu_positions_not_observable',
+                )
+            else:
+                hu_positions_override = None
+                ignored_contradictions = ()
+        else:
+            hu_positions_override = None
+            ignored_contradictions = ()
         hu = interpret_recorder_snapshot(
-            snapshot, hero_seat=self.config.hero_seat)
+            snapshot, hero_seat=self.config.hero_seat,
+            hu_positions_override=hu_positions_override,
+            ignored_contradictions=ignored_contradictions)
         reasons = list(hu.uncertainty_reasons)
         warnings = list(frame.warnings)
 
@@ -673,10 +698,35 @@ class LiveParityAssistant:
                     reasons=reasons, warnings=warnings,
                     recorder_snapshot=snapshot)
 
-        # En ``hu_in_6max`` el turno lo decide el motor live con las posiciones
-        # y el orden 6-max de la mano. No se aplica el corrector HU de
-        # ``hu_sb_bb`` ni la puerta de orden postflop HU: la situacion HU se
-        # define por los 2 jugadores activos, no por el tipo de mesa.
+        # En ``hu_in_6max`` el turno no puede delegarse en ``_hero_act``. Esa
+        # senal es cierta cuando el hero debe fichas, aunque queden jugadores
+        # anteriores por actuar, y el OCR del boton puede quedar visible tras
+        # la apuesta del hero. La puerta reconstruye el siguiente asiento con
+        # el orden 6-max y el ledger de acciones del recorder; si el ledger no
+        # permite demostrar que el hero es el siguiente, se abstiene.
+        if self.config.parity_position_mode == 'hu_in_6max':
+            turn_rejection = _hu_in_6max_turn_rejection(
+                street=hu.street,
+                active_seats=hu.active_seats,
+                positions=snapshot.positions,
+                actions=snapshot.actions_by_street.get(hu.street, ()),
+                hero_seat=hu.hero_seat,
+                hero_stack=hu.hero_stack,
+                allin_seats=snapshot.allin_seats,
+            )
+            if turn_rejection:
+                # No se asume un check rival por ausencia de apuesta: si el
+                # ledger no demuestra que el hero es el siguiente, se
+                # abstiene. La recomendacion no puede inventar el turno.
+                reasons.append('hu_in_6max_turn:%s' % turn_rejection)
+                return self._blocked_analysis(
+                    frame, hu, 'no_hu_decision_pending', started,
+                    reasons=reasons, warnings=warnings,
+                    recorder_snapshot=snapshot)
+
+        # No se aplica el corrector HU de ``hu_sb_bb`` ni la puerta de orden
+        # postflop HU: la situacion HU se define por los 2 jugadores activos,
+        # no por el tipo de mesa.
         if (self.config.parity_position_mode == 'hu_sb_bb'
                 and hu.street != 'preflop'):
             order_reason = self._postflop_order_rejection()
@@ -684,6 +734,17 @@ class LiveParityAssistant:
                 return self._blocked_analysis(
                     frame, hu, order_reason, started, reasons=reasons,
                     warnings=warnings, recorder_snapshot=snapshot)
+
+        if self.config.parity_position_mode == 'hu_in_6max':
+            # La puerta estricta ya verifico el turno con el ledger del
+            # recorder. No se vuelve a preguntar a ``_hero_act``/OCR: si el
+            # boton no se lee en river, esa segunda puerta suprimia una
+            # decision valida (H_1372 captura 41).
+            engine_require_turn = False
+        elif self.config.parity_position_mode == 'hu_sb_bb':
+            engine_require_turn = True
+        else:
+            engine_require_turn = require_turn
 
         # La unica ejecucion real de ``process_frame`` ya ocurrio. ``step``
         # recibe el estado bruto y no vuelve a procesar el frame; su llamada
@@ -699,8 +760,7 @@ class LiveParityAssistant:
                 result = self._engine.step(
                     frame.state, frame.image, frame.pil,
                     log=self._logger, on_reco=on_reco,
-                    require_turn=(True if self.config.parity_position_mode in
-                                  ('hu_sb_bb', 'hu_in_6max') else require_turn),
+                    require_turn=engine_require_turn,
                     force_reco=force_reco,
                 )
         except Exception as exc:  # el fallo no puede saltarse la puerta
@@ -883,7 +943,26 @@ class LiveParityAssistant:
         decision_key = self._decision_key(snapshot)
         prediction = self._build_prediction(
             hu, snapshot, ev_view, captured.get('label'),
-            position_mismatch, preflop, decision_key)
+            position_mismatch, preflop, decision_key,
+            uncertainty_reasons=reasons)
+        assumptions = [
+            'La recomendacion la produce el motor asistente_live original.',
+            'La recomendacion live no se reclasifica como demostrada.',
+            'La equity preflop no se calcula: las tablas devuelven frecuencias.',
+            'El resultado posterior se registra como evento separado.',
+            ('hu_sb_bb corrige deliberadamente el BTN/SB y el orden HU; '
+             'no es paridad exacta con live_default.'
+             if self.config.parity_position_mode == 'hu_sb_bb' else
+             'La recomendacion usa las posiciones y el orden 6-max de la '
+             'mesa; la situacion HU se define por los 2 jugadores activos.'
+             if self.config.parity_position_mode == 'hu_in_6max' else
+             'live_default es solo referencia diagnostica; no se persiste.'),
+            'La recomendacion no se presenta como decision validada.',
+            'La capa HU interpreta el RecorderSnapshot; el motor recibe '
+            'el estado bruto original sin mutarlo.',
+            'El recorder se ejecuto una sola vez; la llamada interna de '
+            'step quedo suprimida y no reproceso el frame.',
+        ]
         elapsed = (datetime.now(timezone.utc).timestamp() - started) * 1000.0
         return ParityAnalysis(
             state=hu,
@@ -941,24 +1020,7 @@ class LiveParityAssistant:
             provisional_selected_action=recommendation,
             legal_actions=tuple(snapshot.get('candidate_actions') or ()),
             uncertainty_reasons=tuple(dict.fromkeys(reasons)),
-            assumptions=(
-                'La recomendacion la produce el motor asistente_live original.',
-                'La recomendacion live no se reclasifica como demostrada.',
-                'La equity preflop no se calcula: las tablas devuelven frecuencias.',
-                'El resultado posterior se registra como evento separado.',
-                ('hu_sb_bb corrige deliberadamente el BTN/SB y el orden HU; '
-                 'no es paridad exacta con live_default.'
-                 if self.config.parity_position_mode == 'hu_sb_bb' else
-                 'La recomendacion usa las posiciones y el orden 6-max de la '
-                 'mesa; la situacion HU se define por los 2 jugadores activos.'
-                 if self.config.parity_position_mode == 'hu_in_6max' else
-                 'live_default es solo referencia diagnostica; no se persiste.'),
-                'La recomendacion no se presenta como decision validada.',
-                'La capa HU interpreta el RecorderSnapshot; el motor recibe '
-                'el estado bruto original sin mutarlo.',
-                'El recorder se ejecuto una sola vez; la llamada interna de '
-                'step quedo suprimida y no reproceso el frame.',
-            ),
+            assumptions=tuple(assumptions),
             warnings=tuple(dict.fromkeys(warnings)),
             capture_source=frame.source,
             captured_at=frame.captured_at,
@@ -1092,7 +1154,8 @@ class LiveParityAssistant:
     def _build_prediction(self, hu: HUState, snapshot: Mapping[str, Any],
                           ev_view: Optional[LiveEVView], label: Optional[str],
                           position_mismatch: bool, preflop: bool,
-                          decision_key: Optional[str]) -> HUPrediction:
+                          decision_key: Optional[str], *,
+                          uncertainty_reasons: Any = ()) -> HUPrediction:
         cards = snapshot.get('cards_known') or {}
         hero_id = snapshot.get('hero_id')
         bets = snapshot.get('bets') or {}
@@ -1171,6 +1234,12 @@ class LiveParityAssistant:
             'model_evidence': snapshot.get('model_evidence'),
             'decision_key': decision_key,
         }
+        assumptions = [
+            'Recomendacion del motor asistente_live original.',
+            'No es una decision demostrada del registro HU.',
+            'El snapshot se congela antes de la accion posterior.',
+            'La posicion live y la posicion HU se declaran por separado.',
+        ]
         return HUPrediction(
             prediction_id=uuid.uuid4().hex,
             emitted_at=self._clock(),
@@ -1219,12 +1288,7 @@ class LiveParityAssistant:
             prior_actions=list(snapshot.get('actions_before_decision') or ()),
             code_version=PARITY_VERSION,
             data_snapshot_id=self._data_snapshot_id,
-            assumptions=[
-                'Recomendacion del motor asistente_live original.',
-                'No es una decision demostrada del registro HU.',
-                'El snapshot se congela antes de la accion posterior.',
-                'La posicion live y la posicion HU se declaran por separado.',
-            ],
+            assumptions=assumptions,
             metadata=metadata,
         )
 
@@ -1467,6 +1531,125 @@ class LiveParityAssistant:
                        overwrite: bool = False) -> Path:
         return self.registry.restore_backup(backup_path, destination,
                                             overwrite=overwrite)
+
+
+_HU_6MAX_PREFLOP_ORDER = ('UTG', 'MP', 'CO', 'BTN', 'SB', 'BB')
+_HU_6MAX_POSTFLOP_ORDER = ('SB', 'BB', 'UTG', 'MP', 'CO', 'BTN')
+_HU_6MAX_MEANINGFUL_ACTIONS = frozenset({'x', 'c', 'f', 'b', 'r'})
+_HU_6MAX_AGGRESSIVE_ACTIONS = frozenset({'b', 'r'})
+
+
+def _hu_in_6max_turn_rejection(*, street: str, active_seats: Any,
+                               positions: Mapping[str, str],
+                               actions: Any, hero_seat: str,
+                               hero_stack: Optional[float] = None,
+                               allin_seats: Any = ()
+                               ) -> Optional[str]:
+    """Motivo por el que el hero no es el siguiente en actuar en 6-max.
+
+    El fallo de H_1372 no estaba en el OCR ni en el orden de posiciones: el
+    turno se delegaba en ``_hero_act``. ``_next_to_act`` devuelve True cuando
+    el hero debe fichas aunque CO/BTN/SB aun no hayan actuado (captura 36), y
+    el OCR del boton puede seguir mostrando accion despues de la apuesta del
+    hero (captura 40). Esta puerta no usa ninguna de esas dos senales: toma el
+    orden 6-max, los asientos activos y el ledger de acciones del recorder, y
+    solo acepta al hero cuando es el siguiente asiento de la ronda o cuando
+    abre una calle nueva.
+
+    Devuelve ``None`` si el hero puede actuar; en caso contrario devuelve un
+    motivo inspeccionable para la prediccion bloqueada. En HU postflop, si el
+    unico rival tenia que actuar antes que el hero y el ledger no contiene su
+    accion, devuelve ``prior_action_not_observed:<pos>``: no se asume un check
+    ni se emite una recomendacion sobre el estado incompleto.
+    """
+    if street not in ('preflop', 'flop', 'turn', 'river'):
+        return 'invalid_street'
+    order = (_HU_6MAX_PREFLOP_ORDER if street == 'preflop'
+             else _HU_6MAX_POSTFLOP_ORDER)
+    hero_pos = positions.get(hero_seat)
+    if hero_pos not in order:
+        return 'hero_position_not_observed'
+
+    active_positions = {}
+    for seat in active_seats or ():
+        pos = positions.get(seat)
+        if pos in order and pos not in active_positions:
+            active_positions[pos] = seat
+    sequence = [pos for pos in order if pos in active_positions]
+    if hero_pos not in sequence:
+        return 'hero_position_not_in_active_sequence'
+    if len(sequence) < 2:
+        return 'active_sequence_incomplete'
+    if hero_stack is not None and float(hero_stack) <= 0.01:
+        return 'hero_all_in'
+    allin_positions = {
+        positions.get(seat) for seat in allin_seats or ()
+        if positions.get(seat) in order
+    }
+
+    current = []
+    for action in actions or ():
+        if not isinstance(action, Mapping):
+            continue
+        action_street = action.get('street')
+        if action_street is not None and action_street != street:
+            continue
+        code = action.get('action')
+        pos = action.get('pos')
+        if code in _HU_6MAX_MEANINGFUL_ACTIONS and pos in order:
+            current.append((pos, code))
+
+    def next_after(position):
+        start = order.index(position)
+        for offset in range(1, len(order) + 1):
+            candidate = order[(start + offset) % len(order)]
+            if (candidate in active_positions
+                    and candidate not in allin_positions):
+                return candidate
+        return None
+
+    aggressive = [
+        index for index, (_, code) in enumerate(current)
+        if code in _HU_6MAX_AGGRESSIVE_ACTIONS
+    ]
+    if aggressive:
+        aggressor_index = aggressive[-1]
+        aggressor = current[aggressor_index][0]
+        responded = {pos for pos, _ in current[aggressor_index + 1:]}
+        other_active = [pos for pos in sequence if pos != aggressor]
+        # Si todos los rivales ya respondieron a la ultima agresion, la ronda
+        # esta cerrada aunque el ledger no contenga una accion posterior.
+        if all(pos in responded for pos in other_active):
+            return 'betting_round_closed'
+        next_pos = next_after(current[-1][0])
+    else:
+        # Si el rival restante esta all-in y no hay apuesta pendiente en esta
+        # calle, no existe una decision de apuesta para el hero; el board
+        # avanzara al showdown automaticamente.
+        live_opponents = [
+            pos for pos in sequence
+            if pos != hero_pos and pos not in allin_positions
+        ]
+        if not live_opponents:
+            return 'no_live_opponent'
+        acted = {pos for pos, _ in current}
+        if all(pos in acted for pos in sequence):
+            return 'betting_round_closed'
+        opening = next(
+            (pos for pos in sequence if pos not in allin_positions), None)
+        if (street != 'preflop' and not current and len(sequence) == 2
+                and opening is not None and opening != hero_pos):
+            # La captura no permite distinguir entre "el rival aun no actuo"
+            # y "el rival checkeo". No se asume check: se abstiene hasta que
+            # el ledger demuestre la accion previa.
+            return 'prior_action_not_observed:%s' % opening
+        next_pos = (next_after(current[-1][0]) if current else opening)
+
+    if next_pos is None:
+        return 'next_position_unresolved'
+    if next_pos != hero_pos:
+        return 'hero_not_next:%s' % next_pos
+    return None
 
 
 def _hu_next_to_act(self, state, hero_pid=None):

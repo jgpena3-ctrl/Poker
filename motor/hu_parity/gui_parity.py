@@ -4,7 +4,7 @@ Version compacta de la GUI de paridad. La ventana se ancla al borde derecho y
 ocupa 367x719 px (dentro de los 368 disponibles) para no tapar la mesa. El
 flujo principal es un unico boton: prepara lectores/motor, arranca el polling
 automatico y muestra la lectura, la recomendacion y las preguntas que necesiten
-intervencion humana (por ejemplo, la accion observada del rival).
+intervencion humana (por ejemplo, la accion observada del heroe).
 
 Sigue siendo una ventana independiente: no importa ``asistente_live_gui``, no
 ejecuta acciones y no escribe en ``data/``. El registro prospectivo aislado y

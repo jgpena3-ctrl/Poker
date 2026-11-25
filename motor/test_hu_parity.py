@@ -29,8 +29,13 @@ from motor.hu_parity.comparison import (
 from motor.hu_parity.concurrency import CaptureSessionGuard, ConcurrencyError
 from motor.hu_parity.fixtures import hu_state_fixtures
 from motor.hu_parity.gui_parity import HUParityGUI, PARITY_WARNING
-from motor.hu_parity.parity import LiveParityAssistant, SnapshotCollector
+from motor.hu_parity.parity import (
+    LiveParityAssistant,
+    SnapshotCollector,
+    _hu_in_6max_turn_rejection,
+)
 from motor.hu_parity.recorder_bridge import SnapshotLiveRecorder
+from motor.hu_experimental.gui import FOLD_LABELS, QUICK_OUTCOME_LABELS
 from motor.rules import MULTIWAY_SOPORTADO
 
 
@@ -196,6 +201,184 @@ def test_hu_in_6max_blocks_until_exactly_two_active(tmp_path):
     assert analysis.canonical_status == 'no_decision'
     assert analysis.canonical_reason.startswith('not_heads_up')
     assert analysis.state.active_seats == ('hero', 'p1', 'p2')
+
+
+def _h1372_turn_rejection(*, street, active_seats, actions):
+    return _hu_in_6max_turn_rejection(
+        street=street,
+        active_seats=active_seats,
+        positions={
+            'hero': 'BB',
+            'p1': 'MP',
+            'p3': 'CO',
+            'p4': 'BTN',
+            'p5': 'SB',
+        },
+        actions=actions,
+        hero_seat='hero',
+        hero_stack=100.0,
+    )
+
+
+def test_hu_in_6max_turn_gate_reproduces_h1372_decision_points():
+    five_active = ('hero', 'p1', 'p3', 'p4', 'p5')
+    heads_up = ('hero', 'p1')
+    preflop_36 = [
+        {'pos': 'SB', 'action': 'p', 'amount': 0.5},
+        {'pos': 'BB', 'action': 'p', 'amount': 1.0},
+        {'pos': 'MP', 'action': 'r', 'amount': 2.5},
+    ]
+    preflop_37 = preflop_36 + [
+        {'pos': 'CO', 'action': 'f'},
+        {'pos': 'BTN', 'action': 'f'},
+        {'pos': 'SB', 'action': 'f'},
+    ]
+
+    # Captura 36: el hero (BB) debe fichas, pero CO/BTN/SB siguen por actuar.
+    # El fallo era devolver True solo por ``to_call``. La captura 37 ya es HU
+    # y el ledger demuestra que el siguiente asiento es BB.
+    assert _h1372_turn_rejection(
+        street='preflop', active_seats=five_active,
+        actions=preflop_36) == 'hero_not_next:CO'
+    assert _h1372_turn_rejection(
+        street='preflop', active_seats=heads_up,
+        actions=preflop_37) is None
+
+    # Flop y turn con el hero primero: hay decision. En la captura 40 el hero
+    # ya aposto 2.7 y el siguiente es MP; el boton de accion del OCR no puede
+    # reabrir una decision del hero.
+    assert _h1372_turn_rejection(
+        street='flop', active_seats=heads_up, actions=[]) is None
+    assert _h1372_turn_rejection(
+        street='turn', active_seats=heads_up, actions=[]) is None
+    assert _h1372_turn_rejection(
+        street='turn', active_seats=heads_up,
+        actions=[{'pos': 'BB', 'action': 'b', 'amount': 2.7}],
+    ) == 'hero_not_next:MP'
+
+    # La calle de river abre de nuevo con BB (captura 41); no debe faltar.
+    assert _h1372_turn_rejection(
+        street='river', active_seats=heads_up, actions=[]) is None
+
+
+def test_hu_in_6max_turn_gate_closes_round_after_everyone_responds():
+    heads_up = ('hero', 'p1')
+    assert _h1372_turn_rejection(
+        street='flop', active_seats=heads_up,
+        actions=[{'pos': 'BB', 'action': 'x'},
+                 {'pos': 'MP', 'action': 'x'}],
+    ) == 'betting_round_closed'
+    assert _h1372_turn_rejection(
+        street='turn', active_seats=heads_up,
+        actions=[{'pos': 'BB', 'action': 'b', 'amount': 2.7},
+                 {'pos': 'MP', 'action': 'c', 'amount': 2.7}],
+    ) == 'betting_round_closed'
+
+
+def test_hu_in_6max_turn_gate_skips_allin_villain():
+    positions = {'hero': 'BTN', 'p2': 'BB'}
+    active = ('hero', 'p2')
+
+    # Sin acciones, no se asume un check de BB: se abstiene.
+    assert _hu_in_6max_turn_rejection(
+        street='turn', active_seats=active, positions=positions,
+        actions=[], hero_seat='hero', hero_stack=100.0,
+    ) == 'prior_action_not_observed:BB'
+    # Sin apuesta pendiente, contra un rival all-in ya no hay decision de
+    # apuesta: el board avanza automaticamente.
+    assert _hu_in_6max_turn_rejection(
+        street='turn', active_seats=active, positions=positions,
+        actions=[], hero_seat='hero', hero_stack=100.0,
+        allin_seats=('p2',),
+    ) == 'no_live_opponent'
+    # Tras la apuesta all-in de BB, el hero sigue siendo el siguiente.
+    assert _hu_in_6max_turn_rejection(
+        street='flop', active_seats=active, positions=positions,
+        actions=[{'pos': 'BB', 'action': 'b', 'amount': 13.5}],
+        hero_seat='hero', hero_stack=100.0, allin_seats=('p2',),
+    ) is None
+
+
+def test_hu_in_6max_turn_gate_blocks_unseen_prior_actor():
+    positions = {'hero': 'BTN', 'p2': 'UTG'}
+    active = ('hero', 'p2')
+
+    # Sin acciones en la captura, no se puede distinguir si UTG aun no actuo
+    # o si ya hizo check. No se asume: se abstiene hasta tener evidencia.
+    assert _hu_in_6max_turn_rejection(
+        street='flop', active_seats=active, positions=positions,
+        actions=[], hero_seat='hero', hero_stack=100.0,
+    ) == 'prior_action_not_observed:UTG'
+    # Un check registrado abre el turno del BTN sin asumir nada.
+    assert _hu_in_6max_turn_rejection(
+        street='flop', active_seats=active, positions=positions,
+        actions=[{'pos': 'UTG', 'action': 'x'}],
+        hero_seat='hero', hero_stack=100.0,
+    ) is None
+    # Si el siguiente frame revela que UTG aposto, el hero puede responder
+    # a esa apuesta; la decision anterior puede reconciliarse como n/a.
+    assert _hu_in_6max_turn_rejection(
+        street='flop', active_seats=active, positions=positions,
+        actions=[{'pos': 'UTG', 'action': 'b', 'amount': 6.7}],
+        hero_seat='hero', hero_stack=100.0,
+    ) is None
+
+
+def test_unseen_prior_action_blocks_instead_of_assuming_check(
+        tmp_path, monkeypatch):
+    import motor.hu_parity.parity as parity_module
+
+    monkeypatch.setattr(
+        parity_module, '_hu_in_6max_turn_rejection',
+        lambda **kwargs: 'prior_action_not_observed:UTG')
+    assistant = _assistant(tmp_path, parity_position_mode='hu_in_6max')
+    analysis = assistant.analyze()
+
+    assert analysis.has_decision is False
+    assert analysis.prediction is None
+    assert analysis.canonical_reason == 'no_hu_decision_pending'
+    assert 'hu_in_6max_turn:prior_action_not_observed:UTG' in (
+        analysis.uncertainty_reasons)
+    assert not any('se asumio check' in assumption
+                   for assumption in analysis.assumptions)
+
+
+def test_outcome_choices_include_na_but_not_as_quick_action():
+    assert 'n/a' in FOLD_LABELS
+    assert 'unknown' in FOLD_LABELS
+    assert 'n/a' not in QUICK_OUTCOME_LABELS
+    assert set(QUICK_OUTCOME_LABELS) == {
+        'fold', 'check', 'call', 'raise', 'all-in'}
+
+
+def test_hu_in_6max_blocks_when_strict_turn_gate_rejects(tmp_path,
+                                                         monkeypatch):
+    import motor.hu_parity.parity as parity_module
+
+    monkeypatch.setattr(
+        parity_module, '_hu_in_6max_turn_rejection',
+        lambda **kwargs: 'hero_not_next:MP')
+    assistant = _assistant(tmp_path, parity_position_mode='hu_in_6max')
+    analysis = assistant.analyze()
+
+    assert analysis.prediction is None
+    assert analysis.canonical_status == 'unresolved'
+    assert analysis.canonical_reason == 'no_hu_decision_pending'
+    assert 'hu_in_6max_turn:hero_not_next:MP' in analysis.uncertainty_reasons
+
+
+def test_hu_in_6max_recorder_turn_is_authoritative_over_ocr(tmp_path):
+    assistant = _assistant(tmp_path, parity_position_mode='hu_in_6max')
+    assistant.ensure_engine()
+    # El OCR/boton puede no reconocer el turno (por ejemplo, en river). La
+    # puerta estricta ya lo verifico con el ledger; ``_hero_act`` no debe
+    # suprimir la decision.
+    assistant.engine._hero_act = lambda state, pil: False
+    assistant.engine._next_to_act = lambda state, hero_pid=None: False
+
+    analysis = assistant.analyze()
+    assert analysis.has_decision
+    assert analysis.prediction is not None
 
 
 def test_hu_in_6max_does_not_apply_manual_position_override(tmp_path):

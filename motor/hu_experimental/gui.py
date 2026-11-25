@@ -34,7 +34,9 @@ FONT_SMALL = ('', 8)
 FONT_TINY = ('', 7)
 FONT_RECO = ('', 14, 'bold')
 
-FOLD_LABELS = ('fold', 'check', 'call', 'raise', 'all-in', 'unknown')
+FOLD_LABELS = (
+    'fold', 'check', 'call', 'raise', 'all-in', 'unknown', 'n/a')
+QUICK_OUTCOME_LABELS = ('fold', 'check', 'call', 'raise', 'all-in')
 
 
 # ---------------------------------------------------------------------------
@@ -85,6 +87,8 @@ _HINTS = {
         'La mesa 6-max tiene al hero en BTN; la situacion HU lo mapea a SB. '
         'La recomendacion usa la posicion live (BTN).'),
     'no_hu_decision_pending': 'Esperando tu turno.',
+    'hu_in_6max_turn': (
+        'No se asume la accion del rival: falta evidencia de su turno.'),
     'hand_finalized_during_capture_cycle': (
         'Mano terminada; esperando la siguiente.'),
     'hero_identity_mismatch': (
@@ -173,6 +177,9 @@ class HUExperimentalGUI:
         self._pending_labels: dict = {}
         self._outcome_choices: dict = {}
         self._quick_buttons: list = []
+        self._collapsed = False
+        self._normal_width = WINDOW_WIDTH
+        self._normal_height = WINDOW_HEIGHT
 
         self.root.title(self.window_title)
         self._apply_geometry()
@@ -197,6 +204,10 @@ class HUExperimentalGUI:
             except tk.TclError:
                 pass
         self.root.geometry('%dx%d+%d+%d' % (width, height, x, y))
+        self._normal_width = width
+        self._normal_height = height
+        self._window_x = x
+        self._window_y = y
         self.root.resizable(False, False)
         if _flag('HU_GUI_TOPMOST', True):
             try:
@@ -210,11 +221,37 @@ class HUExperimentalGUI:
     def _build_ui(self) -> None:
         main = ttk.Frame(self.root, padding=PAD)
         main.pack(fill=tk.BOTH, expand=True)
+        self._main = main
         self._build_header(main)
         self._build_live_panel(main)
         self._build_recommendation(main)
         self._build_question_panel(main)
         self._build_notebook(main)
+
+        # Barra reducida para poder "minimizar" la GUI sin usar decoraciones
+        # del sistema (la ventana es borderless para caber en 367x719).
+        self._collapsed_bar = ttk.Frame(self.root, padding=PAD)
+        ttk.Label(self._collapsed_bar, text=self.window_title,
+                  font=FONT_TINY).pack(side=tk.LEFT)
+        ttk.Button(self._collapsed_bar, text='Restaurar',
+                   command=self.toggle_collapse).pack(side=tk.RIGHT)
+
+    def toggle_collapse(self) -> None:
+        """Oculta la GUI en una barra pequena y la restaura despues."""
+        x = self.root.winfo_x()
+        y = self.root.winfo_y()
+        width = getattr(self, '_normal_width', WINDOW_WIDTH)
+        if getattr(self, '_collapsed', False):
+            self._collapsed_bar.pack_forget()
+            self._main.pack(fill=tk.BOTH, expand=True)
+            self.root.geometry('%dx%d+%d+%d'
+                               % (width, self._normal_height, x, y))
+            self._collapsed = False
+        else:
+            self._main.pack_forget()
+            self._collapsed_bar.pack(fill=tk.X)
+            self.root.geometry('%dx%d+%d+%d' % (width, 48, x, y))
+            self._collapsed = True
 
     def _build_header(self, parent) -> None:
         frame = ttk.Frame(parent)
@@ -229,6 +266,8 @@ class HUExperimentalGUI:
         title.pack(side=tk.LEFT, anchor=tk.W)
         ttk.Button(title_row, text='✕', width=2,
                    command=self.destroy).pack(side=tk.RIGHT)
+        ttk.Button(title_row, text='—', width=2,
+                   command=self.toggle_collapse).pack(side=tk.RIGHT, padx=(0, 2))
         self._drag_offset = None
         title.bind('<ButtonPress-1>', self._begin_drag)
         title.bind('<B1-Motion>', self._on_drag)
@@ -299,14 +338,26 @@ class HUExperimentalGUI:
                                padding=4)
         frame.pack(fill=tk.X, pady=(0, 4))
         self.reco_var = tk.StringVar(value='—')
-        ttk.Label(frame, textvariable=self.reco_var, font=FONT_RECO,
-                  foreground='#123c7a',
-                  wraplength=WINDOW_WIDTH - 2 * PAD - 16,
-                  justify=tk.LEFT).pack(anchor=tk.W)
         self.reco_detail_var = tk.StringVar(value='')
-        ttk.Label(frame, textvariable=self.reco_detail_var, font=FONT_TINY,
-                  wraplength=WINDOW_WIDTH - 2 * PAD - 16,
-                  justify=tk.LEFT).pack(anchor=tk.W, pady=(2, 0))
+        # Text (no Label) para que la recomendacion se pueda seleccionar y
+        # copiar. Se actualiza solo si cambia el contenido, de modo que una
+        # seleccion en curso no se pierda en cada polling.
+        self.reco_text = tk.Text(
+            frame, height=3, width=1, wrap=tk.WORD, font=FONT_TINY,
+            state=tk.NORMAL, relief=tk.FLAT, borderwidth=0,
+            highlightthickness=0, takefocus=True, cursor='xterm')
+        self.reco_text.tag_configure('recommendation', font=FONT_RECO,
+                                     foreground='#123c7a')
+        self.reco_text.tag_configure('detail', font=FONT_TINY)
+        self.reco_text.bind('<Key>', self._readonly_text_key)
+        self.reco_text.bind('<<Paste>>', lambda _event: 'break')
+        self.reco_text.bind('<<Cut>>', lambda _event: 'break')
+        self.reco_text.bind('<<Clear>>', lambda _event: 'break')
+        self.reco_text.pack(fill=tk.X, expand=True)
+        self._reco_last_text = None
+        self._last_reco_action = None
+        self._last_hand_id = None
+        self._set_reco_text('—', '')
 
     def _build_question_panel(self, parent) -> None:
         frame = ttk.LabelFrame(parent, text='Necesito de ti', padding=4)
@@ -320,7 +371,8 @@ class HUExperimentalGUI:
         self.outcome_action_var = tk.StringVar()
         self.outcome_exclusion_var = tk.StringVar()
 
-        ttk.Label(frame, text='Resultado observado del rival:', font=FONT_TINY,
+        ttk.Label(frame, text='Accion observada del heroe (o n/a):',
+                  font=FONT_TINY,
                   foreground='#555555').pack(anchor=tk.W, pady=(3, 0))
         row = ttk.Frame(frame)
         row.pack(fill=tk.X, pady=(1, 0))
@@ -340,7 +392,7 @@ class HUExperimentalGUI:
         quick = ttk.Frame(frame)
         quick.pack(fill=tk.X, pady=(3, 0))
         self._quick_buttons = []
-        for action in FOLD_LABELS[:-1]:
+        for action in QUICK_OUTCOME_LABELS:
             button = ttk.Button(
                 quick, text=action, width=5, state='disabled',
                 command=lambda value=action: self._quick_outcome(value))
@@ -354,7 +406,13 @@ class HUExperimentalGUI:
         detail = ttk.Frame(notebook, padding=2)
         notebook.add(detail, text='Detalle')
         self.detail_text = tk.Text(detail, width=1, height=4, wrap=tk.WORD,
-                                   state=tk.DISABLED, font=('Consolas', 7))
+                                   state=tk.NORMAL, font=('Consolas', 7),
+                                   takefocus=True, cursor='xterm')
+        self.detail_text.bind('<Key>', self._readonly_text_key)
+        self.detail_text.bind('<<Paste>>', lambda _event: 'break')
+        self.detail_text.bind('<<Cut>>', lambda _event: 'break')
+        self.detail_text.bind('<<Clear>>', lambda _event: 'break')
+        self._detail_last_text = None
         scroll = ttk.Scrollbar(detail, command=self.detail_text.yview)
         self.detail_text.configure(yscrollcommand=scroll.set)
         self.detail_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
@@ -488,10 +546,25 @@ class HUExperimentalGUI:
             _fmt_pair(state.hero_bet, state.villain_bet))
 
     def _set_recommendation(self, analysis) -> None:
-        recommendation = (
+        new_recommendation = (
             analysis.selected_action
             or analysis.provisional_selected_action
             or getattr(analysis, 'live_recommendation', None))
+
+        # Una mano nueva invalida la recomendacion anterior. Mientras la mano
+        # siga siendo la misma, se conserva la ultima recomendacion valida en
+        # vez de borrarla en un ciclo bloqueado.
+        hand_id = getattr(getattr(analysis, 'state', None), 'hand_id', None)
+        if hand_id is not None and hand_id != self._last_hand_id:
+            self._last_reco_action = None
+            self._last_hand_id = hand_id
+
+        if new_recommendation:
+            self._last_reco_action = new_recommendation
+            recommendation = new_recommendation
+        else:
+            recommendation = self._last_reco_action
+
         if recommendation:
             self.reco_var.set(str(recommendation))
         else:
@@ -510,7 +583,9 @@ class HUExperimentalGUI:
         if ev is not None and getattr(ev, 'best_action', None):
             pieces.append('mejor EV: %s' % ev.best_action)
         pieces.append('estado: %s' % analysis.canonical_status)
-        if not recommendation:
+        # Aunque se conserve la accion anterior, se muestra por que el ciclo
+        # actual no produjo una nueva recomendacion.
+        if not new_recommendation:
             reason = (getattr(analysis, 'canonical_reason', None)
                       or getattr(analysis.state, 'reason', None))
             if reason:
@@ -519,6 +594,37 @@ class HUExperimentalGUI:
         if block is not None and block.contradictions:
             pieces.append('contradicciones: %d' % len(block.contradictions))
         self.reco_detail_var.set(' | '.join(pieces))
+        self._set_reco_text(self.reco_var.get(), self.reco_detail_var.get())
+
+    @staticmethod
+    def _readonly_text_key(event):
+        """Permite seleccionar/copiar en un Text editable a proposito."""
+        # Ctrl+C, Ctrl+A y Ctrl+Insert deben llegar al binding de Tk. El resto
+        # de teclas de edicion se bloquea para que el widget siga siendo de
+        # solo lectura.
+        if event.state & 0x4:
+            if event.keysym.lower() in ('c', 'a', 'insert'):
+                return None
+            return 'break'
+        if event.keysym in (
+                'Left', 'Right', 'Up', 'Down', 'Home', 'End', 'Prior', 'Next',
+                'Tab', 'Shift_L', 'Shift_R', 'Control_L', 'Control_R'):
+            return None
+        return 'break'
+
+    def _set_reco_text(self, recommendation: str, detail: str) -> None:
+        """Actualiza la recomendacion sin romper la seleccion del operador."""
+        text = getattr(self, 'reco_text', None)
+        if text is None:
+            return
+        desired = '%s\n%s' % (recommendation, detail) if detail else recommendation
+        if desired == getattr(self, '_reco_last_text', None):
+            return
+        self._reco_last_text = desired
+        text.delete('1.0', tk.END)
+        text.insert(tk.END, recommendation, 'recommendation')
+        if detail:
+            text.insert(tk.END, '\n' + detail, 'detail')
 
     def _blockers(self, analysis) -> list:
         items = []
@@ -561,9 +667,11 @@ class HUExperimentalGUI:
             if lines:
                 lines.append('')
             lines.append(
-                ('1 prediccion sin resultado. Marca la accion del rival.'
+                ('1 prediccion pendiente: marca accion hero o n/a si no hubo '
+                 'decision.'
                  if len(self._pending_ids) == 1 else
-                 '%d predicciones sin resultado. Marca la accion del rival.'
+                 '%d predicciones pendientes: marca accion hero o n/a si no '
+                 'hubo decision.'
                  % len(self._pending_ids)))
             latest = self._pending_ids[-1]
             label = self._pending_labels.get(latest)
@@ -617,100 +725,111 @@ class HUExperimentalGUI:
 
     def _set_detail(self, analysis) -> None:
         text = self.detail_text
-        position = text.yview()[0]
-        text.configure(state=tk.NORMAL)
-        text.delete('1.0', tk.END)
+        segments = []
+
+        def add(chunk, tag=None):
+            segments.append((chunk, tag))
+
         state = analysis.state
-        text.insert(tk.END, 'OBSERVADO\n', 'observed')
-        text.insert(tk.END, '  Asientos activos: %s\n' % (state.active_seats,))
-        text.insert(tk.END, '  Hero: %s | rival: %s | posiciones: %s/%s\n'
-                    % (state.hero_seat, state.villain_seat,
-                       state.hero_position, state.villain_position))
-        text.insert(tk.END, '  Cartas hero: %s | board: %s | calle: %s\n'
-                    % (state.hero_cards, state.board, state.street))
-        text.insert(tk.END, '  Pot: %s | to_call: %s | stacks: %s/%s | bets: %s/%s\n'
-                    % (state.pot, state.to_call, state.hero_stack,
-                       state.villain_stack, state.hero_bet, state.villain_bet))
-        text.insert(tk.END, '  Campos observados: %s\n'
-                    % ', '.join(state.observed_fields))
+        add('OBSERVADO\n', 'observed')
+        add('  Asientos activos: %s\n' % (state.active_seats,))
+        add('  Hero: %s | rival: %s | posiciones: %s/%s\n'
+            % (state.hero_seat, state.villain_seat,
+               state.hero_position, state.villain_position))
+        add('  Cartas hero: %s | board: %s | calle: %s\n'
+            % (state.hero_cards, state.board, state.street))
+        add('  Pot: %s | to_call: %s | stacks: %s/%s | bets: %s/%s\n'
+            % (state.pot, state.to_call, state.hero_stack,
+               state.villain_stack, state.hero_bet, state.villain_bet))
+        add('  Campos observados: %s\n'
+            % ', '.join(state.observed_fields))
         snapshot = getattr(analysis, 'recorder_snapshot', None)
         if snapshot is not None:
             view = snapshot.decision_view
             raw = snapshot.raw_state
-            text.insert(tk.END, '\nESTADO BRUTO CAPTURADO\n', 'observed')
-            text.insert(tk.END, '  btn=%s | estados=%s\n'
-                        % (raw.get('btn'), {
-                            seat: raw.get('%s_state' % seat)
-                            for seat in ('hero', 'p1', 'p2', 'p3', 'p4', 'p5')
-                        }))
-            text.insert(tk.END, '  pot=%s | stacks=%s | bets=%s\n'
-                        % (raw.get('pot'), {
-                            seat: raw.get('%s_stake' % seat)
-                            for seat in ('hero', 'p1', 'p2', 'p3', 'p4', 'p5')
-                        }, {
-                            seat: raw.get('%s_bet' % seat)
-                            for seat in ('hero', 'p1', 'p2', 'p3', 'p4', 'p5')
-                        }))
-            text.insert(tk.END, '  hero_cards=%s | community=%s\n'
-                        % (raw.get('hero_cards'), raw.get('community')))
-            text.insert(tk.END, '\nSNAPSHOT RECORDER (una ejecucion)\n',
-                        'observed')
-            text.insert(tk.END, '  seq=%s procesado=%s fingerprint=%s...\n'
-                        % (snapshot.sequence, snapshot.processed,
-                           snapshot.fingerprint[:16]))
-            text.insert(tk.END, '  Cartas OCR/recorder: %s / %s\n'
-                        % (snapshot.cards_read.get('hero'),
-                           snapshot.cards_recorded.get('hero')))
-            text.insert(tk.END, '  Pot leido/calculado: %s / %s | to_call: %s (%s)\n'
-                        % (snapshot.pot_read, snapshot.pot_live_calculated,
-                           snapshot.to_call, snapshot.to_call_source))
-            text.insert(tk.END, '  Posiciones recorder/HU: %s / %s\n'
-                        % (dict(snapshot.positions), dict(view.hu_positions)))
-            text.insert(tk.END, '  Boton OCR/recorder: %s / %s\n'
-                        % (snapshot.button_read, snapshot.button_recorded))
-            text.insert(tk.END, '  Contribuciones: %s\n'
-                        % dict(snapshot.contributions))
-            text.insert(tk.END, '  Contradicciones: %s\n'
-                        % (list(snapshot.contradictions) or 'ninguna'))
-            text.insert(tk.END, '  Ambiguedades: %s\n'
-                        % ([item.get('code') for item in snapshot.ambiguities]
-                           or 'ninguna'))
-        text.insert(tk.END, '\nINFERIDO\n', 'inferred')
-        text.insert(tk.END, '  Rango: %s (%s)\n'
-                    % (analysis.range_kind, analysis.range_source))
-        text.insert(tk.END, '  Cobertura: %s | secuencia: %s\n'
-                    % (analysis.coverage_state, analysis.sequence_status))
-        text.insert(tk.END, '\nDESCONOCIDO / LIMITACIONES\n', 'unknown')
+            add('\nESTADO BRUTO CAPTURADO\n', 'observed')
+            add('  btn=%s | estados=%s\n'
+                % (raw.get('btn'), {
+                    seat: raw.get('%s_state' % seat)
+                    for seat in ('hero', 'p1', 'p2', 'p3', 'p4', 'p5')
+                }))
+            add('  pot=%s | stacks=%s | bets=%s\n'
+                % (raw.get('pot'), {
+                    seat: raw.get('%s_stake' % seat)
+                    for seat in ('hero', 'p1', 'p2', 'p3', 'p4', 'p5')
+                }, {
+                    seat: raw.get('%s_bet' % seat)
+                    for seat in ('hero', 'p1', 'p2', 'p3', 'p4', 'p5')
+                }))
+            add('  hero_cards=%s | community=%s\n'
+                % (raw.get('hero_cards'), raw.get('community')))
+            add('\nSNAPSHOT RECORDER (una ejecucion)\n', 'observed')
+            add('  seq=%s procesado=%s fingerprint=%s...\n'
+                % (snapshot.sequence, snapshot.processed,
+                   snapshot.fingerprint[:16]))
+            add('  Cartas OCR/recorder: %s / %s\n'
+                % (snapshot.cards_read.get('hero'),
+                   snapshot.cards_recorded.get('hero')))
+            add('  Pot leido/calculado: %s / %s | to_call: %s (%s)\n'
+                % (snapshot.pot_read, snapshot.pot_live_calculated,
+                   snapshot.to_call, snapshot.to_call_source))
+            add('  Posiciones recorder/HU: %s / %s\n'
+                % (dict(snapshot.positions), dict(view.hu_positions)))
+            add('  Boton OCR/recorder: %s / %s\n'
+                % (snapshot.button_read, snapshot.button_recorded))
+            add('  Contribuciones: %s\n'
+                % dict(snapshot.contributions))
+            add('  Contradicciones: %s\n'
+                % (list(snapshot.contradictions) or 'ninguna'))
+            add('  Ambiguedades: %s\n'
+                % ([item.get('code') for item in snapshot.ambiguities]
+                   or 'ninguna'))
+        add('\nINFERIDO\n', 'inferred')
+        add('  Rango: %s (%s)\n'
+            % (analysis.range_kind, analysis.range_source))
+        add('  Cobertura: %s | secuencia: %s\n'
+            % (analysis.coverage_state, analysis.sequence_status))
+        add('\nDESCONOCIDO / LIMITACIONES\n', 'unknown')
         for reason in analysis.uncertainty_reasons or ('sin motivos',):
-            text.insert(tk.END, '  - %s\n' % reason)
+            add('  - %s\n' % reason)
         for warning in analysis.warnings:
-            text.insert(tk.END, '  - captura: %s\n' % warning)
-        text.insert(tk.END, '\nPREDICCION EXPERIMENTAL\n', 'prediction')
-        text.insert(tk.END, '  Estado canonico: %s (%s)\n'
-                    % (analysis.canonical_status, analysis.canonical_reason))
-        text.insert(tk.END, '  Equity: %s | metodo: %s | incertidumbre: %s\n'
-                    % (analysis.equity, analysis.equity_method,
-                       analysis.equity_uncertainty))
+            add('  - captura: %s\n' % warning)
+        add('\nPREDICCION EXPERIMENTAL\n', 'prediction')
+        add('  Estado canonico: %s (%s)\n'
+            % (analysis.canonical_status, analysis.canonical_reason))
+        add('  Equity: %s | metodo: %s | incertidumbre: %s\n'
+            % (analysis.equity, analysis.equity_method,
+               analysis.equity_uncertainty))
         if analysis.ev_result is not None:
-            text.insert(tk.END, '  EV status: %s | mejor EV: %s\n'
-                        % (analysis.ev_result.status,
-                           analysis.ev_result.best_action))
+            add('  EV status: %s | mejor EV: %s\n'
+                % (analysis.ev_result.status,
+                   analysis.ev_result.best_action))
             for action in analysis.ev_result.actions:
-                text.insert(tk.END, '    %s: ev=%s status=%s reason=%s\n'
-                            % (action.action, action.ev, action.status,
-                               action.reason))
+                add('    %s: ev=%s status=%s reason=%s\n'
+                    % (action.action, action.ev, action.status,
+                       action.reason))
         if analysis.selected_action:
-            text.insert(tk.END, '  Accion demostrada: %s\n'
-                        % analysis.selected_action)
+            add('  Accion demostrada: %s\n' % analysis.selected_action)
         elif analysis.provisional_selected_action:
-            text.insert(tk.END, '  Accion provisional (NO demostrada): %s\n'
-                        % analysis.provisional_selected_action)
+            add('  Accion provisional (NO demostrada): %s\n'
+                % analysis.provisional_selected_action)
         else:
-            text.insert(tk.END, '  Sin accion recomendada: datos insuficientes.\n')
-        text.insert(tk.END, '\nSUPUESTOS\n', 'posterior')
+            add('  Sin accion recomendada: datos insuficientes.\n')
+        add('\nSUPUESTOS\n', 'posterior')
         for assumption in analysis.assumptions:
-            text.insert(tk.END, '  - %s\n' % assumption)
-        text.configure(state=tk.DISABLED)
+            add('  - %s\n' % assumption)
+
+        desired = ''.join(chunk for chunk, _ in segments)
+        if desired == getattr(self, '_detail_last_text', None):
+            return
+        self._detail_last_text = desired
+        position = text.yview()[0]
+        text.delete('1.0', tk.END)
+        for chunk, tag in segments:
+            if tag:
+                text.insert(tk.END, chunk, tag)
+            else:
+                text.insert(tk.END, chunk)
         try:
             text.yview_moveto(position)
         except tk.TclError:
@@ -876,7 +995,9 @@ class HUExperimentalGUI:
         if not action and not exclusion:
             messagebox.showinfo(
                 'Falta resultado',
-                'Marca la accion observada del rival (o elige unknown), o '
+                'Marca la accion observada del heroe (siga o no la '
+                'recomendacion; unknown si no se observa, n/a si no hubo '
+                'decision aplicable), o '
                 'indica una exclusion en la pestana Avanzado.')
             return
         try:
